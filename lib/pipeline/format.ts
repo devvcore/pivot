@@ -34,6 +34,20 @@ interface PageState {
   pageHeight: number;
 }
 
+function sanitizePdfText(input: string): string {
+  return input
+    .replace(/\u2192/g, "->")
+    .replace(/\u2190/g, "<-")
+    .replace(/\u2014/g, "-")
+    .replace(/\u2013/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u00A0/g, " ")
+    // Keep WinAnsi-safe range and common whitespace.
+    .replace(/[^\x09\x0A\x0D\x20-\xFF]/g, "?");
+}
+
 async function buildPDF(d: MVPDeliverables): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -74,7 +88,8 @@ async function buildPDF(d: MVPDeliverables): Promise<Uint8Array> {
     // Truncate very long lines to fit page
     const maxWidth = state.pageWidth - state.margin * 2 - indent;
     const charLimit = Math.floor(maxWidth / (size * 0.55));
-    const line = text.length > charLimit ? text.slice(0, charLimit - 3) + "..." : text;
+    const safeText = sanitizePdfText(text);
+    const line = safeText.length > charLimit ? safeText.slice(0, charLimit - 3) + "..." : safeText;
     state.page.drawText(line, {
       x: state.margin + indent,
       y: state.y,
@@ -86,9 +101,10 @@ async function buildPDF(d: MVPDeliverables): Promise<Uint8Array> {
   };
 
   const addWrappedText = (text: string, size = 9, indent = 0, maxLines = 4) => {
+    const safeText = sanitizePdfText(text);
     const maxWidth = state.pageWidth - state.margin * 2 - indent;
     const charsPerLine = Math.floor(maxWidth / (size * 0.55));
-    const words = text.split(" ");
+    const words = safeText.split(" ");
     let line = "";
     let lineCount = 0;
     for (const word of words) {

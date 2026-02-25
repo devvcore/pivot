@@ -61,6 +61,24 @@ db.exec(`
 // Jobs: knowledge graph column for schema coverage tracking
 addColumnIfMissing("jobs", "knowledge_graph_json", "TEXT");
 
+// Normalize existing user emails to lowercase (one-time migration)
+try {
+    const users = db.prepare("SELECT id, email FROM users WHERE email != LOWER(email)").all() as Array<{ id: string; email: string }>;
+    if (users.length > 0) {
+        const updateEmail = db.prepare("UPDATE users SET email = LOWER(?) WHERE id = ?");
+        const updateTransaction = db.transaction((usersToUpdate: Array<{ id: string; email: string }>) => {
+            for (const user of usersToUpdate) {
+                updateEmail.run(user.email.toLowerCase(), user.id);
+            }
+        });
+        updateTransaction(users);
+        console.log(`[DB] Migration: normalized ${users.length} user email(s) to lowercase`);
+    }
+} catch (error) {
+    // Migration failed, but don't crash - log and continue
+    console.warn("[DB] Email normalization migration failed:", error);
+}
+
 // Ensure default org exists for MVP
 const orgCheck = db.prepare("SELECT id FROM organizations WHERE id = 'default-org'").get();
 if (!orgCheck) {

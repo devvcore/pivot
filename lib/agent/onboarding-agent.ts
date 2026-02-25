@@ -6,9 +6,8 @@
  * Model: Gemini Flash (NOT Lite - needs full conversation reasoning)
  * Tools: Perplexity web search for industry context, current events, company info
  */
-import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import type { ChatMessage, Questionnaire } from "@/lib/types";
-import { perplexitySearch } from "./perplexity-search";
 
 const FLASH_MODEL = "gemini-3-flash-preview";
 
@@ -50,29 +49,6 @@ function buildSystemPrompt(extractedFromDocs?: Partial<Questionnaire>): string {
   );
 }
 
-// ── Tool: web research (Perplexity) ───────────────────────────────────────────
-
-const WEB_RESEARCH_TOOL = {
-  functionDeclarations: [
-    {
-      name: "web_research",
-      description:
-        "Search the web for current information. Use for industry trends, market context, recent news, or company information. Best for well-known companies and industries; small businesses may have limited web presence.",
-      parametersJsonSchema: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "Search query (e.g. 'SaaS industry trends 2024', 'competitor X company news')",
-          },
-        },
-        required: ["query"],
-        additionalProperties: false,
-      },
-    },
-  ],
-};
-
 // ── Response sanitizer ────────────────────────────────────────────────────────
 
 function sanitize(text: string): string {
@@ -112,19 +88,6 @@ function parseExtracted(raw: string): { message: string; extracted: Partial<Ques
   return { message, extracted, complete };
 }
 
-// ── Execute tool calls ───────────────────────────────────────────────────────
-
-async function executeWebResearch(query: string): Promise<Record<string, unknown>> {
-  const { results } = await perplexitySearch(query, 6);
-  if (results.length === 0) {
-    return { summary: "No results found.", results: [] };
-  }
-  return {
-    summary: `${results.length} result(s) found.`,
-    results: results.map((r) => ({ title: r.title, url: r.url, snippet: r.snippet })),
-  };
-}
-
 // ── Main agent function ───────────────────────────────────────────────────────
 
 export async function runOnboardingTurn(
@@ -150,9 +113,7 @@ export async function runOnboardingTurn(
     trimmedMessages = trimmedMessages.slice(1);
   }
 
-  type ContentTurn = { role: "user" | "model"; parts: Array<{ text?: string; functionCall?: { name?: string; args?: Record<string, unknown> }; functionResponse?: { name?: string; response?: Record<string, unknown> } }> };
-
-  let contents: ContentTurn[] = [
+  const contents = [
     ...trimmedMessages.map((m) => ({
       role: (m.role === "assistant" ? "model" : "user") as "user" | "model",
       parts: [{ text: m.content }],
@@ -160,76 +121,22 @@ export async function runOnboardingTurn(
     { role: "user" as const, parts: [{ text: userMessage }] },
   ];
 
-  const config = {
-    systemInstruction: systemPrompt,
-    temperature: 0.4,
-    maxOutputTokens: 800,
-    tools: [WEB_RESEARCH_TOOL],
-    toolConfig: {
-      functionCallingConfig: {
-        mode: FunctionCallingConfigMode.ANY,
-        allowedFunctionNames: ["web_research"],
-      },
-    },
-  };
-
-  const MAX_TURNS = 5;
-  let turns = 0;
-
   try {
-    while (turns++ < MAX_TURNS) {
-      const resp = await genai.models.generateContent({
-        model: FLASH_MODEL,
-        contents,
-        config,
-      });
+    const resp = await genai.models.generateContent({
+      model: FLASH_MODEL,
+      contents,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.4,
+        maxOutputTokens: 800,
+      },
+    });
 
-      const functionCalls = resp.functionCalls;
-      if (functionCalls && functionCalls.length > 0) {
-        // Model requested tool calls. Execute and add to conversation.
-        const modelParts = functionCalls.map((fc) => ({
-          functionCall: { name: fc.name, args: fc.args ?? {} },
-        }));
-        const userParts: Array<{ functionResponse: { name: string; response: Record<string, unknown> } }> = [];
-
-        for (const fc of functionCalls) {
-          const name = fc.name ?? "web_research";
-          const args = (fc.args ?? {}) as Record<string, unknown>;
-          const query = typeof args.query === "string" ? args.query : "";
-
-          let response: Record<string, unknown>;
-          if (name === "web_research" && query) {
-            const result = await executeWebResearch(query);
-            response = { output: result };
-          } else {
-            response = { error: "Invalid or missing query" };
-          }
-          userParts.push({
-            functionResponse: {
-              name,
-              response,
-              ...(fc.id && { id: fc.id }),
-            },
-          });
-        }
-
-        contents = [
-          ...contents,
-          { role: "model" as const, parts: modelParts },
-          { role: "user" as const, parts: userParts },
-        ];
-        continue;
-      }
-
-      // No tool calls — we have a final text response.
-      const rawText = resp.text ?? "";
-      if (!rawText) {
-        return { message: "I did not receive a response. Please try again.", extracted: {}, complete: false };
-      }
-      return parseExtracted(rawText);
+    const rawText = resp.text ?? "";
+    if (!rawText) {
+      return { message: "I did not receive a response. Please try again.", extracted: {}, complete: false };
     }
-
-    return { message: "I hit a limit on research steps. Please try again.", extracted: {}, complete: false };
+    return parseExtracted(rawText);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[Pivvy Onboarding] Agent error:", msg);

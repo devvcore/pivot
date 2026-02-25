@@ -3,7 +3,7 @@ import path from "path";
 import type { Questionnaire } from "./types";
 
 const ACCEPTED_EXTENSIONS = new Set(
-  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv".split(",").map((e) => e.trim().toLowerCase())
+  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.md".split(",").map((e) => e.trim().toLowerCase())
 );
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
 

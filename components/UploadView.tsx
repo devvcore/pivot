@@ -2,25 +2,16 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
-  ArrowLeft, FileText, UploadCloud, X, Send, Loader2,
-  Bot, ChevronRight, AlertCircle, CheckCircle2, Building2,
-  ShieldAlert, TrendingUp, Info, Mic, MicOff,
+  ArrowLeft, FileText, UploadCloud, X,
+  ChevronRight, AlertCircle, CheckCircle2,
+  ShieldAlert, TrendingUp, Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import type { ChatMessage, Questionnaire } from "@/lib/types";
+import type { Questionnaire } from "@/lib/types";
+import { OnboardingCall } from "@/components/OnboardingCall";
 
-const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv";
+const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.md";
 
-interface SpeechRecognitionLike {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: (e: { results: unknown }) => void;
-  onend: () => void;
-  onerror: () => void;
-  start: () => void;
-  stop: () => void;
-}
 const MAX_FILE_MB = 50;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
@@ -270,7 +261,7 @@ function CoverageIndicator({ files }: { files: StagedFile[] }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
-  // Flow: 01 Upload (files first) → 02 Chat (fill gaps) → 03 Analyze
+  // Flow: 01 Upload (files first) → 02 Live Call (fill gaps) → 03 Analyze
   const [phase, setPhase] = useState<"upload" | "chat">("upload");
   const [runId, setRunId] = useState<string | null>(null);
 
@@ -282,87 +273,10 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Chat phase state (fill gaps)
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  // Call phase state (fill gaps by voice)
   const [extracted, setExtracted] = useState<Partial<Questionnaire>>({});
   const [extractedFromDocs, setExtractedFromDocs] = useState<Partial<Questionnaire>>({});
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [chatComplete, setChatComplete] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<{ stop: () => void } | null>(null);
-
-  // Load welcome when entering chat phase
-  useEffect(() => {
-    if (phase !== "chat") return;
-    const qs = extractedFromDocs && Object.keys(extractedFromDocs).length > 0
-      ? `?extracted=${encodeURIComponent(JSON.stringify(extractedFromDocs))}`
-      : "";
-    fetch(`/api/onboarding/chat${qs}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setMessages([{ role: "assistant", content: d.message, timestamp: Date.now() }]);
-      })
-      .catch(() => {
-        setMessages([{
-          role: "assistant",
-          content: "Welcome. I have a few quick questions to fill in the gaps. What is your business name, and what industry are you in?",
-          timestamp: Date.now(),
-        }]);
-      });
-  }, [phase, extractedFromDocs]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  const send = async (text: string) => {
-    if (!text.trim() || loading) return;
-    const userMsg: ChatMessage = { role: "user", content: text.trim(), timestamp: Date.now() };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/onboarding/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: messages.slice(-12),
-          message: text.trim(),
-          extractedFromDocs: Object.keys(extractedFromDocs).length > 0 ? extractedFromDocs : undefined,
-        }),
-      });
-      const data = await res.json();
-
-      const assistantMsg: ChatMessage = {
-        role: "assistant",
-        content: data.message ?? "Sorry, I had a technical issue. Please try again.",
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-
-      if (data.extracted) {
-        setExtracted((prev) => ({ ...prev, ...data.extracted }));
-      }
-
-      if (data.complete) {
-        setChatComplete(true);
-        setTimeout(() => inputRef.current?.focus(), 200);
-      }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Connection issue — please try again.", timestamp: Date.now() },
-      ]);
-    } finally {
-      setLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  };
 
   const handleContinueFromUpload = async () => {
     setError(null);
@@ -409,42 +323,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
     }
   };
 
-  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send(input);
-    }
-  };
-
-  const toggleVoice = () => {
-    const win = typeof window !== "undefined" ? window : null;
-    const SpeechRecognitionAPI = win && ((win as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike }).SpeechRecognition || (win as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionLike }).webkitSpeechRecognition);
-    if (!SpeechRecognitionAPI) return;
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-    const recognition = new SpeechRecognitionAPI() as SpeechRecognitionLike;
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-    recognition.onresult = (e: { results: unknown }) => {
-      const results = e.results as Array<Array<{ transcript: string }>>;
-      const last = results[results.length - 1];
-      const transcript = (last && last[0] ? last[0].transcript : "").trim();
-      if (transcript) send(transcript);
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  };
-
-  // Check if input likely mentions an industry for autocomplete
-  const showIndustryAutocomplete =
-    messages.length <= 3 && input.length >= 2;
+  // Voice call replaces text chat in phase 2.
 
   // File handling
   const addFiles = useCallback((files: FileList | null) => {
@@ -464,7 +343,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
     setError(null);
     if (!runId) return;
     if (!extracted.organizationName?.trim() || extracted.organizationName === "TBD") {
-      setError("Business name is required — please complete the chat.");
+      setError("Business name is required — please complete the live call.");
       return;
     }
     setSubmitting(true);
@@ -522,7 +401,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
           <div>
             <div className="font-bold tracking-tight text-lg text-zinc-900 leading-none">Pivot</div>
             <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-1">
-              {phase === "upload" ? "Document Upload" : "Fill the Gaps"}
+              {phase === "upload" ? "Document Upload" : "Live Call"}
             </div>
           </div>
         </div>
@@ -531,7 +410,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
         <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
           <span className={phase === "upload" ? "text-zinc-900 font-bold" : ""}>01 Upload</span>
           <span>→</span>
-          <span className={phase === "chat" ? "text-zinc-900 font-bold" : ""}>02 Chat</span>
+          <span className={phase === "chat" ? "text-zinc-900 font-bold" : ""}>02 Call</span>
           <span>→</span>
           <span>03 Analyze</span>
         </div>
@@ -551,7 +430,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
               <div>
                 <h2 className="text-sm font-medium text-zinc-900 mb-2">Drop your documents first</h2>
                 <p className="text-sm text-zinc-500 mb-6">
-                  Upload P&amp;L statements, cash flow reports, invoices, customer lists — anything that shows your business. I will extract what I can, then ask only for what is missing.
+                  Upload P&amp;L statements, cash flow reports, invoices, customer lists — anything that shows your business. I will extract what I can, then run a live voice call only for missing details.
                 </p>
 
                 <input
@@ -579,7 +458,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
                   </div>
                   <div className="text-sm font-medium text-zinc-900 mb-1">Drop files here or click to browse</div>
                   <div className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">
-                    PDF, DOCX, XLSX, CSV, PPTX · Max 50MB per file
+                    PDF, DOCX, XLSX, CSV, PPTX, TXT, MD · Max 50MB per file
                   </div>
                 </motion.div>
 
@@ -635,7 +514,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
                 className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group overflow-hidden relative rounded-xl"
               >
                 <ChevronRight className="w-4 h-4" />
-                {uploading ? "Extracting from documents…" : "Continue to Chat"}
+                {uploading ? "Extracting from documents…" : "Continue to Live Call"}
                 {uploading && (
                   <motion.div className="absolute inset-0 bg-zinc-800" initial={{ left: "-100%" }} animate={{ left: "0%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
                 )}
@@ -652,169 +531,15 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
           </motion.div>
         )}
 
-        {/* ── Phase B: Chat (fill gaps) ── */}
+        {/* ── Phase B: Full-screen live call ── */}
         {phase === "chat" && (
-          <motion.div
-            key="chat"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, x: -30 }}
-            className="flex-1 flex flex-col max-w-2xl mx-auto w-full"
-          >
-            <div className="pt-3">
-              <FieldPills extracted={extracted} />
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {messages.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {msg.role === "assistant" && (
-                    <div className="w-7 h-7 bg-zinc-900 rounded-lg flex items-center justify-center shrink-0 mr-2 mt-1">
-                      <Bot className="w-3.5 h-3.5 text-white" />
-                    </div>
-                  )}
-                  <div className={`max-w-[85%] ${msg.role === "user" ? "order-last" : ""}`}>
-                    <div
-                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === "user"
-                          ? "bg-zinc-900 text-white rounded-br-sm"
-                          : "bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm"
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-
-              {loading && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                  <div className="w-7 h-7 bg-zinc-900 rounded-lg flex items-center justify-center shrink-0">
-                    <Bot className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                    <div className="flex gap-1">
-                      {[0, 1, 2].map((i) => (
-                        <motion.div
-                          key={i}
-                          className="w-1.5 h-1.5 bg-zinc-400 rounded-full"
-                          animate={{ opacity: [0.3, 1, 0.3] }}
-                          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Input (hide when complete) */}
-            {!chatComplete && (
-            <div className="border-t border-zinc-100 bg-white px-4 py-3">
-              <div className="flex gap-2 items-end relative">
-                {showIndustryAutocomplete && (
-                  <div className="absolute bottom-full left-0 right-10 z-10">
-                    <IndustryAutocomplete
-                      query={input}
-                      onSelect={(industry) => {
-                        setInput(industry);
-                        inputRef.current?.focus();
-                      }}
-                    />
-                  </div>
-                )}
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKey}
-                  placeholder="Tell Pivvy about your business…"
-                  rows={1}
-                  disabled={loading}
-                  className="flex-1 resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all disabled:opacity-50 max-h-24 overflow-y-auto"
-                  style={{ minHeight: "42px" }}
-                />
-                <button
-                  type="button"
-                  onClick={toggleVoice}
-                  title="Voice input (speak to chat)"
-                  className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all shrink-0 ${
-                    isListening ? "bg-red-500 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                  }`}
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={() => send(input)}
-                  disabled={!input.trim() || loading}
-                  className="flex items-center justify-center w-9 h-9 bg-zinc-900 text-white rounded-xl hover:bg-zinc-700 disabled:opacity-40 transition-all shrink-0"
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
-              </div>
-              <div className="text-[9px] font-mono text-zinc-400 text-center mt-2 uppercase tracking-widest">
-                Pivvy fills gaps from your documents · then you launch
-              </div>
-            </div>
-            )}
-
-            {/* Launch section when chat complete */}
-            {chatComplete && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="border-t border-zinc-100 bg-white px-4 py-6 space-y-4"
-              >
-                <div className="bg-zinc-900 text-white rounded-2xl p-6">
-                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                    Ready to Launch
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "Business", value: extracted.organizationName },
-                      { label: "Industry", value: extracted.industry },
-                      { label: "Website", value: extracted.website },
-                      { label: "Revenue", value: extracted.revenueRange },
-                      { label: "Offer", value: extracted.businessModel },
-                      { label: "Competitors", value: extracted.keyCompetitors },
-                    ].filter((f) => f.value && f.value !== "TBD").map(({ label, value }) => (
-                      <div key={label}>
-                        <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{label}</div>
-                        <div className="text-sm text-white mt-0.5 truncate">{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={handleLaunchAnalysis}
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group overflow-hidden relative rounded-xl"
-                >
-                  <Building2 className="w-4 h-4" />
-                  {submitting ? "Launching…" : "Launch Intelligence Analysis"}
-                  <ChevronRight className="w-4 h-4" />
-                  {submitting && (
-                    <motion.div className="absolute inset-0 bg-zinc-800" initial={{ left: "-100%" }} animate={{ left: "0%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
-                  )}
-                </button>
-                {error && phase === "chat" && (
-                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                    <div className="text-xs text-red-700 leading-normal">{error}</div>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
-          </motion.div>
+          <OnboardingCall
+            extractedFromDocs={extractedFromDocs}
+            onExtracted={(patch) => setExtracted((prev) => ({ ...prev, ...patch }))}
+            onComplete={() => handleLaunchAnalysis()}
+            onSkip={() => handleLaunchAnalysis()}
+            onError={setError}
+          />
         )}
       </AnimatePresence>
     </div>

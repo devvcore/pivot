@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
-    if (job.status !== "pending") {
-      return NextResponse.json({ runId, status: job.status, message: "Pipeline already started or completed" });
+    if (job.status === "completed") {
+      return NextResponse.json({ runId, status: job.status, message: "Pipeline already completed" });
+    }
+    const alreadyRunning = ["parsing", "ingesting", "synthesizing", "formatting"].includes(job.status);
+    if (alreadyRunning) {
+      return NextResponse.json({ runId, status: job.status, message: "Pipeline is running" });
     }
     runPipeline(runId).catch((err) => {
       console.error("Pipeline error for", runId, err);

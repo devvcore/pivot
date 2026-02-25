@@ -12,44 +12,106 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import type { WebsiteAnalysis } from "@/lib/types";
+import path from "path";
+import { mkdir, writeFile } from "fs/promises";
 
 const LITE_MODEL = "gemini-3-flash-preview";
 
-async function fetchWebsiteText(url: string): Promise<string> {
+interface WebsiteBrowseResult {
+  text: string;
+  snapshot: string;
+  screenshotBase64?: string;
+  source: "better-browse" | "http-fetch";
+}
+
+function normalizeUrl(url: string): string {
+  return url.startsWith("http") ? url : `https://${url}`;
+}
+
+async function fetchWebsiteTextViaHttp(url: string): Promise<WebsiteBrowseResult> {
+  const normalized = normalizeUrl(url);
+  const resp = await fetch(normalized, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; PivotAI/1.0; +https://pivot.ai)",
+      "Accept": "text/html,application/xhtml+xml",
+    },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const html = await resp.text();
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .slice(0, 12000);
+  return { text, snapshot: "", source: "http-fetch" };
+}
+
+async function fetchWebsiteWithBrowserAgent(url: string): Promise<WebsiteBrowseResult> {
+  const normalized = normalizeUrl(url);
+  const mod = await import("better-browse");
+  const BrowserCtor = mod.Browser;
+  const browser = new BrowserCtor({ headless: true });
   try {
-    const normalized = url.startsWith("http") ? url : `https://${url}`;
-    const resp = await fetch(normalized, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; PivotAI/1.0; +https://pivot.ai)",
-        "Accept": "text/html,application/xhtml+xml",
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const html = await resp.text();
-    // Strip HTML tags — keep text content only
-    const text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .trim()
-      .slice(0, 8000);
-    return text;
-  } catch (e) {
-    throw new Error(`Could not fetch ${url}: ${String(e)}`);
+    await browser.launch();
+    await browser.navigate(normalized);
+    const [snapshot, visibleText, screenshotBase64] = await Promise.all([
+      browser.getSnapshot().catch(() => ""),
+      browser.extractText().catch(() => ""),
+      browser.screenshot().catch(() => ""),
+    ]);
+    const text = (visibleText || snapshot || "").replace(/\s{2,}/g, " ").trim().slice(0, 12000);
+    return {
+      text,
+      snapshot: (snapshot || "").slice(0, 8000),
+      screenshotBase64: screenshotBase64 || undefined,
+      source: "better-browse",
+    };
+  } finally {
+    await browser.close().catch(() => {});
   }
 }
 
-export async function analyzeWebsite(url: string): Promise<WebsiteAnalysis> {
+async function fetchWebsiteIntelligence(url: string): Promise<WebsiteBrowseResult> {
+  try {
+    return await fetchWebsiteWithBrowserAgent(url);
+  } catch (e) {
+    console.warn("[WebsiteAnalyzer] better-browse fallback to HTTP:", e);
+    return fetchWebsiteTextViaHttp(url);
+  }
+}
+
+async function maybePersistScreenshot(
+  screenshotBase64: string | undefined,
+  opts?: { runId?: string; label?: string }
+): Promise<void> {
+  if (!screenshotBase64 || !opts?.runId) return;
+  try {
+    const dir = path.join(process.cwd(), "uploads", opts.runId, "website-agent");
+    await mkdir(dir, { recursive: true });
+    const label = opts.label ? opts.label.replace(/[^a-zA-Z0-9_-]/g, "_") : "site";
+    const filePath = path.join(dir, `${label}-${Date.now()}.png`);
+    await writeFile(filePath, Buffer.from(screenshotBase64, "base64"));
+  } catch (e) {
+    console.warn("[WebsiteAnalyzer] Could not persist screenshot:", e);
+  }
+}
+
+export async function analyzeWebsite(
+  url: string,
+  opts?: { runId?: string; label?: string }
+): Promise<WebsiteAnalysis> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return buildFallback(url, "GEMINI_API_KEY not configured");
   }
 
-  let pageText: string;
+  let browseResult: WebsiteBrowseResult;
   try {
-    pageText = await fetchWebsiteText(url);
+    browseResult = await fetchWebsiteIntelligence(url);
+    await maybePersistScreenshot(browseResult.screenshotBase64, opts);
   } catch (e) {
     return buildFallback(url, String(e));
   }
@@ -59,12 +121,18 @@ export async function analyzeWebsite(url: string): Promise<WebsiteAnalysis> {
   const prompt = `You are a marketing and conversion optimization expert analyzing a business website.
 
 Website URL: ${url}
-Website Content (extracted text):
+Website Agent Source: ${browseResult.source}
+ARIA Snapshot (if available):
 ---
-${pageText}
+${browseResult.snapshot || "N/A"}
 ---
 
-Perform a comprehensive website analysis from a business growth perspective. Return valid JSON ONLY:
+Website Content (extracted text):
+---
+${browseResult.text}
+---
+
+Perform a critical website analysis from a business growth perspective. Be direct, specific, and skeptical. Return valid JSON ONLY:
 {
   "grade": "<A/B/C/D/F — overall marketing effectiveness grade>",
   "score": <integer 0-100>,
