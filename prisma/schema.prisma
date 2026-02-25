@@ -1,0 +1,51 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  passwordHash   String
+  name           String?
+  role           String       @default("MEMBER") // ADMIN, MEMBER
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  industry         String?
+  revenueRange     String?
+  businessModel    String?
+  keyConcerns      String?
+  oneDecision      String?
+  primaryObjective String?
+  users            User[]
+  jobs             Job[]
+  createdAt        DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Job {
+  id             String       @id @default(cuid())
+  runId          String       @unique
+  status         String
+  type           String       @default("PLAN") // INGEST, PLAN, EXECUTE
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  questionnaire  String?      // JSON string of questionnaire data
+  filePaths      String?      // JSON string of file paths
+  parsedContext  String?
+  results        String?      // JSON string of MVPDeliverables or agent results
+  error          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
