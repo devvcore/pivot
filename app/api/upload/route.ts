@@ -7,14 +7,13 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const questionnaire = parseQuestionnaire(formData);
 
-    if (!questionnaire.organizationName?.trim()) {
-      return NextResponse.json(
-        { error: "Organization name is required" },
-        { status: 400 }
-      );
+    // Allow upload-first flow: org name can be empty (filled later via chat)
+    const q = { ...questionnaire };
+    if (!q.organizationName?.trim()) {
+      q.organizationName = "TBD";
     }
 
-    const job = createJob(questionnaire, []);
+    const job = createJob(q, []);
     const { filePaths, error: saveError } = await saveUploadedFiles(job.runId, formData);
     if (saveError) {
       return NextResponse.json({ error: saveError }, { status: 400 });

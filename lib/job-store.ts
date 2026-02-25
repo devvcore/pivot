@@ -1,5 +1,5 @@
 import db from "./db";
-import type { Job, Questionnaire, JobStatus, MVPDeliverables } from "./types";
+import type { Job, Questionnaire, JobStatus, MVPDeliverables, KnowledgeGraph } from "./types";
 import { v4 as uuidv4 } from "uuid";
 
 function mapDbToJob(row: any): Job {
@@ -10,6 +10,7 @@ function mapDbToJob(row: any): Job {
     questionnaire: JSON.parse(row.questionnaire_json),
     filePaths: JSON.parse(row.file_paths_json || "[]"),
     parsedContext: row.parsed_context,
+    knowledgeGraph: row.knowledge_graph_json ? JSON.parse(row.knowledge_graph_json) : undefined,
     error: row.error,
     deliverables: row.results_json ? JSON.parse(row.results_json) : undefined,
     createdAt: new Date(row.created_at).getTime(),
@@ -26,14 +27,15 @@ export function createJob(questionnaire: Questionnaire, filePaths: string[]): Jo
   const orgId = "default-org";
 
   const stmt = db.prepare(`
-    INSERT INTO jobs (id, run_id, status, organization_id, questionnaire_json, file_paths_json)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO jobs (id, run_id, status, phase, organization_id, questionnaire_json, file_paths_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
     id,
     runId,
     "pending",
+    "INGEST",
     orgId,
     JSON.stringify(questionnaire),
     JSON.stringify(filePaths)
@@ -49,14 +51,16 @@ export function getJob(runId: string): Job | undefined {
 
 export function updateJob(
   runId: string,
-  updates: Partial<Pick<Job, "status" | "parsedContext" | "deliverables" | "error" | "filePaths" | "phase">>
+  updates: Partial<Pick<Job, "status" | "parsedContext" | "knowledgeGraph" | "deliverables" | "error" | "filePaths" | "phase" | "questionnaire">>
 ): Job | undefined {
   const params: any[] = [];
   const sets: string[] = [];
 
   if (updates.status) { sets.push("status = ?"); params.push(updates.status); }
   if (updates.phase) { sets.push("phase = ?"); params.push(updates.phase); }
+  if (updates.questionnaire) { sets.push("questionnaire_json = ?"); params.push(JSON.stringify(updates.questionnaire)); }
   if (updates.parsedContext !== undefined) { sets.push("parsed_context = ?"); params.push(updates.parsedContext); }
+  if (updates.knowledgeGraph) { sets.push("knowledge_graph_json = ?"); params.push(JSON.stringify(updates.knowledgeGraph)); }
   if (updates.deliverables) { sets.push("results_json = ?"); params.push(JSON.stringify(updates.deliverables)); }
   if (updates.error) { sets.push("error = ?"); params.push(updates.error); }
   if (updates.filePaths) { sets.push("file_paths_json = ?"); params.push(JSON.stringify(updates.filePaths)); }

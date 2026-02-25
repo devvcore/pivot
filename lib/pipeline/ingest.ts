@@ -16,7 +16,7 @@ import { GoogleGenAI } from "@google/genai";
 import type { ParsedFile } from "./parse";
 import type { Questionnaire, BusinessPacket } from "@/lib/types";
 
-const LITE_MODEL = "gemini-2.0-flash-lite";
+const LITE_MODEL = "gemini-3-flash-preview";
 
 const SCHEMA_CATEGORIES = [
   "Team Structure",

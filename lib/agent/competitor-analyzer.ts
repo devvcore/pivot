@@ -20,7 +20,7 @@ import type {
   BusinessPacket,
 } from "@/lib/types";
 
-const FLASH_MODEL = "gemini-2.0-flash";
+const FLASH_MODEL = "gemini-3-flash-preview";
 
 // ── 1. Analyze competitor websites ───────────────────────────────────────────
 

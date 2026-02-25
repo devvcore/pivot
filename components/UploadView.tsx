@@ -1,14 +1,26 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   ArrowLeft, FileText, UploadCloud, X, Send, Loader2,
   Bot, ChevronRight, AlertCircle, CheckCircle2, Building2,
+  ShieldAlert, TrendingUp, Info, Mic, MicOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { ChatMessage, Questionnaire } from "@/lib/types";
 
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv";
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: (e: { results: unknown }) => void;
+  onend: () => void;
+  onerror: () => void;
+  start: () => void;
+  stop: () => void;
+}
 const MAX_FILE_MB = 50;
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
@@ -102,43 +114,206 @@ function IndustryAutocomplete({
   );
 }
 
+// ── Schema coverage estimation ────────────────────────────────────────────────
+
+const SCHEMA_CATEGORIES = [
+  "Team Structure",
+  "Compensation & HR",
+  "Financial Position",
+  "Revenue Model",
+  "Customer Portfolio",
+  "Operations",
+  "Sales & Pipeline",
+  "Market & Competition",
+  "Strategy & Planning",
+  "Risk & Compliance",
+] as const;
+
+const CRITICAL_CATEGORIES = ["Financial Position", "Revenue Model", "Customer Portfolio"] as const;
+
+const CATEGORY_SUGGESTIONS: Record<string, string> = {
+  "Financial Position": "P&L statements, balance sheets, bank statements, or cash flow reports",
+  "Revenue Model": "Invoices, pricing sheets, sales reports, or revenue breakdowns",
+  "Customer Portfolio": "Customer list, CRM export, account summaries, or client roster",
+  "Team Structure": "Org chart, team roster, or employee directory",
+  "Operations": "Process documentation, SOPs, or operational reports",
+  "Sales & Pipeline": "Pipeline data, funnel metrics, or sales forecasts",
+  "Strategy & Planning": "Strategic plans, roadmaps, or business plans",
+  "Compensation & HR": "Payroll data, compensation plans, or HR reports",
+  "Market & Competition": "Market research, competitive analysis, or industry reports",
+  "Risk & Compliance": "Risk assessments, compliance reports, or legal documents",
+};
+
+function guessFileCategory(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.includes("financial") || lower.includes("finance") || lower.includes("cash") || lower.includes("p&l") || lower.includes("balance") || lower.includes("bank")) return "Financial Position";
+  if (lower.includes("customer") || lower.includes("client") || lower.includes("account") || lower.includes("crm")) return "Customer Portfolio";
+  if (lower.includes("revenue") || lower.includes("sales") || lower.includes("invoice") || lower.includes("pricing")) return "Revenue Model";
+  if (lower.includes("team") || lower.includes("staff") || lower.includes("org") || lower.includes("employee")) return "Team Structure";
+  if (lower.includes("hr") || lower.includes("payroll") || lower.includes("compensation") || lower.includes("salary")) return "Compensation & HR";
+  if (lower.includes("strategy") || lower.includes("plan") || lower.includes("roadmap") || lower.includes("business plan")) return "Strategy & Planning";
+  if (lower.includes("risk") || lower.includes("compliance") || lower.includes("legal") || lower.includes("audit")) return "Risk & Compliance";
+  if (lower.includes("market") || lower.includes("competitor") || lower.includes("competitive") || lower.includes("industry")) return "Market & Competition";
+  if (lower.includes("operation") || lower.includes("process") || lower.includes("procedure") || lower.includes("sop")) return "Operations";
+  if (lower.includes("pipeline") || lower.includes("funnel") || lower.includes("deal") || lower.includes("lead")) return "Sales & Pipeline";
+  return "Other";
+}
+
+function CoverageIndicator({ files }: { files: StagedFile[] }) {
+  const coverage = useMemo(() => {
+    const covered = new Set<string>();
+    for (const f of files) {
+      const cat = guessFileCategory(f.name);
+      if (cat !== "Other") covered.add(cat);
+    }
+    return covered;
+  }, [files]);
+
+  const criticalGaps = CRITICAL_CATEGORIES.filter((c) => !coverage.has(c));
+  const allGaps = SCHEMA_CATEGORIES.filter((c) => !coverage.has(c));
+  const pct = Math.round((coverage.size / SCHEMA_CATEGORIES.length) * 100);
+
+  if (files.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm"
+    >
+      <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+          <TrendingUp className="w-3 h-3" />
+          Data Coverage Estimate
+        </span>
+        <span className={`text-[10px] font-mono uppercase tracking-wider font-bold ${
+          pct >= 60 ? "text-green-600" : pct >= 30 ? "text-amber-600" : "text-zinc-400"
+        }`}>
+          {pct}%
+        </span>
+      </div>
+
+      <div className="p-4 space-y-3">
+        {/* Coverage bar */}
+        <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+          <motion.div
+            className={`h-full rounded-full ${
+              pct >= 60 ? "bg-green-500" : pct >= 30 ? "bg-amber-500" : "bg-zinc-300"
+            }`}
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+        </div>
+
+        {/* Category pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {SCHEMA_CATEGORIES.map((cat) => (
+            <span
+              key={cat}
+              className={`text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                coverage.has(cat)
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : CRITICAL_CATEGORIES.includes(cat as typeof CRITICAL_CATEGORIES[number])
+                    ? "bg-red-50 text-red-500 border border-red-200"
+                    : "bg-zinc-50 text-zinc-400 border border-zinc-200"
+              }`}
+            >
+              {coverage.has(cat) && <CheckCircle2 className="w-2.5 h-2.5" />}
+              {!coverage.has(cat) && CRITICAL_CATEGORIES.includes(cat as typeof CRITICAL_CATEGORIES[number]) && (
+                <ShieldAlert className="w-2.5 h-2.5" />
+              )}
+              {cat}
+            </span>
+          ))}
+        </div>
+
+        {/* Critical gaps warning */}
+        {criticalGaps.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+            <div className="text-[10px] font-mono text-amber-700 uppercase tracking-widest font-bold flex items-center gap-1.5">
+              <Info className="w-3 h-3" />
+              Critical data gaps — upload more for better results
+            </div>
+            <div className="space-y-1">
+              {criticalGaps.map((cat) => (
+                <div key={cat} className="text-[11px] text-amber-800 leading-snug">
+                  <span className="font-medium">{cat}:</span>{" "}
+                  <span className="text-amber-600">{CATEGORY_SUGGESTIONS[cat]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Additional suggestions for non-critical gaps */}
+        {criticalGaps.length === 0 && allGaps.length > 0 && (
+          <div className="text-[10px] text-zinc-500 flex items-start gap-1.5">
+            <Info className="w-3 h-3 shrink-0 mt-0.5" />
+            <span>
+              Good coverage on critical data. For even deeper analysis, add documents for: {allGaps.slice(0, 3).join(", ")}.
+            </span>
+          </div>
+        )}
+
+        {allGaps.length === 0 && (
+          <div className="text-[10px] text-green-700 flex items-center gap-1.5 font-medium">
+            <CheckCircle2 className="w-3 h-3" />
+            Excellent coverage across all categories — ready for deep analysis.
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
-  // Chat state
+  // Flow: 01 Upload (files first) → 02 Chat (fill gaps) → 03 Analyze
+  const [phase, setPhase] = useState<"upload" | "chat">("upload");
+  const [runId, setRunId] = useState<string | null>(null);
+
+  // Upload phase state
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Chat phase state (fill gaps)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [extracted, setExtracted] = useState<Partial<Questionnaire>>({});
-  const [phase, setPhase] = useState<"onboarding" | "upload">("onboarding");
+  const [extractedFromDocs, setExtractedFromDocs] = useState<Partial<Questionnaire>>({});
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  // Upload state
-  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
-  const [dragActive, setDragActive] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [chatComplete, setChatComplete] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
 
-  // Load welcome message
+  // Load welcome when entering chat phase
   useEffect(() => {
-    fetch("/api/onboarding/chat")
+    if (phase !== "chat") return;
+    const qs = extractedFromDocs && Object.keys(extractedFromDocs).length > 0
+      ? `?extracted=${encodeURIComponent(JSON.stringify(extractedFromDocs))}`
+      : "";
+    fetch(`/api/onboarding/chat${qs}`)
       .then((r) => r.json())
       .then((d) => {
         setMessages([{ role: "assistant", content: d.message, timestamp: Date.now() }]);
       })
       .catch(() => {
-        setMessages([
-          {
-            role: "assistant",
-            content:
-              "Welcome to Pivot. I'm Pivvy, your business intelligence advisor.\n\nBefore we run your analysis, I have a few quick questions to understand your business. What is the name of your business, and what industry are you in?",
-            timestamp: Date.now(),
-          },
-        ]);
+        setMessages([{
+          role: "assistant",
+          content: "Welcome. I have a few quick questions to fill in the gaps. What is your business name, and what industry are you in?",
+          timestamp: Date.now(),
+        }]);
       });
-  }, []);
+  }, [phase, extractedFromDocs]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -158,6 +333,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
         body: JSON.stringify({
           messages: messages.slice(-12),
           message: text.trim(),
+          extractedFromDocs: Object.keys(extractedFromDocs).length > 0 ? extractedFromDocs : undefined,
         }),
       });
       const data = await res.json();
@@ -169,13 +345,12 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
       };
       setMessages((prev) => [...prev, assistantMsg]);
 
-      // Merge extracted fields
       if (data.extracted) {
         setExtracted((prev) => ({ ...prev, ...data.extracted }));
       }
 
       if (data.complete) {
-        setPhase("upload");
+        setChatComplete(true);
         setTimeout(() => inputRef.current?.focus(), 200);
       }
     } catch {
@@ -189,11 +364,82 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
     }
   };
 
+  const handleContinueFromUpload = async () => {
+    setError(null);
+    if (stagedFiles.length === 0) {
+      setError("Add at least one document to continue.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("organizationName", "");
+      formData.set("industry", "");
+      formData.set("revenueRange", "$0 - $10M");
+      formData.set("businessModel", "");
+      formData.set("keyConcerns", "");
+      formData.set("oneDecisionKeepingOwnerUpAtNight", "");
+      if (websiteUrl.trim()) formData.set("website", websiteUrl.trim());
+      stagedFiles.forEach((f) => formData.append("files", f.file));
+
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!uploadRes.ok) {
+        const d = await uploadRes.json().catch(() => ({}));
+        throw new Error(d.error || uploadRes.statusText);
+      }
+      const { runId: id } = await uploadRes.json();
+      if (!id) throw new Error("No runId returned");
+      setRunId(id);
+
+      const extractRes = await fetch("/api/job/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: id, website: websiteUrl.trim() || undefined }),
+      });
+      const extractData = extractRes.ok ? await extractRes.json() : { extracted: {} };
+      const fromDocs = extractData.extracted ?? {};
+      setExtractedFromDocs(fromDocs);
+      setExtracted((prev) => ({ ...fromDocs, ...prev }));
+
+      setPhase("chat");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send(input);
     }
+  };
+
+  const toggleVoice = () => {
+    const win = typeof window !== "undefined" ? window : null;
+    const SpeechRecognitionAPI = win && ((win as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike }).SpeechRecognition || (win as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionLike }).webkitSpeechRecognition);
+    if (!SpeechRecognitionAPI) return;
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognitionAPI() as SpeechRecognitionLike;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onresult = (e: { results: unknown }) => {
+      const results = e.results as Array<Array<{ transcript: string }>>;
+      const last = results[results.length - 1];
+      const transcript = (last && last[0] ? last[0].transcript : "").trim();
+      if (transcript) send(transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
   };
 
   // Check if input likely mentions an industry for autocomplete
@@ -214,38 +460,36 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
     setStagedFiles((prev) => [...prev, ...next]);
   }, []);
 
-  const handleSubmit = async () => {
+  const handleLaunchAnalysis = async () => {
     setError(null);
-    if (!extracted.organizationName?.trim()) {
-      setError("Organization name is required — please complete the chat first.");
+    if (!runId) return;
+    if (!extracted.organizationName?.trim() || extracted.organizationName === "TBD") {
+      setError("Business name is required — please complete the chat.");
       return;
     }
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.set("organizationName", extracted.organizationName ?? "");
-      formData.set("industry", extracted.industry ?? "");
-      formData.set("revenueRange", extracted.revenueRange ?? "$0 - $10M");
-      formData.set("businessModel", extracted.businessModel ?? "");
-      formData.set("keyConcerns", extracted.keyConcerns ?? "");
-      formData.set("oneDecisionKeepingOwnerUpAtNight", extracted.oneDecisionKeepingOwnerUpAtNight ?? "");
-      if (extracted.website) formData.set("website", extracted.website);
-      if (extracted.websiteVisitorsPerDay)
-        formData.set("websiteVisitorsPerDay", String(extracted.websiteVisitorsPerDay));
-      if (extracted.keyCompetitors) formData.set("keyCompetitors", extracted.keyCompetitors);
-      if (extracted.location) formData.set("location", extracted.location);
-      if (extracted.techStack) formData.set("techStack", extracted.techStack);
-      if (extracted.competitorUrls?.length)
-        formData.set("competitorUrls", JSON.stringify(extracted.competitorUrls));
-      stagedFiles.forEach((f) => formData.append("files", f.file));
+      const questionnaire: Questionnaire = {
+        organizationName: extracted.organizationName ?? "",
+        industry: extracted.industry ?? "",
+        revenueRange: extracted.revenueRange ?? "$0 - $10M",
+        businessModel: extracted.businessModel ?? "",
+        keyConcerns: extracted.keyConcerns ?? "",
+        oneDecisionKeepingOwnerUpAtNight: extracted.oneDecisionKeepingOwnerUpAtNight ?? "",
+        website: extracted.website,
+        websiteVisitorsPerDay: extracted.websiteVisitorsPerDay,
+        keyCompetitors: extracted.keyCompetitors,
+        location: extracted.location,
+        techStack: extracted.techStack,
+        competitorUrls: extracted.competitorUrls,
+      };
 
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!uploadRes.ok) {
-        const d = await uploadRes.json().catch(() => ({}));
-        throw new Error(d.error || uploadRes.statusText);
-      }
-      const { runId } = await uploadRes.json();
-      if (!runId) throw new Error("No runId returned");
+      const updateRes = await fetch("/api/job/update-questionnaire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId, questionnaire }),
+      });
+      if (!updateRes.ok) throw new Error("Failed to update");
 
       const runRes = await fetch("/api/job", {
         method: "POST",
@@ -258,7 +502,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
       }
       onUploadComplete(runId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "Launch failed");
     } finally {
       setSubmitting(false);
     }
@@ -278,37 +522,149 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
           <div>
             <div className="font-bold tracking-tight text-lg text-zinc-900 leading-none">Pivot</div>
             <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-1">
-              {phase === "onboarding" ? "Business Onboarding" : "Document Upload"}
+              {phase === "upload" ? "Document Upload" : "Fill the Gaps"}
             </div>
           </div>
         </div>
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
-          <span className={phase === "onboarding" ? "text-zinc-900 font-bold" : ""}>01 Chat</span>
+          <span className={phase === "upload" ? "text-zinc-900 font-bold" : ""}>01 Upload</span>
           <span>→</span>
-          <span className={phase === "upload" ? "text-zinc-900 font-bold" : ""}>02 Upload</span>
+          <span className={phase === "chat" ? "text-zinc-900 font-bold" : ""}>02 Chat</span>
           <span>→</span>
           <span>03 Analyze</span>
         </div>
       </header>
 
       <AnimatePresence mode="wait">
-        {/* ── Phase A: Onboarding Chat ── */}
-        {phase === "onboarding" && (
+        {/* ── Phase A: Upload First ── */}
+        {phase === "upload" && (
           <motion.div
-            key="onboarding"
+            key="upload"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex-1 p-8 lg:p-12 overflow-y-auto"
+          >
+            <div className="max-w-3xl mx-auto space-y-8">
+              <div>
+                <h2 className="text-sm font-medium text-zinc-900 mb-2">Drop your documents first</h2>
+                <p className="text-sm text-zinc-500 mb-6">
+                  Upload P&amp;L statements, cash flow reports, invoices, customer lists — anything that shows your business. I will extract what I can, then ask only for what is missing.
+                </p>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_TYPES}
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+                />
+
+                <motion.div
+                  whileHover={{ scale: 1.005 }}
+                  whileTap={{ scale: 0.995 }}
+                  className={`border border-dashed p-10 rounded-2xl text-center flex flex-col items-center justify-center cursor-pointer group transition-all ${
+                    dragActive ? "border-zinc-900 bg-zinc-50 ring-4 ring-zinc-900/5" : "border-zinc-200 bg-white hover:border-zinc-400 hover:shadow-lg"
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragActive(false); addFiles(e.dataTransfer.files); }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-zinc-900 group-hover:text-white transition-colors">
+                    <UploadCloud className="w-6 h-6" />
+                  </div>
+                  <div className="text-sm font-medium text-zinc-900 mb-1">Drop files here or click to browse</div>
+                  <div className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">
+                    PDF, DOCX, XLSX, CSV, PPTX · Max 50MB per file
+                  </div>
+                </motion.div>
+
+                <AnimatePresence>
+                  {stagedFiles.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm"
+                    >
+                      <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Staged Files ({stagedFiles.length})</span>
+                        <button type="button" onClick={() => setStagedFiles([])} className="text-[10px] font-mono text-zinc-400 hover:text-red-500 transition-colors">Clear All</button>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto divide-y divide-zinc-50">
+                        {stagedFiles.map((f) => (
+                          <motion.div key={f.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 flex items-center justify-between group hover:bg-zinc-50 transition-colors">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <FileText className="w-4 h-4 text-zinc-300 shrink-0" />
+                              <div className="truncate">
+                                <div className="text-xs text-zinc-900 font-medium truncate">{f.name}</div>
+                                <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider mt-0.5">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => setStagedFiles((p) => p.filter((x) => x.id !== f.id))} className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-white rounded transition-all opacity-0 group-hover:opacity-100">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Website URL (optional)</label>
+                <input
+                  type="url"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  placeholder="https://yourcompany.com"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-900 focus:outline-none transition-all"
+                />
+              </div>
+
+              <CoverageIndicator files={stagedFiles} />
+
+              <button
+                onClick={handleContinueFromUpload}
+                disabled={uploading || stagedFiles.length === 0}
+                className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group overflow-hidden relative rounded-xl"
+              >
+                <ChevronRight className="w-4 h-4" />
+                {uploading ? "Extracting from documents…" : "Continue to Chat"}
+                {uploading && (
+                  <motion.div className="absolute inset-0 bg-zinc-800" initial={{ left: "-100%" }} animate={{ left: "0%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
+                )}
+              </button>
+
+              {stagedFiles.length === 0 && <p className="text-center text-[11px] text-zinc-400">Add at least one document to continue.</p>}
+              {error && phase === "upload" && (
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <div className="text-xs text-red-700 leading-normal">{error}</div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Phase B: Chat (fill gaps) ── */}
+        {phase === "chat" && (
+          <motion.div
+            key="chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, x: -30 }}
             className="flex-1 flex flex-col max-w-2xl mx-auto w-full"
           >
-            {/* Field progress */}
             <div className="pt-3">
               <FieldPills extracted={extracted} />
             </div>
 
-            {/* Chat messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
               {messages.map((msg, i) => (
                 <motion.div
@@ -360,7 +716,8 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
               <div ref={bottomRef} />
             </div>
 
-            {/* Input */}
+            {/* Input (hide when complete) */}
+            {!chatComplete && (
             <div className="border-t border-zinc-100 bg-white px-4 py-3">
               <div className="flex gap-2 items-end relative">
                 {showIndustryAutocomplete && (
@@ -386,6 +743,16 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
                   style={{ minHeight: "42px" }}
                 />
                 <button
+                  type="button"
+                  onClick={toggleVoice}
+                  title="Voice input (speak to chat)"
+                  className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all shrink-0 ${
+                    isListening ? "bg-red-500 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+                <button
                   onClick={() => send(input)}
                   disabled={!input.trim() || loading}
                   className="flex items-center justify-center w-9 h-9 bg-zinc-900 text-white rounded-xl hover:bg-zinc-700 disabled:opacity-40 transition-all shrink-0"
@@ -394,170 +761,59 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
                 </button>
               </div>
               <div className="text-[9px] font-mono text-zinc-400 text-center mt-2 uppercase tracking-widest">
-                Pivvy will collect your business information · then ask for documents
+                Pivvy fills gaps from your documents · then you launch
               </div>
             </div>
-          </motion.div>
-        )}
+            )}
 
-        {/* ── Phase B: Document Upload ── */}
-        {phase === "upload" && (
-          <motion.div
-            key="upload"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 p-8 lg:p-12 overflow-y-auto"
-          >
-            <div className="max-w-3xl mx-auto space-y-8">
-              {/* Collected info summary */}
-              <div className="bg-zinc-900 text-white rounded-2xl p-6">
-                <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                  Onboarding Complete — Here's What I Captured
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Business", value: extracted.organizationName },
-                    { label: "Industry", value: extracted.industry },
-                    { label: "Website", value: extracted.website },
-                    { label: "Revenue Range", value: extracted.revenueRange },
-                    { label: "Offer", value: extracted.businessModel },
-                    { label: "Competitors", value: extracted.keyCompetitors },
-                  ].filter((f) => f.value).map(({ label, value }) => (
-                    <div key={label}>
-                      <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{label}</div>
-                      <div className="text-sm text-white mt-0.5 truncate">{value}</div>
-                    </div>
-                  ))}
+            {/* Launch section when chat complete */}
+            {chatComplete && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="border-t border-zinc-100 bg-white px-4 py-6 space-y-4"
+              >
+                <div className="bg-zinc-900 text-white rounded-2xl p-6">
+                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                    Ready to Launch
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Business", value: extracted.organizationName },
+                      { label: "Industry", value: extracted.industry },
+                      { label: "Website", value: extracted.website },
+                      { label: "Revenue", value: extracted.revenueRange },
+                      { label: "Offer", value: extracted.businessModel },
+                      { label: "Competitors", value: extracted.keyCompetitors },
+                    ].filter((f) => f.value && f.value !== "TBD").map(({ label, value }) => (
+                      <div key={label}>
+                        <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{label}</div>
+                        <div className="text-sm text-white mt-0.5 truncate">{value}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <button
-                  onClick={() => setPhase("onboarding")}
-                  className="mt-4 text-[10px] font-mono text-zinc-400 hover:text-white transition-colors uppercase tracking-wider"
-                >
-                  ← Edit info
-                </button>
-              </div>
-
-              {/* Document upload */}
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] font-mono font-bold text-zinc-400 border border-zinc-200">
-                    02
-                  </div>
-                  <h2 className="text-xs font-mono text-zinc-900 uppercase tracking-[0.2em]">Upload Your Documents</h2>
-                </div>
-                <p className="text-sm text-zinc-500 mb-6">
-                  Upload P&amp;L statements, cash flow reports, invoices, customer lists, payroll — anything that shows your
-                  business's financial and operational state. The more you share, the deeper the analysis.
-                </p>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPTED_TYPES}
-                  multiple
-                  className="hidden"
-                  onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
-                />
-
-                <motion.div
-                  whileHover={{ scale: 1.005 }}
-                  whileTap={{ scale: 0.995 }}
-                  className={`border border-dashed p-10 rounded-2xl text-center flex flex-col items-center justify-center cursor-pointer group transition-all ${
-                    dragActive
-                      ? "border-zinc-900 bg-zinc-50 ring-4 ring-zinc-900/5"
-                      : "border-zinc-200 bg-white hover:border-zinc-400 hover:shadow-lg"
-                  }`}
-                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                  onDragLeave={() => setDragActive(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragActive(false); addFiles(e.dataTransfer.files); }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-zinc-900 group-hover:text-white transition-colors">
-                    <UploadCloud className="w-6 h-6" />
-                  </div>
-                  <div className="text-sm font-medium text-zinc-900 mb-1">Drop files here or click to browse</div>
-                  <div className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">
-                    PDF, DOCX, XLSX, CSV, PPTX · Max 50MB per file
-                  </div>
-                </motion.div>
-
-                <AnimatePresence>
-                  {stagedFiles.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-4 bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm"
-                    >
-                      <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
-                          Staged Files ({stagedFiles.length})
-                        </span>
-                        <button type="button" onClick={() => setStagedFiles([])} className="text-[10px] font-mono text-zinc-400 hover:text-red-500 transition-colors">
-                          Clear All
-                        </button>
-                      </div>
-                      <div className="max-h-60 overflow-y-auto divide-y divide-zinc-50">
-                        {stagedFiles.map((f) => (
-                          <motion.div key={f.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 flex items-center justify-between group hover:bg-zinc-50 transition-colors">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <FileText className="w-4 h-4 text-zinc-300 shrink-0" />
-                              <div className="truncate">
-                                <div className="text-xs text-zinc-900 font-medium truncate">{f.name}</div>
-                                <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider mt-0.5">
-                                  {(f.size / 1024 / 1024).toFixed(2)} MB
-                                </div>
-                              </div>
-                            </div>
-                            <button type="button" onClick={() => setStagedFiles((p) => p.filter((x) => x.id !== f.id))} className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-white rounded transition-all opacity-0 group-hover:opacity-100">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Launch button */}
-              <div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || stagedFiles.length === 0}
+                  onClick={handleLaunchAnalysis}
+                  disabled={submitting}
                   className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group overflow-hidden relative rounded-xl"
                 >
-                  <Building2 className="w-4 h-4 relative z-10" />
-                  <span className="relative z-10">
-                    {submitting ? "Launching Analysis…" : "Launch Intelligence Analysis"}
-                  </span>
-                  {!submitting && <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />}
+                  <Building2 className="w-4 h-4" />
+                  {submitting ? "Launching…" : "Launch Intelligence Analysis"}
+                  <ChevronRight className="w-4 h-4" />
                   {submitting && (
-                    <motion.div
-                      className="absolute inset-0 bg-zinc-800"
-                      initial={{ left: "-100%" }}
-                      animate={{ left: "0%" }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    />
+                    <motion.div className="absolute inset-0 bg-zinc-800" initial={{ left: "-100%" }} animate={{ left: "0%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
                   )}
                 </button>
-
-                {stagedFiles.length === 0 && (
-                  <p className="text-center text-[11px] text-zinc-400 mt-3">
-                    Upload at least one document to begin the analysis.
-                  </p>
-                )}
-
-                {error && (
-                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                {error && phase === "chat" && (
+                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                     <div className="text-xs text-red-700 leading-normal">{error}</div>
                   </motion.div>
                 )}
-              </div>
-            </div>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 interface JobSummary {
   runId: string;
   status: string;
+  phase: "INGEST" | "PLAN" | "EXECUTE";
   orgName: string;
   industry?: string;
   createdAt: number;
@@ -26,6 +27,12 @@ const GRADE_COLORS: Record<string, { text: string; bg: string; border: string }>
   C: { text: "text-yellow-700", bg: "bg-yellow-50", border: "border-yellow-200" },
   D: { text: "text-orange-700", bg: "bg-orange-50", border: "border-orange-200" },
   F: { text: "text-red-700", bg: "bg-red-50", border: "border-red-200" },
+};
+
+const PHASE_CONFIG: Record<string, { label: string; textClass: string; bgClass: string; borderClass: string }> = {
+  INGEST:  { label: "Ingesting",  textClass: "text-blue-700",   bgClass: "bg-blue-50",   borderClass: "border-blue-200" },
+  PLAN:    { label: "Planning",   textClass: "text-violet-700", bgClass: "bg-violet-50", borderClass: "border-violet-200" },
+  EXECUTE: { label: "Executing",  textClass: "text-emerald-700", bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; dotClass: string; textClass: string }> = {
@@ -236,6 +243,14 @@ export function DashboardView({ onStartNew, onViewRun }: DashboardViewProps) {
                               <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${cfg.textClass}`}>
                                 {cfg.label}
                               </span>
+                              {(() => {
+                                const ph = PHASE_CONFIG[job.phase] ?? PHASE_CONFIG.INGEST;
+                                return (
+                                  <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${ph.textClass} ${ph.bgClass} ${ph.borderClass}`}>
+                                    {ph.label}
+                                  </span>
+                                );
+                              })()}
                               {job.industry && (
                                 <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
                                   {job.industry}
@@ -297,7 +312,7 @@ export function DashboardView({ onStartNew, onViewRun }: DashboardViewProps) {
                                 onClick={() => onViewRun(job.runId)}
                                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-700 transition-all rounded-lg shadow-sm"
                               >
-                                View Report <ChevronRight className="w-3.5 h-3.5" />
+                                {job.phase === "EXECUTE" ? "View Execution" : "View Report"} <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             ) : job.status === "failed" ? (
                               <span className="flex items-center gap-1.5 text-[10px] font-mono text-red-600 bg-red-50 border border-red-100 px-2.5 py-1.5 rounded-lg">

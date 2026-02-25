@@ -1,9 +1,8 @@
 /**
  * Synthesis Engine — intelligence core of Pivot.
  *
- * Ported from ItelSys synthesis_engine.py:
- * - 8 deliverables (Health, Cash, Revenue Leaks, Issues, At-Risk Customers,
- *   Decision Brief, Action Plan, Growth Intelligence)
+ * 8 deliverables (Health, Cash, Revenue Leaks, Issues, At-Risk Customers,
+ * Decision Brief, Action Plan, Growth Intelligence) generated via Gemini 2.5 Flash.
  * - Per-deliverable API calls with focused prompts
  * - Rate-limit retry: detects 429, sleeps the suggested wait time, retries up to 6x
  * - Growth Intelligence includes Google Search grounding attempt with fallback
@@ -73,7 +72,7 @@ async function callWithRetry<T>(fn: () => Promise<T>, attempt = 0): Promise<T> {
 async function callJson(
   genai: GoogleGenAI,
   prompt: string,
-  model = "gemini-2.0-flash"
+  model = "gemini-3-flash-preview"
 ): Promise<Record<string, unknown>> {
   return callWithRetry(async () => {
     const resp = await genai.models.generateContent({
@@ -96,7 +95,7 @@ async function callText(
   genai: GoogleGenAI,
   prompt: string,
   useSearch = false,
-  model = "gemini-2.0-flash"
+  model = "gemini-3-flash-preview"
 ): Promise<string> {
   return callWithRetry(async () => {
     const config: Record<string, unknown> = {
@@ -130,7 +129,8 @@ export async function synthesizeDeliverables(
 
   const genai = new GoogleGenAI({ apiKey });
   // Use lean structured packet context (much smaller than raw KnowledgeGraph JSON)
-  const kg = formatPacketAsContext(packet);
+  // Cap at 60K chars to stay within model context limits
+  const kg = formatPacketAsContext(packet).slice(0, 60_000);
 
   try {
     console.log("[Pivot] Generating Health Score…");

@@ -58,6 +58,9 @@ db.exec(`
     )
 `);
 
+// Jobs: knowledge graph column for schema coverage tracking
+addColumnIfMissing("jobs", "knowledge_graph_json", "TEXT");
+
 // Ensure default org exists for MVP
 const orgCheck = db.prepare("SELECT id FROM organizations WHERE id = 'default-org'").get();
 if (!orgCheck) {

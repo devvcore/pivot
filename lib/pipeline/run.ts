@@ -23,6 +23,7 @@
 import { getJob, updateJob } from "@/lib/job-store";
 import { parseFiles } from "./parse";
 import { ingestDocuments } from "./ingest";
+import { categorizeAndBuildGraph } from "./categorize";
 import {
   synthesizeDeliverables,
   synthesizeTechOptimization,
@@ -46,10 +47,19 @@ export async function runPipeline(runId: string): Promise<void> {
     updateJob(runId, { status: "parsing" });
     const parsedFiles = await parseFiles(runId, job.filePaths);
 
-    // ── Step 2: Stage 1 — Gemini Lite ingestion → BusinessPacket ─────────
+    // ── Step 2: Stage 1 — Parallel ingestion ─────────────────────────────
+    // Run both paths concurrently:
+    //   a) BusinessPacket (lean extraction for synthesis prompts)
+    //   b) Knowledge Graph (rich categorization for schema coverage tracking)
     updateJob(runId, { status: "ingesting" });
-    const businessPacket = await ingestDocuments(parsedFiles, job.questionnaire);
-    updateJob(runId, { parsedContext: JSON.stringify(businessPacket) });
+    const [businessPacket, knowledgeGraph] = await Promise.all([
+      ingestDocuments(parsedFiles, job.questionnaire),
+      categorizeAndBuildGraph(parsedFiles, job.questionnaire),
+    ]);
+    updateJob(runId, {
+      parsedContext: JSON.stringify(businessPacket),
+      knowledgeGraph,
+    });
 
     // ── Step 3: Stage 2 — Gemini Flash synthesis → 8 deliverables ────────
     updateJob(runId, { status: "synthesizing" });
@@ -153,8 +163,8 @@ export async function runPipeline(runId: string): Promise<void> {
     updateJob(runId, { status: "formatting" });
     await formatAndSave(runId, deliverables);
 
-    updateJob(runId, { status: "completed" });
-    console.log("[Pivot] Pipeline complete for run:", runId);
+    updateJob(runId, { status: "completed", phase: "PLAN" });
+    console.log("[Pivot] Pipeline complete for run:", runId, "— transitioned to PLAN phase");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[Pivot] Pipeline failed:", message);

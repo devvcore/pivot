@@ -13,7 +13,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { WebsiteAnalysis } from "@/lib/types";
 
-const LITE_MODEL = "gemini-2.0-flash-lite";
+const LITE_MODEL = "gemini-3-flash-preview";
 
 async function fetchWebsiteText(url: string): Promise<string> {
   try {

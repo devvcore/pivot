@@ -55,6 +55,7 @@ CREATE TABLE jobs (
     questionnaire_json TEXT,
     file_paths_json TEXT,
     parsed_context TEXT,                  -- BusinessPacket JSON (Stage 1 output)
+    knowledge_graph_json TEXT,            -- KnowledgeGraph JSON (categorized docs + schema coverage)
     results_json TEXT,                    -- MVPDeliverables JSON
     error TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

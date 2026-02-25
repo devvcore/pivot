@@ -8,6 +8,7 @@ export async function GET() {
         return {
             runId: j.runId,
             status: j.status,
+            phase: j.phase ?? "INGEST",
             orgName: j.questionnaire.organizationName,
             industry: j.questionnaire.industry,
             createdAt: j.createdAt,

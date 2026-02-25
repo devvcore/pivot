@@ -21,7 +21,7 @@ import { analyzeWebsite } from "./website-analyzer";
 import { getJob, listJobs } from "@/lib/job-store";
 import type { ChatMessage, AgentMemory, MVPDeliverables } from "@/lib/types";
 
-const FLASH_MODEL = "gemini-2.0-flash";
+const FLASH_MODEL = "gemini-3-flash-preview";
 const MAX_HISTORY_MESSAGES = 16;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────

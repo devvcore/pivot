@@ -6,11 +6,12 @@ import { DashboardView } from "@/components/DashboardView";
 import { UploadView } from "@/components/UploadView";
 import { ProcessingView } from "@/components/ProcessingView";
 import { ResultsView } from "@/components/ResultsView";
+import { motion, AnimatePresence } from "motion/react";
+import { Building2 } from "lucide-react";
 
 const RUN_ID_KEY = "pivot_runId";
 
-import { motion, AnimatePresence } from "motion/react";
-import { Building2 } from "lucide-react";
+type AppView = "dashboard" | "upload" | "processing" | "results";
 
 interface UserProfile {
   id: string;
@@ -21,7 +22,7 @@ interface UserProfile {
 
 export default function Home() {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [view, setView] = useState<"dashboard" | "upload" | "processing" | "results">("dashboard");
+  const [view, setView] = useState<AppView>("dashboard");
   const [runId, setRunId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,9 +59,12 @@ export default function Home() {
     fetch(`/api/job?runId=${encodeURIComponent(runId)}`)
       .then((r) => r.ok ? r.json() : null)
       .then((job) => {
-        if (job?.status === "completed") setView("results");
-        else if (job?.status === "failed") setView("results");
-        else setView("processing");
+        if (!job) return;
+        if (job.status === "completed" || job.status === "failed") {
+          setView("results");
+        } else {
+          setView("processing");
+        }
       })
       .catch(() => setView("processing"));
   }, [runId, view]);

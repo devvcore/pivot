@@ -14,7 +14,7 @@ import { GoogleGenAI } from "@google/genai";
 import db from "@/lib/db";
 import type { MVPDeliverables, AgentMemory, WebsiteAnalysis } from "@/lib/types";
 
-const LITE_MODEL = "gemini-2.0-flash-lite";
+const LITE_MODEL = "gemini-3-flash-preview";
 
 export async function buildAgentMemory(
   orgId: string,

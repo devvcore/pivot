@@ -116,7 +116,7 @@ Return valid JSON only with this exact structure:
 
   try {
     const resp = await genai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -162,6 +162,85 @@ function buildKnowledgeGraph(docs: CategorizedDoc[], questionnaire: Questionnair
     categories,
     schemaCoverage,
     allDocuments: docs,
+  };
+}
+
+// Categories that are critical for producing high-quality deliverables.
+// Missing these will degrade synthesis quality significantly.
+const CRITICAL_CATEGORIES = [
+  "Financial Position",
+  "Revenue Model",
+  "Customer Portfolio",
+] as const;
+
+const IMPORTANT_CATEGORIES = [
+  "Team Structure",
+  "Operations",
+  "Sales & Pipeline",
+  "Strategy & Planning",
+] as const;
+
+export interface CoverageAnalysis {
+  totalDocuments: number;
+  coveredCategories: string[];
+  missingCategories: string[];
+  criticalGaps: string[];
+  importantGaps: string[];
+  coveragePercent: number;
+  readyForSynthesis: boolean;
+  suggestions: string[];
+}
+
+export function analyzeCoverage(graph: KnowledgeGraph): CoverageAnalysis {
+  const covered = Object.entries(graph.schemaCoverage)
+    .filter(([, has]) => has)
+    .map(([cat]) => cat);
+  const missing = Object.entries(graph.schemaCoverage)
+    .filter(([, has]) => !has)
+    .map(([cat]) => cat)
+    .filter((cat) => cat !== "Other");
+
+  const criticalGaps = CRITICAL_CATEGORIES.filter(
+    (cat) => !graph.schemaCoverage[cat]
+  );
+  const importantGaps = IMPORTANT_CATEGORIES.filter(
+    (cat) => !graph.schemaCoverage[cat]
+  );
+
+  const scorableCategories = SCHEMA_CATEGORIES.filter((c) => c !== "Other");
+  const coveragePercent = Math.round(
+    (covered.filter((c) => c !== "Other").length / scorableCategories.length) * 100
+  );
+
+  const suggestions: string[] = [];
+  if (criticalGaps.includes("Financial Position")) {
+    suggestions.push("Upload financial statements, P&L reports, or bank statements for accurate cash and revenue analysis.");
+  }
+  if (criticalGaps.includes("Revenue Model")) {
+    suggestions.push("Upload invoices, pricing sheets, or sales reports so we can identify revenue leaks.");
+  }
+  if (criticalGaps.includes("Customer Portfolio")) {
+    suggestions.push("Upload a customer list, CRM export, or account summaries for churn risk analysis.");
+  }
+  if (importantGaps.includes("Team Structure")) {
+    suggestions.push("Upload an org chart or team roster for people & team health scoring.");
+  }
+  if (importantGaps.includes("Sales & Pipeline")) {
+    suggestions.push("Upload pipeline or funnel data for growth intelligence.");
+  }
+  if (importantGaps.includes("Strategy & Planning")) {
+    suggestions.push("Upload strategic plans or roadmaps for better action plan generation.");
+  }
+
+  return {
+    totalDocuments: graph.documentCount,
+    coveredCategories: covered,
+    missingCategories: missing,
+    criticalGaps,
+    importantGaps,
+    coveragePercent,
+    readyForSynthesis: criticalGaps.length === 0,
+    suggestions,
   };
 }
 

@@ -33,6 +33,7 @@ export interface Job {
   questionnaire: Questionnaire;
   filePaths: string[];
   parsedContext?: string;
+  knowledgeGraph?: KnowledgeGraph;
   error?: string;
   deliverables?: MVPDeliverables;
   createdAt: number;
