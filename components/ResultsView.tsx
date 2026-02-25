@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft, Download, AlertCircle, TrendingUp, DollarSign, Users, Target,
   ShieldAlert, Sparkles, ChevronRight, Loader2, ShieldCheck, Globe, Zap,
-  BarChart3, GitBranch, Trophy, FileText, Clock, ArrowRight, Server,
+  BarChart3, GitBranch, Trophy, FileText, Clock, ArrowRight, Server, Megaphone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -34,6 +34,7 @@ const TABS = [
   { id: 9,  label: "Competitors",     icon: Trophy,      dataKey: "competitorAnalysis"    },
   { id: 10, label: "Tech Savings",    icon: Server,      dataKey: "techOptimization"      },
   { id: 11, label: "Pricing",         icon: DollarSign,  dataKey: "pricingIntelligence"   },
+  { id: 12, label: "Marketing",       icon: Megaphone,   dataKey: "marketingStrategy"     },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -1121,6 +1122,243 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
                       <SectionHeader><Sparkles className="w-3 h-3" /> Summary</SectionHeader>
                       <p className="text-sm text-zinc-600 leading-relaxed">{pi.summary}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 12: Marketing Intelligence ─────────────────────────── */}
+            {activeTab === 12 && d.marketingStrategy && (() => {
+              const ms = d.marketingStrategy!;
+              const effortColor = (e: string) =>
+                e === "Low" ? "bg-green-50 text-green-700 border-green-200"
+                : e === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-red-50 text-red-700 border-red-200";
+              return (
+                <div className="space-y-8">
+                  {/* Executive summary */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Megaphone className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Marketing Intelligence Report</p>
+                    </div>
+                    {ms.summary && <p className="text-lg leading-relaxed">{ms.summary}</p>}
+                    {ms.currentChannels.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {ms.currentChannels.map((ch) => (
+                          <span key={ch} className="text-[9px] font-mono bg-white/10 text-zinc-300 px-2 py-1 rounded-lg border border-white/10 uppercase">{ch}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Channel recommendations */}
+                  {ms.channelRecommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Megaphone className="w-3 h-3" /> Top Channel Recommendations</SectionHeader>
+                      <div className="space-y-4">
+                        {ms.channelRecommendations.map((rec) => (
+                          <div key={rec.rank} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-start gap-4">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{rec.rank}</span>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 flex-wrap mb-2">
+                                  <p className="font-semibold text-zinc-900 text-lg">{rec.channel}</p>
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded-lg border uppercase ${effortColor(rec.effort)}`}>
+                                    {rec.effort} effort
+                                  </span>
+                                </div>
+                                <p className="text-sm text-zinc-600 mb-3">{rec.why}</p>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                  <div className="bg-green-50 rounded-xl p-3 border border-green-100">
+                                    <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Expected Impact (3 Mo)</p>
+                                    <p className="text-xs text-green-800 font-medium">{rec.expectedImpact}</p>
+                                  </div>
+                                  <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                                    <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">How to Start</p>
+                                    <p className="text-xs text-zinc-700">{rec.howToStart}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Social media audit — user profiles vs competitor profiles */}
+                  {ms.socialMediaStrategy?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Social Media Audit</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {ms.socialMediaStrategy.map((s, i) => {
+                          const gc = s.currentGrade ? (GRADE_COLORS[s.currentGrade] ?? { text: "text-zinc-700", bg: "bg-zinc-100" }) : null;
+                          const cgc = s.vsCompetitorGrade ? (GRADE_COLORS[s.vsCompetitorGrade] ?? { text: "text-zinc-700", bg: "bg-zinc-100" }) : null;
+                          return (
+                            <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <p className="font-semibold text-zinc-900 uppercase tracking-tight">{s.platform}</p>
+                                <div className="flex items-center gap-2">
+                                  {gc && (
+                                    <div className="text-center">
+                                      <span className={`text-sm font-bold px-2 py-0.5 rounded-lg ${gc.text} ${gc.bg}`}>{s.currentGrade}</span>
+                                      <p className="text-[8px] font-mono text-zinc-400 mt-0.5">You</p>
+                                    </div>
+                                  )}
+                                  {cgc && (
+                                    <div className="text-center">
+                                      <span className={`text-sm font-bold px-2 py-0.5 rounded-lg ${cgc.text} ${cgc.bg}`}>{s.vsCompetitorGrade}</span>
+                                      <p className="text-[8px] font-mono text-zinc-400 mt-0.5">Best Comp</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Post {s.postingFrequency}</p>
+                              {s.improvements?.length > 0 && (
+                                <div className="mt-3">
+                                  <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mb-1">Improvements Needed</p>
+                                  <ul className="space-y-1">
+                                    {s.improvements.map((imp, ii) => (
+                                      <li key={ii} className="text-xs text-zinc-700 flex gap-1.5">
+                                        <AlertCircle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />{imp}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {s.contentSuggestions?.length > 0 && (
+                                <div className="mt-3">
+                                  <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Content Ideas</p>
+                                  <ul className="space-y-1">
+                                    {s.contentSuggestions.map((cs2, ci3) => (
+                                      <li key={ci3} className="text-xs text-zinc-700 flex gap-1.5">
+                                        <Sparkles className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />{cs2}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scraped social profiles detail cards */}
+                  {(ms.socialProfiles?.length > 0 || ms.competitorSocialProfiles?.length > 0) && (
+                    <div>
+                      <SectionHeader><Globe className="w-3 h-3" /> Profile Analysis — You vs Competitors</SectionHeader>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[...(ms.socialProfiles ?? []), ...(ms.competitorSocialProfiles ?? [])].map((p, i) => {
+                          const gc = p.profileGrade && p.profileGrade !== "N/A" ? (GRADE_COLORS[p.profileGrade] ?? { text: "text-zinc-700", bg: "bg-zinc-100" }) : null;
+                          return (
+                            <div key={i} className={`border rounded-2xl p-5 shadow-sm ${p.isCompetitor ? "bg-zinc-50 border-zinc-200" : "bg-white border-zinc-900/20"}`}>
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">{p.platform}</p>
+                                  <p className="font-semibold text-zinc-900">@{p.handle}</p>
+                                  {p.companyName && <p className="text-[10px] text-zinc-500">{p.companyName}</p>}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {p.isCompetitor && (
+                                    <span className="text-[9px] font-mono bg-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full uppercase">Competitor</span>
+                                  )}
+                                  {gc && (
+                                    <span className={`text-sm font-bold px-2 py-0.5 rounded-lg ${gc.text} ${gc.bg}`}>{p.profileGrade}</span>
+                                  )}
+                                </div>
+                              </div>
+                              {p.followerCount && p.followerCount !== "Unknown" && (
+                                <p className="text-xs text-zinc-500 mb-1">{p.followerCount} followers · {p.engagementLevel} engagement</p>
+                              )}
+                              {p.bioSummary && <p className="text-xs text-zinc-600 italic mb-2">{p.bioSummary}</p>}
+                              {p.contentThemes?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {p.contentThemes.map((t, ti) => (
+                                    <span key={ti} className="text-[9px] bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Website copy recommendations */}
+                  {ms.websiteCopyRecommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><FileText className="w-3 h-3" /> Website Copy Changes</SectionHeader>
+                      <div className="space-y-4">
+                        {ms.websiteCopyRecommendations.map((rec, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                            <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-3">{rec.section}</p>
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                                <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mb-1">Current</p>
+                                <p className="text-sm text-red-900">{rec.current}</p>
+                              </div>
+                              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                                <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Suggested</p>
+                                <p className="text-sm text-green-900 font-medium">{rec.suggested}</p>
+                              </div>
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-3 italic">{rec.rationale}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Offer positioning */}
+                  {ms.offerPositioning && (
+                    <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                      <SectionHeader><Target className="w-3 h-3 text-zinc-400" /> <span className="text-zinc-400">Offer Positioning</span></SectionHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1">How You Currently Position</p>
+                          <p className="text-zinc-300">{ms.offerPositioning.currentPositioning}</p>
+                        </div>
+                        {ms.offerPositioning.competitorPositioning?.length > 0 && (
+                          <div>
+                            <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1">How Competitors Position</p>
+                            {ms.offerPositioning.competitorPositioning.map((cp, i) => (
+                              <p key={i} className="text-zinc-400 text-sm">- {cp}</p>
+                            ))}
+                          </div>
+                        )}
+                        <div className="bg-white/10 border border-white/20 rounded-xl p-4 mt-2">
+                          <p className="text-[9px] font-mono text-green-400 uppercase tracking-widest mb-1">Recommended Repositioning</p>
+                          <p className="text-white font-medium">{ms.offerPositioning.suggestedRepositioning}</p>
+                        </div>
+                        {ms.offerPositioning.keyMessages?.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {ms.offerPositioning.keyMessages.map((msg, i) => (
+                              <span key={i} className="text-xs bg-white/10 text-zinc-300 px-3 py-1.5 rounded-lg border border-white/10">{msg}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Content strategy */}
+                  {ms.contentStrategy && (
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <SectionHeader><FileText className="w-3 h-3" /> Content Strategy</SectionHeader>
+                      <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-line">{ms.contentStrategy}</p>
+                    </div>
+                  )}
+
+                  {/* Ad spend recommendation */}
+                  {ms.adSpendRecommendation && (
+                    <div className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-6 shadow-sm">
+                      <SectionHeader><DollarSign className="w-3 h-3" /> Ad Spend Recommendation</SectionHeader>
+                      <p className="text-sm text-zinc-600 leading-relaxed">{ms.adSpendRecommendation}</p>
                     </div>
                   )}
                 </div>

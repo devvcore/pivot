@@ -13,6 +13,7 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import { analyzeWebsite } from "./website-analyzer";
+import { perplexitySearch } from "./perplexity-search";
 import type {
   WebsiteAnalysis,
   CompetitorAnalysis,
@@ -52,8 +53,26 @@ export async function findIndustryLeaderUrls(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return [];
 
+  // Try Perplexity first for real, current data
+  let perplexityContext = "";
+  try {
+    const { results } = await perplexitySearch(
+      `top performing fastest growing ${industry} companies websites 2024 2025`,
+      6
+    );
+    if (results.length > 0) {
+      perplexityContext = results
+        .map((r) => `${r.title}: ${r.url} — ${r.snippet}`)
+        .join("\n");
+    }
+  } catch {
+    // Perplexity not available, continue with Gemini only
+  }
+
   const genai = new GoogleGenAI({ apiKey });
   const prompt = `You are a business intelligence researcher. Identify 2-3 of the top-performing or fastest-growing companies in the "${industry}" industry that would serve as meaningful benchmarks for a business that: ${businessDesc}
+
+${perplexityContext ? `RECENT RESEARCH:\n${perplexityContext}\n\nUse the research above to identify REAL companies with their ACTUAL website URLs.` : ""}
 
 Return ONLY a JSON array of their website URLs. Choose companies known for strong marketing, clear positioning, and high growth.
 Example: ["https://example1.com", "https://example2.com"]
@@ -134,6 +153,20 @@ export async function buildCompetitorAnalysis(
 
   const genai = new GoogleGenAI({ apiKey });
 
+  // Perplexity enrichment for competitive intelligence
+  let perplexityContext = "";
+  try {
+    const { results } = await perplexitySearch(
+      `${packet.orgName} vs competitors ${packet.industry} market positioning strategy`,
+      5
+    );
+    if (results.length > 0) {
+      perplexityContext = results.map((r) => `${r.title}: ${r.snippet}`).join("\n").slice(0, 2000);
+    }
+  } catch {
+    // continue without Perplexity
+  }
+
   const userSiteContext = userWebsite
     ? `YOUR WEBSITE (${userWebsite.url}):
 Grade: ${userWebsite.grade} (${userWebsite.score}/100)
@@ -165,6 +198,8 @@ ${userSiteContext}
 
 COMPETITIVE LANDSCAPE:
 ${compContext}
+
+${perplexityContext ? `LIVE MARKET RESEARCH:\n${perplexityContext}` : ""}
 
 Produce a CompetitorAnalysis. Return valid JSON ONLY:
 {

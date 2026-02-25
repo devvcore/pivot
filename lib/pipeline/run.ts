@@ -21,6 +21,10 @@ import {
   findIndustryLeaderUrls,
   buildCompetitorAnalysis,
 } from "@/lib/agent/competitor-analyzer";
+import {
+  gatherSocialProfiles,
+  synthesizeMarketingStrategy,
+} from "@/lib/pipeline/marketing";
 import type { BusinessPacket, MVPDeliverables, WebsiteAnalysis } from "@/lib/types";
 
 const RESUMABLE_ENTRY_STATUSES = new Set(["pending", "parsing", "ingesting", "synthesizing", "formatting", "failed"]);
@@ -146,7 +150,32 @@ export async function runPipeline(runId: string): Promise<void> {
       }
     }
 
-    // ── Step 4: Agent memory (best-effort) ─────────────────────────────────
+    // ── Step 4: Marketing intelligence (social scrape + synthesis) ─────────
+    if (!deliverables.marketingStrategy) {
+      try {
+        console.log("[Pivot] Gathering social profiles + marketing intelligence...");
+        const competitorNames = businessPacket.keyMetrics.topCompetitors.slice(0, 3);
+        const { userProfiles, competitorProfiles } = await gatherSocialProfiles(
+          job.questionnaire,
+          competitorNames
+        );
+
+        const marketingStrategy = await synthesizeMarketingStrategy(
+          job.questionnaire,
+          businessPacket,
+          websiteAnalysis ?? null,
+          deliverables.competitorAnalysis ?? null,
+          userProfiles,
+          competitorProfiles
+        );
+        deliverables = { ...deliverables, marketingStrategy };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Marketing intelligence failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 5: Agent memory (best-effort) ─────────────────────────────────
     try {
       await buildAgentMemory(orgId, job.questionnaire.organizationName, runId, deliverables, websiteAnalysis);
     } catch (e) {

@@ -10,8 +10,11 @@
     "clean": "next clean"
   },
   "dependencies": {
+    "@aduptive/instagram-scraper": "^1.0.3",
     "@google/genai": "^1.17.0",
     "@hookform/resolvers": "^5.2.1",
+    "@prisma/client": "^7.4.1",
+    "@the-convocation/twitter-scraper": "^0.22.1",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^3.0.3",
     "better-browse": "^0.2.1",
@@ -29,6 +32,7 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "recharts": "^3.7.0",
+    "scrape-youtube": "^2.4.0",
     "tailwind-merge": "^3.3.1",
     "undici": "^7.22.0",
     "uuid": "^13.0.0",

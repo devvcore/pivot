@@ -15,6 +15,9 @@ export interface Questionnaire {
   competitorUrls?: string[];         // competitor website URLs (from onboarding)
   techStack?: string;                // hosting/tools used (for cost optimization)
   orgId?: string;                    // which org this run belongs to
+  marketingChannels?: string[];      // current marketing channels (Instagram, Cold Email, etc.)
+  socialMediaUrls?: Record<string, string>; // platform → profile URL
+  socialMediaPlatforms?: string[];   // platforms they're active on (if no URLs given)
 }
 
 export type JobStatus =
@@ -216,6 +219,68 @@ export interface PricingIntelligence {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Social Media Profile Analysis
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SocialProfileAnalysis {
+  platform: string;           // "instagram" | "linkedin" | "tiktok" | "x" | "youtube" | "facebook"
+  handle: string;
+  url: string;
+  followerCount?: string;     // "12.4K" — string because scraped
+  postFrequency?: string;     // "3-4 posts/week"
+  bioSummary: string;         // what their bio communicates
+  contentThemes: string[];    // top 3-4 themes they post about
+  engagementLevel: string;    // "High" | "Medium" | "Low"
+  strengths: string[];
+  weaknesses: string[];
+  profileGrade: string;       // A-F
+  profileScore: number;       // 0-100
+  isCompetitor: boolean;      // true if this is a competitor/leader profile
+  companyName?: string;       // whose profile this is
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Marketing Intelligence — full marketing strategy deliverable
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MarketingStrategyReport {
+  currentChannels: string[];
+  socialProfiles: SocialProfileAnalysis[];
+  competitorSocialProfiles: SocialProfileAnalysis[];
+  channelRecommendations: {
+    rank: number;
+    channel: string;
+    why: string;
+    effort: "Low" | "Medium" | "High";
+    expectedImpact: string;
+    howToStart: string;
+  }[];
+  socialMediaStrategy: {
+    platform: string;
+    currentGrade?: string;
+    vsCompetitorGrade?: string;
+    improvements: string[];
+    contentSuggestions: string[];
+    postingFrequency: string;
+  }[];
+  websiteCopyRecommendations: {
+    section: string;
+    current: string;
+    suggested: string;
+    rationale: string;
+  }[];
+  offerPositioning: {
+    currentPositioning: string;
+    competitorPositioning: string[];
+    suggestedRepositioning: string;
+    keyMessages: string[];
+  };
+  contentStrategy: string;
+  adSpendRecommendation?: string;
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Deliverables
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -232,6 +297,7 @@ export interface MVPDeliverables {
   competitorAnalysis?: CompetitorAnalysis; // included if competitors/industry analyzed
   techOptimization?: TechOptimization;     // included if tech stack provided
   pricingIntelligence?: PricingIntelligence; // always included
+  marketingStrategy?: MarketingStrategyReport; // marketing channels, social audit, copy recs
 }
 
 export interface ActionPlan {

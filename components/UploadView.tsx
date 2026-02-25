@@ -27,6 +27,21 @@ const INDUSTRIES = [
   "Accounting / Finance Services", "Franchise", "Other",
 ];
 
+const MARKETING_CHANNELS = [
+  "Instagram", "LinkedIn", "TikTok", "X / Twitter", "YouTube",
+  "Facebook", "Cold Email", "Newsletter", "Google Ads", "Meta Ads",
+  "SEO / Content", "Podcast", "Referrals", "Events / Webinars", "Other",
+];
+
+const SOCIAL_PLATFORMS = [
+  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/yourhandle" },
+  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/company/yourco" },
+  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@yourhandle" },
+  { key: "x", label: "X / Twitter", placeholder: "https://x.com/yourhandle" },
+  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@yourchannel" },
+  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
+];
+
 interface StagedFile {
   id: string;
   file: File;
@@ -268,6 +283,8 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
   // Upload phase state
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [socialUrls, setSocialUrls] = useState<Record<string, string>>({});
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -294,6 +311,11 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
       formData.set("keyConcerns", "");
       formData.set("oneDecisionKeepingOwnerUpAtNight", "");
       if (websiteUrl.trim()) formData.set("website", websiteUrl.trim());
+      if (selectedChannels.length > 0) formData.set("marketingChannels", JSON.stringify(selectedChannels));
+      const filledSocials = Object.fromEntries(
+        Object.entries(socialUrls).filter(([, v]) => v.trim())
+      );
+      if (Object.keys(filledSocials).length > 0) formData.set("socialMediaUrls", JSON.stringify(filledSocials));
       stagedFiles.forEach((f) => formData.append("files", f.file));
 
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
@@ -361,6 +383,11 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
         location: extracted.location,
         techStack: extracted.techStack,
         competitorUrls: extracted.competitorUrls,
+        marketingChannels: selectedChannels.length > 0 ? selectedChannels : extracted.marketingChannels,
+        socialMediaUrls: Object.keys(socialUrls).some((k) => socialUrls[k]?.trim())
+          ? Object.fromEntries(Object.entries(socialUrls).filter(([, v]) => v.trim()))
+          : extracted.socialMediaUrls,
+        socialMediaPlatforms: extracted.socialMediaPlatforms,
       };
 
       const updateRes = await fetch("/api/job/update-questionnaire", {
@@ -504,6 +531,59 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
                   placeholder="https://yourcompany.com"
                   className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-900 focus:outline-none transition-all"
                 />
+              </div>
+
+              {/* Marketing channels multi-select */}
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">
+                  Current Marketing Channels (optional)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {MARKETING_CHANNELS.map((ch) => {
+                    const active = selectedChannels.includes(ch);
+                    return (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() =>
+                          setSelectedChannels((prev) =>
+                            active ? prev.filter((c) => c !== ch) : [...prev, ch]
+                          )
+                        }
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                          active
+                            ? "bg-zinc-900 text-white border-zinc-900"
+                            : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                        }`}
+                      >
+                        {ch}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Social media profile URLs */}
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">
+                  Social Media Profiles (optional)
+                </label>
+                <div className="space-y-2">
+                  {SOCIAL_PLATFORMS.map(({ key, label, placeholder }) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider w-20 shrink-0">{label}</span>
+                      <input
+                        type="url"
+                        value={socialUrls[key] ?? ""}
+                        onChange={(e) =>
+                          setSocialUrls((prev) => ({ ...prev, [key]: e.target.value }))
+                        }
+                        placeholder={placeholder}
+                        className="flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <CoverageIndicator files={stagedFiles} />

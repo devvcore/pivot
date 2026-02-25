@@ -32,6 +32,27 @@ export function parseQuestionnaire(formData: FormData): Questionnaire {
     }
   }
 
+  const marketingChannelsRaw = formData.get("marketingChannels") as string | null;
+  let marketingChannels: string[] | undefined;
+  if (marketingChannelsRaw) {
+    try {
+      const parsed = JSON.parse(marketingChannelsRaw);
+      marketingChannels = Array.isArray(parsed) ? parsed : undefined;
+    } catch {
+      marketingChannels = marketingChannelsRaw.split(",").map((c) => c.trim()).filter(Boolean);
+    }
+  }
+
+  const socialMediaUrlsRaw = formData.get("socialMediaUrls") as string | null;
+  let socialMediaUrls: Record<string, string> | undefined;
+  if (socialMediaUrlsRaw) {
+    try {
+      socialMediaUrls = JSON.parse(socialMediaUrlsRaw);
+    } catch {
+      // ignore
+    }
+  }
+
   return {
     organizationName: (formData.get("organizationName") as string) || "",
     industry: (formData.get("industry") as string) || "",
@@ -48,6 +69,8 @@ export function parseQuestionnaire(formData: FormData): Questionnaire {
     competitorUrls,
     techStack: (formData.get("techStack") as string) || undefined,
     orgId: (formData.get("orgId") as string) || undefined,
+    marketingChannels,
+    socialMediaUrls,
   };
 }
 
