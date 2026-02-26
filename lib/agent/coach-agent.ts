@@ -162,7 +162,31 @@ KEY SECTIONS FOR COACHING:
 - costIntelligence: Cost structure analysis, cost drivers, benchmarking, reduction opportunities
 - financialModeling: Financial model scenarios, assumptions, sensitivity analysis, projections
 - profitabilityMap: Profitability by product/customer/channel, margin analysis, contribution mapping
-- capitalAllocation: Capital deployment strategy, investment priorities, ROI ranking, funding allocation`;
+- capitalAllocation: Capital deployment strategy, investment priorities, ROI ranking, funding allocation
+- salesPipelineHealth: Pipeline value, stage conversion, coverage ratio, velocity, at-risk deals
+- dealVelocity: Deal cycle time, stage bottlenecks, segment speed, deal size impact
+- winRateOptimizer: Win/loss factors, competitive win rates, improvement areas
+- salesEnablement: Sales readiness, content effectiveness, training gaps, tool adoption
+- territoryPlanning: Territory balance, coverage gaps, untapped potential, rep allocation
+- quotaIntelligence: Quota attainment, territory fit, ramp analysis, segment performance
+- featurePrioritization: Feature ranking, impact-effort matrix, quick wins, tech debt
+- productUsageAnalytics: DAU/MAU, feature adoption, sticky features, churn correlation
+- techStackAudit: Technology inventory, costs, redundancies, security gaps, modernization
+- apiStrategy: API inventory, monetization, developer experience, versioning
+- platformScalability: Scalability dimensions, headroom, bottlenecks, cost per unit
+- userOnboarding: Completion rates, time to value, dropoff points, activation metrics
+- employeeEngagement: Engagement drivers, eNPS, turnover risk, top concerns
+- talentAcquisitionFunnel: Hiring funnel, time to hire, cost per hire, quality of hire
+- compensationBenchmark: Compensation vs market, role gaps, equity strategy
+- successionPlanning: Critical roles, bench strength, succession candidates, risk areas
+- diversityMetrics: Diversity dimensions, inclusion index, pay equity, goals
+- employerBrand: Brand signals, Glassdoor rating, offer acceptance, employer value proposition
+- dataGovernance: Data governance maturity, policies, compliance gaps, data lineage
+- analyticsMaturity: Analytics capability levels, tool stack, skill gaps
+- customerDataPlatform: Unified profiles, data sources, identity resolution, activation
+- predictiveModeling: Predictive models, data readiness, implementation cost, expected ROI
+- reportingFramework: Reports inventory, KPI coverage, dashboards, self-service rate
+- dataQualityScore: Data quality dimensions, critical issues, automation, cost of poor quality`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -262,6 +286,10 @@ const TOOLS = [
             "competitivePricingMatrix", "marketSentimentIndex", "disruptionRadar", "ecosystemMap", "categoryCreation", "marketVelocity",
             "okrCascade", "meetingEffectiveness", "communicationAudit", "decisionVelocity", "resourceOptimizer", "changeManagement",
             "cashReserveStrategy", "revenueQualityScore", "costIntelligence", "financialModeling", "profitabilityMap", "capitalAllocation",
+            "salesPipelineHealth", "dealVelocity", "winRateOptimizer", "salesEnablement", "territoryPlanning", "quotaIntelligence",
+            "featurePrioritization", "productUsageAnalytics", "techStackAudit", "apiStrategy", "platformScalability", "userOnboarding",
+            "employeeEngagement", "talentAcquisitionFunnel", "compensationBenchmark", "successionPlanning", "diversityMetrics", "employerBrand",
+            "dataGovernance", "analyticsMaturity", "customerDataPlatform", "predictiveModeling", "reportingFramework", "dataQualityScore",
           ],
           description: "Which report section to retrieve",
         },
@@ -585,6 +613,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).financialModeling) parts.push(`Financial Modeling: Scenarios: ${(d as any).financialModeling.scenarios?.length ?? 0}, Base case: ${(d as any).financialModeling.baseCase || "N/A"}`);
     if ((d as any).profitabilityMap) parts.push(`Profitability Map: Most profitable: ${(d as any).profitabilityMap.mostProfitable || "N/A"}, Least profitable: ${(d as any).profitabilityMap.leastProfitable || "N/A"}`);
     if ((d as any).capitalAllocation) parts.push(`Capital Allocation: Total capital: ${(d as any).capitalAllocation.totalCapital || "N/A"}, Top priority: ${(d as any).capitalAllocation.topPriority || "N/A"}`);
+    if ((d as any).salesPipelineHealth) parts.push(`Sales Pipeline: Value: ${(d as any).salesPipelineHealth.totalPipelineValue || "N/A"}, Coverage: ${(d as any).salesPipelineHealth.coverage || "N/A"}`);
+    if ((d as any).dealVelocity) parts.push(`Deal Velocity: Avg cycle: ${(d as any).dealVelocity.avgDealCycle || "N/A"}, Fastest: ${(d as any).dealVelocity.fastestSegment || "N/A"}`);
+    if ((d as any).winRateOptimizer) parts.push(`Win Rate: Overall: ${(d as any).winRateOptimizer.overallWinRate || "N/A"}, Competitive: ${(d as any).winRateOptimizer.competitiveWinRate || "N/A"}`);
+    if ((d as any).salesEnablement) parts.push(`Sales Enablement: Readiness: ${(d as any).salesEnablement.readinessScore ?? "N/A"}/100, Gaps: ${(d as any).salesEnablement.trainingGaps?.length ?? 0}`);
+    if ((d as any).territoryPlanning) parts.push(`Territory Planning: Balance: ${(d as any).territoryPlanning.balanceScore ?? "N/A"}/100, Untapped: ${(d as any).territoryPlanning.untappedPotential || "N/A"}`);
+    if ((d as any).quotaIntelligence) parts.push(`Quota Intelligence: Attainment: ${(d as any).quotaIntelligence.overallAttainment || "N/A"}, Fit: ${(d as any).quotaIntelligence.quotaToTerritoryFit || "N/A"}`);
+    if ((d as any).featurePrioritization) parts.push(`Feature Priority: Top: ${(d as any).featurePrioritization.topPriority || "N/A"}, Quick wins: ${(d as any).featurePrioritization.quickWins?.length ?? 0}`);
+    if ((d as any).productUsageAnalytics) parts.push(`Product Usage: DAU: ${(d as any).productUsageAnalytics.dau || "N/A"}, MAU: ${(d as any).productUsageAnalytics.mau || "N/A"}`);
+    if ((d as any).techStackAudit) parts.push(`Tech Stack: Cost: ${(d as any).techStackAudit.totalCost || "N/A"}, Redundancies: ${(d as any).techStackAudit.redundancies?.length ?? 0}`);
+    if ((d as any).apiStrategy) parts.push(`API Strategy: APIs: ${(d as any).apiStrategy.apiCount ?? "N/A"}, Model: ${(d as any).apiStrategy.monetizationModel || "N/A"}`);
+    if ((d as any).platformScalability) parts.push(`Scalability: Score: ${(d as any).platformScalability.overallScore ?? "N/A"}/100, Headroom: ${(d as any).platformScalability.peakCapacity || "N/A"}`);
+    if ((d as any).userOnboarding) parts.push(`Onboarding: Completion: ${(d as any).userOnboarding.completionRate || "N/A"}, Time to value: ${(d as any).userOnboarding.timeToValue || "N/A"}`);
+    if ((d as any).employeeEngagement) parts.push(`Engagement: Score: ${(d as any).employeeEngagement.overallScore ?? "N/A"}/100, eNPS: ${(d as any).employeeEngagement.eNPS || "N/A"}`);
+    if ((d as any).talentAcquisitionFunnel) parts.push(`Talent Acquisition: Time to hire: ${(d as any).talentAcquisitionFunnel.overallTimeToHire || "N/A"}, Cost: ${(d as any).talentAcquisitionFunnel.costPerHire || "N/A"}`);
+    if ((d as any).compensationBenchmark) parts.push(`Compensation: Position: ${(d as any).compensationBenchmark.overallPosition || "N/A"}, Budget: ${(d as any).compensationBenchmark.totalCompBudget || "N/A"}`);
+    if ((d as any).successionPlanning) parts.push(`Succession: Critical roles: ${(d as any).successionPlanning.criticalRoles ?? "N/A"}, Bench: ${(d as any).successionPlanning.benchStrength || "N/A"}`);
+    if ((d as any).diversityMetrics) parts.push(`Diversity: Score: ${(d as any).diversityMetrics.overallScore ?? "N/A"}/100, Inclusion: ${(d as any).diversityMetrics.inclusionIndex || "N/A"}`);
+    if ((d as any).employerBrand) parts.push(`Employer Brand: Score: ${(d as any).employerBrand.overallScore ?? "N/A"}/100, Glassdoor: ${(d as any).employerBrand.glassdoorRating || "N/A"}`);
+    if ((d as any).dataGovernance) parts.push(`Data Governance: Maturity: ${(d as any).dataGovernance.maturityLevel || "N/A"}, Gaps: ${(d as any).dataGovernance.complianceGaps?.length ?? 0}`);
+    if ((d as any).analyticsMaturity) parts.push(`Analytics Maturity: Level: ${(d as any).analyticsMaturity.overallLevel ?? "N/A"}/5, Gaps: ${(d as any).analyticsMaturity.skillGaps?.length ?? 0}`);
+    if ((d as any).customerDataPlatform) parts.push(`CDP: Profiles: ${(d as any).customerDataPlatform.unifiedProfiles || "N/A"}, Completeness: ${(d as any).customerDataPlatform.dataCompleteness || "N/A"}`);
+    if ((d as any).predictiveModeling) parts.push(`Predictive: Models: ${(d as any).predictiveModeling.models?.length ?? 0}, ROI: ${(d as any).predictiveModeling.expectedROI || "N/A"}`);
+    if ((d as any).reportingFramework) parts.push(`Reporting: Reports: ${(d as any).reportingFramework.reports?.length ?? 0}, Self-service: ${(d as any).reportingFramework.selfServiceRate || "N/A"}`);
+    if ((d as any).dataQualityScore) parts.push(`Data Quality: Score: ${(d as any).dataQualityScore.overallScore ?? "N/A"}/100, Issues: ${(d as any).dataQualityScore.criticalIssues?.length ?? 0}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

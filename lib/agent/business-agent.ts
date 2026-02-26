@@ -137,6 +137,10 @@ const TOOLS = [
             "competitivePricingMatrix", "marketSentimentIndex", "disruptionRadar", "ecosystemMap", "categoryCreation", "marketVelocity",
             "okrCascade", "meetingEffectiveness", "communicationAudit", "decisionVelocity", "resourceOptimizer", "changeManagement",
             "cashReserveStrategy", "revenueQualityScore", "costIntelligence", "financialModeling", "profitabilityMap", "capitalAllocation",
+            "salesPipelineHealth", "dealVelocity", "winRateOptimizer", "salesEnablement", "territoryPlanning", "quotaIntelligence",
+            "featurePrioritization", "productUsageAnalytics", "techStackAudit", "apiStrategy", "platformScalability", "userOnboarding",
+            "employeeEngagement", "talentAcquisitionFunnel", "compensationBenchmark", "successionPlanning", "diversityMetrics", "employerBrand",
+            "dataGovernance", "analyticsMaturity", "customerDataPlatform", "predictiveModeling", "reportingFramework", "dataQualityScore",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -391,6 +395,10 @@ Wave 17: customerVoice, referralEngine, priceSensitivityIndex, customerEffortSco
 Wave 18: competitivePricingMatrix, marketSentimentIndex, disruptionRadar, ecosystemMap, categoryCreation, marketVelocity
 Wave 19: okrCascade, meetingEffectiveness, communicationAudit, decisionVelocity, resourceOptimizer, changeManagement
 Wave 20: cashReserveStrategy, revenueQualityScore, costIntelligence, financialModeling, profitabilityMap, capitalAllocation
+Wave 21: salesPipelineHealth, dealVelocity, winRateOptimizer, salesEnablement, territoryPlanning, quotaIntelligence
+Wave 22: featurePrioritization, productUsageAnalytics, techStackAudit, apiStrategy, platformScalability, userOnboarding
+Wave 23: employeeEngagement, talentAcquisitionFunnel, compensationBenchmark, successionPlanning, diversityMetrics, employerBrand
+Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveModeling, reportingFramework, dataQualityScore
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

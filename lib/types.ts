@@ -825,6 +825,34 @@ export interface MVPDeliverables {
   financialModeling?: FinancialModeling;
   profitabilityMap?: ProfitabilityMap;
   capitalAllocation?: CapitalAllocation;
+  // Wave 21: Sales Excellence
+  salesPipelineHealth?: SalesPipelineHealth;
+  dealVelocity?: DealVelocity;
+  winRateOptimizer?: WinRateOptimizer;
+  salesEnablement?: SalesEnablement;
+  territoryPlanning?: TerritoryPlanning;
+  quotaIntelligence?: QuotaIntelligence;
+  // Wave 22: Product Intelligence
+  featurePrioritization?: FeaturePrioritization;
+  productUsageAnalytics?: ProductUsageAnalytics;
+  techStackAudit?: TechStackAudit;
+  apiStrategy?: ApiStrategy;
+  platformScalability?: PlatformScalability;
+  userOnboarding?: UserOnboarding;
+  // Wave 23: People & Culture
+  employeeEngagement?: EmployeeEngagement;
+  talentAcquisitionFunnel?: TalentAcquisitionFunnel;
+  compensationBenchmark?: CompensationBenchmark;
+  successionPlanning?: SuccessionPlanning;
+  diversityMetrics?: DiversityMetrics;
+  employerBrand?: EmployerBrand;
+  // Wave 24: Data & Analytics
+  dataGovernance?: DataGovernance;
+  analyticsMaturity?: AnalyticsMaturity;
+  customerDataPlatform?: CustomerDataPlatform;
+  predictiveModeling?: PredictiveModeling;
+  reportingFramework?: ReportingFramework;
+  dataQualityScore?: DataQualityScore;
 }
 
 export interface BenchmarkDimension {
@@ -2791,3 +2819,91 @@ export interface ProfitabilityMap { summary: string; overallMargin: string; segm
 
 export interface InvestmentOption { option: string; amount: string; expectedROIC: string; paybackPeriod: string; riskLevel: string; strategicFit: string; }
 export interface CapitalAllocation { summary: string; totalCapital: string; investments: InvestmentOption[]; roicTarget: string; currentROIC: string; allocationStrategy: string; rebalancingNeeds: string[]; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 21: Sales Excellence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PipelineStage { stage: string; deals: number; value: string; conversionRate: string; avgTimeInStage: string; }
+export interface SalesPipelineHealth { summary: string; totalPipelineValue: string; weightedPipeline: string; stages: PipelineStage[]; coverage: string; velocity: string; atRiskDeals: string[]; recommendations: string[]; }
+
+export interface DealStageMetric { stage: string; avgDays: number; conversionRate: string; bottleneck: boolean; }
+export interface DealVelocity { summary: string; avgDealCycle: string; medianDealCycle: string; stages: DealStageMetric[]; fastestSegment: string; slowestSegment: string; dealSizeImpact: string; recommendations: string[]; }
+
+export interface WinFactor { factor: string; impact: "high" | "medium" | "low"; winCorrelation: string; improvementArea: string; }
+export interface WinRateOptimizer { summary: string; overallWinRate: string; winFactors: WinFactor[]; topLossReasons: string[]; competitiveWinRate: string; dealSizeWinRate: string; recommendations: string[]; }
+
+export interface EnablementAsset { type: string; coverage: string; usage: string; effectiveness: string; gap: string; }
+export interface SalesEnablement { summary: string; readinessScore: number; assets: EnablementAsset[]; trainingGaps: string[]; contentEffectiveness: string; toolAdoption: string; recommendations: string[]; }
+
+export interface Territory { name: string; accounts: number; revenue: string; potential: string; coverage: string; rep: string; }
+export interface TerritoryPlanning { summary: string; territories: Territory[]; balanceScore: number; untappedPotential: string; overlapIssues: string[]; recommendations: string[]; }
+
+export interface QuotaSegment { segment: string; quota: string; attainment: string; coverage: string; rampTime: string; }
+export interface QuotaIntelligence { summary: string; overallAttainment: string; segments: QuotaSegment[]; quotaToTerritoryFit: string; rampAnalysis: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 22: Product Intelligence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FeatureCandidate { feature: string; impact: "high" | "medium" | "low"; effort: "high" | "medium" | "low"; revenueImpact: string; customerDemand: string; strategicFit: string; }
+export interface FeaturePrioritization { summary: string; framework: string; features: FeatureCandidate[]; topPriority: string; quickWins: string[]; technicalDebt: string[]; recommendations: string[]; }
+
+export interface UsageMetric { feature: string; adoption: string; frequency: string; retention: string; satisfaction: string; }
+export interface ProductUsageAnalytics { summary: string; dau: string; mau: string; metrics: UsageMetric[]; stickyFeatures: string[]; underusedFeatures: string[]; churnCorrelation: string; recommendations: string[]; }
+
+export interface TechComponent { name: string; category: string; cost: string; usage: string; alternatives: string; riskLevel: string; }
+export interface TechStackAudit { summary: string; totalCost: string; components: TechComponent[]; redundancies: string[]; securityGaps: string[]; modernizationNeeds: string[]; recommendations: string[]; }
+
+export interface ApiEndpoint { endpoint: string; usage: string; revenue: string; reliability: string; version: string; }
+export interface ApiStrategy { summary: string; apiCount: number; endpoints: ApiEndpoint[]; monetizationModel: string; developerExperience: string; versioningStrategy: string; recommendations: string[]; }
+
+export interface ScalabilityDimension { dimension: string; current: string; limit: string; headroom: string; bottleneck: string; }
+export interface PlatformScalability { summary: string; overallScore: number; dimensions: ScalabilityDimension[]; currentLoad: string; peakCapacity: string; costPerUnit: string; recommendations: string[]; }
+
+export interface OnboardingStep { step: string; completionRate: string; dropoffRate: string; avgTime: string; friction: string; }
+export interface UserOnboarding { summary: string; completionRate: string; timeToValue: string; steps: OnboardingStep[]; activationMetric: string; biggestDropoff: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 23: People & Culture
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EngagementDriver { driver: string; score: number; trend: "improving" | "stable" | "declining"; benchmark: string; }
+export interface EmployeeEngagement { summary: string; overallScore: number; drivers: EngagementDriver[]; eNPS: string; turnoverRisk: string; topConcerns: string[]; recommendations: string[]; }
+
+export interface FunnelStage { stage: string; candidates: number; conversionRate: string; avgDays: number; cost: string; }
+export interface TalentAcquisitionFunnel { summary: string; overallTimeToHire: string; stages: FunnelStage[]; topSources: string[]; costPerHire: string; qualityOfHire: string; recommendations: string[]; }
+
+export interface CompRole { role: string; currentComp: string; marketMedian: string; percentile: string; gap: string; }
+export interface CompensationBenchmark { summary: string; overallPosition: string; roles: CompRole[]; totalCompBudget: string; equityStrategy: string; recommendations: string[]; }
+
+export interface SuccessionCandidate { role: string; incumbent: string; readyNow: string[]; readyIn1Year: string[]; gap: string; }
+export interface SuccessionPlanning { summary: string; criticalRoles: number; candidates: SuccessionCandidate[]; benchStrength: string; riskAreas: string[]; recommendations: string[]; }
+
+export interface DiversityDimension { dimension: string; current: string; goal: string; industryBenchmark: string; trend: string; }
+export interface DiversityMetrics { summary: string; overallScore: number; dimensions: DiversityDimension[]; inclusionIndex: string; payEquity: string; recommendations: string[]; }
+
+export interface BrandSignal { channel: string; score: number; reach: string; sentiment: string; improvement: string; }
+export interface EmployerBrand { summary: string; overallScore: number; signals: BrandSignal[]; glassdoorRating: string; offerAcceptRate: string; evp: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 24: Data & Analytics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface GovernanceArea { area: string; maturity: string; owner: string; compliance: string; risk: string; }
+export interface DataGovernance { summary: string; maturityLevel: string; areas: GovernanceArea[]; policies: string[]; complianceGaps: string[]; dataLineage: string; recommendations: string[]; }
+
+export interface MaturityDimension { dimension: string; currentLevel: number; targetLevel: number; gap: string; priority: string; }
+export interface AnalyticsMaturity { summary: string; overallLevel: number; dimensions: MaturityDimension[]; toolStack: string[]; skillGaps: string[]; recommendations: string[]; }
+
+export interface DataSource { source: string; type: string; records: string; freshness: string; quality: string; integrated: boolean; }
+export interface CustomerDataPlatform { summary: string; unifiedProfiles: string; sources: DataSource[]; identityResolution: string; activationChannels: string[]; dataCompleteness: string; recommendations: string[]; }
+
+export interface PredictiveModel { model: string; accuracy: string; useCase: string; dataRequirements: string; businessImpact: string; readiness: string; }
+export interface PredictiveModeling { summary: string; models: PredictiveModel[]; dataReadiness: string; topOpportunity: string; implementationCost: string; expectedROI: string; recommendations: string[]; }
+
+export interface ReportItem { report: string; audience: string; frequency: string; automated: boolean; actionability: string; }
+export interface ReportingFramework { summary: string; reports: ReportItem[]; kpiCoverage: string; dashboardCount: number; selfServiceRate: string; dataLatency: string; recommendations: string[]; }
+
+export interface QualityDimension { dimension: string; score: number; issues: string; impactedProcesses: string; remediation: string; }
+export interface DataQualityScore { summary: string; overallScore: number; dimensions: QualityDimension[]; criticalIssues: string[]; automationLevel: string; costOfPoorQuality: string; recommendations: string[]; }

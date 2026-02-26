@@ -135,6 +135,34 @@ import {
   synthesizeFinancialModeling,
   synthesizeProfitabilityMap,
   synthesizeCapitalAllocation,
+  // Wave 21
+  synthesizeSalesPipelineHealth,
+  synthesizeDealVelocity,
+  synthesizeWinRateOptimizer,
+  synthesizeSalesEnablement,
+  synthesizeTerritoryPlanning,
+  synthesizeQuotaIntelligence,
+  // Wave 22
+  synthesizeFeaturePrioritization,
+  synthesizeProductUsageAnalytics,
+  synthesizeTechStackAudit,
+  synthesizeApiStrategy,
+  synthesizePlatformScalability,
+  synthesizeUserOnboarding,
+  // Wave 23
+  synthesizeEmployeeEngagement,
+  synthesizeTalentAcquisitionFunnel,
+  synthesizeCompensationBenchmark,
+  synthesizeSuccessionPlanning,
+  synthesizeDiversityMetrics,
+  synthesizeEmployerBrand,
+  // Wave 24
+  synthesizeDataGovernance,
+  synthesizeAnalyticsMaturity,
+  synthesizeCustomerDataPlatform,
+  synthesizePredictiveModeling,
+  synthesizeReportingFramework,
+  synthesizeDataQualityScore,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -1303,6 +1331,198 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] ProfitabilityMap/CapitalAllocation failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4be: Wave 21 intelligence (sales pipeline health, deal velocity) ──
+    if (!deliverables.salesPipelineHealth || !deliverables.dealVelocity) {
+      try {
+        console.log("[Pivot] Synthesizing sales pipeline health + deal velocity...");
+        const [sph, dv] = await Promise.allSettled([
+          deliverables.salesPipelineHealth ? Promise.resolve(null) : synthesizeSalesPipelineHealth(businessPacket, job.questionnaire),
+          deliverables.dealVelocity ? Promise.resolve(null) : synthesizeDealVelocity(businessPacket, job.questionnaire),
+        ]);
+        if (sph.status === "fulfilled" && sph.value) deliverables = { ...deliverables, salesPipelineHealth: sph.value };
+        if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, dealVelocity: dv.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] SalesPipelineHealth/DealVelocity failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bf: Wave 21 intelligence (win rate optimizer, sales enablement) ──
+    if (!deliverables.winRateOptimizer || !deliverables.salesEnablement) {
+      try {
+        console.log("[Pivot] Synthesizing win rate optimizer + sales enablement...");
+        const [wro, se] = await Promise.allSettled([
+          deliverables.winRateOptimizer ? Promise.resolve(null) : synthesizeWinRateOptimizer(businessPacket, job.questionnaire),
+          deliverables.salesEnablement ? Promise.resolve(null) : synthesizeSalesEnablement(businessPacket, job.questionnaire),
+        ]);
+        if (wro.status === "fulfilled" && wro.value) deliverables = { ...deliverables, winRateOptimizer: wro.value };
+        if (se.status === "fulfilled" && se.value) deliverables = { ...deliverables, salesEnablement: se.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] WinRateOptimizer/SalesEnablement failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bg: Wave 21 intelligence (territory planning, quota intelligence) ──
+    if (!deliverables.territoryPlanning || !deliverables.quotaIntelligence) {
+      try {
+        console.log("[Pivot] Synthesizing territory planning + quota intelligence...");
+        const [tp, qi] = await Promise.allSettled([
+          deliverables.territoryPlanning ? Promise.resolve(null) : synthesizeTerritoryPlanning(businessPacket, job.questionnaire),
+          deliverables.quotaIntelligence ? Promise.resolve(null) : synthesizeQuotaIntelligence(businessPacket, job.questionnaire),
+        ]);
+        if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, territoryPlanning: tp.value };
+        if (qi.status === "fulfilled" && qi.value) deliverables = { ...deliverables, quotaIntelligence: qi.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] TerritoryPlanning/QuotaIntelligence failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bh: Wave 22 intelligence (feature prioritization, product usage analytics) ──
+    if (!deliverables.featurePrioritization || !deliverables.productUsageAnalytics) {
+      try {
+        console.log("[Pivot] Synthesizing feature prioritization + product usage analytics...");
+        const [fp, pua] = await Promise.allSettled([
+          deliverables.featurePrioritization ? Promise.resolve(null) : synthesizeFeaturePrioritization(businessPacket, job.questionnaire),
+          deliverables.productUsageAnalytics ? Promise.resolve(null) : synthesizeProductUsageAnalytics(businessPacket, job.questionnaire),
+        ]);
+        if (fp.status === "fulfilled" && fp.value) deliverables = { ...deliverables, featurePrioritization: fp.value };
+        if (pua.status === "fulfilled" && pua.value) deliverables = { ...deliverables, productUsageAnalytics: pua.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] FeaturePrioritization/ProductUsageAnalytics failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bi: Wave 22 intelligence (tech stack audit, API strategy) ──
+    if (!deliverables.techStackAudit || !deliverables.apiStrategy) {
+      try {
+        console.log("[Pivot] Synthesizing tech stack audit + API strategy...");
+        const [tsa, as_] = await Promise.allSettled([
+          deliverables.techStackAudit ? Promise.resolve(null) : synthesizeTechStackAudit(businessPacket, job.questionnaire),
+          deliverables.apiStrategy ? Promise.resolve(null) : synthesizeApiStrategy(businessPacket, job.questionnaire),
+        ]);
+        if (tsa.status === "fulfilled" && tsa.value) deliverables = { ...deliverables, techStackAudit: tsa.value };
+        if (as_.status === "fulfilled" && as_.value) deliverables = { ...deliverables, apiStrategy: as_.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] TechStackAudit/ApiStrategy failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bj: Wave 22 intelligence (platform scalability, user onboarding) ──
+    if (!deliverables.platformScalability || !deliverables.userOnboarding) {
+      try {
+        console.log("[Pivot] Synthesizing platform scalability + user onboarding...");
+        const [ps, uo] = await Promise.allSettled([
+          deliverables.platformScalability ? Promise.resolve(null) : synthesizePlatformScalability(businessPacket, job.questionnaire),
+          deliverables.userOnboarding ? Promise.resolve(null) : synthesizeUserOnboarding(businessPacket, job.questionnaire),
+        ]);
+        if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, platformScalability: ps.value };
+        if (uo.status === "fulfilled" && uo.value) deliverables = { ...deliverables, userOnboarding: uo.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] PlatformScalability/UserOnboarding failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bk: Wave 23 intelligence (employee engagement, talent acquisition funnel) ──
+    if (!deliverables.employeeEngagement || !deliverables.talentAcquisitionFunnel) {
+      try {
+        console.log("[Pivot] Synthesizing employee engagement + talent acquisition funnel...");
+        const [ee, taf] = await Promise.allSettled([
+          deliverables.employeeEngagement ? Promise.resolve(null) : synthesizeEmployeeEngagement(businessPacket, job.questionnaire),
+          deliverables.talentAcquisitionFunnel ? Promise.resolve(null) : synthesizeTalentAcquisitionFunnel(businessPacket, job.questionnaire),
+        ]);
+        if (ee.status === "fulfilled" && ee.value) deliverables = { ...deliverables, employeeEngagement: ee.value };
+        if (taf.status === "fulfilled" && taf.value) deliverables = { ...deliverables, talentAcquisitionFunnel: taf.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] EmployeeEngagement/TalentAcquisitionFunnel failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bl: Wave 23 intelligence (compensation benchmark, succession planning) ──
+    if (!deliverables.compensationBenchmark || !deliverables.successionPlanning) {
+      try {
+        console.log("[Pivot] Synthesizing compensation benchmark + succession planning...");
+        const [cb, sp] = await Promise.allSettled([
+          deliverables.compensationBenchmark ? Promise.resolve(null) : synthesizeCompensationBenchmark(businessPacket, job.questionnaire),
+          deliverables.successionPlanning ? Promise.resolve(null) : synthesizeSuccessionPlanning(businessPacket, job.questionnaire),
+        ]);
+        if (cb.status === "fulfilled" && cb.value) deliverables = { ...deliverables, compensationBenchmark: cb.value };
+        if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, successionPlanning: sp.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CompensationBenchmark/SuccessionPlanning failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bm: Wave 23 intelligence (diversity metrics, employer brand) ──
+    if (!deliverables.diversityMetrics || !deliverables.employerBrand) {
+      try {
+        console.log("[Pivot] Synthesizing diversity metrics + employer brand...");
+        const [dm, eb] = await Promise.allSettled([
+          deliverables.diversityMetrics ? Promise.resolve(null) : synthesizeDiversityMetrics(businessPacket, job.questionnaire),
+          deliverables.employerBrand ? Promise.resolve(null) : synthesizeEmployerBrand(businessPacket, job.questionnaire),
+        ]);
+        if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, diversityMetrics: dm.value };
+        if (eb.status === "fulfilled" && eb.value) deliverables = { ...deliverables, employerBrand: eb.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] DiversityMetrics/EmployerBrand failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bn: Wave 24 intelligence (data governance, analytics maturity) ──
+    if (!deliverables.dataGovernance || !deliverables.analyticsMaturity) {
+      try {
+        console.log("[Pivot] Synthesizing data governance + analytics maturity...");
+        const [dg, am] = await Promise.allSettled([
+          deliverables.dataGovernance ? Promise.resolve(null) : synthesizeDataGovernance(businessPacket, job.questionnaire),
+          deliverables.analyticsMaturity ? Promise.resolve(null) : synthesizeAnalyticsMaturity(businessPacket, job.questionnaire),
+        ]);
+        if (dg.status === "fulfilled" && dg.value) deliverables = { ...deliverables, dataGovernance: dg.value };
+        if (am.status === "fulfilled" && am.value) deliverables = { ...deliverables, analyticsMaturity: am.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] DataGovernance/AnalyticsMaturity failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bo: Wave 24 intelligence (customer data platform, predictive modeling) ──
+    if (!deliverables.customerDataPlatform || !deliverables.predictiveModeling) {
+      try {
+        console.log("[Pivot] Synthesizing customer data platform + predictive modeling...");
+        const [cdp, pm] = await Promise.allSettled([
+          deliverables.customerDataPlatform ? Promise.resolve(null) : synthesizeCustomerDataPlatform(businessPacket, job.questionnaire),
+          deliverables.predictiveModeling ? Promise.resolve(null) : synthesizePredictiveModeling(businessPacket, job.questionnaire),
+        ]);
+        if (cdp.status === "fulfilled" && cdp.value) deliverables = { ...deliverables, customerDataPlatform: cdp.value };
+        if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, predictiveModeling: pm.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CustomerDataPlatform/PredictiveModeling failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bp: Wave 24 intelligence (reporting framework, data quality score) ──
+    if (!deliverables.reportingFramework || !deliverables.dataQualityScore) {
+      try {
+        console.log("[Pivot] Synthesizing reporting framework + data quality score...");
+        const [rf, dqs] = await Promise.allSettled([
+          deliverables.reportingFramework ? Promise.resolve(null) : synthesizeReportingFramework(businessPacket, job.questionnaire),
+          deliverables.dataQualityScore ? Promise.resolve(null) : synthesizeDataQualityScore(businessPacket, job.questionnaire),
+        ]);
+        if (rf.status === "fulfilled" && rf.value) deliverables = { ...deliverables, reportingFramework: rf.value };
+        if (dqs.status === "fulfilled" && dqs.value) deliverables = { ...deliverables, dataQualityScore: dqs.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] ReportingFramework/DataQualityScore failed (non-fatal):", e);
       }
     }
 

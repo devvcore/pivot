@@ -172,6 +172,34 @@ const TABS = [
   { id: 131, label: "Fin Model",     icon: LineChart,     dataKey: "financialModeling"     },
   { id: 132, label: "Profit Map",    icon: TrendingUp,    dataKey: "profitabilityMap"      },
   { id: 133, label: "Cap Alloc",     icon: Briefcase,     dataKey: "capitalAllocation"     },
+  // Wave 21 — Sales Operations
+  { id: 134, label: "Pipeline",       icon: Gauge,         dataKey: "salesPipelineHealth"   },
+  { id: 135, label: "Deal Speed",     icon: Zap,           dataKey: "dealVelocity"          },
+  { id: 136, label: "Win Rate",       icon: Trophy,        dataKey: "winRateOptimizer"      },
+  { id: 137, label: "Enablement",     icon: Briefcase,     dataKey: "salesEnablement"       },
+  { id: 138, label: "Territories",    icon: Target,        dataKey: "territoryPlanning"     },
+  { id: 139, label: "Quotas",         icon: DollarSign,    dataKey: "quotaIntelligence"     },
+  // Wave 22 — Product & Technology
+  { id: 140, label: "Features",       icon: Sparkles,      dataKey: "featurePrioritization" },
+  { id: 141, label: "Usage",          icon: BarChart3,     dataKey: "productUsageAnalytics" },
+  { id: 142, label: "Tech Audit",     icon: Server,        dataKey: "techStackAudit"        },
+  { id: 143, label: "API Strategy",   icon: GitBranch,     dataKey: "apiStrategy"           },
+  { id: 144, label: "Scalability",    icon: TrendingUp,    dataKey: "platformScalability"   },
+  { id: 145, label: "Onboarding",     icon: ArrowRight,    dataKey: "userOnboarding"        },
+  // Wave 23 — People & Culture
+  { id: 146, label: "Engagement",     icon: Users,         dataKey: "employeeEngagement"    },
+  { id: 147, label: "Talent",         icon: UserPlus,      dataKey: "talentAcquisitionFunnel" },
+  { id: 148, label: "Comp Bench",     icon: Calculator,    dataKey: "compensationBenchmark" },
+  { id: 149, label: "Succession",     icon: Clock,         dataKey: "successionPlanning"    },
+  { id: 150, label: "Diversity",      icon: PieChart,      dataKey: "diversityMetrics"      },
+  { id: 151, label: "Employer Brand", icon: Megaphone,     dataKey: "employerBrand"         },
+  // Wave 24 — Data & Analytics
+  { id: 152, label: "Data Gov",       icon: ShieldCheck,   dataKey: "dataGovernance"        },
+  { id: 153, label: "Analytics",      icon: LineChart,     dataKey: "analyticsMaturity"     },
+  { id: 154, label: "CDP",            icon: Crosshair,     dataKey: "customerDataPlatform"  },
+  { id: 155, label: "Predictive",     icon: TrendingUp,    dataKey: "predictiveModeling"    },
+  { id: 156, label: "Reporting",      icon: BarChart3,     dataKey: "reportingFramework"    },
+  { id: 157, label: "Data Quality",   icon: Gauge,         dataKey: "dataQualityScore"      },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -13572,6 +13600,1854 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
                       <div className="space-y-2">
                         {cal.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 134: Sales Pipeline Health ──────────────────────────────── */}
+            {activeTab === 134 && (d as any).salesPipelineHealth && (() => {
+              const sph = (d as any).salesPipelineHealth;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Gauge className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Sales Pipeline Health</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{sph.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {sph.pipelineValue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Pipeline Value</p>
+                          <p className="text-3xl font-light">{sph.pipelineValue}</p>
+                        </div>
+                      )}
+                      {sph.healthScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Health Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{sph.healthScore}</p>
+                        </div>
+                      )}
+                      {sph.coverageRatio && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Coverage Ratio</p>
+                          <p className="text-2xl font-light">{sph.coverageRatio}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {sph.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><Gauge className="w-3 h-3" /> Pipeline Stages</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Deals</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Value</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Conversion</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sph.stages.map((s: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{s.name || s.stage}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.deals || s.count}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.value || s.amount}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.conversion || s.rate}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {sph.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {sph.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 135: Deal Velocity ──────────────────────────────────────── */}
+            {activeTab === 135 && (d as any).dealVelocity && (() => {
+              const dv = (d as any).dealVelocity;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Deal Velocity</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dv.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {dv.avgCycleTime && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Avg Cycle Time</p>
+                          <p className="text-3xl font-light">{dv.avgCycleTime}</p>
+                        </div>
+                      )}
+                      {dv.velocityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Velocity Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{dv.velocityScore}</p>
+                        </div>
+                      )}
+                      {dv.avgDealSize && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Avg Deal Size</p>
+                          <p className="text-2xl font-light">{dv.avgDealSize}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {dv.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><Zap className="w-3 h-3" /> Stage Velocity</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Duration</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Bottleneck</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Improvement</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dv.stages.map((s: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{s.name || s.stage}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.duration || s.days}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.bottleneck || s.issue}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.improvement || s.action}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {dv.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {dv.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 136: Win Rate Optimizer ─────────────────────────────────── */}
+            {activeTab === 136 && (d as any).winRateOptimizer && (() => {
+              const wro = (d as any).winRateOptimizer;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Win Rate Optimizer</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{wro.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {wro.currentWinRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Current Win Rate</p>
+                          <p className="text-3xl font-light">{wro.currentWinRate}</p>
+                        </div>
+                      )}
+                      {wro.targetWinRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Target Win Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{wro.targetWinRate}</p>
+                        </div>
+                      )}
+                      {wro.revenueImpact && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Revenue Impact</p>
+                          <p className="text-2xl font-light">{wro.revenueImpact}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {wro.factors?.length > 0 && (
+                    <div>
+                      <SectionHeader><Trophy className="w-3 h-3" /> Win/Loss Factors</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Factor</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {wro.factors.map((f: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{f.name || f.factor}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.impact || f.weight}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.current || f.score}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.action || f.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {wro.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {wro.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 137: Sales Enablement ───────────────────────────────────── */}
+            {activeTab === 137 && (d as any).salesEnablement && (() => {
+              const se = (d as any).salesEnablement;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Briefcase className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Sales Enablement</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{se.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {se.readinessScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Readiness Score</p>
+                          <p className="text-3xl font-light">{se.readinessScore}</p>
+                        </div>
+                      )}
+                      {se.contentUtilization && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Content Utilization</p>
+                          <p className="text-2xl font-light text-emerald-300">{se.contentUtilization}</p>
+                        </div>
+                      )}
+                      {se.rampTime && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Ramp Time</p>
+                          <p className="text-2xl font-light">{se.rampTime}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {se.programs?.length > 0 && (
+                    <div>
+                      <SectionHeader><Briefcase className="w-3 h-3" /> Enablement Programs</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Program</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Priority</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {se.programs.map((p: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{p.name || p.program}</td>
+                                <td className="py-2 px-3 text-zinc-600">{p.status || p.state}</td>
+                                <td className="py-2 px-3 text-zinc-600">{p.impact || p.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{p.priority || p.urgency}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {se.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {se.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 138: Territory Planning ─────────────────────────────────── */}
+            {activeTab === 138 && (d as any).territoryPlanning && (() => {
+              const tp = (d as any).territoryPlanning;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Territory Planning</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{tp.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {tp.totalTerritories != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Territories</p>
+                          <p className="text-3xl font-light">{tp.totalTerritories}</p>
+                        </div>
+                      )}
+                      {tp.coverageScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Coverage Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{tp.coverageScore}</p>
+                        </div>
+                      )}
+                      {tp.balanceIndex && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Balance Index</p>
+                          <p className="text-2xl font-light">{tp.balanceIndex}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {tp.territories?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Territory Breakdown</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Territory</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Revenue</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Accounts</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Potential</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tp.territories.map((t: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{t.name || t.territory}</td>
+                                <td className="py-2 px-3 text-zinc-600">{t.revenue || t.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{t.accounts || t.count}</td>
+                                <td className="py-2 px-3 text-zinc-600">{t.potential || t.opportunity}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {tp.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {tp.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 139: Quota Intelligence ─────────────────────────────────── */}
+            {activeTab === 139 && (d as any).quotaIntelligence && (() => {
+              const qi = (d as any).quotaIntelligence;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Quota Intelligence</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{qi.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {qi.quotaAttainment && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Quota Attainment</p>
+                          <p className="text-3xl font-light">{qi.quotaAttainment}</p>
+                        </div>
+                      )}
+                      {qi.fairnessScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Fairness Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{qi.fairnessScore}</p>
+                        </div>
+                      )}
+                      {qi.quotaToMarketRatio && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Quota-to-Market</p>
+                          <p className="text-2xl font-light">{qi.quotaToMarketRatio}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {qi.segments?.length > 0 && (
+                    <div>
+                      <SectionHeader><DollarSign className="w-3 h-3" /> Quota Segments</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Segment</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Quota</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Attainment</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Adjustment</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {qi.segments.map((s: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{s.name || s.segment}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.quota || s.target}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.attainment || s.achieved}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.adjustment || s.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {qi.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {qi.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 140: Feature Prioritization ─────────────────────────────── */}
+            {activeTab === 140 && (d as any).featurePrioritization && (() => {
+              const fp = (d as any).featurePrioritization;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Feature Prioritization</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{fp.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {fp.totalFeatures != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Features</p>
+                          <p className="text-3xl font-light">{fp.totalFeatures}</p>
+                        </div>
+                      )}
+                      {fp.topPriority && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Top Priority</p>
+                          <p className="text-2xl font-light text-emerald-300">{fp.topPriority}</p>
+                        </div>
+                      )}
+                      {fp.estimatedImpact && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Estimated Impact</p>
+                          <p className="text-2xl font-light">{fp.estimatedImpact}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {fp.features?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Feature Backlog</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Feature</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Priority</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Effort</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {fp.features.map((f: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{f.name || f.feature}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.priority || f.rank}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.effort || f.complexity}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.impact || f.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {fp.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {fp.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 141: Product Usage Analytics ────────────────────────────── */}
+            {activeTab === 141 && (d as any).productUsageAnalytics && (() => {
+              const pua = (d as any).productUsageAnalytics;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Product Usage Analytics</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{pua.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {pua.dau && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">DAU</p>
+                          <p className="text-3xl font-light">{pua.dau}</p>
+                        </div>
+                      )}
+                      {pua.adoptionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Adoption Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{pua.adoptionRate}</p>
+                        </div>
+                      )}
+                      {pua.stickinessRatio && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Stickiness</p>
+                          <p className="text-2xl font-light">{pua.stickinessRatio}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {pua.features?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Feature Usage</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Feature</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Usage</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Trend</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Engagement</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pua.features.map((f: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{f.name || f.feature}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.usage || f.count}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.trend || f.direction}</td>
+                                <td className="py-2 px-3 text-zinc-600">{f.engagement || f.score}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {pua.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {pua.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 142: Tech Stack Audit ───────────────────────────────────── */}
+            {activeTab === 142 && (d as any).techStackAudit && (() => {
+              const tsa = (d as any).techStackAudit;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Server className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Tech Stack Audit</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{tsa.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {tsa.totalTools != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Tools</p>
+                          <p className="text-3xl font-light">{tsa.totalTools}</p>
+                        </div>
+                      )}
+                      {tsa.redundancyScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Redundancy Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{tsa.redundancyScore}</p>
+                        </div>
+                      )}
+                      {tsa.annualCost && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Annual Cost</p>
+                          <p className="text-2xl font-light">{tsa.annualCost}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {tsa.tools?.length > 0 && (
+                    <div>
+                      <SectionHeader><Server className="w-3 h-3" /> Stack Components</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Tool</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Category</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Cost</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tsa.tools.map((t: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{t.name || t.tool}</td>
+                                <td className="py-2 px-3 text-zinc-600">{t.category || t.type}</td>
+                                <td className="py-2 px-3 text-zinc-600">{t.cost || t.price}</td>
+                                <td className="py-2 px-3 text-zinc-600">{t.status || t.assessment}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {tsa.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {tsa.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 143: API Strategy ───────────────────────────────────────── */}
+            {activeTab === 143 && (d as any).apiStrategy && (() => {
+              const api = (d as any).apiStrategy;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">API Strategy</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{api.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {api.totalEndpoints != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Endpoints</p>
+                          <p className="text-3xl font-light">{api.totalEndpoints}</p>
+                        </div>
+                      )}
+                      {api.maturityLevel && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Maturity Level</p>
+                          <p className="text-2xl font-light text-emerald-300">{api.maturityLevel}</p>
+                        </div>
+                      )}
+                      {api.revenueOpportunity && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Revenue Opportunity</p>
+                          <p className="text-2xl font-light">{api.revenueOpportunity}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {api.apis?.length > 0 && (
+                    <div>
+                      <SectionHeader><GitBranch className="w-3 h-3" /> API Inventory</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">API</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Type</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Usage</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {api.apis.map((a: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{a.name || a.endpoint}</td>
+                                <td className="py-2 px-3 text-zinc-600">{a.type || a.category}</td>
+                                <td className="py-2 px-3 text-zinc-600">{a.usage || a.calls}</td>
+                                <td className="py-2 px-3 text-zinc-600">{a.status || a.health}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {api.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {api.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 144: Platform Scalability ───────────────────────────────── */}
+            {activeTab === 144 && (d as any).platformScalability && (() => {
+              const ps = (d as any).platformScalability;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Platform Scalability</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ps.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ps.scalabilityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Scalability Score</p>
+                          <p className="text-3xl font-light">{ps.scalabilityScore}</p>
+                        </div>
+                      )}
+                      {ps.currentCapacity && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Current Capacity</p>
+                          <p className="text-2xl font-light text-emerald-300">{ps.currentCapacity}</p>
+                        </div>
+                      )}
+                      {ps.headroom && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Headroom</p>
+                          <p className="text-2xl font-light">{ps.headroom}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ps.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Scalability Dimensions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Dimension</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Limit</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Risk</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ps.dimensions.map((dim: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{dim.name || dim.dimension}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.current || dim.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.limit || dim.max}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.risk || dim.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ps.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ps.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 145: User Onboarding ────────────────────────────────────── */}
+            {activeTab === 145 && (d as any).userOnboarding && (() => {
+              const uo = (d as any).userOnboarding;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ArrowRight className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">User Onboarding</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{uo.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {uo.completionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Completion Rate</p>
+                          <p className="text-3xl font-light">{uo.completionRate}</p>
+                        </div>
+                      )}
+                      {uo.timeToValue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Time to Value</p>
+                          <p className="text-2xl font-light text-emerald-300">{uo.timeToValue}</p>
+                        </div>
+                      )}
+                      {uo.activationRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Activation Rate</p>
+                          <p className="text-2xl font-light">{uo.activationRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {uo.steps?.length > 0 && (
+                    <div>
+                      <SectionHeader><ArrowRight className="w-3 h-3" /> Onboarding Steps</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Step</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Completion</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Drop-off</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Improvement</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {uo.steps.map((s: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{s.name || s.step}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.completion || s.rate}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.dropOff || s.churn}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.improvement || s.action}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {uo.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {uo.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 146: Employee Engagement ────────────────────────────────── */}
+            {activeTab === 146 && (d as any).employeeEngagement && (() => {
+              const ee = (d as any).employeeEngagement;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Employee Engagement</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ee.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ee.engagementScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Engagement Score</p>
+                          <p className="text-3xl font-light">{ee.engagementScore}</p>
+                        </div>
+                      )}
+                      {ee.eNPS != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">eNPS</p>
+                          <p className="text-2xl font-light text-emerald-300">{ee.eNPS}</p>
+                        </div>
+                      )}
+                      {ee.retentionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Retention Rate</p>
+                          <p className="text-2xl font-light">{ee.retentionRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ee.drivers?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Engagement Drivers</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Driver</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Score</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Benchmark</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ee.drivers.map((d_: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{d_.name || d_.driver}</td>
+                                <td className="py-2 px-3 text-zinc-600">{d_.score || d_.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{d_.benchmark || d_.target}</td>
+                                <td className="py-2 px-3 text-zinc-600">{d_.action || d_.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ee.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ee.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 147: Talent Acquisition Funnel ──────────────────────────── */}
+            {activeTab === 147 && (d as any).talentAcquisitionFunnel && (() => {
+              const taf = (d as any).talentAcquisitionFunnel;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserPlus className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Talent Acquisition Funnel</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{taf.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {taf.openPositions != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Open Positions</p>
+                          <p className="text-3xl font-light">{taf.openPositions}</p>
+                        </div>
+                      )}
+                      {taf.timeToHire && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Time to Hire</p>
+                          <p className="text-2xl font-light text-emerald-300">{taf.timeToHire}</p>
+                        </div>
+                      )}
+                      {taf.offerAcceptRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Offer Accept Rate</p>
+                          <p className="text-2xl font-light">{taf.offerAcceptRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {taf.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><UserPlus className="w-3 h-3" /> Funnel Stages</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Candidates</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Conversion</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Avg Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {taf.stages.map((s: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{s.name || s.stage}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.candidates || s.count}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.conversion || s.rate}</td>
+                                <td className="py-2 px-3 text-zinc-600">{s.avgTime || s.duration}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {taf.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {taf.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 148: Compensation Benchmark ─────────────────────────────── */}
+            {activeTab === 148 && (d as any).compensationBenchmark && (() => {
+              const cb = (d as any).compensationBenchmark;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calculator className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Compensation Benchmark</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cb.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cb.marketPosition && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Market Position</p>
+                          <p className="text-3xl font-light">{cb.marketPosition}</p>
+                        </div>
+                      )}
+                      {cb.competitivenessScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Competitiveness</p>
+                          <p className="text-2xl font-light text-emerald-300">{cb.competitivenessScore}</p>
+                        </div>
+                      )}
+                      {cb.totalCompSpend && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Comp Spend</p>
+                          <p className="text-2xl font-light">{cb.totalCompSpend}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cb.roles?.length > 0 && (
+                    <div>
+                      <SectionHeader><Calculator className="w-3 h-3" /> Role Benchmarks</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Role</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Market</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Gap</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cb.roles.map((r: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{r.name || r.role}</td>
+                                <td className="py-2 px-3 text-zinc-600">{r.current || r.salary}</td>
+                                <td className="py-2 px-3 text-zinc-600">{r.market || r.benchmark}</td>
+                                <td className="py-2 px-3 text-zinc-600">{r.gap || r.difference}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {cb.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cb.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 149: Succession Planning ────────────────────────────────── */}
+            {activeTab === 149 && (d as any).successionPlanning && (() => {
+              const sp = (d as any).successionPlanning;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Succession Planning</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{sp.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {sp.criticalRoles != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Critical Roles</p>
+                          <p className="text-3xl font-light">{sp.criticalRoles}</p>
+                        </div>
+                      )}
+                      {sp.readinessScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Readiness Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{sp.readinessScore}</p>
+                        </div>
+                      )}
+                      {sp.benchStrength && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Bench Strength</p>
+                          <p className="text-2xl font-light">{sp.benchStrength}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {sp.positions?.length > 0 && (
+                    <div>
+                      <SectionHeader><Clock className="w-3 h-3" /> Key Positions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Position</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Risk Level</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Successor</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Readiness</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sp.positions.map((p: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{p.name || p.position}</td>
+                                <td className="py-2 px-3 text-zinc-600">{p.riskLevel || p.risk}</td>
+                                <td className="py-2 px-3 text-zinc-600">{p.successor || p.candidate}</td>
+                                <td className="py-2 px-3 text-zinc-600">{p.readiness || p.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {sp.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {sp.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 150: Diversity Metrics ──────────────────────────────────── */}
+            {activeTab === 150 && (d as any).diversityMetrics && (() => {
+              const dm = (d as any).diversityMetrics;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PieChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Diversity Metrics</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dm.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {dm.diversityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Diversity Score</p>
+                          <p className="text-3xl font-light">{dm.diversityScore}</p>
+                        </div>
+                      )}
+                      {dm.inclusionIndex != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Inclusion Index</p>
+                          <p className="text-2xl font-light text-emerald-300">{dm.inclusionIndex}</p>
+                        </div>
+                      )}
+                      {dm.representationGap && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Representation Gap</p>
+                          <p className="text-2xl font-light">{dm.representationGap}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {dm.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><PieChart className="w-3 h-3" /> Diversity Dimensions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Dimension</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Target</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Progress</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dm.dimensions.map((dim: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{dim.name || dim.dimension}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.current || dim.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.target || dim.goal}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.progress || dim.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {dm.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {dm.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 151: Employer Brand ─────────────────────────────────────── */}
+            {activeTab === 151 && (d as any).employerBrand && (() => {
+              const eb = (d as any).employerBrand;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Megaphone className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Employer Brand</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{eb.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {eb.brandScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Brand Score</p>
+                          <p className="text-3xl font-light">{eb.brandScore}</p>
+                        </div>
+                      )}
+                      {eb.glassdoorRating != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Glassdoor Rating</p>
+                          <p className="text-2xl font-light text-emerald-300">{eb.glassdoorRating}</p>
+                        </div>
+                      )}
+                      {eb.applicationRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Application Rate</p>
+                          <p className="text-2xl font-light">{eb.applicationRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {eb.channels?.length > 0 && (
+                    <div>
+                      <SectionHeader><Megaphone className="w-3 h-3" /> Brand Channels</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Channel</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Reach</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Sentiment</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {eb.channels.map((c: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{c.name || c.channel}</td>
+                                <td className="py-2 px-3 text-zinc-600">{c.reach || c.audience}</td>
+                                <td className="py-2 px-3 text-zinc-600">{c.sentiment || c.score}</td>
+                                <td className="py-2 px-3 text-zinc-600">{c.action || c.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {eb.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {eb.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 152: Data Governance ────────────────────────────────────── */}
+            {activeTab === 152 && (d as any).dataGovernance && (() => {
+              const dg = (d as any).dataGovernance;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Data Governance</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dg.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {dg.maturityLevel && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Maturity Level</p>
+                          <p className="text-3xl font-light">{dg.maturityLevel}</p>
+                        </div>
+                      )}
+                      {dg.complianceScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Compliance Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{dg.complianceScore}</p>
+                        </div>
+                      )}
+                      {dg.dataAssets != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Data Assets</p>
+                          <p className="text-2xl font-light">{dg.dataAssets}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {dg.domains?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldCheck className="w-3 h-3" /> Data Domains</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Domain</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Owner</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Quality</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Compliance</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dg.domains.map((dom: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{dom.name || dom.domain}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dom.owner || dom.steward}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dom.quality || dom.score}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dom.compliance || dom.status}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {dg.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {dg.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 153: Analytics Maturity ─────────────────────────────────── */}
+            {activeTab === 153 && (d as any).analyticsMaturity && (() => {
+              const am = (d as any).analyticsMaturity;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <LineChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Analytics Maturity</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{am.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {am.maturityLevel && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Maturity Level</p>
+                          <p className="text-3xl font-light">{am.maturityLevel}</p>
+                        </div>
+                      )}
+                      {am.dataLiteracy != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Data Literacy</p>
+                          <p className="text-2xl font-light text-emerald-300">{am.dataLiteracy}</p>
+                        </div>
+                      )}
+                      {am.analyticsROI && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Analytics ROI</p>
+                          <p className="text-2xl font-light">{am.analyticsROI}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {am.capabilities?.length > 0 && (
+                    <div>
+                      <SectionHeader><LineChart className="w-3 h-3" /> Analytics Capabilities</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Capability</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Target</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Gap</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {am.capabilities.map((c: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{c.name || c.capability}</td>
+                                <td className="py-2 px-3 text-zinc-600">{c.current || c.level}</td>
+                                <td className="py-2 px-3 text-zinc-600">{c.target || c.goal}</td>
+                                <td className="py-2 px-3 text-zinc-600">{c.gap || c.action}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {am.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {am.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 154: Customer Data Platform ─────────────────────────────── */}
+            {activeTab === 154 && (d as any).customerDataPlatform && (() => {
+              const cdp = (d as any).customerDataPlatform;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Crosshair className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Data Platform</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cdp.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cdp.unifiedProfiles != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Unified Profiles</p>
+                          <p className="text-3xl font-light">{cdp.unifiedProfiles}</p>
+                        </div>
+                      )}
+                      {cdp.dataCompleteness && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Data Completeness</p>
+                          <p className="text-2xl font-light text-emerald-300">{cdp.dataCompleteness}</p>
+                        </div>
+                      )}
+                      {cdp.activationRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Activation Rate</p>
+                          <p className="text-2xl font-light">{cdp.activationRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cdp.dataSources?.length > 0 && (
+                    <div>
+                      <SectionHeader><Crosshair className="w-3 h-3" /> Data Sources</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Source</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Type</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Records</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Quality</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cdp.dataSources.map((ds: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{ds.name || ds.source}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ds.type || ds.category}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ds.records || ds.count}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ds.quality || ds.score}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {cdp.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cdp.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 155: Predictive Modeling ────────────────────────────────── */}
+            {activeTab === 155 && (d as any).predictiveModeling && (() => {
+              const pm = (d as any).predictiveModeling;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Predictive Modeling</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{pm.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {pm.modelAccuracy && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Model Accuracy</p>
+                          <p className="text-3xl font-light">{pm.modelAccuracy}</p>
+                        </div>
+                      )}
+                      {pm.predictionConfidence && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Confidence</p>
+                          <p className="text-2xl font-light text-emerald-300">{pm.predictionConfidence}</p>
+                        </div>
+                      )}
+                      {pm.businessImpact && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Business Impact</p>
+                          <p className="text-2xl font-light">{pm.businessImpact}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {pm.models?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Predictive Models</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Model</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Accuracy</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Use Case</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pm.models.map((m: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{m.name || m.model}</td>
+                                <td className="py-2 px-3 text-zinc-600">{m.accuracy || m.score}</td>
+                                <td className="py-2 px-3 text-zinc-600">{m.useCase || m.application}</td>
+                                <td className="py-2 px-3 text-zinc-600">{m.impact || m.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {pm.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {pm.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 156: Reporting Framework ────────────────────────────────── */}
+            {activeTab === 156 && (d as any).reportingFramework && (() => {
+              const rf = (d as any).reportingFramework;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Reporting Framework</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{rf.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {rf.totalReports != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Reports</p>
+                          <p className="text-3xl font-light">{rf.totalReports}</p>
+                        </div>
+                      )}
+                      {rf.automationRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Automation Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{rf.automationRate}</p>
+                        </div>
+                      )}
+                      {rf.dataFreshness && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Data Freshness</p>
+                          <p className="text-2xl font-light">{rf.dataFreshness}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {rf.reports?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Report Inventory</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Report</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Frequency</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Audience</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rf.reports.map((r: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{r.name || r.report}</td>
+                                <td className="py-2 px-3 text-zinc-600">{r.frequency || r.cadence}</td>
+                                <td className="py-2 px-3 text-zinc-600">{r.audience || r.stakeholders}</td>
+                                <td className="py-2 px-3 text-zinc-600">{r.status || r.automated}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {rf.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {rf.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 157: Data Quality Score ─────────────────────────────────── */}
+            {activeTab === 157 && (d as any).dataQualityScore && (() => {
+              const dqs = (d as any).dataQualityScore;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Gauge className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Data Quality Score</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dqs.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {dqs.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Score</p>
+                          <p className="text-3xl font-light">{dqs.overallScore}</p>
+                        </div>
+                      )}
+                      {dqs.completeness && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Completeness</p>
+                          <p className="text-2xl font-light text-emerald-300">{dqs.completeness}</p>
+                        </div>
+                      )}
+                      {dqs.accuracy && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Accuracy</p>
+                          <p className="text-2xl font-light">{dqs.accuracy}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {dqs.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><Gauge className="w-3 h-3" /> Quality Dimensions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Dimension</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Score</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Benchmark</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dqs.dimensions.map((dim: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{dim.name || dim.dimension}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.score || dim.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.benchmark || dim.target}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.action || dim.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {dqs.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {dqs.recommendations.map((rec: any, i: number) => (
                           <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
                             <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
                           </div>
