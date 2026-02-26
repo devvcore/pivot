@@ -412,6 +412,70 @@ const SECTION_CATEGORIES: Record<string, SectionCategory[]> = {
   customerEffortOptimizer: ["b2c", "saas"],
   loyaltyDriver: ["b2c", "saas"],
   accountIntelligence: ["b2b", "enterprise"],
+
+  // ── Wave 93: Go-to-Market Execution ──
+  gtmCalendar: ["marketing", "product", "startup"],
+  launchReadiness: ["product", "startup"],
+  messageTesting: ["marketing", "brand"],
+  salesCollateral: ["sales", "b2b"],
+  demandGenPlan: ["marketing", "b2b", "saas"],
+  channelActivation: ["marketing", "b2b", "b2c"],
+
+  // ── Wave 94: Pricing Science ──
+  priceElasticityModel: ["saas", "b2c", "financial"],
+  dynamicPricingEngine: ["saas", "b2c", "platform"],
+  discountImpactAnalysis: ["sales", "b2b"],
+  bundleDesigner: ["saas", "product"],
+  competitivePriceTracker: ["saas", "b2b", "b2c"],
+  pricingExperiment: ["saas", "product"],
+
+  // ── Wave 95: Business Intelligence Hub ──
+  kpiWatchlist: ["core"],
+  alertFramework: ["enterprise", "operations"],
+  anomalyDetection: ["financial", "operations"],
+  trendForecast: ["financial", "core"],
+  dashboardDesign: ["enterprise", "operations"],
+  insightsCatalog: ["enterprise", "tech"],
+
+  // ── Wave 96: Innovation Management ──
+  ideaPipeline: ["product", "tech"],
+  innovationScoring: ["product", "tech", "enterprise"],
+  experimentBoard: ["product", "startup"],
+  patentAnalysis: ["tech", "enterprise"],
+  disruptionPlaybook: ["enterprise", "startup"],
+  futureProofing: ["enterprise", "tech"],
+
+  // ── Wave 97: Customer Revenue Management ──
+  revenueMixAnalysis: ["financial", "b2b", "saas"],
+  accountGrowthPlan: ["b2b", "enterprise"],
+  contractOptimizer: ["b2b", "enterprise"],
+  usagePatternAnalysis: ["saas", "platform"],
+  churnRecoveryPlan: ["saas", "b2b"],
+  winbackProgram: ["saas", "b2b", "b2c"],
+
+  // ── Wave 98: Operational Automation ──
+  automationAudit: ["operations", "enterprise"],
+  processDigitization: ["operations", "enterprise"],
+  botDeploymentPlan: ["tech", "enterprise"],
+  workflowBenchmark: ["operations"],
+  handoffEfficiency: ["operations", "enterprise"],
+  toolConsolidation: ["operations", "tech"],
+
+  // ── Wave 99: Strategic Communications ──
+  crisisCommunication: ["enterprise", "brand"],
+  internalComms: ["enterprise", "hr"],
+  investorNarrative: ["investor", "startup"],
+  pressStrategy: ["brand", "marketing"],
+  thoughtLeadershipPlan: ["brand", "marketing"],
+  brandStoryArc: ["brand", "marketing"],
+
+  // ── Wave 100: Business Mastery Score ──
+  masteryDashboard: ["core"],
+  growthVelocityScore: ["core"],
+  operationalMaturity: ["enterprise", "operations"],
+  leadershipReadiness: ["enterprise", "hr"],
+  marketDominanceIndex: ["enterprise", "b2b"],
+  futureReadiness: ["core"],
 };
 
 // ── Business Profile Classification ─────────────────────────────────────────

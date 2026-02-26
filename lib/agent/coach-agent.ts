@@ -594,7 +594,55 @@ KEY SECTIONS FOR COACHING:
 - churnEarlyWarning: Churn early warning with at-risk accounts, revenue at risk, and early signals
 - customerEffortOptimizer: Customer effort optimizer with friction points, ease of use, and improvement potential
 - loyaltyDriver: Loyalty driver with top drivers, retention impact, and NPS correlation
-- accountIntelligence: Account intelligence with accounts profiled, growth potential, and risk accounts`;
+- accountIntelligence: Account intelligence with accounts profiled, growth potential, and risk accounts
+- gtmCalendar: Go-to-market launch calendar with milestones, dates, owners
+- launchReadiness: Launch readiness gates and go/no-go assessment
+- messageTesting: Message variant testing plan for audiences and channels
+- salesCollateral: Sales collateral audit and effectiveness analysis
+- demandGenPlan: Demand generation plan with channels and budgets
+- channelActivation: Channel activation plan with readiness scoring
+- priceElasticityModel: Price elasticity analysis with optimal price points
+- dynamicPricingEngine: Dynamic pricing rules and guardrails
+- discountImpactAnalysis: Discount scenario impact modeling
+- bundleDesigner: Product bundle design with pricing and segments
+- competitivePriceTracker: Competitive price tracking and positioning
+- pricingExperiment: Pricing experiment design and A/B test plan
+- kpiWatchlist: KPI watchlist with targets, trends, alerts
+- alertFramework: Business alert rules and threshold monitoring
+- anomalyDetection: Anomaly detection across business metrics
+- trendForecast: Trend forecasting for key metrics (30d/90d)
+- dashboardDesign: Dashboard panel design for stakeholders
+- insightsCatalog: Actionable business insights ranked by impact
+- ideaPipeline: Innovation idea pipeline with feasibility scoring
+- innovationScoring: Innovation capability scoring
+- experimentBoard: Experiment tracking board with learnings
+- patentAnalysis: IP and patent portfolio analysis
+- disruptionPlaybook: Disruption scenario playbook
+- futureProofing: Future-proofing assessment across dimensions
+- revenueMixAnalysis: Revenue mix breakdown with concentration risk
+- accountGrowthPlan: Account-level growth plans and expansion strategies
+- contractOptimizer: Contract portfolio optimization
+- usagePatternAnalysis: Product usage pattern analysis
+- churnRecoveryPlan: Churned customer recovery plan
+- winbackProgram: Win-back program design by segment
+- automationAudit: Automation opportunity audit with ROI
+- processDigitization: Process digitization roadmap
+- botDeploymentPlan: Bot/RPA deployment plan
+- workflowBenchmark: Workflow performance benchmarking
+- handoffEfficiency: Cross-team handoff efficiency analysis
+- toolConsolidation: Tool consolidation and savings analysis
+- crisisCommunication: Crisis communication scenarios and plans
+- internalComms: Internal communications effectiveness audit
+- investorNarrative: Investor narrative with key story components
+- pressStrategy: Press and media strategy
+- thoughtLeadershipPlan: Thought leadership content strategy
+- brandStoryArc: Brand story arc with narrative chapters
+- masteryDashboard: Overall business mastery scoring
+- growthVelocityScore: Growth velocity and acceleration metrics
+- operationalMaturity: Operational maturity assessment (level 1-5)
+- leadershipReadiness: Leadership readiness for next growth stage
+- marketDominanceIndex: Market dominance and competitive position
+- futureReadiness: Future readiness covering adaptability and resilience`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -766,6 +814,14 @@ const TOOLS = [
             "marketSignalRadar", "competitorMoveTracker", "customerVoiceAggregator", "industryConvergenceMap", "emergingTechRadar", "regulatoryHorizon",
             "cashFlowForecaster", "profitDriverTree", "revenueQualityIndex", "financialResilienceScore", "workingCapitalOptimizer", "investmentReadinessGate",
             "customerDnaProfile", "propensityModel", "churnEarlyWarning", "customerEffortOptimizer", "loyaltyDriver", "accountIntelligence",
+            "gtmCalendar", "launchReadiness", "messageTesting", "salesCollateral", "demandGenPlan", "channelActivation",
+            "priceElasticityModel", "dynamicPricingEngine", "discountImpactAnalysis", "bundleDesigner", "competitivePriceTracker", "pricingExperiment",
+            "kpiWatchlist", "alertFramework", "anomalyDetection", "trendForecast", "dashboardDesign", "insightsCatalog",
+            "ideaPipeline", "innovationScoring", "experimentBoard", "patentAnalysis", "disruptionPlaybook", "futureProofing",
+            "revenueMixAnalysis", "accountGrowthPlan", "contractOptimizer", "usagePatternAnalysis", "churnRecoveryPlan", "winbackProgram",
+            "automationAudit", "processDigitization", "botDeploymentPlan", "workflowBenchmark", "handoffEfficiency", "toolConsolidation",
+            "crisisCommunication", "internalComms", "investorNarrative", "pressStrategy", "thoughtLeadershipPlan", "brandStoryArc",
+            "masteryDashboard", "growthVelocityScore", "operationalMaturity", "leadershipReadiness", "marketDominanceIndex", "futureReadiness",
           ],
           description: "Which report section to retrieve",
         },
