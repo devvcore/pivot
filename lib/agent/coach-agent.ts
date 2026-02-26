@@ -306,7 +306,31 @@ KEY SECTIONS FOR COACHING:
 - competitivePositioning: Market positioning analysis with dimension comparison, gap identification, and differentiation strategy
 - marketShareAnalysis: Share of market analysis with competitor breakdown, trend tracking, and growth opportunities
 - growthCorridors: Growth opportunity mapping with potential sizing, readiness assessment, and timeline estimation
-- valuePropCanvas: Value proposition design with customer need mapping, solution fit analysis, and messaging framework`;
+- valuePropCanvas: Value proposition design with customer need mapping, solution fit analysis, and messaging framework
+- competitiveMonitoring: Competitive landscape monitoring with competitor tracking, market signals, and alert triggers
+- marketTrendRadar: Market trend detection and tracking with trend scoring, impact assessment, and timing windows
+- industryBenchmarkIndex: Industry benchmark comparisons with percentile ranking, gap analysis, and peer performance
+- customerIntelPlatform: Customer intelligence aggregation with behavioral signals, intent data, and segmentation insights
+- priceSensitivityModel: Price sensitivity modeling with elasticity curves, willingness-to-pay analysis, and optimal pricing
+- demandSignalAnalysis: Demand signal detection with leading indicators, seasonal patterns, and forecast signals
+- digitalMaturityIndex: Digital maturity scoring with dimension assessment, capability gaps, and transformation priorities
+- cloudMigrationReadiness: Cloud migration readiness assessment with workload analysis, cost modeling, and risk evaluation
+- automationRoi: Automation ROI analysis with process candidates, cost savings, and implementation priority
+- digitalWorkplace: Digital workplace effectiveness with tool adoption, collaboration metrics, and productivity scoring
+- cybersecurityPosture: Cybersecurity posture assessment with vulnerability scoring, compliance gaps, and risk mitigation
+- techVendorConsolidation: Technology vendor consolidation opportunities with overlap analysis, savings potential, and migration risk
+- revenueSourceMapping: Revenue source identification and mapping with concentration analysis, growth potential, and stability scoring
+- channelMixOptimization: Channel mix optimization with performance comparison, budget reallocation, and ROI maximization
+- crossSellEngine: Cross-sell opportunity identification with product affinity, customer readiness, and revenue potential
+- priceOptimizationModel: Price optimization modeling with competitive positioning, margin impact, and demand response
+- promotionEffectiveness: Promotion effectiveness analysis with ROI measurement, cannibalization tracking, and optimal timing
+- revenueHealthIndex: Revenue health index with quality scoring, sustainability metrics, and growth trajectory
+- organizationalNetwork: Organizational network analysis with communication patterns, influence mapping, and collaboration gaps
+- decisionEfficiency: Decision-making efficiency metrics with speed, quality, and alignment scoring
+- meetingEfficiency: Meeting efficiency and ROI with time allocation, decision output, and cost analysis
+- knowledgeCapital: Knowledge capital assessment with intellectual asset inventory, documentation coverage, and knowledge risk
+- changeManagementScore: Change management scoring with adoption rates, resistance mapping, and readiness assessment
+- cultureAlignment: Culture alignment measurement with values fit, team cohesion, and organizational health indicators`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -430,6 +454,10 @@ const TOOLS = [
             "cashBurnAnalysis", "revenuePerEmployee", "financialBenchmarking", "investmentPortfolio", "costAllocationModel", "marginWaterfall",
             "customerOnboardingMetrics", "healthScoreModel", "csExpansionPlaybook", "renewalForecasting", "csOperations", "customerMilestones",
             "okrFramework", "strategicPillars", "competitivePositioning", "marketShareAnalysis", "growthCorridors", "valuePropCanvas",
+            "competitiveMonitoring", "marketTrendRadar", "industryBenchmarkIndex", "customerIntelPlatform", "priceSensitivityModel", "demandSignalAnalysis",
+            "digitalMaturityIndex", "cloudMigrationReadiness", "automationRoi", "digitalWorkplace", "cybersecurityPosture", "techVendorConsolidation",
+            "revenueSourceMapping", "channelMixOptimization", "crossSellEngine", "priceOptimizationModel", "promotionEffectiveness", "revenueHealthIndex",
+            "organizationalNetwork", "decisionEfficiency", "meetingEfficiency", "knowledgeCapital", "changeManagementScore", "cultureAlignment",
           ],
           description: "Which report section to retrieve",
         },
@@ -897,6 +925,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).marketShareAnalysis) parts.push(`Market Share Analysis: ${JSON.stringify((d as any).marketShareAnalysis).slice(0, 300)}`);
     if ((d as any).growthCorridors) parts.push(`Growth Corridors: ${JSON.stringify((d as any).growthCorridors).slice(0, 300)}`);
     if ((d as any).valuePropCanvas) parts.push(`Value Prop Canvas: ${JSON.stringify((d as any).valuePropCanvas).slice(0, 300)}`);
+    if ((d as any).competitiveMonitoring) parts.push(`Competitive Monitoring: ${(d as any).competitiveMonitoring.summary}`);
+    if ((d as any).marketTrendRadar) parts.push(`Market Trend Radar: ${(d as any).marketTrendRadar.summary}`);
+    if ((d as any).industryBenchmarkIndex) parts.push(`Industry Benchmark Index: ${(d as any).industryBenchmarkIndex.summary}`);
+    if ((d as any).customerIntelPlatform) parts.push(`Customer Intel Platform: ${(d as any).customerIntelPlatform.summary}`);
+    if ((d as any).priceSensitivityModel) parts.push(`Price Sensitivity Model: ${(d as any).priceSensitivityModel.summary}`);
+    if ((d as any).demandSignalAnalysis) parts.push(`Demand Signal Analysis: ${(d as any).demandSignalAnalysis.summary}`);
+    if ((d as any).digitalMaturityIndex) parts.push(`Digital Maturity Index: ${(d as any).digitalMaturityIndex.summary}`);
+    if ((d as any).cloudMigrationReadiness) parts.push(`Cloud Migration Readiness: ${(d as any).cloudMigrationReadiness.summary}`);
+    if ((d as any).automationRoi) parts.push(`Automation ROI: ${(d as any).automationRoi.summary}`);
+    if ((d as any).digitalWorkplace) parts.push(`Digital Workplace: ${(d as any).digitalWorkplace.summary}`);
+    if ((d as any).cybersecurityPosture) parts.push(`Cybersecurity Posture: ${(d as any).cybersecurityPosture.summary}`);
+    if ((d as any).techVendorConsolidation) parts.push(`Tech Vendor Consolidation: ${(d as any).techVendorConsolidation.summary}`);
+    if ((d as any).revenueSourceMapping) parts.push(`Revenue Source Mapping: ${(d as any).revenueSourceMapping.summary}`);
+    if ((d as any).channelMixOptimization) parts.push(`Channel Mix Optimization: ${(d as any).channelMixOptimization.summary}`);
+    if ((d as any).crossSellEngine) parts.push(`Cross-Sell Engine: ${(d as any).crossSellEngine.summary}`);
+    if ((d as any).priceOptimizationModel) parts.push(`Price Optimization Model: ${(d as any).priceOptimizationModel.summary}`);
+    if ((d as any).promotionEffectiveness) parts.push(`Promotion Effectiveness: ${(d as any).promotionEffectiveness.summary}`);
+    if ((d as any).revenueHealthIndex) parts.push(`Revenue Health Index: ${(d as any).revenueHealthIndex.summary}`);
+    if ((d as any).organizationalNetwork) parts.push(`Organizational Network: ${(d as any).organizationalNetwork.summary}`);
+    if ((d as any).decisionEfficiency) parts.push(`Decision Efficiency: ${(d as any).decisionEfficiency.summary}`);
+    if ((d as any).meetingEfficiency) parts.push(`Meeting Efficiency: ${(d as any).meetingEfficiency.summary}`);
+    if ((d as any).knowledgeCapital) parts.push(`Knowledge Capital: ${(d as any).knowledgeCapital.summary}`);
+    if ((d as any).changeManagementScore) parts.push(`Change Management Score: ${(d as any).changeManagementScore.summary}`);
+    if ((d as any).cultureAlignment) parts.push(`Culture Alignment: ${(d as any).cultureAlignment.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

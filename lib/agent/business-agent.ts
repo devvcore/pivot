@@ -161,6 +161,10 @@ const TOOLS = [
             "cashBurnAnalysis", "revenuePerEmployee", "financialBenchmarking", "investmentPortfolio", "costAllocationModel", "marginWaterfall",
             "customerOnboardingMetrics", "healthScoreModel", "csExpansionPlaybook", "renewalForecasting", "csOperations", "customerMilestones",
             "okrFramework", "strategicPillars", "competitivePositioning", "marketShareAnalysis", "growthCorridors", "valuePropCanvas",
+            "competitiveMonitoring", "marketTrendRadar", "industryBenchmarkIndex", "customerIntelPlatform", "priceSensitivityModel", "demandSignalAnalysis",
+            "digitalMaturityIndex", "cloudMigrationReadiness", "automationRoi", "digitalWorkplace", "cybersecurityPosture", "techVendorConsolidation",
+            "revenueSourceMapping", "channelMixOptimization", "crossSellEngine", "priceOptimizationModel", "promotionEffectiveness", "revenueHealthIndex",
+            "organizationalNetwork", "decisionEfficiency", "meetingEfficiency", "knowledgeCapital", "changeManagementScore", "cultureAlignment",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -439,6 +443,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 42 (Financial Intelligence): cashBurnAnalysis (burn rate analysis), revenuePerEmployee (productivity metrics), financialBenchmarking (industry financial comparison), investmentPortfolio (investment allocation), costAllocationModel (cost distribution analysis), marginWaterfall (margin flow analysis)
 - Wave 43 (Customer Success): customerOnboardingMetrics (onboarding funnel metrics), healthScoreModel (customer health scoring), csExpansionPlaybook (expansion revenue plays), renewalForecasting (renewal prediction), csOperations (CS process maturity), customerMilestones (customer lifecycle milestones)
 - Wave 44 (Strategic Planning): okrFramework (OKR design and tracking), strategicPillars (strategic pillar definition), competitivePositioning (market positioning analysis), marketShareAnalysis (share of market analysis), growthCorridors (growth opportunity mapping), valuePropCanvas (value proposition design)
+- Wave 45 (Market Intelligence): competitiveMonitoring (competitive landscape monitoring), marketTrendRadar (market trend detection and tracking), industryBenchmarkIndex (industry benchmark comparisons), customerIntelPlatform (customer intelligence aggregation), priceSensitivityModel (price sensitivity modeling), demandSignalAnalysis (demand signal detection and analysis)
+- Wave 46 (Digital Transformation): digitalMaturityIndex (digital maturity scoring), cloudMigrationReadiness (cloud migration readiness assessment), automationRoi (automation ROI analysis), digitalWorkplace (digital workplace effectiveness), cybersecurityPosture (cybersecurity posture assessment), techVendorConsolidation (technology vendor consolidation opportunities)
+- Wave 47 (Revenue Acceleration): revenueSourceMapping (revenue source identification and mapping), channelMixOptimization (channel mix optimization analysis), crossSellEngine (cross-sell opportunity engine), priceOptimizationModel (price optimization modeling), promotionEffectiveness (promotion effectiveness analysis), revenueHealthIndex (revenue health index scoring)
+- Wave 48 (Organizational Health): organizationalNetwork (organizational network analysis), decisionEfficiency (decision-making efficiency metrics), meetingEfficiency (meeting efficiency and ROI), knowledgeCapital (knowledge capital assessment), changeManagementScore (change management scoring), cultureAlignment (culture alignment measurement)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
