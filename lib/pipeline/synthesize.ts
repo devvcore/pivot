@@ -15,6 +15,8 @@ import type {
   CompetitorAnalysis,
   TechOptimization,
   PricingIntelligence,
+  DataProvenance,
+  FinancialFact,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -35,6 +37,15 @@ STANDARDS (non-negotiable):
 - No generic advice. No platitudes. No softening uncomfortable truths.
 - If data is missing for a dimension, say so clearly and score conservatively.
 - You are the thinking partner the business owner never had — tell them what no one else will.
+
+SOURCE ATTRIBUTION RULES (mandatory — anti-hallucination):
+- The data includes a "VERIFIED FINANCIAL FACTS" section with numbers extracted directly from uploaded documents.
+  These are ground truth. Use them EXACTLY as stated. Do NOT round, adjust, or override them.
+- If a number comes from uploaded documents, use it exactly.
+- If you are estimating or projecting a number not found in the documents, clearly note it is an estimate.
+- If data is insufficient to produce a specific number, say "Insufficient data" — do NOT invent a plausible number.
+- NEVER fabricate specific dollar amounts, customer names, or metrics that are not supported by the provided data.
+- Only reference customers, contracts, and entities that appear in the document data.
 
 Always respond with valid JSON matching the exact schema provided. No extra text outside the JSON.`;
 
@@ -160,7 +171,7 @@ export async function synthesizeDeliverables(
     console.log("[Pivot] Building Growth Intelligence…");
     const marketIntel = await genMarketIntelligence(genai, kg, researchCtx);
 
-    return normalizeDeliverables({
+    const deliverables = normalizeDeliverables({
       healthScore: health,
       cashIntelligence: cash,
       revenueLeakAnalysis: leaks,
@@ -170,6 +181,11 @@ export async function synthesizeDeliverables(
       actionPlan,
       marketIntelligence: marketIntel,
     });
+
+    // Attach data provenance (anti-hallucination metadata)
+    deliverables.dataProvenance = buildDataProvenance(packet);
+
+    return deliverables;
   } catch (e) {
     console.warn("[Pivot] Synthesis failed:", e);
     const errorMsg = e instanceof Error ? e.message : String(e);
@@ -265,7 +281,18 @@ async function genCashIntelligence(genai: GoogleGenAI, kg: string) {
     }
   ]
 }`;
-  const prompt = `Business Knowledge Graph:\n${kg}\n\nGenerate the 13-week Cash Intelligence Report.\nUse actual financial data where available. Where exact figures are missing, estimate conservatively\nbased on the revenue model and flag estimates clearly. Flag the exact week number where cash risks appear.\n\nReturn ONLY valid JSON with 13 entries in weeklyProjections, matching this schema:\n${schema}`;
+  const prompt = `Business Knowledge Graph:\n${kg}\n\nGenerate the Cash Intelligence Report.
+
+ANTI-HALLUCINATION RULES FOR CASH PROJECTIONS:
+- Use ONLY financial data from the VERIFIED FINANCIAL FACTS section for opening balances and known amounts.
+- For weeks where you have actual data, use the exact numbers from the documents.
+- For projected weeks, clearly base projections on documented patterns and state your assumptions.
+- If total document data is insufficient for meaningful 13-week projections, produce FEWER weeks
+  with a summary explaining the data limitation, rather than fabricating 13 weeks of made-up numbers.
+- NEVER invent specific dollar amounts that appear to come from documents.
+- Set currentCashPosition to null if no cash figure exists in the VERIFIED FINANCIAL FACTS.
+
+Return ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
 
@@ -291,7 +318,21 @@ async function genRevenueLeaks(genai: GoogleGenAI, kg: string) {
     }
   ]
 }`;
-  const prompt = `Business Knowledge Graph:\n${kg}\n\nIdentify and dollar-denominate every revenue leak in this business.\nA revenue leak is money the business is losing, leaving on the table, or about to lose.\nCategories: underpriced products/services, undercharged clients, missed upsells, at-risk recurring revenue,\nmarketing waste, pricing inconsistencies, pre-churn customer revenue.\n\nBe specific: name the client, the contract, the product line. If the data supports it, name the exact amount.\nMinimum 3 leaks, maximum 8. Rank by annual $ impact.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
+  const prompt = `Business Knowledge Graph:\n${kg}\n\nIdentify and dollar-denominate every revenue leak in this business.
+A revenue leak is money the business is losing, leaving on the table, or about to lose.
+Categories: underpriced products/services, undercharged clients, missed upsells, at-risk recurring revenue,
+marketing waste, pricing inconsistencies, pre-churn customer revenue.
+
+ANTI-HALLUCINATION RULES:
+- Only name clients, contracts, or product lines that appear in the VERIFIED FINANCIAL FACTS or document data.
+- If a specific dollar amount can be tied to document data, use it exactly and set confidence to "High".
+- If you are estimating a dollar amount based on patterns, set confidence to "Medium" or "Low".
+- If you cannot identify a specific dollar amount from the data, set amount to 0 and note "Unquantified" in the description.
+- Do NOT invent client names or contract values. If the data mentions a client, use that name; otherwise describe the area generically.
+
+Minimum 3 leaks, maximum 8. Rank by annual $ impact.
+
+Return ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
 
@@ -347,7 +388,18 @@ async function genAtRiskCustomers(genai: GoogleGenAI, kg: string) {
     }
   ]
 }`;
-  const prompt = `Business Knowledge Graph:\n${kg}\n\nIdentify the top 3 customers most at risk of churning in the next 60-90 days.\nUse every signal available: contract terms, communication frequency, payment history,\nsatisfaction signals, tenure, revenue concentration, competitive threats.\n\nIf fewer than 3 customers are identifiable from the data, include the ones you can identify\nand note data gaps for the others.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
+  const prompt = `Business Knowledge Graph:\n${kg}\n\nIdentify the top 3 customers most at risk of churning in the next 60-90 days.
+Use every signal available: contract terms, communication frequency, payment history,
+satisfaction signals, tenure, revenue concentration, competitive threats.
+
+ANTI-HALLUCINATION RULES:
+- Only name customers that ACTUALLY APPEAR in the uploaded documents or VERIFIED FINANCIAL FACTS.
+- Do NOT invent customer names. If a customer is mentioned in the data, use their exact name.
+- If fewer than 3 customers are identifiable from the data, return ONLY the ones you can identify.
+  Do NOT pad the list with made-up customer names.
+- Revenue at risk should be based on documented figures where available, or noted as an estimate.
+
+Return ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
 
@@ -731,6 +783,55 @@ ${schema}`;
     console.warn("[Pivot] PricingIntelligence synthesis failed:", e);
     return null;
   }
+}
+
+// ── Data Provenance (anti-hallucination metadata) ─────────────────────────────
+
+function buildDataProvenance(packet: BusinessPacket): DataProvenance {
+  const facts = packet.financialFacts ?? [];
+  const sourceFiles = [...new Set(facts.map((f) => f.sourceFile))];
+
+  // Check coverage gaps
+  const coverageGaps: string[] = [];
+  const coverage = packet.dataCoverage ?? {};
+  for (const cat of ["Financial Position", "Revenue Model", "Customer Portfolio", "Operations"]) {
+    if (!coverage[cat]) coverageGaps.push(`No ${cat} documents provided`);
+  }
+  if (!packet.keyMetrics.cashPosition && !facts.some((f) => f.label.toLowerCase().includes("cash"))) {
+    coverageGaps.push("No cash position data found in documents");
+  }
+  if (!packet.keyMetrics.estimatedMonthlyRevenue && !facts.some((f) => f.label.toLowerCase().includes("revenue"))) {
+    coverageGaps.push("No revenue figures found in documents");
+  }
+
+  // Detect conflicts between facts with similar labels
+  const warnings: string[] = [];
+  const byLabel = new Map<string, FinancialFact[]>();
+  for (const f of facts) {
+    const key = f.label.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const existing = byLabel.get(key) ?? [];
+    existing.push(f);
+    byLabel.set(key, existing);
+  }
+  for (const [, group] of byLabel) {
+    if (group.length > 1) {
+      const values = group.map((f) => f.value);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      if (min > 0 && max / min > 1.25) {
+        warnings.push(
+          `Conflicting values for "${group[0].label}": ${group.map((f) => `$${f.value.toLocaleString()} (${f.sourceFile})`).join(" vs ")}`
+        );
+      }
+    }
+  }
+
+  return {
+    documentSources: sourceFiles,
+    financialFactCount: facts.length,
+    warnings,
+    coverageGaps,
+  };
 }
 
 // ── Normalizers & fallback ─────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import {
   ArrowLeft, Download, AlertCircle, TrendingUp, DollarSign, Users, Target,
   ShieldAlert, Sparkles, ChevronRight, Loader2, ShieldCheck, Globe, Zap,
   BarChart3, GitBranch, Trophy, FileText, Clock, ArrowRight, Server, Megaphone,
+  Presentation,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -14,6 +15,14 @@ import {
 import type { Job, MVPDeliverables } from "@/lib/types";
 import { ExecutionView } from "./ExecutionView";
 import { AgentChatButton } from "./AgentChat";
+import { RevenueLeakChart } from "./charts/RevenueLeakChart";
+import { CashFlowChart } from "./charts/CashFlowChart";
+import { CustomerRiskScatter } from "./charts/CustomerRiskScatter";
+import { MarketingChannelChart } from "./charts/MarketingChannelChart";
+import { IssuesSeverityChart } from "./charts/IssuesSeverityChart";
+import { TechSavingsChart } from "./charts/TechSavingsChart";
+import { PricingComparisonChart } from "./charts/PricingComparisonChart";
+import { CompetitorRadarChart } from "./charts/CompetitorRadarChart";
 
 interface ResultsViewProps {
   runId: string;
@@ -35,6 +44,7 @@ const TABS = [
   { id: 10, label: "Tech Savings",    icon: Server,      dataKey: "techOptimization"      },
   { id: 11, label: "Pricing",         icon: DollarSign,  dataKey: "pricingIntelligence"   },
   { id: 12, label: "Marketing",       icon: Megaphone,   dataKey: "marketingStrategy"     },
+  { id: 13, label: "Pitch Deck",      icon: Presentation, dataKey: "pitchDeckAnalysis"    },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -70,6 +80,47 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ConfidenceBanner({ provenance }: { provenance: NonNullable<MVPDeliverables["dataProvenance"]> }) {
+  const hasWarnings = provenance.warnings.length > 0;
+  const hasGaps = provenance.coverageGaps.length > 0;
+  if (!hasWarnings && !hasGaps) return null;
+
+  const severity = provenance.warnings.length > 2 ? "high" : hasWarnings ? "medium" : "low";
+  const colors = severity === "high"
+    ? "bg-red-50 border-red-200 text-red-800"
+    : severity === "medium"
+    ? "bg-amber-50 border-amber-200 text-amber-800"
+    : "bg-zinc-50 border-zinc-200 text-zinc-600";
+
+  return (
+    <div className={`border rounded-xl p-4 mb-6 ${colors}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        <span className="text-[10px] font-mono uppercase tracking-widest font-bold">
+          {severity === "high" ? "Treat numbers as rough estimates only"
+            : severity === "medium" ? "Some figures are AI estimates"
+            : "Data coverage notes"}
+        </span>
+        <span className="text-[9px] font-mono opacity-60 ml-auto">
+          {provenance.financialFactCount} verified facts from {provenance.documentSources.length} documents
+        </span>
+      </div>
+      {hasWarnings && (
+        <ul className="text-xs space-y-1 ml-6">
+          {provenance.warnings.slice(0, 3).map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
+      )}
+      {hasGaps && (
+        <div className="text-[10px] opacity-70 mt-2 ml-6">
+          Coverage gaps: {provenance.coverageGaps.join(", ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +128,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
   const [approving, setApproving] = useState(false);
   const [phase, setPhase] = useState<string>("PLAN");
   const [activeTab, setActiveTab] = useState(0);
+  const [viewMode, setViewMode] = useState<"report" | "execute">("report");
 
   useEffect(() => {
     if (job?.phase) setPhase(job.phase);
@@ -165,8 +217,22 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
     }
   };
 
-  if (phase === "EXECUTE") {
-    return <ExecutionView job={job} onBack={onBack} />;
+  const isExecutePhase = phase === "EXECUTE";
+
+  if (isExecutePhase && viewMode === "execute") {
+    return (
+      <div className="relative">
+        {/* Floating toggle to switch back to report */}
+        <button
+          onClick={() => setViewMode("report")}
+          className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 bg-white text-zinc-900 text-xs font-mono uppercase tracking-wider rounded-xl shadow-2xl border border-zinc-200 hover:bg-zinc-50 transition-all"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          View Report
+        </button>
+        <ExecutionView job={job} onBack={onBack} />
+      </div>
+    );
   }
 
   // ── Data helpers ────────────────────────────────────────────────────────────
@@ -211,11 +277,19 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
             className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 text-zinc-600 text-xs font-mono uppercase tracking-wider hover:bg-zinc-50 transition-all rounded-lg">
             <Download className="w-3.5 h-3.5" /> PDF
           </a>
-          <button onClick={handleApprove} disabled={approving}
-            className="px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-800 transition-all rounded-lg shadow-md active:scale-95 flex items-center gap-2">
-            {approving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-            Approve & Execute
-          </button>
+          {isExecutePhase ? (
+            <button onClick={() => setViewMode("execute")}
+              className="px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-800 transition-all rounded-lg shadow-md active:scale-95 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Execution Center
+            </button>
+          ) : (
+            <button onClick={handleApprove} disabled={approving}
+              className="px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-800 transition-all rounded-lg shadow-md active:scale-95 flex items-center gap-2">
+              {approving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              Approve & Execute
+            </button>
+          )}
         </div>
       </header>
 
@@ -287,6 +361,11 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
             transition={{ duration: 0.15 }}
           >
 
+            {/* Data confidence indicator */}
+            {d.dataProvenance && activeTab === 0 && (
+              <ConfidenceBanner provenance={d.dataProvenance} />
+            )}
+
             {/* ── Tab 0: Health Score ─────────────────────────────────────── */}
             {activeTab === 0 && (
               <div className="space-y-4">
@@ -353,6 +432,9 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <p className="text-sm text-zinc-600 leading-relaxed">{ci.summary}</p>
                   </div>
                 )}
+
+                {/* Cash flow charts */}
+                <CashFlowChart projections={(ci as any).weeklyProjections ?? []} />
 
                 {weeklyModel.length > 0 && (
                   <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
@@ -423,6 +505,9 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   </div>
                 )}
 
+                {/* Revenue leak charts */}
+                <RevenueLeakChart items={rl.items || []} />
+
                 {(rl.items || []).map((item, i) => (
                   <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -469,6 +554,9 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   ))}
                 </div>
 
+                {/* Issues charts */}
+                <IssuesSeverityChart issues={ir.issues || []} />
+
                 {(ir.issues || []).map((issue, i) => (
                   <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
                     <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
@@ -512,6 +600,9 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <p className="text-sm text-zinc-600 mt-1">{arc.summary}</p>
                   </div>
                 )}
+
+                {/* Customer risk scatter chart */}
+                <CustomerRiskScatter customers={arc.customers || []} />
 
                 {(arc.customers || []).map((c, i) => (
                   <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
@@ -978,6 +1069,12 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     </div>
                   )}
 
+                  {/* Competitor radar chart */}
+                  <CompetitorRadarChart
+                    competitors={[...ca.competitors, ...ca.industryLeaders]}
+                    yourGrade={d.websiteAnalysis?.grade}
+                  />
+
                   {/* Competitor cards */}
                   {[...ca.competitors, ...ca.industryLeaders].length > 0 && (
                     <div>
@@ -1045,6 +1142,11 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     </div>
                   )}
 
+                  {/* Tech savings chart */}
+                  {to.recommendations?.length > 0 && (
+                    <TechSavingsChart recommendations={to.recommendations} />
+                  )}
+
                   {/* Recommendations */}
                   {to.recommendations?.length > 0 && (
                     <div className="space-y-4">
@@ -1084,6 +1186,11 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-3">Current Pricing Assessment</p>
                     <p className="text-lg leading-relaxed">{pi.currentPricingAssessment}</p>
                   </div>
+
+                  {/* Pricing chart */}
+                  {pi.suggestedPricing?.length > 0 && (
+                    <PricingComparisonChart tiers={pi.suggestedPricing} />
+                  )}
 
                   {/* Pricing tiers */}
                   {pi.suggestedPricing?.length > 0 && (
@@ -1152,6 +1259,12 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       </div>
                     )}
                   </div>
+
+                  {/* Marketing charts */}
+                  <MarketingChannelChart
+                    channels={ms.channelRecommendations ?? []}
+                    socialStrategy={ms.socialMediaStrategy ?? []}
+                  />
 
                   {/* Channel recommendations */}
                   {ms.channelRecommendations?.length > 0 && (
@@ -1361,6 +1474,157 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       <p className="text-sm text-zinc-600 leading-relaxed">{ms.adSpendRecommendation}</p>
                     </div>
                   )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 13: Pitch Deck Analysis ─────────────────────────── */}
+            {activeTab === 13 && d.pitchDeckAnalysis && (() => {
+              const pd = d.pitchDeckAnalysis!;
+              const gc = GRADE_COLORS[pd.overallGrade] ?? { text: "text-zinc-700", bg: "bg-zinc-100" };
+              return (
+                <div className="space-y-6">
+                  {/* Score hero */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8 flex flex-col md:flex-row gap-6 items-start">
+                    <div className="text-center shrink-0">
+                      <div className={`text-6xl font-bold px-6 py-4 rounded-2xl ${gc.text} ${gc.bg}`}>{pd.overallGrade}</div>
+                      <div className="text-zinc-400 text-sm mt-2">{pd.overallScore}/100</div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Presentation className="w-4 h-4 text-zinc-400" />
+                        <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Pitch Deck Review</p>
+                      </div>
+                      <p className="text-lg text-white leading-relaxed">{pd.headline}</p>
+                      <div className="flex gap-3 mt-3 text-[10px] font-mono text-zinc-500">
+                        <span>{pd.fileName}</span>
+                        {pd.slideCount && <span>{pd.slideCount} slides</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Extracted content */}
+                  {pd.extractedContent && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {Object.entries(pd.extractedContent)
+                        .filter(([, v]) => v)
+                        .map(([key, value]) => (
+                          <div key={key} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">
+                              {key.replace(/([A-Z])/g, " $1").trim()}
+                            </p>
+                            <p className="text-sm text-zinc-700">{value}</p>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
+                  {/* Strengths + Weaknesses */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {pd.strengths?.length > 0 && (
+                      <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                        <SectionHeader><Sparkles className="w-3 h-3 text-green-600" /> Strengths</SectionHeader>
+                        <ul className="space-y-2">
+                          {pd.strengths.map((s, i) => (
+                            <li key={i} className="text-sm text-green-800 flex gap-2">
+                              <span className="text-green-500 font-bold shrink-0">+</span>{s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {pd.weaknesses?.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                        <SectionHeader><AlertCircle className="w-3 h-3 text-red-500" /> Weaknesses</SectionHeader>
+                        <ul className="space-y-2">
+                          {pd.weaknesses.map((w, i) => (
+                            <li key={i} className="text-sm text-red-800 flex gap-2">
+                              <span className="text-red-500 font-bold shrink-0">-</span>{w}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Missing slides */}
+                  {pd.missingSlides?.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-amber-500" /> Missing Essential Slides</SectionHeader>
+                      <div className="flex flex-wrap gap-2">
+                        {pd.missingSlides.map((s, i) => (
+                          <span key={i} className="text-xs font-mono bg-amber-100 text-amber-800 border border-amber-300 px-3 py-1.5 rounded-lg">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {pd.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Improvement Recommendations</SectionHeader>
+                      <div className="space-y-4">
+                        {pd.recommendations.map((rec) => (
+                          <div key={rec.rank} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-start gap-4">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{rec.rank}</span>
+                              <div className="flex-1">
+                                <p className="font-semibold text-zinc-900 mb-2">{rec.area}</p>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                  <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                                    <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mb-1">Current</p>
+                                    <p className="text-xs text-red-900">{rec.current}</p>
+                                  </div>
+                                  <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                                    <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Suggested</p>
+                                    <p className="text-xs text-green-900 font-medium">{rec.suggested}</p>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-2 italic">{rec.rationale}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Suggested infographics */}
+                  {pd.suggestedInfographics?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Suggested Visuals & Infographics</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {pd.suggestedInfographics.map((info, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[9px] font-mono bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded uppercase">
+                                {info.type}
+                              </span>
+                              <span className="text-[10px] text-zinc-400">{info.slide}</span>
+                            </div>
+                            <p className="text-sm text-zinc-700">{info.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Positioning advice */}
+                  {pd.positioningAdvice && (
+                    <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6">
+                      <SectionHeader><Target className="w-3 h-3" /> Positioning Strategy</SectionHeader>
+                      <p className="text-sm text-zinc-700 leading-relaxed">{pd.positioningAdvice}</p>
+                    </div>
+                  )}
+
+                  {/* Generate new deck CTA */}
+                  <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 text-center">
+                    <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-3">Need a New Pitch Deck?</p>
+                    <p className="text-sm text-zinc-600 mb-4">Ask Pivvy to generate an investor-ready pitch deck based on your report data.</p>
+                    <p className="text-xs text-zinc-500 italic">Try: &quot;Generate a pitch deck for me&quot; in the Pivvy chat</p>
+                  </div>
                 </div>
               );
             })()}

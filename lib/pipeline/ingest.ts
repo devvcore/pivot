@@ -9,7 +9,7 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import type { ParsedFile } from "./parse";
-import type { Questionnaire, BusinessPacket } from "@/lib/types";
+import type { Questionnaire, BusinessPacket, FinancialFact, CompanyIdentity } from "@/lib/types";
 
 const MICRO_MODEL = process.env.MICRO_AGENT_MODEL || "gemini-3-flash-preview";
 const ORCHESTRATOR_MODEL = process.env.ORCHESTRATOR_MODEL || "gemini-3-flash-preview";
@@ -137,7 +137,7 @@ Rules:
             Object.entries(parsed.financialAmounts as Record<string, unknown>).filter(
               ([, v]) => typeof v === "number" && Number.isFinite(v)
             )
-          )
+          ) as Record<string, number>
         : {},
       confidence:
         typeof parsed.confidence === "number"
@@ -232,7 +232,7 @@ Rules:
               Object.entries(parsed.financialAmounts as Record<string, unknown>).filter(
                 ([, v]) => typeof v === "number" && Number.isFinite(v)
               )
-            )
+            ) as Record<string, number>
           : firstPass.financialAmounts,
       confidence:
         typeof parsed.confidence === "number"
@@ -466,6 +466,24 @@ export async function ingestDocuments(
     }));
   }
 
+  // ── Build financial facts registry (anti-hallucination) ──
+  const financialFacts: FinancialFact[] = [];
+  for (const { filename, extract } of extracts) {
+    for (const [label, value] of Object.entries(extract.financialAmounts)) {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        financialFacts.push({
+          label,
+          value,
+          sourceFile: filename,
+          confidence: extract.confidence,
+        });
+      }
+    }
+  }
+
+  // ── Build company identity anchor ──
+  const identity = buildCompanyIdentity(questionnaire, extracts);
+
   let consolidated;
   if (genai) {
     const raw = await consolidateToPacket(genai, extracts, questionnaire);
@@ -493,8 +511,50 @@ export async function ingestDocuments(
     website: questionnaire.website,
     questionnaire,
     documentCount: parsedFiles.length,
+    financialFacts,
+    identity,
     ...consolidated,
   } as BusinessPacket;
+}
+
+// ── Company Identity Anchoring ────────────────────────────────────────────────
+
+function buildCompanyIdentity(
+  questionnaire: Questionnaire,
+  extracts: { filename: string; extract: DocExtract }[]
+): CompanyIdentity {
+  let domain: string | null = null;
+  if (questionnaire.website) {
+    try {
+      domain = new URL(
+        questionnaire.website.startsWith("http")
+          ? questionnaire.website
+          : `https://${questionnaire.website}`
+      ).hostname.replace(/^www\./, "");
+    } catch { /* invalid URL */ }
+  }
+
+  // Collect company name variations from documents
+  const aliases = new Set<string>();
+  const orgLower = questionnaire.organizationName.toLowerCase();
+  for (const { extract } of extracts) {
+    for (const fact of extract.keyFacts) {
+      const words = fact.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/g) ?? [];
+      for (const w of words) {
+        if (w.toLowerCase() !== orgLower && w.length > 3 &&
+            (orgLower.includes(w.toLowerCase()) || w.toLowerCase().includes(orgLower))) {
+          aliases.add(w);
+        }
+      }
+    }
+  }
+
+  return {
+    name: questionnaire.organizationName,
+    domain,
+    verifiedDomain: false,
+    aliases: Array.from(aliases).slice(0, 5),
+  };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -551,6 +611,32 @@ export function formatPacketAsContext(packet: BusinessPacket): string {
         `[${d.category}]\n  Facts: ${d.keyFacts.slice(0, 5).join(" | ")}\n  Issues: ${d.criticalIssues.slice(0, 3).join(" | ")}\n  Amounts: ${JSON.stringify(d.financialAmounts)}`
     ),
   ];
+
+  // Add verified financial facts section (anti-hallucination)
+  if (packet.financialFacts && packet.financialFacts.length > 0) {
+    lines.push("", "══ VERIFIED FINANCIAL FACTS (from source documents — use these exactly) ══");
+    for (const fact of packet.financialFacts) {
+      lines.push(`  ${fact.label}: $${fact.value.toLocaleString()} [FROM: ${fact.sourceFile}] (confidence: ${fact.confidence}/100)`);
+    }
+    lines.push(
+      "",
+      "IMPORTANT: The numbers above were extracted directly from uploaded documents.",
+      "Use them exactly as stated. Do NOT round, adjust, or override them with estimates.",
+      "If you need a number that is NOT in this list, clearly mark it as [ESTIMATED].",
+    );
+  }
+
+  // Add identity anchor
+  if (packet.identity) {
+    lines.push(
+      "",
+      `══ COMPANY IDENTITY ANCHOR ══`,
+      `Name: ${packet.identity.name}`,
+      packet.identity.domain ? `Domain: ${packet.identity.domain}` : "",
+      packet.identity.aliases.length > 0 ? `Aliases: ${packet.identity.aliases.join(", ")}` : "",
+      `All analysis MUST be about THIS specific entity only. Do not confuse with similarly-named companies.`,
+    );
+  }
 
   return lines.filter((l) => l !== "").join("\n");
 }

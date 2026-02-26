@@ -97,7 +97,9 @@ Based on this REAL data, return valid JSON ONLY:
   "profileGrade": "<A/B/C/D/F>",
   "profileScore": <integer 0-100>,
   "topPerformingContent": "<describe their best-performing post type based on the data>",
-  "postingRecommendation": "<specific recommendation: what to post, how often, based on what works>"
+  "postingRecommendation": "<specific recommendation: what to post, how often, based on what works>",
+  "verified": <true if this profile DEFINITELY belongs to ${companyName ?? handle}, false if uncertain>,
+  "verificationNote": "<if verified is false, explain why — e.g. 'Bio mentions different company' or 'Cannot confirm ownership'>"
 }
 
 Grading rubric:
@@ -138,6 +140,8 @@ IMPORTANT: Use the REAL numbers provided. Do not guess or make up follower count
       profileScore: result.profileScore ?? 50,
       isCompetitor,
       companyName: companyName ?? undefined,
+      verified: result.verified ?? undefined,
+      verificationNote: result.verificationNote ?? undefined,
     };
   } catch (e) {
     console.warn("[SocialAnalyzer] Gemini analysis failed, using scraped data directly:", e);

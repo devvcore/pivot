@@ -25,6 +25,7 @@ import {
   gatherSocialProfiles,
   synthesizeMarketingStrategy,
 } from "@/lib/pipeline/marketing";
+import { analyzePitchDeck } from "@/lib/agent/pitch-deck-analyzer";
 import type { BusinessPacket, MVPDeliverables, WebsiteAnalysis } from "@/lib/types";
 
 const RESUMABLE_ENTRY_STATUSES = new Set(["pending", "parsing", "ingesting", "synthesizing", "formatting", "failed"]);
@@ -174,6 +175,36 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Marketing intelligence failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4b: Pitch deck analysis (best-effort) ────────────────────────
+    if (!deliverables.pitchDeckAnalysis) {
+      // Detect pitch deck files (.pptx, .ppt, or files with "pitch" or "deck" in name)
+      const pitchDeckFiles = job.filePaths.filter((fp) => {
+        const lower = fp.toLowerCase();
+        return lower.endsWith(".pptx") || lower.endsWith(".ppt") ||
+          lower.includes("pitch") || lower.includes("deck");
+      });
+
+      if (pitchDeckFiles.length > 0) {
+        try {
+          console.log("[Pivot] Analyzing pitch deck:", pitchDeckFiles[0]);
+          const parsedDeck = await parseFiles(runId, [pitchDeckFiles[0]]);
+          const deckText = parsedDeck[0]?.text ?? "";
+          if (deckText.length > 50) {
+            const pitchDeckAnalysis = await analyzePitchDeck(
+              deckText,
+              parsedDeck[0].filename,
+              businessPacket,
+              job.questionnaire
+            );
+            deliverables = { ...deliverables, pitchDeckAnalysis };
+            updateJob(runId, { deliverables });
+          }
+        } catch (e) {
+          console.warn("[Pivot] Pitch deck analysis failed (non-fatal):", e);
+        }
       }
     }
 

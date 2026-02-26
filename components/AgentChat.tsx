@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, X, Bot, Globe, BarChart3, Search, MessageCircle, ChevronDown } from "lucide-react";
+import { Send, Loader2, X, Bot, Globe, BarChart3, Search, MessageCircle, ChevronDown, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { ChatMessage } from "@/lib/types";
+import { ProjectionChart } from "./charts/ProjectionChart";
 
 interface AgentChatProps {
   orgId: string;
@@ -13,17 +14,31 @@ interface AgentChatProps {
 }
 
 const TOOL_ICONS: Record<string, React.ReactNode> = {
-  search_web:        <Search className="w-3 h-3" />,
-  get_report_section: <BarChart3 className="w-3 h-3" />,
-  analyze_website:   <Globe className="w-3 h-3" />,
+  search_web:          <Search className="w-3 h-3" />,
+  get_report_section:  <BarChart3 className="w-3 h-3" />,
+  analyze_website:     <Globe className="w-3 h-3" />,
+  generate_projection: <TrendingUp className="w-3 h-3" />,
 };
+
+/** Extract projection JSON from <!--PROJECTION:{...}--> markers in message text */
+function extractProjection(content: string): { text: string; projection: any | null } {
+  const match = content.match(/<!--PROJECTION:([\s\S]*?)-->/);
+  if (!match) return { text: content, projection: null };
+  try {
+    const projection = JSON.parse(match[1]);
+    const text = content.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim();
+    return { text, projection };
+  } catch {
+    return { text: content, projection: null };
+  }
+}
 
 const STARTER_PROMPTS = [
   "What are my most urgent cash risks right now?",
-  "Which customers should I call this week and what do I say?",
+  "What would my cash look like in 12 months if I fix the top 3 leaks?",
+  "Show me the revenue impact if I lose my highest-risk customer",
   "What should I prioritize in the next 30 days?",
-  "How does my business compare to industry benchmarks?",
-  "What quick wins can I act on today?",
+  "What's my growth trajectory if I implement all quick wins?",
 ];
 
 export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentChatProps) {
@@ -138,15 +153,25 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentCh
               </div>
             )}
             <div className={`max-w-[85%] ${msg.role === "user" ? "order-last" : ""}`}>
-              <div
-                className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                  msg.role === "user"
-                    ? "bg-zinc-900 text-white rounded-br-sm"
-                    : "bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm"
-                }`}
-              >
-                {msg.content}
-              </div>
+              {(() => {
+                const { text, projection } = msg.role === "assistant"
+                  ? extractProjection(msg.content)
+                  : { text: msg.content, projection: null };
+                return (
+                  <>
+                    <div
+                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                        msg.role === "user"
+                          ? "bg-zinc-900 text-white rounded-br-sm"
+                          : "bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm"
+                      }`}
+                    >
+                      {text}
+                    </div>
+                    {projection && <ProjectionChart data={projection} />}
+                  </>
+                );
+              })()}
               {/* Tools used indicator */}
               {toolsUsed[i] && (
                 <div className="flex items-center gap-1 mt-1 ml-1">
@@ -225,7 +250,7 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentCh
           </button>
         </div>
         <div className="text-[9px] font-mono text-zinc-400 text-center mt-2 uppercase tracking-widest">
-          Pivvy can search the web · access your full report · analyze websites
+          Pivvy can search the web · access your full report · analyze websites · generate projections
         </div>
       </div>
     </div>

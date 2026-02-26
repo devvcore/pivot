@@ -23,6 +23,21 @@ import type {
 
 const FLASH_MODEL = "gemini-3-flash-preview";
 
+// ── URL verification (anti-hallucination) ───────────────────────────────────
+
+async function verifyUrl(url: string): Promise<boolean> {
+  try {
+    const resp = await fetch(url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(5000),
+      redirect: "follow",
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ── 1. Analyze competitor websites ───────────────────────────────────────────
 
 export async function analyzeCompetitorWebsites(
@@ -91,7 +106,21 @@ Return only the JSON array, no other text.`;
     });
     const raw = resp.text ?? "[]";
     const urls = JSON.parse(raw);
-    return Array.isArray(urls) ? urls.slice(0, 3) : [];
+    if (!Array.isArray(urls)) return [];
+
+    // Verify URLs actually resolve (catches hallucinated URLs)
+    const candidates = urls.slice(0, 4); // check up to 4, keep 3
+    const verified: string[] = [];
+    for (const u of candidates) {
+      if (typeof u === "string" && u.startsWith("http") && await verifyUrl(u)) {
+        verified.push(u);
+        if (verified.length >= 3) break;
+      }
+    }
+    if (verified.length < urls.length) {
+      console.log(`[Pivot] URL verification: ${verified.length}/${urls.length} URLs verified`);
+    }
+    return verified;
   } catch {
     return [];
   }

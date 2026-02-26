@@ -44,6 +44,31 @@ export interface Job {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Anti-hallucination: Financial Facts & Data Provenance
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FinancialFact {
+  label: string;        // "Monthly Revenue", "Cash Position", etc.
+  value: number;
+  sourceFile: string;   // filename it was extracted from
+  confidence: number;   // 0-100 from extraction
+}
+
+export interface CompanyIdentity {
+  name: string;              // from questionnaire
+  domain: string | null;     // extracted from website URL
+  verifiedDomain: boolean;   // did we successfully fetch the website?
+  aliases: string[];         // alternative names found in documents
+}
+
+export interface DataProvenance {
+  documentSources: string[];         // filenames used
+  financialFactCount: number;        // how many facts came from docs
+  warnings: string[];                // conflicts or suspicious values
+  coverageGaps: string[];            // what data was missing
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Stage 1 output: BusinessPacket
 // Lean, structured extraction produced by Gemini Lite ingestion agent.
 // No raw text — only facts, metrics, and issues. Passed to Stage 2 Flash agents.
@@ -74,6 +99,8 @@ export interface BusinessPacket {
   consolidatedOpportunities: string[];
   dataCoverage: Record<string, boolean>;
   documentCount: number;
+  financialFacts?: FinancialFact[];    // verified facts from source documents
+  identity?: CompanyIdentity;          // anchored company identity
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -237,6 +264,8 @@ export interface SocialProfileAnalysis {
   profileScore: number;       // 0-100
   isCompetitor: boolean;      // true if this is a competitor/leader profile
   companyName?: string;       // whose profile this is
+  verified?: boolean;         // true if profile confirmed to belong to the company
+  verificationNote?: string;  // explanation if verification failed
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,6 +327,44 @@ export interface MVPDeliverables {
   techOptimization?: TechOptimization;     // included if tech stack provided
   pricingIntelligence?: PricingIntelligence; // always included
   marketingStrategy?: MarketingStrategyReport; // marketing channels, social audit, copy recs
+  pitchDeckAnalysis?: PitchDeckAnalysis;       // pitch deck review + generation
+  dataProvenance?: DataProvenance;              // anti-hallucination metadata
+}
+
+export interface PitchDeckAnalysis {
+  fileName: string;
+  slideCount?: number;
+  overallScore: number;          // 0-100
+  overallGrade: string;          // A-F
+  headline: string;              // One-line verdict
+  extractedContent: {
+    problemStatement?: string;
+    solution?: string;
+    marketOpportunity?: string;
+    businessModel?: string;
+    traction?: string;
+    teamSummary?: string;
+    fundingAsk?: string;
+    useOfFunds?: string;
+  };
+  strengths: string[];
+  weaknesses: string[];
+  missingSlides: string[];       // e.g. "Team slide", "Financial projections"
+  recommendations: {
+    rank: number;
+    area: string;
+    current: string;
+    suggested: string;
+    rationale: string;
+  }[];
+  suggestedInfographics: {
+    slide: string;               // which slide
+    type: string;                // "bar chart", "timeline", "process flow", etc.
+    description: string;
+  }[];
+  positioningAdvice: string;     // overall positioning guidance
+  generatedDeckJobId?: string;   // 2slides job ID if a deck was generated
+  generatedDeckUrl?: string;     // download URL from 2slides
 }
 
 export interface ActionPlan {

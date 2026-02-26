@@ -61,6 +61,11 @@ const TOOLS = [
             "actionPlan",
             "marketIntelligence",
             "websiteAnalysis",
+            "competitorAnalysis",
+            "techOptimization",
+            "pricingIntelligence",
+            "marketingStrategy",
+            "pitchDeckAnalysis",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -85,6 +90,30 @@ const TOOLS = [
         },
       },
       required: ["url"],
+    },
+  },
+  {
+    name: "generate_projection",
+    description:
+      "Generate a what-if financial projection based on the business report data. Returns structured data points that render as an interactive chart. Use when the user asks about future scenarios, impact of fixing issues, or 'what would happen if...' questions.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        projectionType: {
+          type: "string",
+          enum: ["cash_forecast", "revenue_recovery", "customer_churn", "growth_scenario"],
+          description: "Type of projection to generate",
+        },
+        timeframeMonths: {
+          type: "number",
+          description: "Number of months to project (1-24)",
+        },
+        scenario: {
+          type: "string",
+          description: "Description of the scenario to model (e.g. 'fix top 3 revenue leaks', 'lose highest-risk customer')",
+        },
+      },
+      required: ["projectionType", "timeframeMonths", "scenario"],
     },
   },
 ];
@@ -144,6 +173,91 @@ CTA Assessment: ${analysis.ctaAssessment}`;
     }
   }
 
+  if (toolName === "generate_projection") {
+    const projectionType = args.projectionType as string;
+    const timeframeMonths = Math.min(Math.max(Number(args.timeframeMonths ?? 12), 1), 24);
+    const scenario = args.scenario as string;
+
+    // Load report data for context
+    const allJobs = listJobs();
+    const job = allJobs.find((j) => j.questionnaire.orgId === orgId && j.status === "completed")
+      ?? allJobs.find((j) => j.status === "completed");
+
+    if (!job?.deliverables) return `No completed report found for projection.`;
+
+    const d = job.deliverables as MVPDeliverables;
+    const contextParts: string[] = [];
+
+    if (projectionType === "cash_forecast" || projectionType === "growth_scenario") {
+      contextParts.push(`Cash Intelligence: ${JSON.stringify({
+        currentCash: (d.cashIntelligence as any).currentCashPosition ?? 0,
+        runway: (d.cashIntelligence as any).runwayWeeks ?? 0,
+        risks: d.cashIntelligence.risks?.slice(0, 3),
+      })}`);
+    }
+    if (projectionType === "revenue_recovery" || projectionType === "growth_scenario") {
+      contextParts.push(`Revenue Leaks: ${JSON.stringify({
+        total: d.revenueLeakAnalysis.totalIdentified,
+        items: d.revenueLeakAnalysis.items?.slice(0, 5).map(i => ({ desc: i.description, amount: i.amount })),
+      })}`);
+    }
+    if (projectionType === "customer_churn") {
+      contextParts.push(`At-Risk Customers: ${JSON.stringify({
+        customers: d.atRiskCustomers.customers?.slice(0, 5).map(c => ({ name: c.name, revenue: c.revenueAtRisk, risk: c.risk })),
+      })}`);
+    }
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) return "Projection unavailable — API key not configured.";
+
+      const genai = new GoogleGenAI({ apiKey });
+      const projResp = await genai.models.generateContent({
+        model: "gemini-2.5-flash-preview-05-20",
+        contents: [{
+          role: "user",
+          parts: [{ text: `Generate a ${timeframeMonths}-month financial projection.
+Type: ${projectionType}
+Scenario: ${scenario}
+
+Business data:
+${contextParts.join("\n")}
+
+Return ONLY valid JSON with this structure:
+{
+  "title": "Chart title",
+  "subtitle": "Brief scenario description",
+  "dataPoints": [
+    { "month": "Mon YYYY", "baseline": <number>, "projected": <number> }
+  ],
+  "insight": "One sentence key insight",
+  "totalImpact": "Dollar impact summary"
+}
+
+Rules:
+- Generate one data point per month for ${timeframeMonths} months starting from the current month
+- baseline = what happens if nothing changes
+- projected = what happens under the scenario
+- Use realistic numbers grounded in the business data provided
+- All monetary values in raw numbers (not formatted strings)` }],
+        }],
+        config: {
+          temperature: 0.3,
+          maxOutputTokens: 1000,
+        } as Record<string, unknown>,
+      });
+
+      const text = projResp.text ?? "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return `Projection generation failed — could not parse response.`;
+
+      const projection = JSON.parse(jsonMatch[0]);
+      return `[Projection Generated]\n${projection.insight}\n${projection.totalImpact}\n\n<!--PROJECTION:${JSON.stringify(projection)}-->`;
+    } catch (e) {
+      return `Projection generation failed: ${String(e)}`;
+    }
+  }
+
   return `Unknown tool: ${toolName}`;
 }
 
@@ -182,6 +296,7 @@ YOUR TOOLS:
 - search_web(query): Search for current market data, competitors, benchmarks
 - get_report_section(section): Get full details from the intelligence report
 - analyze_website(url): Grade and analyze any website for marketing effectiveness
+- generate_projection(projectionType, timeframeMonths, scenario): Create what-if financial projections that render as interactive charts. Use for cash forecasts, revenue recovery modeling, customer churn impact, or growth scenarios.
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
