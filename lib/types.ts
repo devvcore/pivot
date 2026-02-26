@@ -719,6 +719,13 @@ export interface MVPDeliverables {
   complianceChecklist?: ComplianceChecklist;
   expansionPlaybook?: ExpansionPlaybook;
   vendorScorecard?: VendorScorecard;
+  // Wave 7 features
+  productMarketFit?: ProductMarketFit;
+  brandHealth?: BrandHealth;
+  pricingElasticity?: PricingElasticity;
+  strategicInitiatives?: StrategicInitiatives;
+  cashConversionCycle?: CashConversionCycle;
+  innovationPipeline?: InnovationPipeline;
 }
 
 export interface BenchmarkDimension {
@@ -1366,4 +1373,131 @@ export interface VendorScorecard {
   renegotiationTargets: string[];
   totalPotentialSavings: string;
   recommendations: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 7: Product-Market Fit, Brand Health, Pricing Elasticity,
+//          Strategic Initiatives, Cash Conversion Cycle, Innovation Pipeline
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PMFIndicator {
+  indicator: string;              // "Retention Rate > 40%", "NPS > 40"
+  status: "strong" | "moderate" | "weak";
+  evidence: string;
+  weight: number;                 // 0-1 weight in overall score
+}
+
+export interface ProductMarketFit {
+  summary: string;
+  overallScore: number;           // 0-100
+  grade: "strong_fit" | "approaching_fit" | "weak_fit" | "no_fit";
+  indicators: PMFIndicator[];
+  keyStrengths: string[];
+  keyGaps: string[];
+  improvementActions: string[];
+  seanEllisScore?: string;        // "X% would be very disappointed"
+  targetSegmentFit: string;       // best-fit segment description
+}
+
+export interface BrandDimension {
+  dimension: string;              // "Awareness", "Perception", "Loyalty", "Differentiation"
+  score: number;                  // 1-10
+  insight: string;
+  improvementAction: string;
+}
+
+export interface BrandHealth {
+  summary: string;
+  overallScore: number;           // 0-100
+  brandStrength: "strong" | "developing" | "weak";
+  dimensions: BrandDimension[];
+  brandPositioning: string;
+  competitiveDifferentiators: string[];
+  brandRisks: string[];
+  recommendations: string[];
+  messagingGuidelines: string[];
+}
+
+export interface PriceTier {
+  name: string;                   // "Basic", "Pro", "Enterprise"
+  currentPrice: string;
+  suggestedPrice: string;
+  elasticity: "inelastic" | "moderate" | "elastic";
+  rationale: string;
+  revenueImpact: string;
+}
+
+export interface PricingElasticity {
+  summary: string;
+  overallSensitivity: "low" | "moderate" | "high";
+  priceTiers: PriceTier[];
+  priceIncreaseCapacity: string;  // "Can increase 10-15% without churn"
+  competitivePricePosition: string;
+  psychologicalPricePoints: string[];
+  bundlingOpportunities: string[];
+  recommendations: string[];
+}
+
+export interface StrategicInitiative {
+  name: string;
+  description: string;
+  status: "planning" | "in_progress" | "completed" | "on_hold" | "at_risk";
+  priority: "critical" | "high" | "medium" | "low";
+  owner: string;
+  timeline: string;
+  investmentRequired: string;
+  expectedROI: string;
+  risks: string[];
+  milestones: string[];
+}
+
+export interface StrategicInitiatives {
+  summary: string;
+  initiatives: StrategicInitiative[];
+  totalInvestment: string;
+  expectedTotalROI: string;
+  resourceConstraints: string[];
+  recommendations: string[];
+  prioritizationFramework: string;
+}
+
+export interface CashConversionMetric {
+  metric: string;                 // "Days Sales Outstanding", "Days Payable Outstanding"
+  currentValue: string;
+  industryBenchmark: string;
+  status: "good" | "average" | "needs_improvement";
+  improvementAction: string;
+}
+
+export interface CashConversionCycle {
+  summary: string;
+  cycleDays: number;              // total cash conversion cycle in days
+  industryAverage: number;
+  metrics: CashConversionMetric[];
+  workingCapitalEfficiency: string;
+  improvementOpportunities: string[];
+  cashFlowImpact: string;        // "Reducing cycle by 10 days frees $50K"
+  recommendations: string[];
+}
+
+export interface InnovationProject {
+  name: string;
+  description: string;
+  stage: "ideation" | "validation" | "development" | "launch" | "scaling";
+  investmentToDate: string;
+  projectedRevenue: string;
+  timeToMarket: string;
+  riskLevel: "low" | "medium" | "high";
+  keyAssumptions: string[];
+}
+
+export interface InnovationPipeline {
+  summary: string;
+  innovationScore: number;        // 0-100
+  projects: InnovationProject[];
+  portfolioBalance: string;       // "70% core, 20% adjacent, 10% transformational"
+  totalInvestment: string;
+  gapAreas: string[];
+  recommendations: string[];
+  innovationCulture: string;      // assessment of org's innovation readiness
 }

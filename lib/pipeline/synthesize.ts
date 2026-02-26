@@ -52,6 +52,12 @@ import type {
   ComplianceChecklist,
   ExpansionPlaybook,
   VendorScorecard,
+  ProductMarketFit,
+  BrandHealth,
+  PricingElasticity,
+  StrategicInitiatives,
+  CashConversionCycle,
+  InnovationPipeline,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -3748,6 +3754,523 @@ ${schema}`;
     return result as unknown as VendorScorecard;
   } catch (e) {
     console.warn("[Pivot] Vendor Scorecard synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 7: Product-Market Fit ──────────────────────────────────────────────
+
+export async function synthesizeProductMarketFit(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ProductMarketFit | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence product-market fit assessment",
+  "overallScore": 0,
+  "grade": "strong_fit|approaching_fit|weak_fit|no_fit",
+  "indicators": [{
+    "indicator": "Retention Rate > 40%",
+    "status": "strong|moderate|weak",
+    "evidence": "evidence from the data",
+    "weight": 0.25
+  }],
+  "keyStrengths": ["strength 1", "..."],
+  "keyGaps": ["gap 1", "..."],
+  "improvementActions": ["action 1", "..."],
+  "seanEllisScore": "X% would be very disappointed if this product disappeared",
+  "targetSegmentFit": "description of best-fit customer segment"
+}`;
+
+  const prompt = `You are a product-market fit analyst evaluating how well a business's offering matches market demand.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Customers: ${questionnaire.keyCustomers ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+Key Concern: ${questionnaire.keyConcerns}
+
+Perform a comprehensive product-market fit analysis:
+
+1. SUMMARY: Provide a 2-3 sentence PMF assessment based on available signals.
+
+2. OVERALL SCORE (0-100): Score reflecting how strong the product-market fit is.
+   - 80-100 = strong_fit (clear demand, high retention, organic growth)
+   - 60-79 = approaching_fit (promising signals but gaps remain)
+   - 40-59 = weak_fit (product solving a problem but market validation incomplete)
+   - 0-39 = no_fit (significant misalignment between product and market)
+
+3. GRADE: One of "strong_fit", "approaching_fit", "weak_fit", "no_fit".
+
+4. INDICATORS (5-8): Assess PMF indicators such as:
+   - Customer retention / repeat usage
+   - Organic referral / word-of-mouth signals
+   - Willingness-to-pay evidence
+   - Customer engagement depth
+   - Net Promoter Score signals
+   - Revenue growth trajectory
+   - Customer acquisition cost efficiency
+   For each, assign a status (strong/moderate/weak), provide evidence, and weight (0-1, summing to ~1.0).
+
+5. KEY STRENGTHS (3-5): What is working well for PMF.
+
+6. KEY GAPS (3-5): What is preventing stronger PMF.
+
+7. IMPROVEMENT ACTIONS (4-6): Specific steps to strengthen product-market fit.
+
+8. SEAN ELLIS SCORE: Estimate what percentage of customers would be "very disappointed" if the product disappeared.
+   Base this on retention signals, engagement data, and competitive alternatives.
+
+9. TARGET SEGMENT FIT: Describe the customer segment with the strongest fit.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Product-Market Fit...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ProductMarketFit;
+  } catch (e) {
+    console.warn("[Pivot] Product-Market Fit synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 7: Brand Health ────────────────────────────────────────────────────
+
+export async function synthesizeBrandHealth(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<BrandHealth | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence brand health overview",
+  "overallScore": 0,
+  "brandStrength": "strong|developing|weak",
+  "dimensions": [{
+    "dimension": "Awareness",
+    "score": 7,
+    "insight": "insight about this dimension",
+    "improvementAction": "specific action to improve"
+  }],
+  "brandPositioning": "description of current brand positioning",
+  "competitiveDifferentiators": ["differentiator 1", "..."],
+  "brandRisks": ["risk 1", "..."],
+  "recommendations": ["recommendation 1", "..."],
+  "messagingGuidelines": ["guideline 1", "..."]
+}`;
+
+  const prompt = `You are a brand strategist performing a comprehensive brand health assessment.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+Website: ${questionnaire.website ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Perform a comprehensive brand health analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the brand's health and market position.
+
+2. OVERALL SCORE (0-100): Composite brand health score.
+
+3. BRAND STRENGTH: One of "strong", "developing", or "weak".
+
+4. DIMENSIONS (4 required): Evaluate these four brand dimensions, each scored 1-10:
+   a. Awareness — How well-known is the brand in its target market?
+   b. Perception — How do customers perceive the brand quality and values?
+   c. Loyalty — How strong is customer retention and repeat business?
+   d. Differentiation — How distinct is the brand vs. competitors?
+   For each, provide a score, an insight explaining the score, and a specific improvement action.
+
+5. BRAND POSITIONING: Describe the brand's current market positioning — who it serves, what promise it makes, and how it's perceived relative to alternatives.
+
+6. COMPETITIVE DIFFERENTIATORS (3-5): What makes this brand genuinely different from competitors.
+
+7. BRAND RISKS (3-5): Threats to brand health — reputation risks, market shifts, competitor actions, messaging inconsistencies.
+
+8. RECOMMENDATIONS (4-6): Prioritized actions to strengthen the brand.
+
+9. MESSAGING GUIDELINES (3-5): Core messaging principles the brand should follow for consistency.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Brand Health...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as BrandHealth;
+  } catch (e) {
+    console.warn("[Pivot] Brand Health synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 7: Pricing Elasticity ──────────────────────────────────────────────
+
+export async function synthesizePricingElasticity(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<PricingElasticity | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence pricing elasticity overview",
+  "overallSensitivity": "low|moderate|high",
+  "priceTiers": [{
+    "name": "Basic",
+    "currentPrice": "$X/mo",
+    "suggestedPrice": "$Y/mo",
+    "elasticity": "inelastic|moderate|elastic",
+    "rationale": "why this price change is recommended",
+    "revenueImpact": "$X additional annual revenue"
+  }],
+  "priceIncreaseCapacity": "Can increase X% without significant churn",
+  "competitivePricePosition": "description of price position vs competitors",
+  "psychologicalPricePoints": ["$X.99 tier resonates", "..."],
+  "bundlingOpportunities": ["bundling opportunity 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a pricing strategy expert analyzing price sensitivity and optimization opportunities.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Customers: ${questionnaire.keyCustomers ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+
+Perform a comprehensive pricing elasticity analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of pricing sensitivity and key findings.
+
+2. OVERALL SENSITIVITY: Classify the business's price sensitivity as "low" (customers value-driven, price-insensitive),
+   "moderate" (some price sensitivity but room to optimize), or "high" (highly competitive, price-sensitive market).
+
+3. PRICE TIERS (3-5 tiers): Analyze each pricing tier or product line. For each:
+   - Name (e.g., "Basic", "Pro", "Enterprise" or product/service names)
+   - Current price (from data or estimated)
+   - Suggested optimal price based on value delivered and market positioning
+   - Elasticity classification: inelastic (price changes won't affect demand much),
+     moderate (some impact), or elastic (highly sensitive to price changes)
+   - Rationale for the suggested price change
+   - Estimated revenue impact of the price change
+
+4. PRICE INCREASE CAPACITY: Estimate how much prices can increase without triggering meaningful churn.
+
+5. COMPETITIVE PRICE POSITION: Where does this business sit vs. competitors — premium, mid-market, or budget?
+
+6. PSYCHOLOGICAL PRICE POINTS (3-5): Specific price points that resonate with customers based on pricing psychology.
+
+7. BUNDLING OPPORTUNITIES (3-5): Ways to package offerings for higher average deal value.
+
+8. RECOMMENDATIONS (4-6): Prioritized pricing strategy recommendations.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Pricing Elasticity...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as PricingElasticity;
+  } catch (e) {
+    console.warn("[Pivot] Pricing Elasticity synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 7: Strategic Initiatives ───────────────────────────────────────────
+
+export async function synthesizeStrategicInitiatives(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<StrategicInitiatives | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence strategic initiatives overview",
+  "initiatives": [{
+    "name": "initiative name",
+    "description": "detailed description of the initiative",
+    "status": "planning|in_progress|completed|on_hold|at_risk",
+    "priority": "critical|high|medium|low",
+    "owner": "recommended owner/team",
+    "timeline": "Q1 2025 - Q3 2025",
+    "investmentRequired": "$X estimated investment",
+    "expectedROI": "X% ROI or $X return",
+    "risks": ["risk 1", "..."],
+    "milestones": ["milestone 1", "..."]
+  }],
+  "totalInvestment": "$X total investment across all initiatives",
+  "expectedTotalROI": "$X or X% total expected return",
+  "resourceConstraints": ["constraint 1", "..."],
+  "recommendations": ["recommendation 1", "..."],
+  "prioritizationFramework": "description of how to prioritize these initiatives"
+}`;
+
+  const prompt = `You are a strategic planning consultant identifying the key strategic bets a business should make.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+Key Concern: ${questionnaire.keyConcerns}
+Critical Decision: ${questionnaire.oneDecisionKeepingOwnerUpAtNight}
+
+Perform a comprehensive strategic initiatives analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the strategic landscape and recommended bets.
+
+2. INITIATIVES (5-8): Identify the most impactful strategic initiatives the business should pursue. For each:
+   - Name and description of the initiative
+   - Status: planning (not started), in_progress, completed, on_hold, or at_risk
+   - Priority: critical (must-do for survival/growth), high, medium, or low
+   - Recommended owner/team
+   - Timeline with start and end estimates
+   - Investment required (estimated dollar amount)
+   - Expected ROI (percentage or dollar return)
+   - Key risks (2-3 per initiative)
+   - Key milestones (3-5 per initiative)
+
+3. TOTAL INVESTMENT: Sum of all investment estimates.
+
+4. EXPECTED TOTAL ROI: Aggregate expected return across all initiatives.
+
+5. RESOURCE CONSTRAINTS (3-5): Key constraints that could limit execution — talent, capital, time, technology.
+
+6. RECOMMENDATIONS (4-6): Overarching strategic recommendations.
+
+7. PRIORITIZATION FRAMEWORK: Suggest a framework for prioritizing these initiatives (e.g., impact vs. effort matrix, RICE scoring).
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Strategic Initiatives...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as StrategicInitiatives;
+  } catch (e) {
+    console.warn("[Pivot] Strategic Initiatives synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 7: Cash Conversion Cycle ───────────────────────────────────────────
+
+export async function synthesizeCashConversionCycle(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CashConversionCycle | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence cash conversion cycle overview",
+  "cycleDays": 0,
+  "industryAverage": 0,
+  "metrics": [{
+    "metric": "Days Sales Outstanding",
+    "currentValue": "X days",
+    "industryBenchmark": "Y days",
+    "status": "good|average|needs_improvement",
+    "improvementAction": "specific action to improve this metric"
+  }],
+  "workingCapitalEfficiency": "assessment of working capital management",
+  "improvementOpportunities": ["opportunity 1", "..."],
+  "cashFlowImpact": "Reducing cycle by X days frees $Y in working capital",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a treasury and working capital analyst evaluating cash conversion efficiency.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+
+Perform a comprehensive cash conversion cycle analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of cash conversion efficiency and key findings.
+
+2. CYCLE DAYS: Calculate the total cash conversion cycle in days (DSO + DIO - DPO).
+   Use financial data from the business report. If exact figures are unavailable, estimate
+   based on industry norms for the business model and revenue range.
+
+3. INDUSTRY AVERAGE: Provide the typical cash conversion cycle for this industry and business model.
+
+4. METRICS (3 required, plus any additional relevant metrics):
+   a. Days Sales Outstanding (DSO) — How quickly the business collects receivables.
+   b. Days Payable Outstanding (DPO) — How long the business takes to pay suppliers.
+   c. Days Inventory Outstanding (DIO) — How long inventory sits before being sold (if applicable).
+   For each metric, provide:
+   - Current value (from data or estimated with clear notation)
+   - Industry benchmark for comparison
+   - Status: good (better than benchmark), average (near benchmark), or needs_improvement (worse)
+   - Specific improvement action
+
+5. WORKING CAPITAL EFFICIENCY: Assess how effectively the business manages its working capital.
+
+6. IMPROVEMENT OPPORTUNITIES (4-6): Specific, actionable opportunities to shorten the cash conversion cycle.
+
+7. CASH FLOW IMPACT: Quantify the dollar impact of reducing the cycle — "Reducing the cycle by X days would free approximately $Y in working capital."
+
+8. RECOMMENDATIONS (4-6): Prioritized recommendations for improving cash conversion.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+If the business is a services/SaaS business with no inventory, note DIO as 0 or N/A and focus on DSO and DPO.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Cash Conversion Cycle...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CashConversionCycle;
+  } catch (e) {
+    console.warn("[Pivot] Cash Conversion Cycle synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 7: Innovation Pipeline ─────────────────────────────────────────────
+
+export async function synthesizeInnovationPipeline(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<InnovationPipeline | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence innovation pipeline overview",
+  "innovationScore": 0,
+  "projects": [{
+    "name": "project name",
+    "description": "what this innovation initiative involves",
+    "stage": "ideation|validation|development|launch|scaling",
+    "investmentToDate": "$X invested so far",
+    "projectedRevenue": "$X projected annual revenue at maturity",
+    "timeToMarket": "X months to launch",
+    "riskLevel": "low|medium|high",
+    "keyAssumptions": ["assumption 1", "..."]
+  }],
+  "portfolioBalance": "X% core, Y% adjacent, Z% transformational",
+  "totalInvestment": "$X total innovation investment",
+  "gapAreas": ["gap area 1", "..."],
+  "recommendations": ["recommendation 1", "..."],
+  "innovationCulture": "assessment of the organization's innovation readiness and culture"
+}`;
+
+  const prompt = `You are an innovation strategy consultant assessing R&D portfolio health and innovation readiness.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+Tech Stack: ${questionnaire.techStack ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive innovation pipeline analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the innovation landscape and key findings.
+
+2. INNOVATION SCORE (0-100): Composite score reflecting innovation readiness and pipeline strength.
+   - Consider: investment levels, pipeline diversity, time-to-market, organizational culture, competitive positioning.
+
+3. PROJECTS (5-8): Identify current and recommended innovation initiatives. For each:
+   - Name and description
+   - Stage: ideation (concept phase), validation (testing assumptions), development (building),
+     launch (going to market), or scaling (growing post-launch)
+   - Investment to date (from data or estimated)
+   - Projected revenue at maturity
+   - Time to market (months)
+   - Risk level: low (incremental improvement), medium (adjacent innovation), high (transformational bet)
+   - Key assumptions (2-3) that must hold true for success
+
+4. PORTFOLIO BALANCE: Assess the mix using the 70-20-10 framework:
+   - Core innovation (70%): Improvements to existing products/services
+   - Adjacent innovation (20%): Extensions into new markets or capabilities
+   - Transformational innovation (10%): Breakthrough bets
+   State the current and recommended balance.
+
+5. TOTAL INVESTMENT: Sum of all innovation-related investment.
+
+6. GAP AREAS (3-5): Areas where the business is under-investing in innovation relative to competitors or market needs.
+
+7. RECOMMENDATIONS (4-6): Prioritized actions to strengthen the innovation pipeline.
+
+8. INNOVATION CULTURE: Assess the organization's innovation readiness — processes, talent, risk tolerance, experimentation habits.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Innovation Pipeline...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as InnovationPipeline;
+  } catch (e) {
+    console.warn("[Pivot] Innovation Pipeline synthesis failed:", e);
     return null;
   }
 }

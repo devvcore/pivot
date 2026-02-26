@@ -103,6 +103,12 @@ const TOOLS = [
             "complianceChecklist",
             "expansionPlaybook",
             "vendorScorecard",
+            "productMarketFit",
+            "brandHealth",
+            "pricingElasticity",
+            "strategicInitiatives",
+            "cashConversionCycle",
+            "innovationPipeline",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -343,6 +349,7 @@ Strategy: swotAnalysis, unitEconomics, customerSegmentation, competitiveWinLoss,
 Operations: hiringPlan, revenueForecast, churnPlaybook, salesPlaybook, goalTracker, benchmarkScore, executiveSummary, milestoneTracker, riskRegister, operationalEfficiency
 Growth: retentionPlaybook, boardDeck, gtmScorecard, cashOptimization
 Wave 6: talentGapAnalysis, revenueDiversification, customerJourneyMap, complianceChecklist, expansionPlaybook, vendorScorecard
+Wave 7: productMarketFit, brandHealth, pricingElasticity, strategicInitiatives, cashConversionCycle, innovationPipeline
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

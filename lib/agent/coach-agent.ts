@@ -78,7 +78,13 @@ KEY SECTIONS FOR COACHING:
 - customerJourneyMap: customer touchpoints, friction points, conversion optimization, experience scoring
 - complianceChecklist: regulatory readiness, compliance gaps, immediate actions, risk areas
 - expansionPlaybook: market expansion opportunities, go-to-market strategies, resource requirements
-- vendorScorecard: vendor performance, total spend, potential savings, contract optimization`;
+- vendorScorecard: vendor performance, total spend, potential savings, contract optimization
+- productMarketFit: PMF score, indicators, target segment fit, improvement actions
+- brandHealth: brand score, dimensions, positioning, messaging guidelines
+- pricingElasticity: price sensitivity, tier analysis, bundling opportunities
+- strategicInitiatives: strategic bets, ROI projections, resource constraints
+- cashConversionCycle: DSO/DPO/DIO metrics, working capital efficiency
+- innovationPipeline: innovation score, project portfolio, stage pipeline`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -144,6 +150,12 @@ const TOOLS = [
             "complianceChecklist",
             "expansionPlaybook",
             "vendorScorecard",
+            "productMarketFit",
+            "brandHealth",
+            "pricingElasticity",
+            "strategicInitiatives",
+            "cashConversionCycle",
+            "innovationPipeline",
           ],
           description: "Which report section to retrieve",
         },
@@ -389,6 +401,9 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).talentGapAnalysis) parts.push(`Talent Gap Analysis: Team strengths: ${(d as any).talentGapAnalysis.currentTeamStrengths?.length || 0} identified, Roles to hire: ${(d as any).talentGapAnalysis.roleRecommendations?.length || 0}`);
     if ((d as any).complianceChecklist) parts.push(`Compliance Checklist: Overall readiness: ${(d as any).complianceChecklist.overallReadiness ?? "N/A"}, Immediate actions: ${(d as any).complianceChecklist.immediateActions?.length || 0}`);
     if ((d as any).vendorScorecard) parts.push(`Vendor Scorecard: Total spend: ${(d as any).vendorScorecard.totalVendorSpend || "?"}, Potential savings: ${(d as any).vendorScorecard.totalPotentialSavings || "?"}`);
+    if ((d as any).productMarketFit) parts.push(`Product-Market Fit: Overall score: ${(d as any).productMarketFit.overallScore ?? "N/A"}, Grade: ${(d as any).productMarketFit.grade || "N/A"}`);
+    if ((d as any).brandHealth) parts.push(`Brand Health: Overall score: ${(d as any).brandHealth.overallScore ?? "N/A"}, Brand strength: ${(d as any).brandHealth.brandStrength || "N/A"}`);
+    if ((d as any).innovationPipeline) parts.push(`Innovation Pipeline: Innovation score: ${(d as any).innovationPipeline.innovationScore ?? "N/A"}, Projects: ${(d as any).innovationPipeline.projects?.length || 0}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

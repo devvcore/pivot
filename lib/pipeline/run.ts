@@ -47,6 +47,12 @@ import {
   synthesizeComplianceChecklist,
   synthesizeExpansionPlaybook,
   synthesizeVendorScorecard,
+  synthesizeProductMarketFit,
+  synthesizeBrandHealth,
+  synthesizePricingElasticity,
+  synthesizeStrategicInitiatives,
+  synthesizeCashConversionCycle,
+  synthesizeInnovationPipeline,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -543,6 +549,54 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Expansion/VendorScorecard failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4o: Wave 7 intelligence (product-market fit, brand health) ──
+    if (!deliverables.productMarketFit || !deliverables.brandHealth) {
+      try {
+        console.log("[Pivot] Synthesizing product-market fit + brand health...");
+        const [pmf, bh] = await Promise.allSettled([
+          deliverables.productMarketFit ? Promise.resolve(null) : synthesizeProductMarketFit(businessPacket, job.questionnaire),
+          deliverables.brandHealth ? Promise.resolve(null) : synthesizeBrandHealth(businessPacket, job.questionnaire),
+        ]);
+        if (pmf.status === "fulfilled" && pmf.value) deliverables = { ...deliverables, productMarketFit: pmf.value };
+        if (bh.status === "fulfilled" && bh.value) deliverables = { ...deliverables, brandHealth: bh.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] ProductMarketFit/BrandHealth failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4p: Wave 7 intelligence (pricing elasticity, strategic initiatives) ──
+    if (!deliverables.pricingElasticity || !deliverables.strategicInitiatives) {
+      try {
+        console.log("[Pivot] Synthesizing pricing elasticity + strategic initiatives...");
+        const [pe, si] = await Promise.allSettled([
+          deliverables.pricingElasticity ? Promise.resolve(null) : synthesizePricingElasticity(businessPacket, job.questionnaire),
+          deliverables.strategicInitiatives ? Promise.resolve(null) : synthesizeStrategicInitiatives(businessPacket, job.questionnaire),
+        ]);
+        if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, pricingElasticity: pe.value };
+        if (si.status === "fulfilled" && si.value) deliverables = { ...deliverables, strategicInitiatives: si.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] PricingElasticity/StrategicInitiatives failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4q: Wave 7 intelligence (cash conversion cycle, innovation pipeline) ──
+    if (!deliverables.cashConversionCycle || !deliverables.innovationPipeline) {
+      try {
+        console.log("[Pivot] Synthesizing cash conversion cycle + innovation pipeline...");
+        const [ccc, ip] = await Promise.allSettled([
+          deliverables.cashConversionCycle ? Promise.resolve(null) : synthesizeCashConversionCycle(businessPacket, job.questionnaire),
+          deliverables.innovationPipeline ? Promise.resolve(null) : synthesizeInnovationPipeline(businessPacket, job.questionnaire),
+        ]);
+        if (ccc.status === "fulfilled" && ccc.value) deliverables = { ...deliverables, cashConversionCycle: ccc.value };
+        if (ip.status === "fulfilled" && ip.value) deliverables = { ...deliverables, innovationPipeline: ip.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CashConversionCycle/InnovationPipeline failed (non-fatal):", e);
       }
     }
 
