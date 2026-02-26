@@ -72,7 +72,13 @@ KEY SECTIONS FOR COACHING:
 - fundingReadiness: investor readiness assessment, gaps to close, fundraising preparation
 - retentionPlaybook: customer retention strategies, engagement tactics, loyalty programs
 - cashOptimization: cash flow optimization levers, cost reduction opportunities, working capital improvements
-- operationalEfficiency: process bottlenecks, automation opportunities, resource utilization`;
+- operationalEfficiency: process bottlenecks, automation opportunities, resource utilization
+- talentGapAnalysis: team strengths, skill gaps, hiring priorities, upskilling recommendations
+- revenueDiversification: revenue stream analysis, diversification opportunities, concentration risk
+- customerJourneyMap: customer touchpoints, friction points, conversion optimization, experience scoring
+- complianceChecklist: regulatory readiness, compliance gaps, immediate actions, risk areas
+- expansionPlaybook: market expansion opportunities, go-to-market strategies, resource requirements
+- vendorScorecard: vendor performance, total spend, potential savings, contract optimization`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -132,6 +138,12 @@ const TOOLS = [
             "competitiveMoat",
             "gtmScorecard",
             "cashOptimization",
+            "talentGapAnalysis",
+            "revenueDiversification",
+            "customerJourneyMap",
+            "complianceChecklist",
+            "expansionPlaybook",
+            "vendorScorecard",
           ],
           description: "Which report section to retrieve",
         },
@@ -374,6 +386,9 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).gtmScorecard) parts.push(`GTM Scorecard: ${(d as any).gtmScorecard.overallScore ?? "N/A"}/100`);
     if ((d as any).fundingReadiness) parts.push(`Funding Readiness: ${(d as any).fundingReadiness.readinessScore ?? "N/A"}/100 (${(d as any).fundingReadiness.stage || "N/A"})`);
     if ((d as any).cashOptimization) parts.push(`Cash Optimization: ${(d as any).cashOptimization.opportunities?.length || 0} optimization opportunities identified`);
+    if ((d as any).talentGapAnalysis) parts.push(`Talent Gap Analysis: Team strengths: ${(d as any).talentGapAnalysis.currentTeamStrengths?.length || 0} identified, Roles to hire: ${(d as any).talentGapAnalysis.roleRecommendations?.length || 0}`);
+    if ((d as any).complianceChecklist) parts.push(`Compliance Checklist: Overall readiness: ${(d as any).complianceChecklist.overallReadiness ?? "N/A"}, Immediate actions: ${(d as any).complianceChecklist.immediateActions?.length || 0}`);
+    if ((d as any).vendorScorecard) parts.push(`Vendor Scorecard: Total spend: ${(d as any).vendorScorecard.totalVendorSpend || "?"}, Potential savings: ${(d as any).vendorScorecard.totalPotentialSavings || "?"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

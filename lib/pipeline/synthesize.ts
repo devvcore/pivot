@@ -46,6 +46,12 @@ import type {
   CompetitiveMoat,
   GTMScorecard,
   CashOptimization,
+  TalentGapAnalysis,
+  RevenueDiversification,
+  CustomerJourneyMap,
+  ComplianceChecklist,
+  ExpansionPlaybook,
+  VendorScorecard,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -3212,6 +3218,536 @@ ${schema}`;
     return result as unknown as CashOptimization;
   } catch (e) {
     console.warn("[Pivot] Cash Optimization synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 6: Talent Gap Analysis ────────────────────────────────────────────
+
+export async function synthesizeTalentGapAnalysis(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<TalentGapAnalysis | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence talent gap analysis overview",
+  "currentTeamStrengths": ["strength 1", "strength 2", "..."],
+  "skillGaps": [{
+    "skill": "skill name",
+    "currentLevel": "none|basic|intermediate|advanced",
+    "requiredLevel": "basic|intermediate|advanced|expert",
+    "priority": "critical|high|medium|low",
+    "recommendation": "Hire senior data engineer or Train existing team"
+  }],
+  "roleRecommendations": [{
+    "title": "Senior Data Engineer",
+    "department": "Engineering",
+    "urgency": "immediate|next_quarter|next_year",
+    "rationale": "why this role is needed",
+    "estimatedSalaryRange": "$120K-$160K"
+  }],
+  "teamStructureNotes": "org design suggestions and team structure recommendations",
+  "trainingRecommendations": ["training recommendation 1", "..."],
+  "totalHiringBudgetEstimate": "$X total estimated hiring budget"
+}`;
+
+  const prompt = `You are a talent strategy consultant analyzing workforce needs for a growing business.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+
+Perform a comprehensive talent gap analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the talent landscape and key findings.
+
+2. CURRENT TEAM STRENGTHS (3-5): Identify the team's existing strengths based on what the business has achieved,
+   its model, and available data about the team composition.
+
+3. SKILL GAPS (5-8 gaps): Analyze critical skill gaps based on the business model, growth stage, competitive
+   landscape, and stated objectives. For each gap:
+   - Name the specific skill (e.g., "Product Analytics", "Enterprise Sales", "DevOps")
+   - Assess current level vs. required level
+   - Assign priority (critical = blocking growth, high = impacting performance, medium = would improve outcomes, low = nice to have)
+   - Recommend whether to hire, train, or outsource
+
+4. ROLE RECOMMENDATIONS (4-6 roles): Identify the most impactful hires. For each:
+   - Job title and department
+   - Urgency: immediate (within 30 days), next_quarter, or next_year
+   - Business rationale tied to specific goals or gaps
+   - Estimated salary range for the market
+
+5. TEAM STRUCTURE NOTES: Suggest org design improvements — reporting lines, team topology, or structural changes.
+
+6. TRAINING RECOMMENDATIONS (3-5): Identify upskilling opportunities for existing team members.
+
+7. TOTAL HIRING BUDGET ESTIMATE: Sum the estimated cost of all recommended hires.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Talent Gap Analysis...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as TalentGapAnalysis;
+  } catch (e) {
+    console.warn("[Pivot] Talent Gap Analysis synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 6: Revenue Diversification ────────────────────────────────────────
+
+export async function synthesizeRevenueDiversification(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<RevenueDiversification | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence revenue diversification overview",
+  "concentrationRisk": "critical|high|moderate|low",
+  "concentrationDetails": "description of revenue concentration risk",
+  "currentStreams": [{
+    "name": "SaaS Subscriptions",
+    "currentRevenue": "$X",
+    "revenueShare": 0,
+    "growthRate": "X% YoY",
+    "risk": "high|medium|low",
+    "notes": "notes about this stream"
+  }],
+  "diversificationOpportunities": [{
+    "stream": "new revenue stream name",
+    "estimatedRevenue": "$X potential annual revenue",
+    "timeToRevenue": "3-6 months",
+    "investmentRequired": "$X upfront investment",
+    "feasibility": "high|medium|low",
+    "rationale": "why this opportunity makes sense"
+  }],
+  "recommendations": ["recommendation 1", "recommendation 2", "..."],
+  "targetMix": "Aim for no single stream >40% of revenue"
+}`;
+
+  const prompt = `You are a revenue strategy consultant analyzing revenue concentration risk and diversification opportunities.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+
+Perform a comprehensive revenue diversification analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the revenue diversification landscape.
+
+2. CONCENTRATION RISK: Assess how concentrated revenue is (critical = one customer/stream >70%,
+   high = >50%, moderate = >30%, low = well diversified). Explain the risk in detail.
+
+3. CURRENT STREAMS (3-6 streams): Identify all current revenue streams. For each:
+   - Name the stream (e.g., "SaaS Subscriptions", "Consulting", "Marketplace Fees")
+   - Estimate current revenue (from data or note as estimate)
+   - Revenue share as percentage (0-100)
+   - Growth rate trend
+   - Risk level (high if declining or concentrated, low if stable and growing)
+   - Notes on sustainability and trajectory
+
+4. DIVERSIFICATION OPPORTUNITIES (4-6 opportunities): For each new revenue stream opportunity:
+   - Name the new stream
+   - Estimated annual revenue potential
+   - Time to first revenue (e.g., "3-6 months")
+   - Investment required to launch
+   - Feasibility rating (high = leverages existing assets, medium = requires some new capability, low = significant pivot)
+   - Business rationale
+
+5. RECOMMENDATIONS (4-6): Prioritized strategic recommendations for diversification.
+
+6. TARGET MIX: Describe the ideal revenue mix the business should aim for.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Revenue Diversification...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as RevenueDiversification;
+  } catch (e) {
+    console.warn("[Pivot] Revenue Diversification synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 6: Customer Journey Map ───────────────────────────────────────────
+
+export async function synthesizeCustomerJourneyMap(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CustomerJourneyMap | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence customer journey overview",
+  "stages": [{
+    "name": "Awareness",
+    "description": "how customers first discover the business",
+    "touchpoints": ["touchpoint 1", "touchpoint 2"],
+    "frictionPoints": ["friction point 1", "..."],
+    "conversionRate": "X% estimated conversion to next stage",
+    "dropOffRate": "X% estimated drop-off at this stage",
+    "improvements": ["improvement 1", "improvement 2"]
+  }],
+  "criticalFrictionPoints": ["critical friction point 1", "..."],
+  "quickWins": ["quick win 1 to improve journey", "..."],
+  "longTermImprovements": ["long term improvement 1", "..."],
+  "estimatedImpact": "Improving onboarding could increase retention by 15%"
+}`;
+
+  const prompt = `You are a customer experience strategist mapping the complete customer lifecycle.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Customers: ${questionnaire.keyCustomers ?? "Unknown"}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+
+Map the full customer journey from awareness to advocacy:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the customer journey and key findings.
+
+2. JOURNEY STAGES (6 stages): Map each stage of the customer lifecycle:
+   - Awareness: How do customers first learn about the business?
+   - Consideration: What drives evaluation and comparison?
+   - Purchase: What is the buying experience like?
+   - Onboarding: How are new customers activated and set up for success?
+   - Retention: What keeps customers engaged and renewing?
+   - Advocacy: What turns satisfied customers into referral sources?
+
+   For each stage:
+   - Describe what happens at this stage for THIS specific business
+   - Identify 2-4 touchpoints (channels, interactions, moments)
+   - Identify 1-3 friction points (barriers, pain points, drop-off causes)
+   - Estimate conversion rate to the next stage (from data or as estimate)
+   - Estimate drop-off rate at this stage
+   - Recommend 2-3 specific improvements
+
+3. CRITICAL FRICTION POINTS (3-5): The most impactful friction points across the entire journey
+   that are costing the business the most revenue.
+
+4. QUICK WINS (3-5): Journey improvements achievable within 30 days.
+
+5. LONG-TERM IMPROVEMENTS (3-5): Strategic journey enhancements requiring 3-6 months.
+
+6. ESTIMATED IMPACT: Quantify the potential revenue impact of fixing the top friction points.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Customer Journey Map...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CustomerJourneyMap;
+  } catch (e) {
+    console.warn("[Pivot] Customer Journey Map synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 6: Compliance Checklist ───────────────────────────────────────────
+
+export async function synthesizeComplianceChecklist(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ComplianceChecklist | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence compliance overview",
+  "overallReadiness": "strong|adequate|needs_work|at_risk",
+  "complianceScore": 0,
+  "items": [{
+    "requirement": "GDPR Data Processing Agreement",
+    "category": "Data Privacy",
+    "status": "compliant|partial|non_compliant|unknown",
+    "priority": "critical|high|medium|low",
+    "deadline": "date or regulatory deadline if applicable",
+    "action": "specific action to achieve or maintain compliance",
+    "estimatedCost": "$X estimated cost to remediate"
+  }],
+  "immediateActions": ["immediate action 1", "..."],
+  "upcomingDeadlines": ["deadline 1 with date", "..."],
+  "industrySpecificNotes": "notes specific to this industry's regulatory environment"
+}`;
+
+  const prompt = `You are a compliance and regulatory expert generating an industry-specific compliance checklist.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+
+Generate a comprehensive compliance checklist:
+
+1. SUMMARY: Provide a 2-3 sentence overview of compliance posture and key risks.
+
+2. OVERALL READINESS: Rate overall compliance readiness (strong = minimal gaps, adequate = some gaps but manageable,
+   needs_work = significant gaps, at_risk = critical gaps that could result in penalties).
+
+3. COMPLIANCE SCORE (0-100): Quantify the compliance posture.
+
+4. COMPLIANCE ITEMS (8-12 items): For each regulatory requirement relevant to this business:
+   - Name the specific requirement (e.g., "GDPR Data Processing Agreement", "SOC 2 Type II", "PCI DSS")
+   - Category: Data Privacy, Financial, Employment, Industry-Specific, Tax, IP/Legal
+   - Status: compliant, partial, non_compliant, or unknown (if insufficient data)
+   - Priority: critical (legal risk), high (financial risk), medium (operational risk), low (best practice)
+   - Deadline if applicable (regulatory deadlines, renewal dates)
+   - Specific action to achieve or maintain compliance
+   - Estimated cost to remediate (if non-compliant or partial)
+
+   Cover these areas based on the business's industry and model:
+   - Data privacy (GDPR, CCPA, etc.)
+   - Financial regulations (SOX, payment processing, etc.)
+   - Employment law (labor compliance, contractor classification, etc.)
+   - Industry-specific regulations
+   - Tax compliance
+   - Intellectual property protection
+   - Security certifications (SOC 2, ISO 27001, etc.)
+
+5. IMMEDIATE ACTIONS (3-5): Most urgent compliance actions to take within 30 days.
+
+6. UPCOMING DEADLINES: Any known regulatory deadlines relevant to this business.
+
+7. INDUSTRY-SPECIFIC NOTES: Key regulatory considerations unique to this industry.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+If the compliance status cannot be determined from available data, mark as "unknown" — do NOT assume compliance.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Compliance Checklist...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ComplianceChecklist;
+  } catch (e) {
+    console.warn("[Pivot] Compliance Checklist synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 6: Expansion Playbook ─────────────────────────────────────────────
+
+export async function synthesizeExpansionPlaybook(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ExpansionPlaybook | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence expansion playbook overview",
+  "currentMarketPosition": "description of current market position, geography, and segments served",
+  "expansionMarkets": [{
+    "market": "Southeast Asia or Healthcare Vertical",
+    "type": "geographic|vertical|segment",
+    "attractiveness": 0,
+    "readiness": 0,
+    "estimatedRevenue": "$X potential annual revenue",
+    "timeToEntry": "6-12 months",
+    "keyBarriers": ["barrier 1", "barrier 2"],
+    "entryStrategy": "recommended approach to enter this market"
+  }],
+  "prioritizedSequence": ["market 1 (highest priority)", "market 2", "..."],
+  "resourceRequirements": ["resource requirement 1", "..."],
+  "riskFactors": ["risk factor 1", "..."],
+  "timeline": "Phase 1: Q1-Q2, Phase 2: Q3-Q4"
+}`;
+
+  const prompt = `You are a market expansion strategist identifying growth opportunities beyond the current market.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+Target Customers: ${questionnaire.keyCustomers ?? "Unknown"}
+
+Develop a comprehensive expansion playbook:
+
+1. SUMMARY: Provide a 2-3 sentence overview of expansion potential and top opportunities.
+
+2. CURRENT MARKET POSITION: Describe the business's current market position including geography,
+   verticals served, customer segments, and market share indicators.
+
+3. EXPANSION MARKETS (5-7 opportunities): Identify expansion opportunities across three categories:
+   - Geographic: New regions, countries, or local markets
+   - Vertical: New industry verticals where the product/service applies
+   - Segment: New customer segments (e.g., enterprise, SMB, consumer)
+
+   For each opportunity:
+   - Name the market
+   - Type: geographic, vertical, or segment
+   - Attractiveness score (1-10): Market size, growth rate, competitive intensity, margin potential
+   - Readiness score (1-10): How prepared the business is (product fit, team, infrastructure, capital)
+   - Estimated annual revenue potential
+   - Time to market entry
+   - Key barriers to entry (2-3)
+   - Recommended entry strategy (partnership, direct, acquisition, etc.)
+
+4. PRIORITIZED SEQUENCE: Rank the expansion markets in recommended order of pursuit,
+   balancing attractiveness with readiness.
+
+5. RESOURCE REQUIREMENTS (4-6): Key resources needed for expansion (capital, people, technology, partnerships).
+
+6. RISK FACTORS (3-5): Major risks associated with expansion and mitigation strategies.
+
+7. TIMELINE: Provide a phased timeline for pursuing the prioritized expansion markets.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Expansion Playbook...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ExpansionPlaybook;
+  } catch (e) {
+    console.warn("[Pivot] Expansion Playbook synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 6: Vendor Scorecard ───────────────────────────────────────────────
+
+export async function synthesizeVendorScorecard(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<VendorScorecard | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence vendor scorecard overview",
+  "totalVendorSpend": "$X total annual vendor spend",
+  "vendorCount": 0,
+  "assessments": [{
+    "vendor": "vendor name",
+    "category": "Cloud Infrastructure",
+    "annualCost": "$X annual cost",
+    "contractEnd": "date or unknown",
+    "satisfaction": 0,
+    "alternatives": ["alternative vendor 1", "..."],
+    "potentialSaving": "$X potential annual saving",
+    "recommendation": "keep|renegotiate|replace|consolidate",
+    "notes": "notes about this vendor relationship"
+  }],
+  "consolidationOpportunities": ["consolidation opportunity 1", "..."],
+  "renegotiationTargets": ["vendor to renegotiate 1", "..."],
+  "totalPotentialSavings": "$X total potential annual savings",
+  "recommendations": ["recommendation 1", "recommendation 2", "..."]
+}`;
+
+  const prompt = `You are a procurement and vendor management expert analyzing vendor relationships and spend optimization.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+
+Perform a comprehensive vendor scorecard analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of vendor landscape and key findings.
+
+2. TOTAL VENDOR SPEND: Estimate total annual spend on vendors/suppliers from available data.
+
+3. VENDOR COUNT: Estimate the number of active vendor relationships.
+
+4. VENDOR ASSESSMENTS (6-10 vendors): Analyze each vendor/supplier relationship. For each:
+   - Vendor name or category (from data, or typical vendors for this business type)
+   - Category: Cloud Infrastructure, Marketing Tools, Payment Processing, SaaS Tools,
+     Professional Services, Office/Facilities, Insurance, etc.
+   - Annual cost (from data or estimated for the business size)
+   - Contract end date if known
+   - Satisfaction score (1-10) based on value delivered vs. cost
+   - 2-3 alternative vendors that could be evaluated
+   - Potential annual saving if renegotiated or replaced
+   - Recommendation: keep (good value), renegotiate (overpriced but good fit),
+     replace (better alternatives exist), consolidate (overlap with other vendors)
+   - Notes on the relationship quality and strategic importance
+
+5. CONSOLIDATION OPPORTUNITIES (2-4): Identify vendors with overlapping capabilities that could be consolidated.
+
+6. RENEGOTIATION TARGETS (2-4): Vendors where the business likely has leverage to negotiate better terms
+   (approaching contract end, competitive alternatives, volume discounts).
+
+7. TOTAL POTENTIAL SAVINGS: Sum the potential savings across all vendor optimizations.
+
+8. RECOMMENDATIONS (4-6): Prioritized vendor management recommendations.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+If specific vendors are not mentioned in the data, identify TYPICAL vendors for a business of this type and size,
+and clearly note they are estimated/typical rather than confirmed.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Vendor Scorecard...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as VendorScorecard;
+  } catch (e) {
+    console.warn("[Pivot] Vendor Scorecard synthesis failed:", e);
     return null;
   }
 }

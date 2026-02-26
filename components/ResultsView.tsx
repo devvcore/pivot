@@ -78,6 +78,12 @@ const TABS = [
   { id: 41, label: "Moat Analysis",   icon: Trophy,       dataKey: "competitiveMoat"       },
   { id: 42, label: "GTM Score",       icon: Target,       dataKey: "gtmScorecard"          },
   { id: 43, label: "Cash Optimize",   icon: DollarSign,   dataKey: "cashOptimization"      },
+  { id: 44, label: "Talent Gaps",     icon: Users,        dataKey: "talentGapAnalysis"     },
+  { id: 45, label: "Diversification", icon: PieChart,     dataKey: "revenueDiversification"},
+  { id: 46, label: "Customer Journey",icon: GitBranch,    dataKey: "customerJourneyMap"    },
+  { id: 47, label: "Compliance",      icon: ShieldCheck,  dataKey: "complianceChecklist"   },
+  { id: 48, label: "Expansion",       icon: Target,       dataKey: "expansionPlaybook"     },
+  { id: 49, label: "Vendors",         icon: DollarSign,   dataKey: "vendorScorecard"       },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -4824,6 +4830,655 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6 shadow-sm text-center">
                       <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Extended Runway</p>
                       <p className="text-3xl font-light text-zinc-900">{co.extendedRunway}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 44: Talent Gap Analysis ─────────────────────────────────── */}
+            {activeTab === 44 && (d as any).talentGapAnalysis && (() => {
+              const tga = (d as any).talentGapAnalysis;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Talent Gap Analysis</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{tga.summary}</p>
+                  </div>
+
+                  {/* Skill gaps table */}
+                  {tga.skillGaps?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Skill Gaps</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-100 bg-zinc-50">
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Skill</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Current</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Required</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Priority</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Recommendation</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tga.skillGaps.map((sg: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-50">
+                                <td className="px-4 py-3 font-medium text-zinc-900">{sg.skill || sg.name}</td>
+                                <td className="px-4 py-3 text-zinc-700">{sg.current || sg.currentLevel}</td>
+                                <td className="px-4 py-3 text-zinc-700">{sg.required || sg.requiredLevel}</td>
+                                <td className="px-4 py-3">
+                                  {sg.priority && (
+                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                      sg.priority === "high" || sg.priority === "High" ? "bg-red-50 text-red-700 border-red-200" :
+                                      sg.priority === "medium" || sg.priority === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                      "bg-blue-50 text-blue-700 border-blue-200"
+                                    }`}>{sg.priority}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-zinc-500">{sg.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Role recommendations */}
+                  {tga.roleRecommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><UserPlus className="w-3 h-3" /> Role Recommendations</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {tga.roleRecommendations.map((role: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-zinc-900">{role.title}</p>
+                              {role.urgency && (
+                                <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                  role.urgency === "immediate" || role.urgency === "high" ? "bg-red-50 text-red-700 border-red-200" :
+                                  role.urgency === "short-term" || role.urgency === "medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                  "bg-blue-50 text-blue-700 border-blue-200"
+                                }`}>{role.urgency}</span>
+                              )}
+                            </div>
+                            {role.department && <p className="text-[9px] font-mono text-zinc-400 uppercase mb-2">{role.department}</p>}
+                            {role.salaryRange && <p className="text-xs text-zinc-500 mb-1">Salary: {role.salaryRange}</p>}
+                            {role.rationale && <p className="text-xs text-zinc-500 mb-1">{role.rationale}</p>}
+                            {role.impact && <p className="text-xs text-green-700 font-medium">Impact: {role.impact}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Training recommendations */}
+                  {tga.trainingRecommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><BookOpen className="w-3 h-3" /> Training Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {tga.trainingRecommendations.map((tr: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                            <span className="w-5 h-5 bg-zinc-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-zinc-900">{typeof tr === "string" ? tr : tr.program || tr.title || tr.recommendation}</p>
+                              {typeof tr !== "string" && tr.description && <p className="text-xs text-zinc-500 mt-1">{tr.description}</p>}
+                              {typeof tr !== "string" && tr.duration && <p className="text-xs text-zinc-400 mt-0.5">Duration: {tr.duration}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 45: Revenue Diversification ─────────────────────────────── */}
+            {activeTab === 45 && (d as any).revenueDiversification && (() => {
+              const rd = (d as any).revenueDiversification;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PieChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Revenue Diversification</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{rd.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {rd.concentrationRisk && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Concentration Risk</p>
+                          <span className={`text-sm font-mono px-3 py-1 rounded ${
+                            rd.concentrationRisk === "high" || rd.concentrationRisk === "High" ? "bg-red-500/20 text-red-300" :
+                            rd.concentrationRisk === "medium" || rd.concentrationRisk === "Medium" ? "bg-amber-500/20 text-amber-300" :
+                            "bg-green-500/20 text-green-300"
+                          }`}>{rd.concentrationRisk}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Current revenue streams table */}
+                  {rd.currentStreams?.length > 0 && (
+                    <div>
+                      <SectionHeader><DollarSign className="w-3 h-3" /> Current Revenue Streams</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-100 bg-zinc-50">
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Stream</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Revenue</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Share</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Growth</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Risk</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rd.currentStreams.map((s: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-50">
+                                <td className="px-4 py-3 font-medium text-zinc-900">{s.name || s.stream}</td>
+                                <td className="px-4 py-3 text-zinc-700">{s.revenue}</td>
+                                <td className="px-4 py-3 text-zinc-700">{s.share || s.percentage}</td>
+                                <td className="px-4 py-3">
+                                  <span className={
+                                    String(s.growth).startsWith("+") || String(s.growth).startsWith("up") ? "text-green-700" :
+                                    String(s.growth).startsWith("-") || String(s.growth).startsWith("down") ? "text-red-700" :
+                                    "text-zinc-500"
+                                  }>{s.growth}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {s.risk && (
+                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                      s.risk === "high" || s.risk === "High" ? "bg-red-50 text-red-700 border-red-200" :
+                                      s.risk === "medium" || s.risk === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                      "bg-green-50 text-green-700 border-green-200"
+                                    }`}>{s.risk}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Diversification opportunities */}
+                  {rd.opportunities?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Diversification Opportunities</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {rd.opportunities.map((opp: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-2">{opp.stream || opp.name || opp.opportunity}</p>
+                            {opp.estimatedRevenue && <p className="text-xs text-zinc-500 mb-1">Est. Revenue: <span className="font-medium text-green-700">{opp.estimatedRevenue}</span></p>}
+                            {opp.timeToRevenue && <p className="text-xs text-zinc-500 mb-1">Time to Revenue: {opp.timeToRevenue}</p>}
+                            {opp.investment && <p className="text-xs text-zinc-500 mb-1">Investment: {opp.investment}</p>}
+                            {opp.feasibility && (
+                              <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                opp.feasibility === "high" || opp.feasibility === "High" ? "bg-green-50 text-green-700 border-green-200" :
+                                opp.feasibility === "medium" || opp.feasibility === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                "bg-red-50 text-red-700 border-red-200"
+                              }`}>Feasibility: {opp.feasibility}</span>
+                            )}
+                            {opp.rationale && <p className="text-xs text-zinc-500 mt-2">{opp.rationale}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Target mix */}
+                  {rd.targetMix && (
+                    <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6 shadow-sm text-center">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Target Revenue Mix</p>
+                      <p className="text-xl font-light text-zinc-900">{typeof rd.targetMix === "string" ? rd.targetMix : JSON.stringify(rd.targetMix)}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 46: Customer Journey Map ────────────────────────────────── */}
+            {activeTab === 46 && (d as any).customerJourneyMap && (() => {
+              const cjm = (d as any).customerJourneyMap;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Journey Map</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cjm.summary}</p>
+                  </div>
+
+                  {/* Journey stages as horizontal flow */}
+                  {cjm.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><ArrowRight className="w-3 h-3" /> Journey Stages</SectionHeader>
+                      <div className="flex flex-col md:flex-row gap-3 overflow-x-auto pb-2">
+                        {cjm.stages.map((stage: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 flex-shrink-0">
+                            <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm min-w-[220px]">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                                <p className="text-sm font-semibold text-zinc-900">{stage.name || stage.stage}</p>
+                              </div>
+                              {stage.description && <p className="text-xs text-zinc-500 mb-2">{stage.description}</p>}
+                              {stage.touchpoints?.length > 0 && (
+                                <div className="mb-2">
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Touchpoints</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {stage.touchpoints.map((tp: any, j: number) => (
+                                      <span key={j} className="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">{typeof tp === "string" ? tp : tp.name}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {stage.frictionPoints?.length > 0 && (
+                                <div className="mb-2">
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Friction Points</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {stage.frictionPoints.map((fp: any, j: number) => (
+                                      <span key={j} className="text-[9px] font-mono px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">{typeof fp === "string" ? fp : fp.name || fp.description}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {stage.conversionRate && (
+                                <p className="text-xs text-zinc-500">Conversion: <span className="font-medium text-zinc-900">{stage.conversionRate}</span></p>
+                              )}
+                              {stage.improvements?.length > 0 && (
+                                <div className="mt-2">
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Improvements</p>
+                                  {stage.improvements.map((imp: any, j: number) => (
+                                    <p key={j} className="text-xs text-green-700">{typeof imp === "string" ? imp : imp.action || imp.description}</p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {i < cjm.stages.length - 1 && (
+                              <ChevronRight className="w-5 h-5 text-zinc-300 shrink-0 hidden md:block" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Critical friction points */}
+                  {cjm.criticalFrictionPoints?.length > 0 && (
+                    <div>
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-red-500" /> Critical Friction Points</SectionHeader>
+                      <div className="space-y-2">
+                        {cjm.criticalFrictionPoints.map((fp: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-red-50 border border-red-200 rounded-xl p-4">
+                            <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-red-900">{typeof fp === "string" ? fp : fp.point || fp.description || fp.name}</p>
+                              {typeof fp !== "string" && fp.impact && <p className="text-xs text-red-700 mt-1">Impact: {fp.impact}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick wins */}
+                  {cjm.quickWins?.length > 0 && (
+                    <div>
+                      <SectionHeader><Zap className="w-3 h-3 text-green-600" /> Quick Wins</SectionHeader>
+                      <div className="space-y-2">
+                        {cjm.quickWins.map((qw: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-green-50 border border-green-200 rounded-xl p-4">
+                            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-900">{typeof qw === "string" ? qw : qw.action || qw.description || qw.name}</p>
+                              {typeof qw !== "string" && qw.impact && <p className="text-xs text-green-700 mt-1">Impact: {qw.impact}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 47: Compliance Checklist ─────────────────────────────────── */}
+            {activeTab === 47 && (d as any).complianceChecklist && (() => {
+              const cc = (d as any).complianceChecklist;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Compliance Checklist</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cc.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cc.readinessLevel && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Readiness</p>
+                          <span className={`text-sm font-mono px-3 py-1 rounded ${
+                            cc.readinessLevel === "high" || cc.readinessLevel === "High" || cc.readinessLevel === "strong" ? "bg-green-500/20 text-green-300" :
+                            cc.readinessLevel === "medium" || cc.readinessLevel === "Medium" || cc.readinessLevel === "moderate" ? "bg-amber-500/20 text-amber-300" :
+                            "bg-red-500/20 text-red-300"
+                          }`}>{cc.readinessLevel}</span>
+                        </div>
+                      )}
+                      {cc.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Compliance Score</p>
+                          <p className="text-3xl font-light">{cc.overallScore}<span className="text-lg text-zinc-400">%</span></p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Compliance items table */}
+                  {cc.items?.length > 0 && (
+                    <div>
+                      <SectionHeader><ClipboardCheck className="w-3 h-3" /> Compliance Items</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-100 bg-zinc-50">
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Item</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Category</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Status</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Notes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cc.items.map((item: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-50">
+                                <td className="px-4 py-3 font-medium text-zinc-900">{item.name || item.item || item.requirement}</td>
+                                <td className="px-4 py-3 text-zinc-700">{item.category || item.framework}</td>
+                                <td className="px-4 py-3">
+                                  {item.status && (
+                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                      item.status === "compliant" || item.status === "Compliant" ? "bg-green-50 text-green-700 border-green-200" :
+                                      item.status === "partial" || item.status === "Partial" || item.status === "partially_compliant" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                      item.status === "non_compliant" || item.status === "Non-Compliant" || item.status === "non-compliant" ? "bg-red-50 text-red-700 border-red-200" :
+                                      "bg-zinc-50 text-zinc-600 border-zinc-200"
+                                    }`}>{item.status}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-zinc-500">{item.notes || item.detail || item.description}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Immediate actions */}
+                  {cc.immediateActions?.length > 0 && (
+                    <div>
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-red-500" /> Immediate Actions</SectionHeader>
+                      <div className="space-y-2">
+                        {cc.immediateActions.map((a: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-red-50 border border-red-100 rounded-xl p-4">
+                            <span className="w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
+                            <p className="text-sm text-red-900 font-medium">{typeof a === "string" ? a : a.action || a.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upcoming deadlines */}
+                  {cc.upcomingDeadlines?.length > 0 && (
+                    <div>
+                      <SectionHeader><Calendar className="w-3 h-3" /> Upcoming Deadlines</SectionHeader>
+                      <div className="space-y-3">
+                        {cc.upcomingDeadlines.map((dl: any, i: number) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-amber-500 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="font-semibold text-zinc-900">{typeof dl === "string" ? dl : dl.requirement || dl.name || dl.deadline}</p>
+                                {typeof dl !== "string" && dl.date && <p className="text-xs text-amber-700 mt-1">Due: {dl.date}</p>}
+                                {typeof dl !== "string" && dl.description && <p className="text-xs text-zinc-500 mt-0.5">{dl.description}</p>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 48: Expansion Playbook ───────────────────────────────────── */}
+            {activeTab === 48 && (d as any).expansionPlaybook && (() => {
+              const ep = (d as any).expansionPlaybook;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Expansion Playbook</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ep.summary}</p>
+                    {ep.currentPosition && (
+                      <div className="mt-4">
+                        <p className="text-[9px] font-mono text-zinc-500 uppercase">Current Position</p>
+                        <p className="text-xl font-light">{ep.currentPosition}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expansion markets */}
+                  {ep.markets?.length > 0 && (
+                    <div>
+                      <SectionHeader><Globe className="w-3 h-3" /> Expansion Markets</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {ep.markets.map((mkt: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-3">{mkt.name || mkt.market}</p>
+                            {mkt.attractiveness != null && (
+                              <div className="mb-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Attractiveness</p>
+                                  <span className="text-xs font-mono text-zinc-500">{mkt.attractiveness}/10</span>
+                                </div>
+                                <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${mkt.attractiveness >= 7 ? "bg-green-500" : mkt.attractiveness >= 4 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${(mkt.attractiveness / 10) * 100}%` }} />
+                                </div>
+                              </div>
+                            )}
+                            {mkt.readiness != null && (
+                              <div className="mb-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Readiness</p>
+                                  <span className="text-xs font-mono text-zinc-500">{mkt.readiness}/10</span>
+                                </div>
+                                <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${mkt.readiness >= 7 ? "bg-green-500" : mkt.readiness >= 4 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${(mkt.readiness / 10) * 100}%` }} />
+                                </div>
+                              </div>
+                            )}
+                            {mkt.estimatedRevenue && <p className="text-xs text-zinc-500 mb-1">Est. Revenue: <span className="font-medium text-green-700">{mkt.estimatedRevenue}</span></p>}
+                            {mkt.timeToEntry && <p className="text-xs text-zinc-500 mb-1">Time to Entry: {mkt.timeToEntry}</p>}
+                            {mkt.keyBarriers?.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Key Barriers</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {mkt.keyBarriers.map((b: any, j: number) => (
+                                    <span key={j} className="text-[9px] font-mono px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">{typeof b === "string" ? b : b.name || b.barrier}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {mkt.entryStrategy && <p className="text-xs text-zinc-500">Strategy: {mkt.entryStrategy}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Prioritized sequence */}
+                  {ep.prioritizedSequence?.length > 0 && (
+                    <div>
+                      <SectionHeader><Flag className="w-3 h-3" /> Prioritized Expansion Sequence</SectionHeader>
+                      <div className="space-y-3">
+                        {ep.prioritizedSequence.map((step: any, i: number) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <div className="flex-1">
+                                <p className="font-semibold text-zinc-900">{typeof step === "string" ? step : step.market || step.name || step.action}</p>
+                                {typeof step !== "string" && step.rationale && <p className="text-xs text-zinc-500 mt-1">{step.rationale}</p>}
+                                {typeof step !== "string" && step.timeline && <p className="text-xs text-zinc-400 mt-0.5">Timeline: {step.timeline}</p>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Risk factors */}
+                  {ep.riskFactors?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldAlert className="w-3 h-3 text-red-500" /> Risk Factors</SectionHeader>
+                      <div className="space-y-2">
+                        {ep.riskFactors.map((rf: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-red-50 border border-red-100 rounded-xl p-4">
+                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-900">{typeof rf === "string" ? rf : rf.risk || rf.factor || rf.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 49: Vendor Scorecard ─────────────────────────────────────── */}
+            {activeTab === 49 && (d as any).vendorScorecard && (() => {
+              const vs = (d as any).vendorScorecard;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Vendor Scorecard</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{vs.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {vs.totalSpend && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Spend</p>
+                          <p className="text-xl font-light">{vs.totalSpend}</p>
+                        </div>
+                      )}
+                      {vs.vendorCount != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Vendor Count</p>
+                          <p className="text-xl font-light">{vs.vendorCount}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Vendor assessments table */}
+                  {vs.assessments?.length > 0 && (
+                    <div>
+                      <SectionHeader><ClipboardCheck className="w-3 h-3" /> Vendor Assessments</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-100 bg-zinc-50">
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Vendor</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Category</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Cost</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Satisfaction</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Recommendation</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Potential Saving</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {vs.assessments.map((v: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-50">
+                                <td className="px-4 py-3 font-medium text-zinc-900">{v.vendor || v.name}</td>
+                                <td className="px-4 py-3 text-zinc-700">{v.category}</td>
+                                <td className="px-4 py-3 text-zinc-700">{v.cost || v.annualCost}</td>
+                                <td className="px-4 py-3 text-zinc-700">{v.satisfaction}</td>
+                                <td className="px-4 py-3">
+                                  {v.recommendation && (
+                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                      v.recommendation === "keep" || v.recommendation === "Keep" ? "bg-green-50 text-green-700 border-green-200" :
+                                      v.recommendation === "renegotiate" || v.recommendation === "Renegotiate" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                      v.recommendation === "replace" || v.recommendation === "Replace" ? "bg-red-50 text-red-700 border-red-200" :
+                                      "bg-zinc-50 text-zinc-600 border-zinc-200"
+                                    }`}>{v.recommendation}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-green-700 font-medium">{v.potentialSaving || v.saving}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Consolidation opportunities */}
+                  {vs.consolidationOpportunities?.length > 0 && (
+                    <div>
+                      <SectionHeader><Zap className="w-3 h-3" /> Consolidation Opportunities</SectionHeader>
+                      <div className="space-y-3">
+                        {vs.consolidationOpportunities.map((co: any, i: number) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <div className="flex-1">
+                                <p className="font-semibold text-zinc-900">{typeof co === "string" ? co : co.opportunity || co.description || co.name}</p>
+                                {typeof co !== "string" && co.saving && <p className="text-xs text-green-700 mt-1">Potential Saving: {co.saving}</p>}
+                                {typeof co !== "string" && co.vendors && <p className="text-xs text-zinc-500 mt-0.5">Vendors: {Array.isArray(co.vendors) ? co.vendors.join(", ") : co.vendors}</p>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Renegotiation targets */}
+                  {vs.renegotiationTargets?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3 text-amber-500" /> Renegotiation Targets</SectionHeader>
+                      <div className="space-y-2">
+                        {vs.renegotiationTargets.map((rt: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-xl p-4">
+                            <DollarSign className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-amber-900">{typeof rt === "string" ? rt : rt.vendor || rt.name}</p>
+                              {typeof rt !== "string" && rt.currentCost && <p className="text-xs text-amber-700 mt-1">Current: {rt.currentCost}</p>}
+                              {typeof rt !== "string" && rt.targetCost && <p className="text-xs text-green-700">Target: {rt.targetCost}</p>}
+                              {typeof rt !== "string" && rt.strategy && <p className="text-xs text-zinc-500 mt-0.5">{rt.strategy}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Total potential savings callout */}
+                  {vs.totalPotentialSavings && (
+                    <div className="bg-white border-2 border-green-600 rounded-2xl p-6 shadow-sm text-center">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Total Potential Savings</p>
+                      <p className="text-3xl font-light text-green-700">{vs.totalPotentialSavings}</p>
                     </div>
                   )}
                 </div>

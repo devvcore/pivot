@@ -712,6 +712,13 @@ export interface MVPDeliverables {
   competitiveMoat?: CompetitiveMoat;
   gtmScorecard?: GTMScorecard;
   cashOptimization?: CashOptimization;
+  // Wave 6 features
+  talentGapAnalysis?: TalentGapAnalysis;
+  revenueDiversification?: RevenueDiversification;
+  customerJourneyMap?: CustomerJourneyMap;
+  complianceChecklist?: ComplianceChecklist;
+  expansionPlaybook?: ExpansionPlaybook;
+  vendorScorecard?: VendorScorecard;
 }
 
 export interface BenchmarkDimension {
@@ -1216,4 +1223,147 @@ export interface CategorizedDoc {
     companies: string[];
   };
   rawTextExcerpt: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 6: Talent, Revenue Diversification, Customer Journey, Compliance,
+//          Expansion, Vendor Scorecard
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SkillGap {
+  skill: string;
+  currentLevel: "none" | "basic" | "intermediate" | "advanced";
+  requiredLevel: "basic" | "intermediate" | "advanced" | "expert";
+  priority: "critical" | "high" | "medium" | "low";
+  recommendation: string;         // "Hire senior data engineer" or "Train existing team"
+}
+
+export interface RoleRecommendation {
+  title: string;                  // "Senior Data Engineer"
+  department: string;             // "Engineering"
+  urgency: "immediate" | "next_quarter" | "next_year";
+  rationale: string;
+  estimatedSalaryRange: string;   // "$120K-$160K"
+  impact: string;                 // "Unlocks real-time analytics pipeline"
+}
+
+export interface TalentGapAnalysis {
+  summary: string;
+  currentTeamStrengths: string[];
+  skillGaps: SkillGap[];
+  roleRecommendations: RoleRecommendation[];
+  teamStructureNotes: string;     // org design suggestions
+  trainingRecommendations: string[];
+  totalHiringBudgetEstimate: string;
+}
+
+export interface RevenueStream {
+  name: string;                   // "SaaS Subscriptions", "Consulting", "Marketplace"
+  currentRevenue: string;
+  revenueShare: number;           // percentage 0-100
+  growthRate: string;
+  risk: "high" | "medium" | "low";
+  notes: string;
+}
+
+export interface DiversificationOpportunity {
+  stream: string;                 // new revenue stream name
+  estimatedRevenue: string;
+  timeToRevenue: string;          // "3-6 months"
+  investmentRequired: string;
+  feasibility: "high" | "medium" | "low";
+  rationale: string;
+}
+
+export interface RevenueDiversification {
+  summary: string;
+  concentrationRisk: "critical" | "high" | "moderate" | "low";
+  concentrationDetails: string;
+  currentStreams: RevenueStream[];
+  diversificationOpportunities: DiversificationOpportunity[];
+  recommendations: string[];
+  targetMix: string;              // "Aim for no single stream >40% of revenue"
+}
+
+export interface JourneyStage {
+  name: string;                   // "Awareness", "Consideration", "Purchase", "Onboarding", "Retention", "Advocacy"
+  description: string;
+  touchpoints: string[];
+  frictionPoints: string[];
+  conversionRate?: string;
+  dropOffRate?: string;
+  improvements: string[];
+}
+
+export interface CustomerJourneyMap {
+  summary: string;
+  stages: JourneyStage[];
+  criticalFrictionPoints: string[];
+  quickWins: string[];
+  longTermImprovements: string[];
+  estimatedImpact: string;        // "Improving onboarding could increase retention by 15%"
+}
+
+export interface ComplianceItem {
+  requirement: string;            // "GDPR Data Processing Agreement"
+  category: string;               // "Data Privacy", "Financial", "Employment", "Industry-Specific"
+  status: "compliant" | "partial" | "non_compliant" | "unknown";
+  priority: "critical" | "high" | "medium" | "low";
+  deadline?: string;
+  action: string;
+  estimatedCost?: string;
+}
+
+export interface ComplianceChecklist {
+  summary: string;
+  overallReadiness: "strong" | "adequate" | "needs_work" | "at_risk";
+  complianceScore: number;        // 0-100
+  items: ComplianceItem[];
+  immediateActions: string[];
+  upcomingDeadlines: string[];
+  industrySpecificNotes: string;
+}
+
+export interface ExpansionMarket {
+  market: string;                 // "Southeast Asia", "Healthcare Vertical", "Enterprise Segment"
+  type: "geographic" | "vertical" | "segment";
+  attractiveness: number;         // 1-10
+  readiness: number;              // 1-10
+  estimatedRevenue: string;
+  timeToEntry: string;
+  keyBarriers: string[];
+  entryStrategy: string;
+}
+
+export interface ExpansionPlaybook {
+  summary: string;
+  currentMarketPosition: string;
+  expansionMarkets: ExpansionMarket[];
+  prioritizedSequence: string[];  // ordered list of which markets to enter first
+  resourceRequirements: string[];
+  riskFactors: string[];
+  timeline: string;               // "Phase 1: Q1-Q2, Phase 2: Q3-Q4"
+}
+
+export interface VendorAssessment {
+  vendor: string;
+  category: string;               // "Cloud Infrastructure", "Marketing Tools", "Payment Processing"
+  annualCost: string;
+  contractEnd?: string;
+  satisfaction: number;            // 1-10
+  alternatives: string[];
+  potentialSaving: string;
+  recommendation: "keep" | "renegotiate" | "replace" | "consolidate";
+  notes: string;
+}
+
+export interface VendorScorecard {
+  summary: string;
+  totalVendorSpend: string;
+  vendorCount: number;
+  assessments: VendorAssessment[];
+  consolidationOpportunities: string[];
+  renegotiationTargets: string[];
+  totalPotentialSavings: string;
+  recommendations: string[];
 }

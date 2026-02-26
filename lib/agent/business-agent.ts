@@ -97,6 +97,12 @@ const TOOLS = [
             "competitiveMoat",
             "gtmScorecard",
             "cashOptimization",
+            "talentGapAnalysis",
+            "revenueDiversification",
+            "customerJourneyMap",
+            "complianceChecklist",
+            "expansionPlaybook",
+            "vendorScorecard",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -336,6 +342,7 @@ Analysis: pitchDeckAnalysis, techOptimization, terminology, kpiReport, roadmap, 
 Strategy: swotAnalysis, unitEconomics, customerSegmentation, competitiveWinLoss, investorOnePager, competitiveMoat, scenarioPlanner, fundingReadiness
 Operations: hiringPlan, revenueForecast, churnPlaybook, salesPlaybook, goalTracker, benchmarkScore, executiveSummary, milestoneTracker, riskRegister, operationalEfficiency
 Growth: retentionPlaybook, boardDeck, gtmScorecard, cashOptimization
+Wave 6: talentGapAnalysis, revenueDiversification, customerJourneyMap, complianceChecklist, expansionPlaybook, vendorScorecard
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

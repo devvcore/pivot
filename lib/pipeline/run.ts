@@ -41,6 +41,12 @@ import {
   synthesizeCompetitiveMoat,
   synthesizeGTMScorecard,
   synthesizeCashOptimization,
+  synthesizeTalentGapAnalysis,
+  synthesizeRevenueDiversification,
+  synthesizeCustomerJourneyMap,
+  synthesizeComplianceChecklist,
+  synthesizeExpansionPlaybook,
+  synthesizeVendorScorecard,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -489,6 +495,54 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] GTM/CashOptimization failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4l: Wave 6 intelligence (talent gap analysis, revenue diversification) ──
+    if (!deliverables.talentGapAnalysis || !deliverables.revenueDiversification) {
+      try {
+        console.log("[Pivot] Synthesizing talent gap analysis + revenue diversification...");
+        const [tga, rd] = await Promise.allSettled([
+          deliverables.talentGapAnalysis ? Promise.resolve(null) : synthesizeTalentGapAnalysis(businessPacket, job.questionnaire),
+          deliverables.revenueDiversification ? Promise.resolve(null) : synthesizeRevenueDiversification(businessPacket, job.questionnaire),
+        ]);
+        if (tga.status === "fulfilled" && tga.value) deliverables = { ...deliverables, talentGapAnalysis: tga.value };
+        if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, revenueDiversification: rd.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] TalentGap/RevenueDiversification failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4m: Wave 6 intelligence (customer journey map, compliance checklist) ──
+    if (!deliverables.customerJourneyMap || !deliverables.complianceChecklist) {
+      try {
+        console.log("[Pivot] Synthesizing customer journey map + compliance checklist...");
+        const [cjm, cc] = await Promise.allSettled([
+          deliverables.customerJourneyMap ? Promise.resolve(null) : synthesizeCustomerJourneyMap(businessPacket, job.questionnaire),
+          deliverables.complianceChecklist ? Promise.resolve(null) : synthesizeComplianceChecklist(businessPacket, job.questionnaire),
+        ]);
+        if (cjm.status === "fulfilled" && cjm.value) deliverables = { ...deliverables, customerJourneyMap: cjm.value };
+        if (cc.status === "fulfilled" && cc.value) deliverables = { ...deliverables, complianceChecklist: cc.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CustomerJourney/Compliance failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4n: Wave 6 intelligence (expansion playbook, vendor scorecard) ──
+    if (!deliverables.expansionPlaybook || !deliverables.vendorScorecard) {
+      try {
+        console.log("[Pivot] Synthesizing expansion playbook + vendor scorecard...");
+        const [ep, vs] = await Promise.allSettled([
+          deliverables.expansionPlaybook ? Promise.resolve(null) : synthesizeExpansionPlaybook(businessPacket, job.questionnaire),
+          deliverables.vendorScorecard ? Promise.resolve(null) : synthesizeVendorScorecard(businessPacket, job.questionnaire),
+        ]);
+        if (ep.status === "fulfilled" && ep.value) deliverables = { ...deliverables, expansionPlaybook: ep.value };
+        if (vs.status === "fulfilled" && vs.value) deliverables = { ...deliverables, vendorScorecard: vs.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Expansion/VendorScorecard failed (non-fatal):", e);
       }
     }
 
