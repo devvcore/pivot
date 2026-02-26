@@ -40,6 +40,12 @@ import type {
   ScenarioPlanner,
   OperationalEfficiency,
   CLVAnalysis,
+  RetentionPlaybook,
+  RevenueAttribution,
+  BoardDeck,
+  CompetitiveMoat,
+  GTMScorecard,
+  CashOptimization,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -2707,6 +2713,505 @@ ${schema}`;
     return result as unknown as CLVAnalysis;
   } catch (e) {
     console.warn("[Pivot] CLV Analysis synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 5: Retention Playbook ─────────────────────────────────────────────
+
+export async function synthesizeRetentionPlaybook(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<RetentionPlaybook | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "overallRetentionRate": "X% estimated overall retention rate",
+  "strategies": [{
+    "segment": "customer segment name",
+    "engagementScore": 0,
+    "churnRisk": "low|medium|high",
+    "triggers": ["trigger event 1", "..."],
+    "interventions": ["intervention action 1", "..."],
+    "expectedImpact": "description of expected retention improvement",
+    "timeline": "implementation timeline"
+  }],
+  "quickWins": ["quick win 1", "quick win 2", "..."],
+  "longTermInitiatives": ["long term initiative 1", "..."],
+  "engagementMetrics": [{
+    "metric": "metric name",
+    "current": "current value",
+    "target": "target value",
+    "gap": "description of the gap"
+  }],
+  "summary": "2-3 sentence retention playbook overview"
+}`;
+
+  const prompt = `You are a customer retention strategist building a comprehensive retention playbook.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Customers: ${questionnaire.keyCustomers ?? "Unknown"}
+Key Concern: ${questionnaire.keyConcerns}
+
+Build a detailed retention playbook with the following:
+
+1. OVERALL RETENTION RATE: Estimate the current retention rate based on available data.
+
+2. SEGMENT STRATEGIES (4-6 segments): For each customer segment:
+   - Assign an engagement score (0-100) based on available signals
+   - Classify churn risk as low, medium, or high
+   - Identify 2-3 specific churn triggers (events that precede churn)
+   - Recommend 2-3 interventions to prevent churn
+   - Estimate the expected impact on retention
+   - Provide a realistic implementation timeline
+
+3. QUICK WINS: 3-5 retention actions that can be implemented within 30 days with minimal effort.
+
+4. LONG-TERM INITIATIVES: 3-5 strategic retention programs that require 3-6 months to implement.
+
+5. ENGAGEMENT METRICS: 4-6 key engagement metrics to track, with current values (from data),
+   target values, and the gap between them.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Retention Playbook...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as RetentionPlaybook;
+  } catch (e) {
+    console.warn("[Pivot] Retention Playbook synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 5: Revenue Attribution ────────────────────────────────────────────
+
+export async function synthesizeRevenueAttribution(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<RevenueAttribution | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "channels": [{
+    "channel": "channel name",
+    "contribution": 0,
+    "revenue": "$X",
+    "cost": "$X",
+    "roi": "X%",
+    "trend": "growing|stable|declining"
+  }],
+  "topPerformer": "name of the highest ROI channel",
+  "underperformer": "name of the lowest ROI channel",
+  "recommendations": ["recommendation 1", "recommendation 2", "..."],
+  "attributionModel": "description of the attribution model used",
+  "summary": "2-3 sentence revenue attribution overview"
+}`;
+
+  const prompt = `You are a revenue analytics expert performing multi-channel revenue attribution analysis.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+
+Perform a detailed revenue attribution analysis:
+
+1. CHANNEL BREAKDOWN: Identify 5-8 revenue channels/sources and for each:
+   - Estimate the percentage contribution to total revenue
+   - Estimate the revenue attributed to this channel
+   - Estimate the cost of acquisition/operation for this channel
+   - Calculate or estimate the ROI
+   - Classify the trend as growing, stable, or declining
+
+2. TOP PERFORMER: Identify the single channel delivering the best ROI and explain why.
+
+3. UNDERPERFORMER: Identify the channel with the worst ROI or most wasted spend.
+
+4. RECOMMENDATIONS: Provide 4-6 specific recommendations to optimize the revenue mix:
+   - Which channels to double down on and why
+   - Which channels to reduce investment in
+   - New channels to explore based on industry benchmarks
+   - Budget reallocation suggestions with expected revenue impact
+
+5. ATTRIBUTION MODEL: Describe which attribution model best fits this business
+   (first-touch, last-touch, linear, time-decay, data-driven) and why.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Revenue Attribution...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as RevenueAttribution;
+  } catch (e) {
+    console.warn("[Pivot] Revenue Attribution synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 5: Board Deck ────────────────────────────────────────────────────
+
+export async function synthesizeBoardDeck(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<BoardDeck | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "period": "reporting period (e.g., Q1 2025)",
+  "highlights": ["highlight 1", "highlight 2", "highlight 3"],
+  "financialOverview": [{
+    "metric": "metric name",
+    "value": "$X or X%",
+    "change": "+X% or -X% vs prior period",
+    "status": "up|down|flat"
+  }],
+  "keyMetrics": [{
+    "name": "metric name",
+    "value": "current value",
+    "target": "target value",
+    "status": "on_track|at_risk|behind"
+  }],
+  "strategicUpdates": ["update 1", "update 2", "..."],
+  "risksAndChallenges": ["risk 1", "risk 2", "..."],
+  "askAndNextSteps": ["ask or next step 1", "..."],
+  "summary": "2-3 sentence board-ready overview"
+}`;
+
+  const prompt = `You are a CFO preparing a board-ready quarterly deck summary for investors and board members.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+Key Concern: ${questionnaire.keyConcerns}
+
+Create a concise, board-ready deck summary:
+
+1. PERIOD: Identify the most recent reporting period from the data.
+
+2. HIGHLIGHTS: 3-5 key wins or achievements to lead the board meeting with.
+
+3. FINANCIAL OVERVIEW: 5-8 key financial metrics with:
+   - Current value
+   - Change vs. prior period (use data if available, otherwise estimate direction)
+   - Status indicator (up/down/flat)
+
+4. KEY METRICS: 5-7 operational KPIs with current value, target, and status:
+   - on_track: within 10% of target
+   - at_risk: 10-25% off target
+   - behind: more than 25% off target
+
+5. STRATEGIC UPDATES: 3-5 strategic initiatives and their progress.
+
+6. RISKS AND CHALLENGES: 3-5 risks or challenges the board needs to be aware of.
+
+7. ASK AND NEXT STEPS: 2-4 specific asks of the board or next steps requiring approval.
+
+Tone: Concise, data-driven, executive-level. No fluff.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Board Deck...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as BoardDeck;
+  } catch (e) {
+    console.warn("[Pivot] Board Deck synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 5: Competitive Moat ──────────────────────────────────────────────
+
+export async function synthesizeCompetitiveMoat(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CompetitiveMoat | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "overallMoatScore": 0,
+  "moatType": "primary moat type (e.g., Network Effects, Switching Costs, Brand, Scale, IP, Data)",
+  "dimensions": [{
+    "dimension": "moat dimension name",
+    "score": 0,
+    "description": "assessment of this dimension",
+    "threats": ["threat 1", "..."],
+    "reinforcements": ["action to strengthen this dimension", "..."]
+  }],
+  "vulnerabilities": ["vulnerability 1", "vulnerability 2", "..."],
+  "recommendations": ["recommendation 1", "recommendation 2", "..."],
+  "competitorComparison": "brief comparison of moat strength vs. key competitors",
+  "summary": "2-3 sentence competitive moat overview"
+}`;
+
+  const prompt = `You are a competitive strategy expert analyzing the business's competitive moat.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Unknown"}
+
+Perform a comprehensive competitive moat analysis:
+
+1. OVERALL MOAT SCORE (0-100): Rate the overall strength of the competitive moat.
+
+2. MOAT TYPE: Identify the primary moat type:
+   - Network Effects, Switching Costs, Brand/Reputation, Scale Economies,
+     Intellectual Property, Data Advantages, Regulatory/Licensing, or a combination.
+
+3. DIMENSIONS (5-7 dimensions): Evaluate each moat dimension:
+   - Score each 0-10
+   - Describe the current state with evidence from the data
+   - Identify 2-3 threats that could erode this dimension
+   - Recommend 2-3 actions to reinforce/strengthen it
+
+   Dimensions to evaluate:
+   - Brand & Reputation
+   - Customer Lock-in / Switching Costs
+   - Network Effects (if applicable)
+   - Technology / IP Advantage
+   - Data & Learning Advantages
+   - Scale / Cost Advantages
+   - Talent & Culture Moat
+
+4. VULNERABILITIES: 3-5 specific vulnerabilities where the moat is weakest.
+
+5. RECOMMENDATIONS: 4-6 high-impact actions to deepen the moat, ranked by priority.
+
+6. COMPETITOR COMPARISON: Brief comparison of moat strength vs. known competitors.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Competitive Moat...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CompetitiveMoat;
+  } catch (e) {
+    console.warn("[Pivot] Competitive Moat synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 5: GTM Scorecard ─────────────────────────────────────────────────
+
+export async function synthesizeGTMScorecard(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<GTMScorecard | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "overallScore": 0,
+  "grade": "A|B|C|D|F",
+  "dimensions": [{
+    "dimension": "GTM dimension name",
+    "score": 0,
+    "status": "strong|developing|weak",
+    "insights": ["insight 1", "..."],
+    "actions": ["action 1", "..."]
+  }],
+  "topStrength": "single strongest GTM dimension",
+  "biggestGap": "single weakest GTM dimension needing most attention",
+  "prioritizedActions": ["action 1 (highest priority)", "action 2", "..."],
+  "summary": "2-3 sentence GTM scorecard overview"
+}`;
+
+  const prompt = `You are a go-to-market strategy expert evaluating the business's GTM effectiveness.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+Target Customers: ${questionnaire.keyCustomers ?? "Unknown"}
+
+Evaluate the go-to-market strategy across all dimensions:
+
+1. OVERALL SCORE (0-100) and GRADE (A-F): Rate the overall GTM effectiveness.
+
+2. DIMENSIONS (6-8 dimensions): Evaluate each with a score (0-10), status, insights, and actions:
+
+   a. Market Positioning & Messaging
+      - Clarity of value proposition, differentiation, messaging consistency
+   b. Sales Efficiency
+      - Sales cycle length, win rates, pipeline health, quota attainment
+   c. Marketing Effectiveness
+      - Lead generation quality, CAC, marketing ROI, brand awareness
+   d. Product-Market Fit
+      - Retention signals, NPS/CSAT, feature adoption, expansion revenue
+   e. Pricing Strategy
+      - Pricing model alignment, willingness to pay, competitive pricing
+   f. Channel Strategy
+      - Distribution effectiveness, partner ecosystem, channel mix
+   g. Customer Success
+      - Onboarding efficiency, time to value, expansion rate, advocacy
+   h. Data & Analytics
+      - GTM data infrastructure, attribution capability, forecasting accuracy
+
+3. TOP STRENGTH: The single strongest GTM area with evidence.
+
+4. BIGGEST GAP: The single weakest area requiring immediate attention.
+
+5. PRIORITIZED ACTIONS: 5-7 specific actions ranked by expected revenue impact.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating GTM Scorecard...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as GTMScorecard;
+  } catch (e) {
+    console.warn("[Pivot] GTM Scorecard synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 5: Cash Optimization ─────────────────────────────────────────────
+
+export async function synthesizeCashOptimization(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CashOptimization | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "currentBurnRate": "$X/month current burn rate",
+  "optimizedBurnRate": "$X/month projected optimized burn rate",
+  "potentialSavings": "$X/month total potential savings",
+  "recommendations": [{
+    "area": "expense area or category",
+    "current": "$X current monthly spend",
+    "optimized": "$X optimized monthly spend",
+    "saving": "$X monthly saving",
+    "effort": "low|medium|high",
+    "priority": 1
+  }],
+  "quickWins": ["quick win 1 with $ impact", "..."],
+  "revenueAcceleration": ["revenue acceleration strategy 1", "..."],
+  "extendedRunway": "X additional months of runway gained",
+  "summary": "2-3 sentence cash optimization overview"
+}`;
+
+  const prompt = `You are a fractional CFO specializing in cash flow optimization for growing businesses.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+
+Perform a comprehensive cash optimization analysis:
+
+1. CURRENT BURN RATE: Estimate the monthly cash burn from available data.
+
+2. OPTIMIZED BURN RATE: Project what the burn rate could be after optimizations.
+
+3. POTENTIAL SAVINGS: Total monthly savings opportunity.
+
+4. RECOMMENDATIONS (6-10 items): For each cost optimization opportunity:
+   - Identify the expense area
+   - Current monthly spend (from data or estimated)
+   - Optimized monthly spend after action
+   - Monthly saving amount
+   - Implementation effort (low/medium/high)
+   - Priority ranking (1 = highest priority)
+
+   Areas to evaluate:
+   - SaaS/tool stack consolidation
+   - Vendor renegotiation opportunities
+   - Staffing optimization (contractors vs. full-time)
+   - Infrastructure/cloud cost reduction
+   - Payment terms optimization (AP/AR)
+   - Marketing spend efficiency
+   - Office/overhead reduction
+   - Insurance and compliance costs
+
+5. QUICK WINS: 3-5 savings actions achievable within 30 days with dollar estimates.
+
+6. REVENUE ACCELERATION: 3-5 strategies to bring revenue forward or increase cash inflows:
+   - Annual prepayment discounts
+   - Faster invoicing/collections
+   - Deposit or milestone-based billing
+   - Price increases on underpriced services
+
+7. EXTENDED RUNWAY: Estimate how many additional months of runway these optimizations provide.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Cash Optimization...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CashOptimization;
+  } catch (e) {
+    console.warn("[Pivot] Cash Optimization synthesis failed:", e);
     return null;
   }
 }

@@ -83,6 +83,20 @@ const TOOLS = [
             "goalTracker",
             "benchmarkScore",
             "executiveSummary",
+            "milestoneTracker",
+            "riskRegister",
+            "partnershipOpportunities",
+            "fundingReadiness",
+            "marketSizing",
+            "scenarioPlanner",
+            "operationalEfficiency",
+            "clvAnalysis",
+            "retentionPlaybook",
+            "revenueAttribution",
+            "boardDeck",
+            "competitiveMoat",
+            "gtmScorecard",
+            "cashOptimization",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -317,10 +331,11 @@ YOUR TOOLS:
 
 AVAILABLE REPORT SECTIONS (for get_report_section):
 Core: healthScore, cashIntelligence, revenueLeakAnalysis, issuesRegister, atRiskCustomers, decisionBrief, actionPlan
-Market: marketIntelligence, competitorAnalysis, pricingIntelligence, websiteAnalysis, marketingStrategy
-Analysis: pitchDeckAnalysis, techOptimization, terminology, kpiReport, roadmap, healthChecklist, leadReport
-Strategy: swotAnalysis, unitEconomics, customerSegmentation, competitiveWinLoss, investorOnePager
-Operations: hiringPlan, revenueForecast, churnPlaybook, salesPlaybook, goalTracker, benchmarkScore, executiveSummary
+Market: marketIntelligence, competitorAnalysis, pricingIntelligence, websiteAnalysis, marketingStrategy, marketSizing, partnershipOpportunities
+Analysis: pitchDeckAnalysis, techOptimization, terminology, kpiReport, roadmap, healthChecklist, leadReport, clvAnalysis, revenueAttribution
+Strategy: swotAnalysis, unitEconomics, customerSegmentation, competitiveWinLoss, investorOnePager, competitiveMoat, scenarioPlanner, fundingReadiness
+Operations: hiringPlan, revenueForecast, churnPlaybook, salesPlaybook, goalTracker, benchmarkScore, executiveSummary, milestoneTracker, riskRegister, operationalEfficiency
+Growth: retentionPlaybook, boardDeck, gtmScorecard, cashOptimization
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

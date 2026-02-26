@@ -65,7 +65,14 @@ KEY SECTIONS FOR COACHING:
 - salesPlaybook: sales process, objection handling, talk tracks for sales team coaching
 - churnPlaybook: retention plays and escalation triggers for customer-facing teams
 - benchmarkScore: how the team and business compare to industry peers
-- executiveSummary: high-level view of wins, risks, and priorities`;
+- executiveSummary: high-level view of wins, risks, and priorities
+- milestoneTracker: key business milestones, progress, and upcoming deadlines
+- riskRegister: identified risks, severity, likelihood, mitigation strategies
+- gtmScorecard: go-to-market performance metrics, channel effectiveness, conversion rates
+- fundingReadiness: investor readiness assessment, gaps to close, fundraising preparation
+- retentionPlaybook: customer retention strategies, engagement tactics, loyalty programs
+- cashOptimization: cash flow optimization levers, cost reduction opportunities, working capital improvements
+- operationalEfficiency: process bottlenecks, automation opportunities, resource utilization`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -111,6 +118,20 @@ const TOOLS = [
             "goalTracker",
             "benchmarkScore",
             "executiveSummary",
+            "milestoneTracker",
+            "riskRegister",
+            "partnershipOpportunities",
+            "fundingReadiness",
+            "marketSizing",
+            "scenarioPlanner",
+            "operationalEfficiency",
+            "clvAnalysis",
+            "retentionPlaybook",
+            "revenueAttribution",
+            "boardDeck",
+            "competitiveMoat",
+            "gtmScorecard",
+            "cashOptimization",
           ],
           description: "Which report section to retrieve",
         },
@@ -348,6 +369,11 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if (d.hiringPlan) parts.push(`Hiring Plan: ${d.hiringPlan.recommendations?.length || 0} hiring recommendations, ${d.hiringPlan.currentTeamGaps?.length || 0} team gaps identified`);
     if (d.goalTracker) parts.push(`Goal Tracker: ${d.goalTracker.objectives?.length || 0} objectives, theme: ${d.goalTracker.quarterlyTheme || "N/A"}`);
     if (d.benchmarkScore) parts.push(`Benchmark Score: ${d.benchmarkScore.overallScore}/100 (${d.benchmarkScore.overallPercentile || "N/A"})`);
+    if ((d as any).milestoneTracker) parts.push(`Milestone Tracker: ${(d as any).milestoneTracker.milestones?.length || 0} milestones tracked`);
+    if ((d as any).riskRegister) parts.push(`Risk Register: ${(d as any).riskRegister.risks?.length || 0} risks identified`);
+    if ((d as any).gtmScorecard) parts.push(`GTM Scorecard: ${(d as any).gtmScorecard.overallScore ?? "N/A"}/100`);
+    if ((d as any).fundingReadiness) parts.push(`Funding Readiness: ${(d as any).fundingReadiness.readinessScore ?? "N/A"}/100 (${(d as any).fundingReadiness.stage || "N/A"})`);
+    if ((d as any).cashOptimization) parts.push(`Cash Optimization: ${(d as any).cashOptimization.opportunities?.length || 0} optimization opportunities identified`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

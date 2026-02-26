@@ -705,6 +705,13 @@ export interface MVPDeliverables {
   scenarioPlanner?: ScenarioPlanner;
   operationalEfficiency?: OperationalEfficiency;
   clvAnalysis?: CLVAnalysis;
+  // Wave 5 features
+  retentionPlaybook?: RetentionPlaybook;
+  revenueAttribution?: RevenueAttribution;
+  boardDeck?: BoardDeck;
+  competitiveMoat?: CompetitiveMoat;
+  gtmScorecard?: GTMScorecard;
+  cashOptimization?: CashOptimization;
 }
 
 export interface BenchmarkDimension {
@@ -881,6 +888,103 @@ export interface CLVAnalysis {
   churnRiskFactors: string[];
   optimizationStrategies: string[];
   projectedImpact: string;
+  summary: string;
+}
+
+// ── Wave 5 Types ─────────────────────────────────────────────────────────────
+
+export interface RetentionStrategy {
+  segment: string;
+  engagementScore: number;     // 0-100
+  churnRisk: "low" | "medium" | "high";
+  triggers: string[];
+  interventions: string[];
+  expectedImpact: string;
+  timeline: string;
+}
+
+export interface RetentionPlaybook {
+  overallRetentionRate: string;
+  strategies: RetentionStrategy[];
+  quickWins: string[];
+  longTermInitiatives: string[];
+  engagementMetrics: { metric: string; current: string; target: string; gap: string }[];
+  summary: string;
+}
+
+export interface AttributionChannel {
+  channel: string;
+  contribution: number;        // percentage
+  revenue: string;
+  cost: string;
+  roi: string;
+  trend: "growing" | "stable" | "declining";
+}
+
+export interface RevenueAttribution {
+  channels: AttributionChannel[];
+  topPerformer: string;
+  underperformer: string;
+  recommendations: string[];
+  attributionModel: string;
+  summary: string;
+}
+
+export interface BoardDeck {
+  period: string;
+  highlights: string[];
+  financialOverview: { metric: string; value: string; change: string; status: "up" | "down" | "flat" }[];
+  keyMetrics: { name: string; value: string; target: string; status: "on_track" | "at_risk" | "behind" }[];
+  strategicUpdates: string[];
+  risksAndChallenges: string[];
+  askAndNextSteps: string[];
+  summary: string;
+}
+
+export interface MoatDimension {
+  dimension: string;
+  score: number;               // 0-10
+  description: string;
+  threats: string[];
+  reinforcements: string[];
+}
+
+export interface CompetitiveMoat {
+  overallMoatScore: number;    // 0-100
+  moatType: string;            // "Network Effects", "Switching Costs", etc.
+  dimensions: MoatDimension[];
+  vulnerabilities: string[];
+  recommendations: string[];
+  competitorComparison: string;
+  summary: string;
+}
+
+export interface GTMDimension {
+  dimension: string;
+  score: number;               // 0-10
+  status: "strong" | "developing" | "weak";
+  insights: string[];
+  actions: string[];
+}
+
+export interface GTMScorecard {
+  overallScore: number;        // 0-100
+  grade: string;
+  dimensions: GTMDimension[];
+  topStrength: string;
+  biggestGap: string;
+  prioritizedActions: string[];
+  summary: string;
+}
+
+export interface CashOptimization {
+  currentBurnRate: string;
+  optimizedBurnRate: string;
+  potentialSavings: string;
+  recommendations: { area: string; current: string; optimized: string; saving: string; effort: "low" | "medium" | "high"; priority: number }[];
+  quickWins: string[];
+  revenueAcceleration: string[];
+  extendedRunway: string;
   summary: string;
 }
 

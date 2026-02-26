@@ -35,6 +35,12 @@ import {
   synthesizeScenarioPlanner,
   synthesizeOperationalEfficiency,
   synthesizeCLVAnalysis,
+  synthesizeRetentionPlaybook,
+  synthesizeRevenueAttribution,
+  synthesizeBoardDeck,
+  synthesizeCompetitiveMoat,
+  synthesizeGTMScorecard,
+  synthesizeCashOptimization,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -435,6 +441,54 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] OpsEfficiency/CLV failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4i: Wave 5 intelligence (retention, attribution) ───────────────
+    if (!deliverables.retentionPlaybook || !deliverables.revenueAttribution) {
+      try {
+        console.log("[Pivot] Synthesizing retention playbook + revenue attribution...");
+        const [rp, ra] = await Promise.allSettled([
+          deliverables.retentionPlaybook ? Promise.resolve(null) : synthesizeRetentionPlaybook(businessPacket, job.questionnaire),
+          deliverables.revenueAttribution ? Promise.resolve(null) : synthesizeRevenueAttribution(businessPacket, job.questionnaire),
+        ]);
+        if (rp.status === "fulfilled" && rp.value) deliverables = { ...deliverables, retentionPlaybook: rp.value };
+        if (ra.status === "fulfilled" && ra.value) deliverables = { ...deliverables, revenueAttribution: ra.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Retention/Attribution failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4j: Wave 5 intelligence (board deck, competitive moat) ─────────
+    if (!deliverables.boardDeck || !deliverables.competitiveMoat) {
+      try {
+        console.log("[Pivot] Synthesizing board deck + competitive moat...");
+        const [bd, cm] = await Promise.allSettled([
+          deliverables.boardDeck ? Promise.resolve(null) : synthesizeBoardDeck(businessPacket, job.questionnaire),
+          deliverables.competitiveMoat ? Promise.resolve(null) : synthesizeCompetitiveMoat(businessPacket, job.questionnaire),
+        ]);
+        if (bd.status === "fulfilled" && bd.value) deliverables = { ...deliverables, boardDeck: bd.value };
+        if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, competitiveMoat: cm.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] BoardDeck/Moat failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4k: Wave 5 intelligence (GTM scorecard, cash optimization) ─────
+    if (!deliverables.gtmScorecard || !deliverables.cashOptimization) {
+      try {
+        console.log("[Pivot] Synthesizing GTM scorecard + cash optimization...");
+        const [gs, co] = await Promise.allSettled([
+          deliverables.gtmScorecard ? Promise.resolve(null) : synthesizeGTMScorecard(businessPacket, job.questionnaire),
+          deliverables.cashOptimization ? Promise.resolve(null) : synthesizeCashOptimization(businessPacket, job.questionnaire),
+        ]);
+        if (gs.status === "fulfilled" && gs.value) deliverables = { ...deliverables, gtmScorecard: gs.value };
+        if (co.status === "fulfilled" && co.value) deliverables = { ...deliverables, cashOptimization: co.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] GTM/CashOptimization failed (non-fatal):", e);
       }
     }
 
