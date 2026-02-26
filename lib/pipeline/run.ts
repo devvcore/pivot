@@ -155,7 +155,7 @@ export async function runPipeline(runId: string): Promise<void> {
       try {
         console.log("[Pivot] Gathering social profiles + marketing intelligence...");
         const competitorNames = businessPacket.keyMetrics.topCompetitors.slice(0, 3);
-        const { userProfiles, competitorProfiles } = await gatherSocialProfiles(
+        const { userProfiles, competitorProfiles, userRawData, competitorRawData } = await gatherSocialProfiles(
           job.questionnaire,
           competitorNames
         );
@@ -166,7 +166,9 @@ export async function runPipeline(runId: string): Promise<void> {
           websiteAnalysis ?? null,
           deliverables.competitorAnalysis ?? null,
           userProfiles,
-          competitorProfiles
+          competitorProfiles,
+          userRawData,
+          competitorRawData
         );
         deliverables = { ...deliverables, marketingStrategy };
         updateJob(runId, { deliverables });

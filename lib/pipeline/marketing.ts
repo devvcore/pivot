@@ -1,16 +1,24 @@
 /**
  * Marketing Intelligence Synthesizer
  *
- * Takes social profile analyses (user + competitors), website analyses,
- * competitor analysis, and questionnaire data to produce a full
- * MarketingStrategyReport via Gemini Flash.
+ * Flow:
+ *   1. Scrape real social data (followers, posts, engagement) via social-scraper
+ *   2. Analyze profiles via Gemini (grades, themes, strengths/weaknesses)
+ *   3. Research marketing channels via Perplexity
+ *   4. Feed ALL raw scraped data + analysis + Perplexity research into Gemini Flash
+ *      to produce a full MarketingStrategyReport
  *
- * Perplexity is used for channel/platform research when available.
+ * The key insight: Gemini gets the ACTUAL post text, ACTUAL like counts,
+ * ACTUAL follower numbers — not just pre-digested summaries.
  */
 import { GoogleGenAI } from "@google/genai";
 import { perplexitySearch } from "@/lib/agent/perplexity-search";
 import {
-  analyzeSocialProfiles,
+  scrapeSocialProfile,
+  type RawSocialData,
+} from "@/lib/agent/social-scraper";
+import {
+  analyzeSocialProfile,
   findCompetitorSocialUrls,
 } from "@/lib/agent/social-analyzer";
 import type {
@@ -24,7 +32,7 @@ import type {
 
 const FLASH_MODEL = "gemini-3-flash-preview";
 
-// ── 1. Gather social profiles ──────────────────────────────────────────────
+// ── 1. Gather social profiles (scrape + analyze) ───────────────────────────
 
 export async function gatherSocialProfiles(
   questionnaire: Questionnaire,
@@ -32,51 +40,62 @@ export async function gatherSocialProfiles(
 ): Promise<{
   userProfiles: SocialProfileAnalysis[];
   competitorProfiles: SocialProfileAnalysis[];
+  userRawData: RawSocialData[];
+  competitorRawData: RawSocialData[];
 }> {
-  // User's own profiles
-  const userProfileInputs: { url: string; companyName?: string; isCompetitor?: boolean }[] = [];
+  // ── Collect user URLs ──
+  const userUrls: { url: string; companyName: string }[] = [];
   if (questionnaire.socialMediaUrls) {
     for (const [, url] of Object.entries(questionnaire.socialMediaUrls)) {
-      if (url) {
-        userProfileInputs.push({
-          url,
-          companyName: questionnaire.organizationName,
-          isCompetitor: false,
-        });
-      }
+      if (url) userUrls.push({ url, companyName: questionnaire.organizationName });
     }
   }
 
-  // Competitor profiles — find via Perplexity, then analyze
-  const competitorProfileInputs: { url: string; companyName?: string; isCompetitor?: boolean }[] = [];
+  // ── Collect competitor URLs via Perplexity discovery ──
+  const competitorUrls: { url: string; companyName: string }[] = [];
   const userPlatforms = questionnaire.socialMediaPlatforms ?? ["instagram", "linkedin"];
 
   for (const name of competitorNames.slice(0, 3)) {
     try {
       const found = await findCompetitorSocialUrls(name, userPlatforms);
       for (const f of found) {
-        competitorProfileInputs.push({
-          url: f.url,
-          companyName: name,
-          isCompetitor: true,
-        });
+        competitorUrls.push({ url: f.url, companyName: name });
       }
-    } catch {
-      // skip
-    }
+    } catch { /* skip */ }
   }
 
-  // Analyze all in parallel
-  const [userProfiles, competitorProfiles] = await Promise.all([
-    userProfileInputs.length > 0
-      ? analyzeSocialProfiles(userProfileInputs)
-      : Promise.resolve([]),
-    competitorProfileInputs.length > 0
-      ? analyzeSocialProfiles(competitorProfileInputs)
-      : Promise.resolve([]),
+  // ── Step A: Scrape raw data from all platforms in parallel ──
+  console.log(`[Marketing] Scraping ${userUrls.length} user + ${competitorUrls.length} competitor profiles...`);
+
+  const [userRawResults, competitorRawResults] = await Promise.all([
+    Promise.allSettled(userUrls.map((u) => scrapeSocialProfile(u.url))),
+    Promise.allSettled(competitorUrls.map((u) => scrapeSocialProfile(u.url))),
   ]);
 
-  return { userProfiles, competitorProfiles };
+  const userRawData = userRawResults
+    .map((r) => (r.status === "fulfilled" ? r.value : null))
+    .filter((r): r is RawSocialData => r !== null);
+
+  const competitorRawData = competitorRawResults
+    .map((r) => (r.status === "fulfilled" ? r.value : null))
+    .filter((r): r is RawSocialData => r !== null);
+
+  console.log(`[Marketing] Scraped: ${userRawData.length} user profiles, ${competitorRawData.length} competitor profiles`);
+  for (const d of userRawData) {
+    console.log(`  ${d.platform} @${d.handle}: ${d.followerCount ?? "?"} followers, ${d.recentPosts.length} posts (source: ${d.source})`);
+  }
+
+  // ── Step B: Run Gemini analysis on scraped data (grades, themes) ──
+  const [userProfiles, competitorProfiles] = await Promise.all([
+    Promise.allSettled(
+      userUrls.map((u) => analyzeSocialProfile(u.url, u.companyName, false))
+    ).then((r) => r.filter((x): x is PromiseFulfilledResult<SocialProfileAnalysis> => x.status === "fulfilled").map((x) => x.value)),
+    Promise.allSettled(
+      competitorUrls.map((u) => analyzeSocialProfile(u.url, u.companyName, true))
+    ).then((r) => r.filter((x): x is PromiseFulfilledResult<SocialProfileAnalysis> => x.status === "fulfilled").map((x) => x.value)),
+  ]);
+
+  return { userProfiles, competitorProfiles, userRawData, competitorRawData };
 }
 
 // ── 2. Research marketing channels via Perplexity ──────────────────────────
@@ -108,7 +127,9 @@ export async function synthesizeMarketingStrategy(
   websiteAnalysis: WebsiteAnalysis | null,
   competitorAnalysis: CompetitorAnalysis | null,
   userProfiles: SocialProfileAnalysis[],
-  competitorProfiles: SocialProfileAnalysis[]
+  competitorProfiles: SocialProfileAnalysis[],
+  userRawData: RawSocialData[] = [],
+  competitorRawData: RawSocialData[] = []
 ): Promise<MarketingStrategyReport> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -123,14 +144,46 @@ export async function synthesizeMarketingStrategy(
 
   const genai = new GoogleGenAI({ apiKey });
 
-  // Build context sections
-  const userSocialContext = userProfiles.length > 0
+  // ── Build RAW DATA context (actual posts, actual numbers) ──
+  const userRawContext = userRawData.length > 0
+    ? userRawData.map((d) => {
+        const postList = d.recentPosts.slice(0, 6).map((p, i) =>
+          `  Post ${i + 1}: "${p.text.slice(0, 150)}" | ${p.likes} likes | ${p.comments} comments${p.views ? ` | ${p.views} views` : ""}${p.shares ? ` | ${p.shares} shares` : ""}`
+        ).join("\n");
+        return `${d.platform.toUpperCase()} (@${d.handle}) — REAL SCRAPED DATA:
+  Followers: ${d.followerCount ?? "Unknown"} | Following: ${d.followingCount ?? "Unknown"} | Posts: ${d.postCount ?? "Unknown"}
+  Bio: "${d.bio ?? "N/A"}"
+  Verified: ${d.verified ?? "Unknown"}
+  Avg Engagement Rate: ${d.averageEngagement ? (d.averageEngagement * 100).toFixed(2) + "%" : "Unknown"}
+  Total Likes: ${d.totalLikes ?? "Unknown"}
+  Data Source: ${d.source}
+RECENT POSTS:
+${postList || "  No posts scraped"}`;
+      }).join("\n\n")
+    : "No raw social data scraped.";
+
+  const compRawContext = competitorRawData.length > 0
+    ? competitorRawData.map((d) => {
+        const postList = d.recentPosts.slice(0, 4).map((p, i) =>
+          `  Post ${i + 1}: "${p.text.slice(0, 120)}" | ${p.likes} likes | ${p.comments} comments${p.views ? ` | ${p.views} views` : ""}`
+        ).join("\n");
+        return `COMPETITOR ${d.platform.toUpperCase()} (@${d.handle}):
+  Followers: ${d.followerCount ?? "Unknown"} | Verified: ${d.verified ?? "Unknown"}
+  Bio: "${d.bio ?? "N/A"}"
+  Avg Engagement: ${d.averageEngagement ? (d.averageEngagement * 100).toFixed(2) + "%" : "Unknown"}
+THEIR POSTS:
+${postList || "  No posts scraped"}`;
+      }).join("\n\n")
+    : "No competitor raw data scraped.";
+
+  // ── Build ANALYSIS context (grades, themes) ──
+  const userAnalysisContext = userProfiles.length > 0
     ? userProfiles.map((p) =>
         `${p.platform.toUpperCase()} (@${p.handle}): Grade ${p.profileGrade} (${p.profileScore}/100) | Followers: ${p.followerCount} | Engagement: ${p.engagementLevel} | Posting: ${p.postFrequency}\nBio: ${p.bioSummary}\nThemes: ${p.contentThemes.join(", ")}\nStrengths: ${p.strengths.join("; ")}\nWeaknesses: ${p.weaknesses.join("; ")}`
       ).join("\n\n")
-    : "No social profiles provided.";
+    : "No social profiles analyzed.";
 
-  const compSocialContext = competitorProfiles.length > 0
+  const compAnalysisContext = competitorProfiles.length > 0
     ? competitorProfiles.map((p) =>
         `${p.companyName ?? "Competitor"} — ${p.platform.toUpperCase()} (@${p.handle}): Grade ${p.profileGrade} (${p.profileScore}/100) | Followers: ${p.followerCount} | Engagement: ${p.engagementLevel}\nThemes: ${p.contentThemes.join(", ")}\nStrengths: ${p.strengths.join("; ")}`
       ).join("\n\n")
@@ -146,7 +199,7 @@ export async function synthesizeMarketingStrategy(
 
   const currentChannels = questionnaire.marketingChannels ?? [];
 
-  const prompt = `You are a senior marketing strategist. Produce a comprehensive marketing strategy for this business based on their current presence, competitors, and industry research.
+  const prompt = `You are a senior marketing strategist. Produce a comprehensive marketing strategy based on REAL SCRAPED social media data, competitor analysis, and industry research.
 
 BUSINESS: ${packet.orgName} | ${packet.industry}
 Revenue: ${questionnaire.revenueRange}
@@ -154,19 +207,27 @@ Business Model: ${questionnaire.businessModel}
 Current Marketing Channels: ${currentChannels.length > 0 ? currentChannels.join(", ") : "None specified"}
 Website Visitors/Day: ${questionnaire.websiteVisitorsPerDay ?? "Unknown"}
 
-YOUR SOCIAL MEDIA PROFILES:
-${userSocialContext}
+═══ YOUR SOCIAL MEDIA — RAW SCRAPED DATA ═══
+${userRawContext}
 
-COMPETITOR SOCIAL PROFILES:
-${compSocialContext}
+═══ YOUR SOCIAL MEDIA — AI ANALYSIS ═══
+${userAnalysisContext}
 
-YOUR WEBSITE:
+═══ COMPETITOR SOCIAL MEDIA — RAW SCRAPED DATA ═══
+${compRawContext}
+
+═══ COMPETITOR SOCIAL MEDIA — AI ANALYSIS ═══
+${compAnalysisContext}
+
+═══ YOUR WEBSITE ═══
 ${websiteContext}
 
-COMPETITOR WEBSITES:
+═══ COMPETITOR WEBSITES ═══
 ${competitorWebContext}
 
-${channelResearch ? `INDUSTRY MARKETING RESEARCH:\n${channelResearch}` : ""}
+${channelResearch ? `═══ INDUSTRY MARKETING RESEARCH (Perplexity) ═══\n${channelResearch}` : ""}
+
+IMPORTANT: The social media data above is REAL — actual follower counts, actual post content, actual engagement numbers scraped directly from the platforms. Base your recommendations on these real numbers, not assumptions.
 
 Return valid JSON ONLY with this structure:
 {
@@ -174,7 +235,7 @@ Return valid JSON ONLY with this structure:
     {
       "rank": 1,
       "channel": "<specific channel: Instagram Reels, LinkedIn Posts, Cold Email, Google Ads, TikTok, Newsletter, etc.>",
-      "why": "<why this channel for THIS business specifically>",
+      "why": "<why this channel for THIS business — reference their actual data>",
       "effort": "<Low|Medium|High>",
       "expectedImpact": "<expected results in 3 months>",
       "howToStart": "<specific first 3 steps to get started>"
@@ -185,8 +246,8 @@ Return valid JSON ONLY with this structure:
       "platform": "<platform name>",
       "currentGrade": "<their current grade on this platform, or null if not active>",
       "vsCompetitorGrade": "<best competitor grade on this platform>",
-      "improvements": ["<specific improvement 1>", "<improvement 2>", "<improvement 3>"],
-      "contentSuggestions": ["<specific content idea 1>", "<content idea 2>", "<content idea 3>"],
+      "improvements": ["<specific improvement referencing their actual content>", "<improvement 2>", "<improvement 3>"],
+      "contentSuggestions": ["<specific content idea based on what's working in their posts>", "<content idea 2>", "<content idea 3>"],
       "postingFrequency": "<recommended posting frequency>"
     }
   ],
@@ -199,21 +260,22 @@ Return valid JSON ONLY with this structure:
     }
   ],
   "offerPositioning": {
-    "currentPositioning": "<how they currently position their offer>",
-    "competitorPositioning": ["<how competitor 1 positions>", "<how competitor 2 positions>"],
-    "suggestedRepositioning": "<how they SHOULD position, informed by what works for competitors/leaders>",
+    "currentPositioning": "<how they currently position — reference their actual bio/website>",
+    "competitorPositioning": ["<how competitor 1 positions — reference their actual posts>", "<how competitor 2 positions>"],
+    "suggestedRepositioning": "<how they SHOULD position, informed by what competitor content gets the most engagement>",
     "keyMessages": ["<key message 1>", "<key message 2>", "<key message 3>"]
   },
-  "contentStrategy": "<2-3 paragraph content strategy: what to create, where to publish, how often, what topics>",
+  "contentStrategy": "<2-3 paragraph strategy: what to create (reference their best-performing post types), where to publish, how often, what topics based on their actual content themes>",
   "adSpendRecommendation": "<if relevant: where to spend ad budget and expected ROI>",
-  "summary": "<3-4 sentence executive summary of the marketing strategy>"
+  "summary": "<3-4 sentence executive summary referencing actual metrics>"
 }
 
 RULES:
 - Give 5-7 channel recommendations, ranked by impact-to-effort ratio
-- For social strategy, cover EVERY platform the user is on plus 1-2 they SHOULD be on
+- Reference ACTUAL post content and engagement numbers from the scraped data
+- For social strategy, cover EVERY platform they're on plus 1-2 they SHOULD be on
 - Website copy recs should reference how competitors/leaders phrase similar things
-- Be specific — no generic advice. Reference actual competitor data.
+- Be specific — cite actual post examples, actual follower counts, actual engagement rates
 - Channel recs should include platforms they're NOT using but should be`;
 
   try {
