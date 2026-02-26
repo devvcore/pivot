@@ -175,6 +175,18 @@ import type {
   NpsAnalysis,
   SupportTicketIntelligence,
   VoiceOfCustomer,
+  DealPipeline,
+  SalesForecasting,
+  AccountBasedMarketing,
+  CommissionOptimization,
+  ProductAnalytics,
+  CompetitiveResponse,
+  ScenarioPlanning,
+  CapitalStructure,
+  FundraisingReadiness,
+  ExitStrategy,
+  TalentAcquisition,
+  DiversityInclusion,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -4155,9 +4167,9 @@ ${schema}`;
   }
 }
 
-// ── Wave 8: Culture Assessment ───────────────────────────────────────────────
+// ── Wave 8: Culture Assessment (Legacy — superseded by Wave 32) ─────────────
 
-export async function synthesizeCultureAssessment(
+export async function synthesizeCultureAssessmentLegacy(
   packet: BusinessPacket,
   questionnaire: Questionnaire
 ): Promise<CultureAssessment | null> {
@@ -6255,9 +6267,9 @@ ${schema}`;
   }
 }
 
-// ── Wave 16: Financial Planning & Strategy ────────────────────────────────────
+// ── Wave 16: Financial Planning & Strategy (Legacy — superseded by Wave 31) ──
 
-export async function synthesizeWorkingCapital(
+export async function synthesizeWorkingCapitalLegacy(
   packet: BusinessPacket,
   questionnaire: Questionnaire
 ): Promise<WorkingCapital | null> {
@@ -6411,7 +6423,8 @@ ${schema}`;
   }
 }
 
-export async function synthesizeTaxStrategy(
+// Legacy — superseded by Wave 31
+export async function synthesizeTaxStrategyLegacy(
   packet: BusinessPacket,
   questionnaire: Questionnaire
 ): Promise<TaxStrategy | null> {
@@ -9961,9 +9974,9 @@ ${schema}`;
   }
 }
 
-// ── Wave 23: People & Culture ─────────────────────────────────────────────────
+// ── Wave 23: People & Culture (Legacy — superseded by Wave 32) ───────────────
 
-export async function synthesizeEmployeeEngagement(
+export async function synthesizeEmployeeEngagementLegacy(
   packet: BusinessPacket,
   questionnaire: Questionnaire
 ): Promise<EmployeeEngagement | null> {
@@ -10126,9 +10139,9 @@ ${schema}`;
   }
 }
 
-// ── Wave 23: Compensation Benchmark ──────────────────────────────────────────
+// ── Wave 23: Compensation Benchmark (Legacy — superseded by Wave 32) ────────
 
-export async function synthesizeCompensationBenchmark(
+export async function synthesizeCompensationBenchmarkLegacy(
   packet: BusinessPacket,
   questionnaire: Questionnaire
 ): Promise<CompensationBenchmark | null> {
@@ -10207,9 +10220,9 @@ ${schema}`;
   }
 }
 
-// ── Wave 23: Succession Planning ─────────────────────────────────────────────
+// ── Wave 23: Succession Planning (Legacy — superseded by Wave 32) ───────────
 
-export async function synthesizeSuccessionPlanning(
+export async function synthesizeSuccessionPlanningLegacy(
   packet: BusinessPacket,
   questionnaire: Questionnaire
 ): Promise<SuccessionPlanning | null> {
@@ -13965,6 +13978,1297 @@ ${schema}`;
     return result as unknown as SocialImpact;
   } catch (e) {
     console.warn("[Pivot] Social Impact (Wave 28) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 31: Financial Planning & Analysis ────────────────────────────────────
+
+export async function synthesizeScenarioPlanning(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ScenarioPlanning | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of scenario planning analysis and strategic outlook",
+  "scenarios": [{
+    "name": "Scenario name",
+    "probability": "Estimated probability",
+    "revenue": "Projected revenue under this scenario",
+    "costs": "Projected costs under this scenario",
+    "profit": "Projected profit under this scenario",
+    "cashPosition": "Expected cash position",
+    "keyAssumptions": ["assumption 1", "..."]
+  }],
+  "baseCase": "Description of the base-case scenario",
+  "bestCase": "Description of the best-case scenario",
+  "worstCase": "Description of the worst-case scenario",
+  "criticalVariables": ["variable 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a financial planning strategist building scenario models for executive decision-making.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Scenario Planning analysis:
+
+1. SUMMARY: 2-3 sentence overview of the scenario planning analysis and strategic outlook.
+
+2. SCENARIOS (3-5): For each scenario:
+   - Name (e.g., "Aggressive Growth", "Market Contraction", "Steady State", "Disruption", "Regulatory Shift")
+   - Probability of occurrence
+   - Projected revenue
+   - Projected costs
+   - Projected profit
+   - Expected cash position
+   - Key assumptions driving this scenario (3-5)
+
+3. BASE CASE: Description of the most likely scenario with key metrics.
+
+4. BEST CASE: Description of the optimistic scenario with upside potential.
+
+5. WORST CASE: Description of the pessimistic scenario with downside risk and survival implications.
+
+6. CRITICAL VARIABLES (4-6): The key variables that most influence which scenario materializes.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to prepare for multiple scenarios and maximize optionality.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Scenario Planning (Wave 31)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ScenarioPlanning;
+  } catch (e) {
+    console.warn("[Pivot] Scenario Planning (Wave 31) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCapitalStructure(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CapitalStructure | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of capital structure and financing mix",
+  "components": [{
+    "type": "Capital type (e.g., equity, term debt, revolving credit, convertible notes)",
+    "amount": "Dollar amount or percentage",
+    "cost": "Cost of this capital component",
+    "percentage": "Percentage of total capital",
+    "maturity": "Maturity or duration",
+    "flexibility": "Flexibility assessment"
+  }],
+  "wacc": "Weighted average cost of capital estimate",
+  "debtToEquity": "Current debt-to-equity ratio",
+  "optimalStructure": "Recommended optimal capital structure",
+  "refinancingOpportunities": ["opportunity 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a corporate finance expert analyzing capital structure, cost of capital, and financing optimization.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Capital Structure analysis:
+
+1. SUMMARY: 2-3 sentence overview of the current capital structure and financing mix.
+
+2. COMPONENTS (3-6): For each capital component:
+   - Type (equity, term debt, revolving credit, convertible notes, etc.)
+   - Amount or percentage of total
+   - Cost of this capital
+   - Percentage of total capital structure
+   - Maturity or term
+   - Flexibility assessment (ability to adjust)
+
+3. WACC: Estimated weighted average cost of capital.
+
+4. DEBT-TO-EQUITY: Current debt-to-equity ratio with industry comparison.
+
+5. OPTIMAL STRUCTURE: Recommended optimal capital structure given growth stage and risk profile.
+
+6. REFINANCING OPPORTUNITIES (3-5): Specific opportunities to lower cost of capital or improve terms.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize capital structure and reduce financing costs.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Capital Structure (Wave 31)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CapitalStructure;
+  } catch (e) {
+    console.warn("[Pivot] Capital Structure (Wave 31) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeWorkingCapital(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<WorkingCapital | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of working capital efficiency and cash conversion",
+  "items": [{
+    "component": "Working capital component (e.g., accounts receivable, inventory, accounts payable)",
+    "currentDays": 0,
+    "benchmarkDays": 0,
+    "cashImpact": "Dollar impact of optimizing this component",
+    "trend": "Improving / Stable / Deteriorating",
+    "improvement": "Specific improvement action"
+  }],
+  "cashConversionCycle": 0,
+  "netWorkingCapital": "Net working capital amount",
+  "improvementPotential": "Total cash that could be freed by optimizing working capital",
+  "seasonalityImpact": "How seasonality affects working capital needs",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a treasury and working capital specialist analyzing cash conversion efficiency and liquidity management.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Working Capital analysis:
+
+1. SUMMARY: 2-3 sentence overview of working capital efficiency and cash conversion performance.
+
+2. ITEMS (4-6): For each working capital component:
+   - Component name (accounts receivable, inventory, accounts payable, prepaid expenses, etc.)
+   - Current days outstanding (DSO, DIO, DPO, etc.)
+   - Industry benchmark days
+   - Dollar impact of optimizing this component
+   - Trend direction (Improving / Stable / Deteriorating)
+   - Specific improvement action
+
+3. CASH CONVERSION CYCLE: Total days in the cash conversion cycle (DSO + DIO - DPO).
+
+4. NET WORKING CAPITAL: Current net working capital position.
+
+5. IMPROVEMENT POTENTIAL: Total cash that could be freed by optimizing working capital to benchmarks.
+
+6. SEASONALITY IMPACT: How seasonal patterns affect working capital needs and timing.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to improve working capital efficiency and free up cash.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Working Capital (Wave 31)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as WorkingCapital;
+  } catch (e) {
+    console.warn("[Pivot] Working Capital (Wave 31) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeTaxStrategy(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<TaxStrategy | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of tax position and optimization opportunities",
+  "effectiveRate": "Current effective tax rate",
+  "areas": [{
+    "area": "Tax optimization area",
+    "currentRate": "Current rate or treatment",
+    "optimizedRate": "Potential optimized rate or treatment",
+    "savingsPotential": "Dollar savings potential",
+    "complexity": "Implementation complexity (Low / Medium / High)",
+    "timeline": "Time to implement"
+  }],
+  "totalSavings": "Total estimated tax savings across all areas",
+  "complianceRisk": "Overall compliance risk assessment",
+  "structuralChanges": ["structural change 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a tax strategy advisor analyzing tax efficiency, compliance, and optimization opportunities for businesses.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Tax Strategy analysis:
+
+1. SUMMARY: 2-3 sentence overview of the current tax position and key optimization opportunities.
+
+2. EFFECTIVE RATE: Current effective tax rate across all jurisdictions.
+
+3. AREAS (4-6): For each tax optimization area:
+   - Area name (e.g., R&D credits, depreciation strategy, entity structure, transfer pricing, state/local optimization, deferred compensation)
+   - Current rate or treatment
+   - Potential optimized rate or treatment
+   - Dollar savings potential
+   - Implementation complexity (Low / Medium / High)
+   - Timeline to implement
+
+4. TOTAL SAVINGS: Aggregate estimated annual tax savings if all recommendations implemented.
+
+5. COMPLIANCE RISK: Overall assessment of current compliance posture and audit risk.
+
+6. STRUCTURAL CHANGES (3-5): Entity structure or jurisdictional changes that could improve tax efficiency.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to reduce tax burden while maintaining full compliance.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Tax Strategy (Wave 31)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as TaxStrategy;
+  } catch (e) {
+    console.warn("[Pivot] Tax Strategy (Wave 31) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeFundraisingReadiness(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<FundraisingReadiness | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of fundraising readiness and investor attractiveness",
+  "overallScore": 0,
+  "dimensions": [{
+    "dimension": "Readiness dimension (e.g., financials, traction, team, market, product, governance)",
+    "score": 0,
+    "benchmark": 0,
+    "gap": "Gap description between current state and fundraising-ready",
+    "action": "Specific action to close the gap"
+  }],
+  "suggestedRound": "Recommended fundraising round type and size",
+  "valuationRange": "Estimated valuation range based on metrics",
+  "timeToReady": "Estimated time to reach fundraising readiness",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a venture capital advisor evaluating a company's readiness to raise funding from institutional investors.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Fundraising Readiness assessment:
+
+1. SUMMARY: 2-3 sentence overview of current fundraising readiness and investor attractiveness.
+
+2. OVERALL SCORE (0-100): Composite readiness score weighted across all dimensions.
+
+3. DIMENSIONS (5-7): For each readiness dimension:
+   - Dimension name (financials, traction/metrics, team depth, market size, product maturity, governance/legal, data room)
+   - Current score (0-100)
+   - Benchmark score for successful raises in this stage
+   - Gap description
+   - Specific action to close the gap
+
+4. SUGGESTED ROUND: Recommended round type (Pre-Seed, Seed, Series A, etc.) and target raise amount.
+
+5. VALUATION RANGE: Estimated valuation range based on current metrics and comparable transactions.
+
+6. TIME TO READY: Estimated calendar time to reach fundraising-ready state.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to maximize fundraising success and valuation.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Fundraising Readiness (Wave 31)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as FundraisingReadiness;
+  } catch (e) {
+    console.warn("[Pivot] Fundraising Readiness (Wave 31) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeExitStrategy(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ExitStrategy | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of exit options and value maximization strategy",
+  "options": [{
+    "type": "Exit type (e.g., strategic acquisition, PE buyout, IPO, management buyout, merger)",
+    "likelihood": "Likelihood assessment for this exit path",
+    "valuationMultiple": "Expected valuation multiple",
+    "timeline": "Estimated timeline to execute",
+    "requirements": ["requirement 1", "..."],
+    "risks": "Key risks for this exit path"
+  }],
+  "bestOption": "Recommended best exit option given current position",
+  "currentValuation": "Estimated current company valuation",
+  "targetValuation": "Target valuation to maximize exit value",
+  "gapToClose": ["gap 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an M&A and exit strategy advisor helping business owners understand and maximize their exit options.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Exit Strategy analysis:
+
+1. SUMMARY: 2-3 sentence overview of available exit paths and value maximization strategy.
+
+2. OPTIONS (3-5): For each exit path:
+   - Exit type (strategic acquisition, private equity buyout, IPO, management buyout, merger, ESOP, etc.)
+   - Likelihood of successful execution
+   - Expected valuation multiple (revenue or EBITDA multiple)
+   - Estimated timeline to execute
+   - Key requirements to pursue this path (3-5)
+   - Primary risks
+
+3. BEST OPTION: Recommended optimal exit path given the company's current position, growth trajectory, and owner goals.
+
+4. CURRENT VALUATION: Estimated current company valuation based on available financial data and comparable transactions.
+
+5. TARGET VALUATION: Target valuation to achieve before pursuing exit, with justification.
+
+6. GAP TO CLOSE (4-6): Specific gaps between current state and exit-ready state that must be addressed.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to maximize exit value and prepare for a successful transaction.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Exit Strategy (Wave 31)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ExitStrategy;
+  } catch (e) {
+    console.warn("[Pivot] Exit Strategy (Wave 31) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 32: People & Culture Analytics ───────────────────────────────────────
+
+export async function synthesizeTalentAcquisition(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<TalentAcquisition | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of talent acquisition effectiveness and hiring pipeline",
+  "openRoles": 0,
+  "needs": [{
+    "role": "Role title",
+    "priority": "Critical / High / Medium / Low",
+    "department": "Department or team",
+    "timeToFill": "Expected time to fill",
+    "salaryRange": "Estimated salary range",
+    "source": "Best sourcing channel for this role"
+  }],
+  "avgTimeToFill": "Average time to fill across all roles",
+  "costPerHire": "Average cost per hire",
+  "topSourceChannel": "Most effective sourcing channel",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a talent acquisition strategist analyzing hiring effectiveness, pipeline health, and recruitment optimization.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concerns: ${questionnaire.keyConcerns ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Talent Acquisition analysis:
+
+1. SUMMARY: 2-3 sentence overview of talent acquisition effectiveness and hiring pipeline health.
+
+2. OPEN ROLES: Estimated number of open or needed roles based on growth trajectory and current gaps.
+
+3. NEEDS (4-6): For each critical hiring need:
+   - Role title
+   - Priority level (Critical / High / Medium / Low)
+   - Department or team
+   - Expected time to fill based on market conditions
+   - Estimated salary range for the market
+   - Best sourcing channel (referrals, LinkedIn, agencies, job boards, etc.)
+
+4. AVG TIME TO FILL: Average time to fill positions across all role types.
+
+5. COST PER HIRE: Estimated average cost per hire including sourcing, interviewing, and onboarding.
+
+6. TOP SOURCE CHANNEL: Most effective sourcing channel for this company's hiring needs.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to improve hiring velocity, quality, and employer brand.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Talent Acquisition (Wave 32)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as TalentAcquisition;
+  } catch (e) {
+    console.warn("[Pivot] Talent Acquisition (Wave 32) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeEmployeeEngagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<EmployeeEngagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of employee engagement health and cultural vitality",
+  "overallScore": 0,
+  "drivers": [{
+    "driver": "Engagement driver name",
+    "score": 0,
+    "benchmark": 0,
+    "trend": "Improving / Stable / Declining",
+    "impact": "Impact on retention and productivity",
+    "action": "Specific improvement action"
+  }],
+  "eNPS": 0,
+  "turnoverRate": "Current or estimated turnover rate",
+  "topConcern": "The single biggest engagement risk",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an organizational psychologist and employee engagement specialist analyzing workforce satisfaction, motivation, and retention risk.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concerns: ${questionnaire.keyConcerns ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Employee Engagement analysis:
+
+1. SUMMARY: 2-3 sentence overview of employee engagement health and cultural vitality.
+
+2. OVERALL SCORE (0-100): Composite engagement score based on all available signals.
+
+3. DRIVERS (5-7): For each engagement driver:
+   - Driver name (e.g., leadership trust, career growth, compensation fairness, work-life balance, mission alignment, team collaboration, recognition)
+   - Current score (0-100)
+   - Industry benchmark score
+   - Trend direction (Improving / Stable / Declining)
+   - Impact on retention and productivity
+   - Specific action to improve this driver
+
+4. eNPS: Estimated Employee Net Promoter Score (-100 to 100).
+
+5. TURNOVER RATE: Current or estimated annual turnover rate with industry comparison.
+
+6. TOP CONCERN: The single biggest engagement risk that could drive attrition.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to boost engagement, reduce turnover, and strengthen culture.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Employee Engagement (Wave 32)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as EmployeeEngagement;
+  } catch (e) {
+    console.warn("[Pivot] Employee Engagement (Wave 32) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCompensationBenchmark(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CompensationBenchmark | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of compensation competitiveness and pay equity",
+  "bands": [{
+    "role": "Role or job family",
+    "currentPay": "Current compensation level",
+    "marketMedian": "Market median for this role",
+    "percentile": "Current pay percentile vs market",
+    "gap": "Gap between current and target percentile",
+    "attritionRisk": "Attrition risk due to compensation (Low / Medium / High)"
+  }],
+  "overallCompetitiveness": "Overall compensation competitiveness assessment",
+  "totalCompSpend": "Total compensation spend or estimate",
+  "equityAnalysis": "Equity/stock option competitiveness analysis",
+  "benefitsGap": "Gap in benefits compared to market expectations",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a total rewards and compensation analyst benchmarking pay, equity, and benefits against market data.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concerns: ${questionnaire.keyConcerns ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Compensation Benchmark analysis:
+
+1. SUMMARY: 2-3 sentence overview of compensation competitiveness and pay equity posture.
+
+2. BANDS (4-6): For each key role or job family:
+   - Role or job family name
+   - Current compensation level (base + bonus if available)
+   - Market median compensation
+   - Current pay percentile vs market (e.g., 50th, 75th)
+   - Gap between current and target percentile in dollar or percentage terms
+   - Attrition risk due to compensation gap (Low / Medium / High)
+
+3. OVERALL COMPETITIVENESS: Assessment of overall compensation positioning vs market (e.g., "Below market at 40th percentile").
+
+4. TOTAL COMP SPEND: Total compensation spend or estimate as percentage of revenue.
+
+5. EQUITY ANALYSIS: Competitiveness of equity/stock option program vs peers at similar stage.
+
+6. BENEFITS GAP: Key gaps in benefits package compared to market and employee expectations.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize compensation strategy, close critical gaps, and improve retention.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Compensation Benchmark (Wave 32)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CompensationBenchmark;
+  } catch (e) {
+    console.warn("[Pivot] Compensation Benchmark (Wave 32) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeSuccessionPlanning(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SuccessionPlanning | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of succession readiness and leadership pipeline strength",
+  "roles": [{
+    "role": "Critical leadership role",
+    "incumbent": "Current incumbent or description",
+    "readiness": "Succession readiness level (Ready Now / 1-2 Years / 3+ Years / No Successor)",
+    "successors": ["potential successor 1", "..."],
+    "developmentGap": "Key gap that needs to be closed for successor readiness",
+    "urgency": "Urgency level (Immediate / Near-term / Long-term)"
+  }],
+  "criticalRolesAtRisk": 0,
+  "benchStrength": "Overall bench strength assessment",
+  "developmentInvestment": "Recommended investment in leadership development",
+  "timelineToReady": "Average timeline to develop succession-ready candidates",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an executive leadership and succession planning consultant assessing leadership pipeline depth and continuity risk.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concerns: ${questionnaire.keyConcerns ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Succession Planning analysis:
+
+1. SUMMARY: 2-3 sentence overview of succession readiness and leadership pipeline strength.
+
+2. ROLES (4-6): For each critical leadership role:
+   - Role title (CEO, CTO, VP Sales, Head of Product, etc.)
+   - Current incumbent or description
+   - Succession readiness level (Ready Now / 1-2 Years / 3+ Years / No Successor)
+   - Potential internal successors
+   - Key development gap that needs to be closed
+   - Urgency level (Immediate / Near-term / Long-term)
+
+3. CRITICAL ROLES AT RISK: Count of critical roles with no succession plan or no ready successor.
+
+4. BENCH STRENGTH: Overall assessment of leadership bench depth (e.g., "Weak — 4 of 6 critical roles have no identified successor").
+
+5. DEVELOPMENT INVESTMENT: Recommended annual investment in leadership development programs.
+
+6. TIMELINE TO READY: Average estimated timeline to develop succession-ready candidates.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the leadership pipeline and reduce key-person risk.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Succession Planning (Wave 32)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SuccessionPlanning;
+  } catch (e) {
+    console.warn("[Pivot] Succession Planning (Wave 32) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeDiversityInclusion(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<DiversityInclusion | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of diversity, equity, and inclusion posture",
+  "metrics": [{
+    "category": "DEI category (e.g., gender, ethnicity, age, disability, leadership representation)",
+    "currentState": "Current state assessment",
+    "benchmark": "Industry benchmark",
+    "trend": "Improving / Stable / Declining",
+    "gap": "Gap between current state and benchmark or target",
+    "initiative": "Recommended initiative to address this gap"
+  }],
+  "overallScore": 0,
+  "representationGaps": ["gap 1", "..."],
+  "inclusionIndex": "Inclusion index score or assessment",
+  "payEquity": "Pay equity assessment across demographics",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a diversity, equity, and inclusion strategist analyzing workforce composition, inclusion culture, and equitable practices.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concerns: ${questionnaire.keyConcerns ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Diversity & Inclusion analysis:
+
+1. SUMMARY: 2-3 sentence overview of the company's DEI posture, strengths, and areas for improvement.
+
+2. METRICS (4-6): For each DEI category:
+   - Category (gender, ethnicity, age, disability, leadership representation, supplier diversity, etc.)
+   - Current state assessment
+   - Industry benchmark for this category
+   - Trend direction (Improving / Stable / Declining)
+   - Gap between current state and target
+   - Recommended initiative to close the gap
+
+3. OVERALL SCORE (0-100): Composite DEI maturity score.
+
+4. REPRESENTATION GAPS (3-5): Specific representation gaps at leadership, management, and individual contributor levels.
+
+5. INCLUSION INDEX: Assessment of inclusion culture — do employees of all backgrounds feel valued and heard?
+
+6. PAY EQUITY: Assessment of pay equity across demographics, including any identified disparities.
+
+7. RECOMMENDATIONS (4-6): Actionable, measurable steps to advance DEI goals and create lasting cultural change.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Diversity & Inclusion (Wave 32)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as DiversityInclusion;
+  } catch (e) {
+    console.warn("[Pivot] Diversity & Inclusion (Wave 32) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCultureAssessment(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CultureAssessment | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of organizational culture health and alignment",
+  "dimensions": [{
+    "dimension": "Culture dimension (e.g., innovation, accountability, collaboration, customer focus, agility)",
+    "score": 0,
+    "alignment": "Alignment with stated values (Strong / Moderate / Weak)",
+    "strength": "Key strength in this dimension",
+    "risk": "Key risk or gap in this dimension"
+  }],
+  "overallHealth": 0,
+  "coreValues": ["value 1", "..."],
+  "subcultures": ["subculture description 1", "..."],
+  "toxicityRisk": "Assessment of cultural toxicity risk and warning signs",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an organizational culture expert assessing cultural health, values alignment, and organizational dynamics.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concerns: ${questionnaire.keyConcerns ?? "Not specified"}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Culture Assessment:
+
+1. SUMMARY: 2-3 sentence overview of organizational culture health and alignment with business strategy.
+
+2. DIMENSIONS (5-7): For each culture dimension:
+   - Dimension name (innovation, accountability, collaboration, customer focus, agility, transparency, psychological safety, etc.)
+   - Score (0-100)
+   - Alignment with stated company values (Strong / Moderate / Weak)
+   - Key strength in this dimension
+   - Key risk or gap in this dimension
+
+3. OVERALL HEALTH (0-100): Composite cultural health score.
+
+4. CORE VALUES (3-5): Identified or stated core values and assessment of whether they are lived vs. aspirational.
+
+5. SUBCULTURES (2-4): Distinct subcultures that exist within the organization (e.g., engineering vs. sales culture, remote vs. in-office) and their impact.
+
+6. TOXICITY RISK: Assessment of cultural toxicity risk — warning signs such as fear-based management, blame culture, burnout, lack of psychological safety.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen healthy cultural elements and address toxic patterns.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Culture Assessment (Wave 32)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CultureAssessment;
+  } catch (e) {
+    console.warn("[Pivot] Culture Assessment (Wave 32) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── NOTE: Wave 29-30 functions (if added by another agent) should appear above this line ──
+
+// ── Wave 29: Revenue Intelligence & Sales Analytics ──────────────────────────
+
+export async function synthesizeDealPipeline(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<DealPipeline | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of deal pipeline health and velocity",
+  "totalPipelineValue": "$X.XM total pipeline value",
+  "stages": [{
+    "stage": "Stage name",
+    "dealCount": 0,
+    "totalValue": "$X.XM",
+    "avgDaysInStage": 0,
+    "conversionRate": "XX%",
+    "dropoffReason": "Primary reason deals drop off at this stage"
+  }],
+  "avgDealCycle": "XX days average deal cycle",
+  "winRate": "XX% overall win rate",
+  "velocityTrend": "Improving/Declining/Stable with context",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a revenue operations analyst specializing in deal pipeline optimization and sales velocity metrics.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Deal Pipeline analysis:
+
+1. SUMMARY: 2-3 sentence overview of deal pipeline health and velocity.
+2. TOTAL PIPELINE VALUE: Estimated total pipeline value.
+3. STAGES (4-6): For each pipeline stage — deal count, total value, avg days in stage, conversion rate, primary dropoff reason.
+4. AVG DEAL CYCLE: Average days from first contact to close.
+5. WIN RATE: Overall win rate percentage.
+6. VELOCITY TREND: Whether pipeline velocity is improving, declining, or stable.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve pipeline health and velocity.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Deal Pipeline (Wave 29)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as DealPipeline;
+  } catch (e) {
+    console.warn("[Pivot] Deal Pipeline (Wave 29) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeSalesForecasting(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SalesForecasting | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of sales forecast accuracy and outlook",
+  "forecastAccuracy": "XX% historical forecast accuracy",
+  "periods": [{
+    "period": "Q1 2025, Q2 2025, etc.",
+    "predicted": "$X.XM predicted revenue",
+    "confidence": 0,
+    "drivers": ["driver 1", "driver 2"],
+    "risks": ["risk 1", "risk 2"]
+  }],
+  "quotaAttainment": "XX% average quota attainment",
+  "pipelineCoverage": "X.Xx pipeline coverage ratio",
+  "upliftOpportunities": ["opportunity 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a sales forecasting analyst specializing in predictive revenue modeling and quota planning.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Sales Forecasting analysis:
+
+1. SUMMARY: 2-3 sentence overview of forecast accuracy and sales outlook.
+2. FORECAST ACCURACY: Historical forecast accuracy percentage.
+3. PERIODS (3-4): For each forecast period — predicted revenue, confidence level (0-100), key drivers, key risks.
+4. QUOTA ATTAINMENT: Average quota attainment across the team.
+5. PIPELINE COVERAGE: Pipeline coverage ratio (pipeline / quota).
+6. UPLIFT OPPORTUNITIES (3-5): Areas where forecast can be improved.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve forecast accuracy.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Sales Forecasting (Wave 29)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SalesForecasting;
+  } catch (e) {
+    console.warn("[Pivot] Sales Forecasting (Wave 29) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeAccountBasedMarketing(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<AccountBasedMarketing | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of ABM strategy and target account performance",
+  "totalTargetAccounts": 0,
+  "accounts": [{
+    "account": "Account name",
+    "tier": "Tier 1/2/3",
+    "engagementScore": 0,
+    "intent": "High/Medium/Low buying intent",
+    "champion": "Internal champion status",
+    "nextAction": "Recommended next action"
+  }],
+  "avgEngagementScore": 0,
+  "pipelineInfluenced": "$X.XM pipeline influenced by ABM",
+  "conversionRate": "XX% ABM conversion rate",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an account-based marketing strategist specializing in target account identification, engagement scoring, and ABM campaign optimization.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Account-Based Marketing analysis:
+
+1. SUMMARY: 2-3 sentence overview of ABM strategy effectiveness.
+2. TOTAL TARGET ACCOUNTS: Number of accounts in ABM program.
+3. ACCOUNTS (4-6): For each target account — tier, engagement score (0-100), buying intent, champion status, next action.
+4. AVG ENGAGEMENT SCORE: Average engagement score across all target accounts.
+5. PIPELINE INFLUENCED: Total pipeline value influenced by ABM efforts.
+6. CONVERSION RATE: ABM-specific conversion rate.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve ABM effectiveness.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Account-Based Marketing (Wave 29)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as AccountBasedMarketing;
+  } catch (e) {
+    console.warn("[Pivot] Account-Based Marketing (Wave 29) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCommissionOptimization(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CommissionOptimization | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of commission structure and optimization opportunities",
+  "plans": [{
+    "role": "Sales role name",
+    "baseSplit": "XX% base salary",
+    "variableSplit": "XX% variable compensation",
+    "quota": "$X.XM quota",
+    "onTargetEarnings": "$XXXk OTE",
+    "accelerators": "Description of accelerator structure"
+  }],
+  "totalCommissionSpend": "$X.XM total commission spend",
+  "revPerCommissionDollar": "$X.XX revenue per commission dollar",
+  "alignmentScore": 0,
+  "topPerformerRetention": "XX% top performer retention rate",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a sales compensation analyst specializing in incentive plan design, commission optimization, and sales performance alignment.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Commission Optimization analysis:
+
+1. SUMMARY: 2-3 sentence overview of commission structure effectiveness.
+2. PLANS (3-5): For each sales role — base/variable split, quota, OTE, accelerator structure.
+3. TOTAL COMMISSION SPEND: Total annual commission spend.
+4. REVENUE PER COMMISSION DOLLAR: Revenue generated per dollar of commission spent.
+5. ALIGNMENT SCORE (0-100): How well commissions align with business objectives.
+6. TOP PERFORMER RETENTION: Retention rate of top-performing salespeople.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize commission structure.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Commission Optimization (Wave 29)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CommissionOptimization;
+  } catch (e) {
+    console.warn("[Pivot] Commission Optimization (Wave 29) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 30: Product & Market Intelligence ───────────────────────────────────
+
+export async function synthesizeProductAnalytics(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ProductAnalytics | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of product usage patterns and engagement",
+  "metrics": [{
+    "feature": "Feature name",
+    "dailyActive": "XX% DAU",
+    "weeklyActive": "XX% WAU",
+    "adoptionRate": "XX% adoption",
+    "satisfaction": "X.X/5 satisfaction",
+    "trend": "Growing/Declining/Stable"
+  }],
+  "topFeature": "Most used or valuable feature",
+  "underusedFeatures": ["feature 1", "feature 2"],
+  "stickinessRatio": "XX% DAU/MAU ratio",
+  "powerUserPercentage": "XX% power users",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a product analytics expert specializing in usage metrics, feature adoption, and product-led growth strategies.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Product Analytics analysis:
+
+1. SUMMARY: 2-3 sentence overview of product usage patterns.
+2. METRICS (4-6): For each key feature — daily active, weekly active, adoption rate, satisfaction, trend.
+3. TOP FEATURE: Most used or most valuable feature.
+4. UNDERUSED FEATURES (2-4): Features with low adoption that have high potential.
+5. STICKINESS RATIO: DAU/MAU ratio.
+6. POWER USER PERCENTAGE: Percentage of users who are power users.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve product engagement.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Product Analytics (Wave 30)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ProductAnalytics;
+  } catch (e) {
+    console.warn("[Pivot] Product Analytics (Wave 30) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCompetitiveResponse(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CompetitiveResponse | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of competitive landscape and response readiness",
+  "moves": [{
+    "competitor": "Competitor name",
+    "move": "Recent competitive move",
+    "impact": "High/Medium/Low impact",
+    "urgency": "Immediate/Near-term/Long-term",
+    "response": "Recommended response strategy",
+    "timeline": "Response timeline"
+  }],
+  "threatLevel": "Overall competitive threat level",
+  "defensiveActions": ["action 1", "..."],
+  "offensiveOpportunities": ["opportunity 1", "..."],
+  "blindSpots": ["blind spot 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a competitive intelligence analyst specializing in competitor monitoring, threat assessment, and strategic response planning.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Produce a comprehensive Competitive Response analysis:
+
+1. SUMMARY: 2-3 sentence overview of competitive landscape.
+2. MOVES (4-6): For each competitor move — competitor, move description, impact, urgency, response, timeline.
+3. THREAT LEVEL: Overall competitive threat assessment.
+4. DEFENSIVE ACTIONS (3-5): Immediate defensive actions needed.
+5. OFFENSIVE OPPORTUNITIES (3-5): Opportunities to gain competitive advantage.
+6. BLIND SPOTS (2-4): Areas where competitive intelligence is lacking.
+7. RECOMMENDATIONS (4-6): Actionable steps for competitive response.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Competitive Response (Wave 30)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CompetitiveResponse;
+  } catch (e) {
+    console.warn("[Pivot] Competitive Response (Wave 30) synthesis failed:", e);
     return null;
   }
 }

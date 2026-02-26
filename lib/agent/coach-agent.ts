@@ -210,7 +210,31 @@ KEY SECTIONS FOR COACHING:
 - regulatoryCompliance: Compliance inventory with risk assessment, audit readiness, and fine exposure
 - businessContinuity: Disaster recovery readiness with critical function mapping and recovery objectives
 - ethicsFramework: Ethical risk assessment with policy gaps and governance structure analysis
-- socialImpact: Community impact metrics with social ROI and sustainability reporting`;
+- socialImpact: Community impact metrics with social ROI and sustainability reporting
+- dealPipeline: Deal pipeline analytics with stage progression, conversion rates, and deal aging
+- salesForecasting: AI-powered sales forecasts with pipeline-weighted projections and confidence intervals
+- accountBasedMarketing: ABM strategy with target account selection, engagement scoring, and campaign orchestration
+- salesEnablement: Sales enablement asset inventory with content effectiveness and training gap analysis
+- revenueAttribution: Multi-touch revenue attribution across channels with ROI by touchpoint
+- commissionOptimization: Sales incentive plan analysis with commission structures and motivation alignment
+- productMarketFit: PMF assessment with survey scores, retention indicators, and segment-level fit analysis
+- featurePrioritization: RICE scoring framework with impact-effort matrix and feature ranking
+- userOnboarding: Onboarding funnel analysis with completion rates, drop-off points, and time-to-value metrics
+- productAnalytics: Product usage metrics with DAU/MAU ratios, feature adoption, and engagement patterns
+- marketTiming: Market window analysis with timing factors, competitive dynamics, and entry readiness
+- competitiveResponse: Competitive response playbook with threat scenarios, counter-strategies, and win-back tactics
+- scenarioPlanning: Financial scenario modeling with best/base/worst cases and sensitivity analysis
+- capitalStructure: Capital structure optimization with debt-equity mix and cost of capital analysis
+- workingCapital: Cash conversion cycle optimization with DSO, DPO, DIO, and working capital efficiency
+- taxStrategy: Tax optimization strategies with R&D credits, entity structure, and compliance planning
+- fundraisingReadiness: Fundraising round readiness assessment with metrics gaps and investor preparation
+- exitStrategy: Exit planning with valuation modeling, buyer landscape, and preparation timeline
+- talentAcquisition: Hiring strategy with talent pipeline, sourcing channels, and employer brand effectiveness
+- employeeEngagement: Employee engagement scores with eNPS, satisfaction drivers, and retention risk factors
+- compensationBenchmark: Compensation analysis with market benchmarking, pay equity, and total rewards optimization
+- successionPlanning: Succession planning with critical role mapping, bench strength, and development paths
+- diversityInclusion: DEI analytics with representation metrics, inclusion index, and equity analysis
+- cultureAssessment: Culture health assessment with values alignment, team dynamics, and organizational climate`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -318,6 +342,10 @@ const TOOLS = [
             "customerJourneyMap", "npsAnalysis", "supportTicketIntelligence", "customerHealthScore", "voiceOfCustomer", "customerSegmentation",
             "innovationPipeline", "ipPortfolio", "rdEfficiency", "technologyReadiness", "partnershipEcosystem", "mergersAcquisitions",
             "esgScorecard", "carbonFootprint", "regulatoryCompliance", "businessContinuity", "ethicsFramework", "socialImpact",
+            "dealPipeline", "salesForecasting", "accountBasedMarketing", "salesEnablement", "revenueAttribution", "commissionOptimization",
+            "productMarketFit", "featurePrioritization", "userOnboarding", "productAnalytics", "marketTiming", "competitiveResponse",
+            "scenarioPlanning", "capitalStructure", "workingCapital", "taxStrategy", "fundraisingReadiness", "exitStrategy",
+            "talentAcquisition", "employeeEngagement", "compensationBenchmark", "successionPlanning", "diversityInclusion", "cultureAssessment",
           ],
           description: "Which report section to retrieve",
         },
@@ -689,6 +717,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).businessContinuity) parts.push(`BC Readiness: ${(d as any).businessContinuity.overallReadiness}`);
     if ((d as any).ethicsFramework) parts.push(`Ethics Maturity: ${(d as any).ethicsFramework.overallMaturity}`);
     if ((d as any).socialImpact) parts.push(`Social Impact: ${(d as any).socialImpact.overallScore}/100, Investment: ${(d as any).socialImpact.communityInvestment}`);
+    if ((d as any).dealPipeline) parts.push(`Deal Pipeline: ${JSON.stringify((d as any).dealPipeline).slice(0, 300)}`);
+    if ((d as any).salesForecasting) parts.push(`Sales Forecasting: ${JSON.stringify((d as any).salesForecasting).slice(0, 300)}`);
+    if ((d as any).accountBasedMarketing) parts.push(`Account Based Marketing: ${JSON.stringify((d as any).accountBasedMarketing).slice(0, 300)}`);
+    if ((d as any).salesEnablement) parts.push(`Sales Enablement: ${JSON.stringify((d as any).salesEnablement).slice(0, 300)}`);
+    if ((d as any).revenueAttribution) parts.push(`Revenue Attribution: ${JSON.stringify((d as any).revenueAttribution).slice(0, 300)}`);
+    if ((d as any).commissionOptimization) parts.push(`Commission Optimization: ${JSON.stringify((d as any).commissionOptimization).slice(0, 300)}`);
+    if ((d as any).productMarketFit) parts.push(`Product Market Fit: ${JSON.stringify((d as any).productMarketFit).slice(0, 300)}`);
+    if ((d as any).featurePrioritization) parts.push(`Feature Prioritization: ${JSON.stringify((d as any).featurePrioritization).slice(0, 300)}`);
+    if ((d as any).userOnboarding) parts.push(`User Onboarding: ${JSON.stringify((d as any).userOnboarding).slice(0, 300)}`);
+    if ((d as any).productAnalytics) parts.push(`Product Analytics: ${JSON.stringify((d as any).productAnalytics).slice(0, 300)}`);
+    if ((d as any).marketTiming) parts.push(`Market Timing: ${JSON.stringify((d as any).marketTiming).slice(0, 300)}`);
+    if ((d as any).competitiveResponse) parts.push(`Competitive Response: ${JSON.stringify((d as any).competitiveResponse).slice(0, 300)}`);
+    if ((d as any).scenarioPlanning) parts.push(`Scenario Planning: ${JSON.stringify((d as any).scenarioPlanning).slice(0, 300)}`);
+    if ((d as any).capitalStructure) parts.push(`Capital Structure: ${JSON.stringify((d as any).capitalStructure).slice(0, 300)}`);
+    if ((d as any).workingCapital) parts.push(`Working Capital: ${JSON.stringify((d as any).workingCapital).slice(0, 300)}`);
+    if ((d as any).taxStrategy) parts.push(`Tax Strategy: ${JSON.stringify((d as any).taxStrategy).slice(0, 300)}`);
+    if ((d as any).fundraisingReadiness) parts.push(`Fundraising Readiness: ${JSON.stringify((d as any).fundraisingReadiness).slice(0, 300)}`);
+    if ((d as any).exitStrategy) parts.push(`Exit Strategy: ${JSON.stringify((d as any).exitStrategy).slice(0, 300)}`);
+    if ((d as any).talentAcquisition) parts.push(`Talent Acquisition: ${JSON.stringify((d as any).talentAcquisition).slice(0, 300)}`);
+    if ((d as any).employeeEngagement) parts.push(`Employee Engagement: ${JSON.stringify((d as any).employeeEngagement).slice(0, 300)}`);
+    if ((d as any).compensationBenchmark) parts.push(`Compensation Benchmark: ${JSON.stringify((d as any).compensationBenchmark).slice(0, 300)}`);
+    if ((d as any).successionPlanning) parts.push(`Succession Planning: ${JSON.stringify((d as any).successionPlanning).slice(0, 300)}`);
+    if ((d as any).diversityInclusion) parts.push(`Diversity Inclusion: ${JSON.stringify((d as any).diversityInclusion).slice(0, 300)}`);
+    if ((d as any).cultureAssessment) parts.push(`Culture Assessment: ${JSON.stringify((d as any).cultureAssessment).slice(0, 300)}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

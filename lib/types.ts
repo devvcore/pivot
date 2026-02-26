@@ -853,6 +853,22 @@ export interface MVPDeliverables {
   businessContinuity?: BusinessContinuity;
   ethicsFramework?: EthicsFramework;
   socialImpact?: SocialImpact;
+  // Wave 29: Revenue Intelligence & Sales Analytics (new fields only)
+  dealPipeline?: DealPipeline;
+  salesForecasting?: SalesForecasting;
+  accountBasedMarketing?: AccountBasedMarketing;
+  commissionOptimization?: CommissionOptimization;
+  // Wave 30: Product & Market Intelligence (new fields only)
+  productAnalytics?: ProductAnalytics;
+  competitiveResponse?: CompetitiveResponse;
+  // Wave 31: Financial Planning & Analysis (new fields only)
+  scenarioPlanning?: ScenarioPlanning;
+  capitalStructure?: CapitalStructure;
+  fundraisingReadiness?: FundraisingReadiness;
+  exitStrategy?: ExitStrategy;
+  // Wave 32: People & Culture Analytics (new fields only)
+  talentAcquisition?: TalentAcquisition;
+  diversityInclusion?: DiversityInclusion;
 }
 
 export interface BenchmarkDimension {
@@ -2839,3 +2855,55 @@ export interface EthicsFramework { summary: string; overallMaturity: string; ris
 
 export interface ImpactMetric { area: string; metric: string; currentValue: string; target: string; socialROI: string; stakeholder: string; }
 export interface SocialImpact { summary: string; overallScore: number; metrics: ImpactMetric[]; communityInvestment: string; volunteerHours: string; reportingFramework: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 29: Revenue Intelligence (new types only — others exist from earlier waves)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DealStage { stage: string; dealCount: number; totalValue: string; avgDaysInStage: number; conversionRate: string; dropoffReason: string; }
+export interface DealPipeline { summary: string; totalPipelineValue: string; stages: DealStage[]; avgDealCycle: string; winRate: string; velocityTrend: string; recommendations: string[]; }
+
+export interface ForecastPeriod { period: string; predicted: string; confidence: number; drivers: string[]; risks: string[]; }
+export interface SalesForecasting { summary: string; forecastAccuracy: string; periods: ForecastPeriod[]; quotaAttainment: string; pipelineCoverage: string; upliftOpportunities: string[]; recommendations: string[]; }
+
+export interface TargetAccount { account: string; tier: string; engagementScore: number; intent: string; champion: string; nextAction: string; }
+export interface AccountBasedMarketing { summary: string; totalTargetAccounts: number; accounts: TargetAccount[]; avgEngagementScore: number; pipelineInfluenced: string; conversionRate: string; recommendations: string[]; }
+
+export interface IncentivePlan { role: string; baseSplit: string; variableSplit: string; quota: string; onTargetEarnings: string; accelerators: string; }
+export interface CommissionOptimization { summary: string; plans: IncentivePlan[]; totalCommissionSpend: string; revPerCommissionDollar: string; alignmentScore: number; topPerformerRetention: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 30: Product & Market Intelligence (new types only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProductUsageMetric { feature: string; dailyActive: string; weeklyActive: string; adoptionRate: string; satisfaction: string; trend: string; }
+export interface ProductAnalytics { summary: string; metrics: ProductUsageMetric[]; topFeature: string; underusedFeatures: string[]; stickinessRatio: string; powerUserPercentage: string; recommendations: string[]; }
+
+export interface CompetitorMove { competitor: string; move: string; impact: string; urgency: string; response: string; timeline: string; }
+export interface CompetitiveResponse { summary: string; moves: CompetitorMove[]; threatLevel: string; defensiveActions: string[]; offensiveOpportunities: string[]; blindSpots: string[]; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 31: Financial Planning (new types only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FinancialScenario { name: string; probability: string; revenue: string; costs: string; profit: string; cashPosition: string; keyAssumptions: string[]; }
+export interface ScenarioPlanning { summary: string; scenarios: FinancialScenario[]; baseCase: string; bestCase: string; worstCase: string; criticalVariables: string[]; recommendations: string[]; }
+
+export interface CapitalComponent { type: string; amount: string; cost: string; percentage: string; maturity: string; flexibility: string; }
+export interface CapitalStructure { summary: string; components: CapitalComponent[]; wacc: string; debtToEquity: string; optimalStructure: string; refinancingOpportunities: string[]; recommendations: string[]; }
+
+export interface ReadinessDimension { dimension: string; score: number; benchmark: number; gap: string; action: string; }
+export interface FundraisingReadiness { summary: string; overallScore: number; dimensions: ReadinessDimension[]; suggestedRound: string; valuationRange: string; timeToReady: string; recommendations: string[]; }
+
+export interface ExitOption { type: string; likelihood: string; valuationMultiple: string; timeline: string; requirements: string[]; risks: string; }
+export interface ExitStrategy { summary: string; options: ExitOption[]; bestOption: string; currentValuation: string; targetValuation: string; gapToClose: string[]; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 32: People & Culture (new types only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HiringNeed { role: string; priority: string; department: string; timeToFill: string; salaryRange: string; source: string; }
+export interface TalentAcquisition { summary: string; openRoles: number; needs: HiringNeed[]; avgTimeToFill: string; costPerHire: string; topSourceChannel: string; recommendations: string[]; }
+
+export interface DeiMetric { category: string; currentState: string; benchmark: string; trend: string; gap: string; initiative: string; }
+export interface DiversityInclusion { summary: string; metrics: DeiMetric[]; overallScore: number; representationGaps: string[]; inclusionIndex: string; payEquity: string; recommendations: string[]; }

@@ -145,6 +145,10 @@ const TOOLS = [
             "customerJourneyMap", "npsAnalysis", "supportTicketIntelligence", "customerHealthScore", "voiceOfCustomer", "customerSegmentation",
             "innovationPipeline", "ipPortfolio", "rdEfficiency", "technologyReadiness", "partnershipEcosystem", "mergersAcquisitions",
             "esgScorecard", "carbonFootprint", "regulatoryCompliance", "businessContinuity", "ethicsFramework", "socialImpact",
+            "dealPipeline", "salesForecasting", "accountBasedMarketing", "salesEnablement", "revenueAttribution", "commissionOptimization",
+            "productMarketFit", "featurePrioritization", "userOnboarding", "productAnalytics", "marketTiming", "competitiveResponse",
+            "scenarioPlanning", "capitalStructure", "workingCapital", "taxStrategy", "fundraisingReadiness", "exitStrategy",
+            "talentAcquisition", "employeeEngagement", "compensationBenchmark", "successionPlanning", "diversityInclusion", "cultureAssessment",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -407,6 +411,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 26 (Customer Experience & Journey): customerJourneyMap, npsAnalysis, supportTicketIntelligence, customerHealthScore, voiceOfCustomer, customerSegmentation
 - Wave 27 (Innovation & IP): innovationPipeline, ipPortfolio, rdEfficiency, technologyReadiness, partnershipEcosystem, mergersAcquisitions
 - Wave 28 (Sustainability & Governance): esgScorecard, carbonFootprint, regulatoryCompliance, businessContinuity, ethicsFramework, socialImpact
+- Wave 29 (Sales Intelligence): dealPipeline (deal pipeline analytics), salesForecasting (AI sales forecasts), accountBasedMarketing (ABM strategy), salesEnablement (enablement assets), revenueAttribution (channel attribution), commissionOptimization (incentive plans)
+- Wave 30 (Product Strategy): productMarketFit (PMF assessment), featurePrioritization (RICE scoring), userOnboarding (funnel analysis), productAnalytics (usage metrics), marketTiming (market windows), competitiveResponse (response playbook)
+- Wave 31 (Financial Strategy): scenarioPlanning (financial scenarios), capitalStructure (capital optimization), workingCapital (cash conversion), taxStrategy (tax optimization), fundraisingReadiness (round readiness), exitStrategy (exit planning)
+- Wave 32 (People & Culture): talentAcquisition (hiring strategy), employeeEngagement (engagement scores), compensationBenchmark (comp analysis), successionPlanning (succession plans), diversityInclusion (DEI analytics), cultureAssessment (culture health)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
