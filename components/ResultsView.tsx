@@ -5,7 +5,8 @@ import {
   ArrowLeft, Download, AlertCircle, TrendingUp, DollarSign, Users, Target,
   ShieldAlert, Sparkles, ChevronRight, Loader2, ShieldCheck, Globe, Zap,
   BarChart3, GitBranch, Trophy, FileText, Clock, ArrowRight, Server, Megaphone,
-  Presentation,
+  Presentation, Gauge, Calendar, ClipboardCheck, UserSearch, CheckCircle2,
+  XCircle, MinusCircle, HelpCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -15,6 +16,7 @@ import {
 import type { Job, MVPDeliverables } from "@/lib/types";
 import { ExecutionView } from "./ExecutionView";
 import { AgentChatButton } from "./AgentChat";
+import { CoachChatButton } from "./CoachChat";
 import { RevenueLeakChart } from "./charts/RevenueLeakChart";
 import { CashFlowChart } from "./charts/CashFlowChart";
 import { CustomerRiskScatter } from "./charts/CustomerRiskScatter";
@@ -46,6 +48,10 @@ const TABS = [
   { id: 11, label: "Pricing",         icon: DollarSign,  dataKey: "pricingIntelligence"   },
   { id: 12, label: "Marketing",       icon: Megaphone,   dataKey: "marketingStrategy"     },
   { id: 13, label: "Pitch Deck",      icon: Presentation, dataKey: "pitchDeckAnalysis"    },
+  { id: 14, label: "KPIs",            icon: Gauge,        dataKey: "kpiReport"             },
+  { id: 15, label: "30-Day Roadmap",  icon: Calendar,     dataKey: "roadmap"               },
+  { id: 16, label: "Health Check",    icon: ClipboardCheck, dataKey: "healthChecklist"      },
+  { id: 17, label: "Lead Gen",        icon: UserSearch,   dataKey: "leadReport"            },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -130,6 +136,19 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
   const [phase, setPhase] = useState<string>("PLAN");
   const [activeTab, setActiveTab] = useState(0);
   const [viewMode, setViewMode] = useState<"report" | "execute">("report");
+  const [chartOverlays, setChartOverlays] = useState<Record<string, any>>({});
+
+  const handleProjection = (section: string) => (data: { projection: any; insight: string | null }) => {
+    setChartOverlays(prev => ({ ...prev, [section]: data.projection }));
+  };
+
+  const clearOverlay = (section: string) => () => {
+    setChartOverlays(prev => {
+      const next = { ...prev };
+      delete next[section];
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (job?.phase) setPhase(job.phase);
@@ -436,7 +455,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                 )}
 
                 {/* Cash flow charts */}
-                <CashFlowChart projections={(ci as any).weeklyProjections ?? []} />
+                <CashFlowChart projections={(ci as any).weeklyProjections ?? []} overlay={chartOverlays.cash} />
                 <ChartInteraction
                   section="cash"
                   orgId={chartOrgId}
@@ -450,6 +469,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     scenario: "Continue current burn rate with no changes to revenue or expenses",
                     months: 3,
                   }}
+                  onProjection={handleProjection("cash")}
+                  onDismiss={clearOverlay("cash")}
                 />
 
                 {weeklyModel.length > 0 && (
@@ -522,7 +543,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                 )}
 
                 {/* Revenue leak charts */}
-                <RevenueLeakChart items={rl.items || []} />
+                <RevenueLeakChart items={rl.items || []} overlay={chartOverlays.revenue} onDismissOverlay={clearOverlay("revenue")} />
                 <ChartInteraction
                   section="revenue"
                   orgId={chartOrgId}
@@ -536,6 +557,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     scenario: "Fix the top 3 revenue leaks over the next 10 weeks",
                     months: 3,
                   }}
+                  onProjection={handleProjection("revenue")}
+                  onDismiss={clearOverlay("revenue")}
                 />
 
                 {(rl.items || []).map((item, i) => (
@@ -585,7 +608,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                 </div>
 
                 {/* Issues charts */}
-                <IssuesSeverityChart issues={ir.issues || []} />
+                <IssuesSeverityChart issues={ir.issues || []} overlay={chartOverlays.issues} onDismissOverlay={clearOverlay("issues")} />
                 <ChartInteraction
                   section="issues"
                   orgId={chartOrgId}
@@ -594,6 +617,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     "Which issue should I tackle this week?",
                     "How do these issues affect my cash runway?",
                   ]}
+                  onProjection={handleProjection("issues")}
+                  onDismiss={clearOverlay("issues")}
                   projectionConfig={{
                     type: "growth_scenario",
                     scenario: "Resolve all critical and high-severity issues over the next 10 weeks",
@@ -646,7 +671,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                 )}
 
                 {/* Customer risk scatter chart */}
-                <CustomerRiskScatter customers={arc.customers || []} />
+                <CustomerRiskScatter customers={arc.customers || []} overlay={chartOverlays.customers} onDismissOverlay={clearOverlay("customers")} />
                 <ChartInteraction
                   section="customers"
                   orgId={chartOrgId}
@@ -660,6 +685,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     scenario: "Lose the highest-risk customer within 4 weeks with no replacement revenue",
                     months: 3,
                   }}
+                  onProjection={handleProjection("customers")}
+                  onDismiss={clearOverlay("customers")}
                 />
 
                 {(arc.customers || []).map((c, i) => (
@@ -1131,6 +1158,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   <CompetitorRadarChart
                     competitors={[...ca.competitors, ...ca.industryLeaders]}
                     yourGrade={d.websiteAnalysis?.grade}
+                    overlay={chartOverlays.competitors}
+                    onDismissOverlay={clearOverlay("competitors")}
                   />
                   <ChartInteraction
                     section="competitors"
@@ -1140,6 +1169,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       "What are competitors doing that I should copy?",
                       "Where am I strongest vs weakest against competition?",
                     ]}
+                    onProjection={handleProjection("competitors")}
+                    onDismiss={clearOverlay("competitors")}
                   />
 
                   {/* Competitor cards */}
@@ -1212,7 +1243,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   {/* Tech savings chart */}
                   {to.recommendations?.length > 0 && (
                     <>
-                      <TechSavingsChart recommendations={to.recommendations} />
+                      <TechSavingsChart recommendations={to.recommendations} overlay={chartOverlays.tech} onDismissOverlay={clearOverlay("tech")} />
                       <ChartInteraction
                         section="tech"
                         orgId={chartOrgId}
@@ -1226,6 +1257,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                           scenario: "Implement all tech cost optimizations over 10 weeks, saving estimated monthly amounts",
                           months: 3,
                         }}
+                        onProjection={handleProjection("tech")}
+                        onDismiss={clearOverlay("tech")}
                       />
                     </>
                   )}
@@ -1273,7 +1306,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   {/* Pricing chart */}
                   {pi.suggestedPricing?.length > 0 && (
                     <>
-                      <PricingComparisonChart tiers={pi.suggestedPricing} />
+                      <PricingComparisonChart tiers={pi.suggestedPricing} overlay={chartOverlays.pricing} onDismissOverlay={clearOverlay("pricing")} />
                       <ChartInteraction
                         section="pricing"
                         orgId={chartOrgId}
@@ -1287,6 +1320,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                           scenario: "Implement recommended pricing tiers over the next 10 weeks with gradual customer migration",
                           months: 3,
                         }}
+                        onProjection={handleProjection("pricing")}
+                        onDismiss={clearOverlay("pricing")}
                       />
                     </>
                   )}
@@ -1363,6 +1398,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   <MarketingChannelChart
                     channels={ms.channelRecommendations ?? []}
                     socialStrategy={ms.socialMediaStrategy ?? []}
+                    overlay={chartOverlays.marketing}
+                    onDismissOverlay={clearOverlay("marketing")}
                   />
                   <ChartInteraction
                     section="marketing"
@@ -1377,6 +1414,8 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       scenario: "Execute top 3 recommended marketing channels for 10 weeks with consistent effort",
                       months: 3,
                     }}
+                    onProjection={handleProjection("marketing")}
+                    onDismiss={clearOverlay("marketing")}
                   />
 
                   {/* Channel recommendations */}
@@ -1591,6 +1630,375 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
               );
             })()}
 
+            {/* ── Tab 14: KPIs ──────────────────────────────────────────── */}
+            {activeTab === 14 && d.kpiReport && (() => {
+              const kpi = d.kpiReport!;
+              const northStars = kpi.kpis.filter(k => k.isNorthStar);
+              const others = kpi.kpis.filter(k => !k.isNorthStar);
+              const statusIcon = (s: string) => {
+                if (s === "on_track") return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+                if (s === "at_risk") return <AlertCircle className="w-4 h-4 text-amber-500" />;
+                if (s === "behind") return <XCircle className="w-4 h-4 text-red-500" />;
+                return <HelpCircle className="w-4 h-4 text-zinc-400" />;
+              };
+              const statusColor = (s: string) =>
+                s === "on_track" ? "bg-green-50 border-green-200" :
+                s === "at_risk" ? "bg-amber-50 border-amber-200" :
+                s === "behind" ? "bg-red-50 border-red-200" :
+                "bg-zinc-50 border-zinc-200";
+              const sourceTag = (s: string) =>
+                s === "from_documents" ? "text-green-700 bg-green-50 border-green-200" :
+                s === "estimated" ? "text-amber-700 bg-amber-50 border-amber-200" :
+                "text-zinc-500 bg-zinc-50 border-zinc-200";
+              return (
+                <div className="space-y-6">
+                  {/* Hero */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Gauge className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Key Performance Indicators</p>
+                      <span className="text-[9px] font-mono bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full border border-white/10 ml-auto">{kpi.businessType}</span>
+                    </div>
+                    <p className="text-lg leading-relaxed">{kpi.summary}</p>
+                    {kpi.missingDataWarning && (
+                      <div className="mt-4 bg-amber-600/20 border border-amber-500/30 rounded-xl p-3">
+                        <p className="text-amber-200 text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{kpi.missingDataWarning}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* North Star KPIs */}
+                  {northStars.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> North Star Metrics</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {northStars.map((k, i) => (
+                          <div key={i} className={`border-2 border-zinc-900 rounded-2xl p-6 shadow-sm ${statusColor(k.status)}`}>
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-semibold text-zinc-900 text-lg">{k.name}</p>
+                                <p className="text-[10px] font-mono text-zinc-500">{k.abbreviation} · {k.frequency}</p>
+                              </div>
+                              {statusIcon(k.status)}
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                              <div>
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Current</p>
+                                <p className="text-2xl font-light text-zinc-900">{k.currentValue || "—"}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Target</p>
+                                <p className="text-2xl font-light text-zinc-900">{k.targetValue || "—"}</p>
+                              </div>
+                            </div>
+                            {k.benchmark && <p className="text-xs text-zinc-500 mt-3 italic">{k.benchmark}</p>}
+                            <div className="flex items-center gap-2 mt-3">
+                              <span className={`text-[9px] font-mono px-2 py-0.5 rounded border uppercase ${sourceTag(k.sourceData)}`}>
+                                {k.sourceData === "from_documents" ? "Verified" : k.sourceData === "estimated" ? "Estimated" : "Unknown"}
+                              </span>
+                              <span className="text-[9px] font-mono text-zinc-400 uppercase">{k.category}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other KPIs */}
+                  {others.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> All KPIs</SectionHeader>
+                      <div className="space-y-3">
+                        {others.map((k, i) => (
+                          <div key={i} className={`bg-white border rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center ${statusColor(k.status)}`}>
+                            <div className="flex items-center gap-3 shrink-0">
+                              {statusIcon(k.status)}
+                              <div>
+                                <p className="font-semibold text-zinc-900">{k.name}</p>
+                                <p className="text-[10px] font-mono text-zinc-400">{k.abbreviation} · {k.frequency} · {k.category}</p>
+                              </div>
+                            </div>
+                            <div className="flex-1 flex items-center gap-6 ml-auto">
+                              <div className="text-right">
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase">Current</p>
+                                <p className="font-semibold text-zinc-900">{k.currentValue || "—"}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase">Target</p>
+                                <p className="font-semibold text-zinc-900">{k.targetValue || "—"}</p>
+                              </div>
+                              <span className={`text-[9px] font-mono px-2 py-0.5 rounded border uppercase ${sourceTag(k.sourceData)}`}>
+                                {k.sourceData === "from_documents" ? "Verified" : k.sourceData === "estimated" ? "Estimated" : "Unknown"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 15: 30-Day Roadmap ────────────────────────────────────── */}
+            {activeTab === 15 && d.roadmap && (() => {
+              const rm = d.roadmap!;
+              const catColors: Record<string, string> = {
+                "Revenue Recovery": "bg-green-100 text-green-800 border-green-200",
+                "Marketing": "bg-purple-100 text-purple-800 border-purple-200",
+                "Operations": "bg-blue-100 text-blue-800 border-blue-200",
+                "Sales": "bg-amber-100 text-amber-800 border-amber-200",
+                "Finance": "bg-emerald-100 text-emerald-800 border-emerald-200",
+                "HR": "bg-pink-100 text-pink-800 border-pink-200",
+              };
+              const priColors: Record<string, string> = {
+                critical: "bg-red-600 text-white",
+                high: "bg-orange-500 text-white",
+                medium: "bg-amber-400 text-zinc-900",
+                low: "bg-zinc-200 text-zinc-700",
+              };
+              return (
+                <div className="space-y-6">
+                  {/* Hero */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">30-Day Action Roadmap</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{rm.summary}</p>
+                  </div>
+
+                  {/* Weekly themes */}
+                  {rm.weeklyThemes?.length > 0 && (
+                    <div className="grid md:grid-cols-4 gap-3">
+                      {rm.weeklyThemes.map((wt) => (
+                        <div key={wt.week} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm text-center">
+                          <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Week {wt.week}</p>
+                          <p className="font-semibold text-zinc-900 text-sm">{wt.theme}</p>
+                          <p className="text-xs text-zinc-500 mt-1">{wt.focus}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Daily action items timeline */}
+                  <div className="space-y-3 relative before:absolute before:inset-0 before:left-[15px] before:w-[1px] before:bg-zinc-200 before:z-0">
+                    {rm.items.map((item, i) => (
+                      <div key={i} className="relative z-10 pl-10 flex items-start gap-4">
+                        <div className={`absolute left-0 top-1 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 ${
+                          item.priority === "critical" ? "bg-red-50 border-red-500 text-red-700" :
+                          item.priority === "high" ? "bg-orange-50 border-orange-400 text-orange-700" :
+                          "bg-white border-zinc-300 text-zinc-600"
+                        }`}>
+                          {item.day}
+                        </div>
+                        <div className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm flex-1">
+                          <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium text-zinc-900 text-sm">{item.action}</p>
+                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${priColors[item.priority] || priColors.medium}`}>
+                                {item.priority}
+                              </span>
+                            </div>
+                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${catColors[item.category] || "bg-zinc-100 text-zinc-600 border-zinc-200"}`}>
+                              {item.category}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-zinc-500">
+                            <span>{item.owner}</span>
+                            {item.expectedImpact && <span className="text-green-600 font-medium">{item.expectedImpact}</span>}
+                            {item.source && <span className="italic">{item.source}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 16: Health Checklist ─────────────────────────────────── */}
+            {activeTab === 16 && d.healthChecklist && (() => {
+              const hc = d.healthChecklist!;
+              const gc = GRADE_COLORS[hc.grade] ?? { text: "text-zinc-700", bg: "bg-zinc-100" };
+              const statusIcons: Record<string, React.ReactNode> = {
+                present: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+                absent: <XCircle className="w-4 h-4 text-red-500" />,
+                partial: <MinusCircle className="w-4 h-4 text-amber-500" />,
+                unknown: <HelpCircle className="w-4 h-4 text-zinc-400" />,
+              };
+              const statusBg: Record<string, string> = {
+                present: "bg-green-50 border-green-200",
+                absent: "bg-red-50 border-red-200",
+                partial: "bg-amber-50 border-amber-200",
+                unknown: "bg-zinc-50 border-zinc-200",
+              };
+              // Group by category
+              const categories = Array.from(new Set(hc.items.map(i => i.category)));
+              return (
+                <div className="space-y-6">
+                  {/* Score hero */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8 flex flex-col md:flex-row gap-6 items-start">
+                    <div className="text-center shrink-0">
+                      <div className={`text-6xl font-bold px-6 py-4 rounded-2xl ${gc.text} ${gc.bg}`}>{hc.grade}</div>
+                      <div className="text-zinc-400 text-sm mt-2">{hc.score}/100</div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ClipboardCheck className="w-4 h-4 text-zinc-400" />
+                        <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Business Health Checklist</p>
+                      </div>
+                      <p className="text-lg text-white leading-relaxed">{hc.summary}</p>
+                      {hc.topGap && (
+                        <div className="mt-4 bg-red-600/20 border border-red-500/30 rounded-xl p-3">
+                          <p className="text-red-200 text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{hc.topGap}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Score bar */}
+                  <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Operational Readiness</span>
+                      <span className="text-sm font-bold text-zinc-900">{hc.score}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-zinc-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${hc.score}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className={`h-full rounded-full ${hc.score >= 70 ? "bg-green-500" : hc.score >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-1 text-[9px] font-mono text-zinc-400">
+                      <span>{hc.items.filter(i => i.status === "present").length} present</span>
+                      <span>{hc.items.filter(i => i.status === "partial").length} partial</span>
+                      <span>{hc.items.filter(i => i.status === "absent").length} missing</span>
+                    </div>
+                  </div>
+
+                  {/* Items by category */}
+                  {categories.map((cat) => (
+                    <div key={cat}>
+                      <SectionHeader><ClipboardCheck className="w-3 h-3" /> {cat}</SectionHeader>
+                      <div className="space-y-2">
+                        {hc.items.filter(i => i.category === cat).map((item, i) => (
+                          <div key={i} className={`border rounded-xl p-4 shadow-sm flex items-start gap-3 ${statusBg[item.status] || statusBg.unknown}`}>
+                            {statusIcons[item.status] || statusIcons.unknown}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-zinc-900 text-sm">{item.item}</p>
+                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase ${
+                                  item.status === "present" ? "bg-green-100 text-green-700" :
+                                  item.status === "absent" ? "bg-red-100 text-red-700" :
+                                  item.status === "partial" ? "bg-amber-100 text-amber-700" :
+                                  "bg-zinc-100 text-zinc-500"
+                                }`}>{item.status}</span>
+                              </div>
+                              <p className="text-xs text-zinc-500 mt-1">{item.description}</p>
+                              {item.evidence && <p className="text-xs text-zinc-600 mt-1 italic">Evidence: {item.evidence}</p>}
+                              {item.recommendation && item.status !== "present" && (
+                                <p className="text-xs text-zinc-700 mt-2 font-medium flex gap-1">
+                                  <ChevronRight className="w-3 h-3 text-zinc-400 shrink-0 mt-0.5" />{item.recommendation}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 17: Lead Generation ──────────────────────────────────── */}
+            {activeTab === 17 && d.leadReport && (() => {
+              const lr = d.leadReport!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserSearch className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Lead Generation Report</p>
+                      <span className="text-[9px] font-mono bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full border border-white/10 ml-auto">
+                        {lr.leads.length} leads · {lr.creditsUsed} credits used
+                      </span>
+                    </div>
+                    <p className="text-lg leading-relaxed">
+                      {lr.leads.length} potential leads found
+                      {lr.searchCriteria.industry ? ` in ${lr.searchCriteria.industry}` : ""}
+                      {lr.searchCriteria.location ? ` near ${lr.searchCriteria.location}` : ""}
+                    </p>
+                  </div>
+
+                  {/* Lead cards */}
+                  <div className="space-y-3">
+                    {lr.leads.map((lead, i) => (
+                      <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                          <div>
+                            <p className="font-semibold text-zinc-900 text-lg">{lead.name}</p>
+                            <div className="flex items-center gap-2 text-sm text-zinc-500 mt-0.5">
+                              {lead.title && <span>{lead.title}</span>}
+                              {lead.title && lead.company && <span>at</span>}
+                              {lead.company && <span className="font-medium text-zinc-700">{lead.company}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {lead.isDecisionMaker && (
+                              <span className="text-[9px] font-mono bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full uppercase">Decision Maker</span>
+                            )}
+                            {lead.relevanceScore != null && (
+                              <span className={`text-sm font-bold px-2 py-0.5 rounded-lg ${
+                                lead.relevanceScore >= 70 ? "bg-green-50 text-green-700" :
+                                lead.relevanceScore >= 40 ? "bg-amber-50 text-amber-700" :
+                                "bg-zinc-50 text-zinc-500"
+                              }`}>{lead.relevanceScore}%</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                          {lead.industry && (
+                            <div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase">Industry</p>
+                              <p className="text-zinc-700">{lead.industry}</p>
+                            </div>
+                          )}
+                          {lead.location && (
+                            <div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase">Location</p>
+                              <p className="text-zinc-700">{lead.location}</p>
+                            </div>
+                          )}
+                          {lead.estimatedCompanySize && (
+                            <div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase">Company Size</p>
+                              <p className="text-zinc-700">{lead.estimatedCompanySize}</p>
+                            </div>
+                          )}
+                          {lead.email && (
+                            <div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase">Email</p>
+                              <p className="text-zinc-700">{lead.email}</p>
+                            </div>
+                          )}
+                        </div>
+                        {lead.headline && <p className="text-xs text-zinc-500 mt-3 italic">{lead.headline}</p>}
+                        {lead.linkedinUrl && (
+                          <a href={lead.linkedinUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block underline underline-offset-2">
+                            View LinkedIn Profile
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── Tab 13: Pitch Deck Analysis ─────────────────────────── */}
             {activeTab === 13 && d.pitchDeckAnalysis && (() => {
               const pd = d.pitchDeckAnalysis!;
@@ -1746,7 +2154,11 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
         </AnimatePresence>
       </main>
 
-      {/* ── ARIA Floating Chat Button ──────────────────────────────────────── */}
+      {/* ── Floating Chat Buttons ──────────────────────────────────────────── */}
+      <CoachChatButton
+        orgId={job.questionnaire.orgId ?? "default-org"}
+        runId={runId}
+      />
       <AgentChatButton
         orgId={job.questionnaire.orgId ?? "default-org"}
         orgName={job.questionnaire.organizationName}

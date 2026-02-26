@@ -16,20 +16,65 @@ interface WeeklyProjection {
   riskFlag?: string;
 }
 
-interface Props {
-  projections: WeeklyProjection[];
+interface OverlayData {
+  dataPoints: { month: string; baseline: number; projected: number }[];
+  title?: string;
+  insight?: string;
+  totalImpact?: string;
 }
 
-export function CashFlowChart({ projections }: Props) {
+interface Props {
+  projections: WeeklyProjection[];
+  overlay?: OverlayData;
+}
+
+export function CashFlowChart({ projections, overlay }: Props) {
   if (!projections?.length) return null;
 
-  const data = projections.map((p) => ({
+  const baseData = projections.map((p) => ({
     name: p.label || `W${p.week}`,
     inflows: p.inflows,
     outflows: p.outflows,
     closing: p.closingBalance,
     riskFlag: p.riskFlag,
+    projected: undefined as number | undefined,
   }));
+
+  // When overlay exists, merge projected data onto the existing chart data
+  // and extend with future projected weeks
+  let mergedData = baseData;
+  if (overlay?.dataPoints?.length) {
+    // Create a map of overlay data by month label
+    const overlayMap = new Map<string, number>();
+    for (const dp of overlay.dataPoints) {
+      overlayMap.set(dp.month, dp.projected);
+    }
+
+    // First, try to match overlay months to existing data points
+    const matchedNames = new Set<string>();
+    mergedData = baseData.map((d) => {
+      const projValue = overlayMap.get(d.name);
+      if (projValue !== undefined) {
+        matchedNames.add(d.name);
+        return { ...d, projected: projValue };
+      }
+      return d;
+    });
+
+    // Then append any overlay data points that don't match existing weeks
+    for (const dp of overlay.dataPoints) {
+      if (!matchedNames.has(dp.month) && !mergedData.some((d) => d.name === dp.month)) {
+        mergedData.push({
+          name: dp.month,
+          inflows: 0,
+          outflows: 0,
+          closing: dp.baseline,
+          riskFlag: undefined,
+          projected: dp.projected,
+        });
+      }
+    }
+  }
 
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -37,9 +82,10 @@ export function CashFlowChart({ projections }: Props) {
       <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
         <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
           Cash Balance Trend
+          {overlay && <span className="text-blue-500 ml-2">+ Projection</span>}
         </h3>
         <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={data} margin={{ left: 5, right: 5 }}>
+          <ComposedChart data={mergedData} margin={{ left: 5, right: 5 }}>
             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
             <YAxis tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
             <Tooltip
@@ -56,6 +102,18 @@ export function CashFlowChart({ projections }: Props) {
               dot={false}
               name="Closing Balance"
             />
+            {overlay && (
+              <Line
+                type="monotone"
+                dataKey="projected"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                strokeDasharray="6 3"
+                dot={{ r: 2, fill: "#3b82f6" }}
+                name="Projected"
+                connectNulls
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -66,7 +124,7 @@ export function CashFlowChart({ projections }: Props) {
           Inflows vs Outflows
         </h3>
         <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={data} margin={{ left: 5, right: 5 }}>
+          <AreaChart data={mergedData} margin={{ left: 5, right: 5 }}>
             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
             <YAxis tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
             <Tooltip

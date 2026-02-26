@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Bot, TrendingUp, Loader2, X, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { ProjectionChart } from "./ProjectionChart";
 
 interface ChartInteractionProps {
   /** Which tab/section this chart belongs to — maps to projection type */
@@ -18,14 +17,25 @@ interface ChartInteractionProps {
     scenario: string;
     months?: number;
   };
+  /** Called when projection data is extracted — passes data UP to parent chart */
+  onProjection?: (data: { projection: any; insight: string | null }) => void;
+  /** Called when the user dismisses projection — tells parent to clear overlay */
+  onDismiss?: () => void;
 }
 
-export function ChartInteraction({ section, prompts, orgId, projectionConfig }: ChartInteractionProps) {
+export function ChartInteraction({ section, prompts, orgId, projectionConfig, onProjection, onDismiss }: ChartInteractionProps) {
   const [response, setResponse] = useState<string | null>(null);
   const [projection, setProjection] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingProjection, setLoadingProjection] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  const handleProjectionData = (projData: any, insightText: string | null) => {
+    setProjection(projData);
+    if (onProjection) {
+      onProjection({ projection: projData, insight: insightText });
+    }
+  };
 
   const askPivvy = async (prompt: string) => {
     setLoading(true);
@@ -49,8 +59,10 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig }: 
       const projMatch = text.match(/<!--PROJECTION:([\s\S]*?)-->/);
       if (projMatch) {
         try {
-          setProjection(JSON.parse(projMatch[1]));
-          setResponse(text.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim());
+          const projData = JSON.parse(projMatch[1]);
+          const cleanedText = text.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim();
+          setResponse(cleanedText);
+          handleProjectionData(projData, cleanedText);
         } catch {
           setResponse(text);
         }
@@ -85,8 +97,10 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig }: 
       const projMatch = text.match(/<!--PROJECTION:([\s\S]*?)-->/);
       if (projMatch) {
         try {
-          setProjection(JSON.parse(projMatch[1]));
-          setResponse(text.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim());
+          const projData = JSON.parse(projMatch[1]);
+          const cleanedText = text.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim();
+          setResponse(cleanedText);
+          handleProjectionData(projData, cleanedText);
         } catch {
           setResponse(text);
         }
@@ -104,6 +118,9 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig }: 
     setExpanded(false);
     setResponse(null);
     setProjection(null);
+    if (onDismiss) {
+      onDismiss();
+    }
   };
 
   return (
@@ -195,8 +212,31 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig }: 
                 </div>
               )}
 
-              {/* Projection chart */}
-              {projection && <ProjectionChart data={projection} />}
+              {/* Compact insight banner (replaces ProjectionChart rendering) */}
+              {projection && (
+                <div className="mt-3 bg-gradient-to-r from-blue-50/60 to-white border border-blue-200 rounded-xl p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      {projection.title && (
+                        <p className="text-xs font-semibold text-zinc-900 truncate">{projection.title}</p>
+                      )}
+                      {projection.subtitle && (
+                        <p className="text-[10px] text-zinc-500 mt-0.5 truncate">{projection.subtitle}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <TrendingUp className="w-3 h-3 text-blue-500" />
+                      <span className="text-[9px] font-mono text-blue-600 uppercase tracking-wider">Overlay Active</span>
+                    </div>
+                  </div>
+                  {(projection.insight || projection.totalImpact) && (
+                    <div className="mt-2 pt-2 border-t border-blue-100 flex gap-4 text-[10px]">
+                      {projection.insight && <p className="text-zinc-600 flex-1">{projection.insight}</p>}
+                      {projection.totalImpact && <p className="text-zinc-900 font-semibold shrink-0">{projection.totalImpact}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )}

@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from "recharts";
 import { SEVERITY_COLORS, CHART_COLORS, TOOLTIP_STYLE, formatDollar } from "./chart-utils";
+import { OverlayProjection } from "./OverlayProjection";
 
 interface Issue {
   severity: string;
@@ -13,11 +14,21 @@ interface Issue {
   description: string;
 }
 
-interface Props {
-  issues: Issue[];
+interface OverlayData {
+  dataPoints: { month: string; baseline: number; projected: number }[];
+  title?: string;
+  subtitle?: string;
+  insight?: string;
+  totalImpact?: string;
 }
 
-export function IssuesSeverityChart({ issues }: Props) {
+interface Props {
+  issues: Issue[];
+  overlay?: OverlayData;
+  onDismissOverlay?: () => void;
+}
+
+export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props) {
   if (!issues.length) return null;
 
   // Group by severity
@@ -45,46 +56,52 @@ export function IssuesSeverityChart({ issues }: Props) {
     }));
 
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
-        <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
-          Issues by Severity
-        </h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={severityData} margin={{ left: 5, right: 5 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-            <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-            <Tooltip contentStyle={TOOLTIP_STYLE} />
-            <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Count">
-              {severityData.map((entry, i) => (
-                <Cell key={i} fill={SEVERITY_COLORS[entry.name] ?? CHART_COLORS.secondary} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {impactData.length > 0 && (
+    <div>
+      <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
           <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
-            Top Financial Exposure
+            Issues by Severity
           </h3>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={impactData} layout="vertical" margin={{ left: 10, right: 20 }}>
-              <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
-              <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 9 }} />
-              <Tooltip
-                formatter={(v) => formatDollar(Number(v ?? 0))}
-                contentStyle={TOOLTIP_STYLE}
-              />
-              <Bar dataKey="impact" radius={[0, 4, 4, 0]} name="Financial Impact">
-                {impactData.map((entry, i) => (
-                  <Cell key={i} fill={SEVERITY_COLORS[entry.severity] ?? CHART_COLORS.secondary} />
+            <BarChart data={severityData} margin={{ left: 5, right: 5 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Count">
+                {severityData.map((entry, i) => (
+                  <Cell key={i} fill={SEVERITY_COLORS[entry.name] ?? CHART_COLORS.secondary} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {impactData.length > 0 && (
+          <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+            <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
+              Top Financial Exposure
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={impactData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
+                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 9 }} />
+                <Tooltip
+                  formatter={(v) => formatDollar(Number(v ?? 0))}
+                  contentStyle={TOOLTIP_STYLE}
+                />
+                <Bar dataKey="impact" radius={[0, 4, 4, 0]} name="Financial Impact">
+                  {impactData.map((entry, i) => (
+                    <Cell key={i} fill={SEVERITY_COLORS[entry.severity] ?? CHART_COLORS.secondary} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {overlay && overlay.dataPoints?.length > 0 && (
+        <OverlayProjection data={overlay} onDismiss={onDismissOverlay} />
       )}
     </div>
   );

@@ -12,7 +12,11 @@ import {
   synthesizeDeliverables,
   synthesizeTechOptimization,
   synthesizePricingIntelligence,
+  synthesizeKPIs,
+  synthesizeRoadmap,
+  synthesizeHealthChecklist,
 } from "./synthesize";
+import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
 import { analyzeWebsite } from "@/lib/agent/website-analyzer";
 import { buildAgentMemory, saveWebsiteAnalysis } from "@/lib/agent/memory";
@@ -205,6 +209,59 @@ export async function runPipeline(runId: string): Promise<void> {
         } catch (e) {
           console.warn("[Pivot] Pitch deck analysis failed (non-fatal):", e);
         }
+      }
+    }
+
+    // ── Step 4c: Terminology + KPIs + Roadmap + Health Checklist ────────────
+    // Detect business model terminology
+    if (!deliverables.terminology) {
+      try {
+        deliverables = { ...deliverables, terminology: detectTerminology(job.questionnaire) };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Terminology detection failed (non-fatal):", e);
+      }
+    }
+
+    // KPI identification
+    if (!deliverables.kpiReport) {
+      try {
+        console.log("[Pivot] Identifying KPIs...");
+        const kpiReport = await synthesizeKPIs(businessPacket, job.questionnaire);
+        if (kpiReport) {
+          deliverables = { ...deliverables, kpiReport };
+          updateJob(runId, { deliverables });
+        }
+      } catch (e) {
+        console.warn("[Pivot] KPI synthesis failed (non-fatal):", e);
+      }
+    }
+
+    // Health checklist
+    if (!deliverables.healthChecklist) {
+      try {
+        console.log("[Pivot] Generating business health checklist...");
+        const healthChecklist = await synthesizeHealthChecklist(businessPacket, job.questionnaire);
+        if (healthChecklist) {
+          deliverables = { ...deliverables, healthChecklist };
+          updateJob(runId, { deliverables });
+        }
+      } catch (e) {
+        console.warn("[Pivot] Health checklist failed (non-fatal):", e);
+      }
+    }
+
+    // 30-day roadmap (depends on other deliverables for context)
+    if (!deliverables.roadmap) {
+      try {
+        console.log("[Pivot] Building 30-day roadmap...");
+        const roadmap = await synthesizeRoadmap(businessPacket, job.questionnaire, deliverables);
+        if (roadmap) {
+          deliverables = { ...deliverables, roadmap };
+          updateJob(runId, { deliverables });
+        }
+      } catch (e) {
+        console.warn("[Pivot] Roadmap synthesis failed (non-fatal):", e);
       }
     }
 

@@ -1,0 +1,409 @@
+/**
+ * Coach — Business Performance & Team Coaching Agent
+ *
+ * A separate agent from Pivvy, focused on people, team performance,
+ * and personal coaching. Powered by Gemini Flash.
+ *
+ * Architecture:
+ * - Loads business report context from job-store
+ * - Has coaching-focused system prompt with anti-hallucination rules
+ * - Tools: get_report_section, get_team_data, generate_action_items
+ * - Client maintains conversation history; server is stateless per request
+ *
+ * Personality:
+ * - Direct, data-driven, brutally honest but constructive
+ * - Frames everything in business impact and ROI
+ * - Never invents employee data or performance metrics
+ */
+import { GoogleGenAI } from "@google/genai";
+import { getJob, listJobs } from "@/lib/job-store";
+import type { MVPDeliverables } from "@/lib/types";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+const COACH_SYSTEM_PROMPT = `You are Coach, a direct and data-driven business performance advisor for Pivot.
+
+CRITICAL ANTI-HALLUCINATION RULES:
+- ONLY reference data that exists in the business report or uploaded team records
+- If asked about employee performance and no performance data exists, say: "I don't have performance data for your team yet. Upload payroll, performance reviews, or CRM activity data so I can give you real numbers instead of guesses."
+- NEVER invent employee names, salaries, performance metrics, or team statistics
+- If data is insufficient, say so clearly — do NOT fill gaps with plausible-sounding numbers
+- Be brutally honest but constructive — frame everything in terms of business impact and ROI
+
+FOR OWNERS:
+- Analyze team cost vs output (only with real data)
+- Recommend who to invest in or let go (only with evidence)
+- Identify performance gaps and hiring needs
+- Create prioritized daily/weekly action items
+- Answer "who should I fire?" honestly — but only if you have the data
+
+FOR EMPLOYEES:
+- Show their assigned KPIs and progress
+- Suggest specific daily actions to improve their metrics
+- Coach on skills relevant to their role
+- Explain how their work impacts business outcomes
+
+STYLE RULES:
+- Lead with numbers, not feelings
+- Give specific next steps, not vague advice
+- Reference actual business data from the report
+- When you don't know something, say so — don't guess
+- Keep responses focused and actionable (not long essays)
+- Use bullet points and structure when listing actions
+- Do NOT use em dashes, en dashes, double dashes, or asterisks. Use plain text only.
+
+You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.`;
+
+// ── Tool definitions ──────────────────────────────────────────────────────────
+
+const TOOLS = [
+  {
+    name: "get_report_section",
+    description:
+      "Retrieve a specific section of the business intelligence report. Use when you need data to back up coaching advice.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        section: {
+          type: "string",
+          enum: [
+            "healthScore",
+            "cashIntelligence",
+            "revenueLeakAnalysis",
+            "issuesRegister",
+            "atRiskCustomers",
+            "decisionBrief",
+            "actionPlan",
+            "marketIntelligence",
+            "websiteAnalysis",
+            "competitorAnalysis",
+            "techOptimization",
+            "pricingIntelligence",
+            "marketingStrategy",
+            "kpiReport",
+            "roadmap",
+            "healthChecklist",
+          ],
+          description: "Which report section to retrieve",
+        },
+      },
+      required: ["section"],
+    },
+  },
+  {
+    name: "get_team_data",
+    description:
+      "Retrieve team member records if any have been uploaded (payroll, org chart, performance reviews). Returns team data or a message indicating no data is available.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        orgId: {
+          type: "string",
+          description: "The organization ID to look up team data for",
+        },
+      },
+      required: ["orgId"],
+    },
+  },
+  {
+    name: "generate_action_items",
+    description:
+      "Generate a prioritized daily to-do list based on the user's role and current business data. Pulls from the action plan, KPIs, and issues register to create specific tasks.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        role: {
+          type: "string",
+          enum: ["owner", "employee"],
+          description: "Whether to generate action items for an owner or employee",
+        },
+        focusArea: {
+          type: "string",
+          description: "Optional focus area like 'revenue', 'team', 'operations', 'marketing'",
+        },
+      },
+      required: ["role"],
+    },
+  },
+];
+
+// ── Tool execution ────────────────────────────────────────────────────────────
+
+function findJobForOrg(orgId: string, runId?: string): ReturnType<typeof getJob> {
+  if (runId) {
+    return getJob(runId);
+  }
+  const allJobs = listJobs();
+  return (
+    allJobs.find((j) => j.questionnaire.orgId === orgId && j.status === "completed") ??
+    allJobs.find((j) => j.status === "completed")
+  );
+}
+
+async function executeTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  orgId: string,
+  runId?: string
+): Promise<string> {
+  if (toolName === "get_report_section") {
+    const section = args.section as string;
+    const job = findJobForOrg(orgId, runId);
+
+    if (!job?.deliverables) return `No completed report found for section: ${section}`;
+
+    const d = job.deliverables as MVPDeliverables;
+    const sectionData = (d as any)[section];
+    if (!sectionData) return `Section "${section}" not found in this report.`;
+
+    // Truncate to avoid token overflow
+    const json = JSON.stringify(sectionData, null, 2);
+    return `[Report Section: ${section}]\n${json.slice(0, 3000)}`;
+  }
+
+  if (toolName === "get_team_data") {
+    // Team data would come from uploaded HR/payroll documents
+    // For now, check if the report has any employee-related data
+    const job = findJobForOrg(orgId, runId);
+
+    if (!job?.deliverables) {
+      return "No team data available. The business owner needs to upload payroll records, org charts, or performance reviews for team analysis.";
+    }
+
+    const d = job.deliverables as MVPDeliverables;
+    const parts: string[] = [];
+
+    // Check for employee count in health score dimensions
+    if (d.healthScore?.dimensions) {
+      const teamDim = d.healthScore.dimensions.find(
+        (dim) => dim.name.toLowerCase().includes("team") || dim.name.toLowerCase().includes("people")
+      );
+      if (teamDim) parts.push(`Team Health: ${teamDim.score}/100 - ${teamDim.keyFinding || teamDim.summary || "N/A"}`);
+    }
+
+    // Check KPIs for team-related metrics
+    if (d.kpiReport?.kpis) {
+      const teamKpis = d.kpiReport.kpis.filter(
+        (k) => k.category === "Operations" || k.name.toLowerCase().includes("team") || k.name.toLowerCase().includes("employee")
+      );
+      if (teamKpis.length > 0) {
+        parts.push(`Team KPIs: ${teamKpis.map((k) => `${k.name}: ${k.currentValue || "Unknown"} (${k.status})`).join("; ")}`);
+      }
+    }
+
+    // Check action plan for team-related tasks
+    if (d.actionPlan?.days) {
+      const teamTasks = d.actionPlan.days.flatMap((day) =>
+        day.tasks.filter((t) => t.owner !== "Owner" || t.description.toLowerCase().includes("team") || t.description.toLowerCase().includes("hire"))
+      );
+      if (teamTasks.length > 0) {
+        parts.push(`Team-related actions: ${teamTasks.slice(0, 5).map((t) => t.description).join("; ")}`);
+      }
+    }
+
+    if (parts.length === 0) {
+      return "No specific team member data found in the current report. Upload payroll, performance reviews, or org chart data for detailed team analysis.";
+    }
+
+    return `[Team Data from Report]\n${parts.join("\n")}`;
+  }
+
+  if (toolName === "generate_action_items") {
+    const role = args.role as string;
+    const focusArea = args.focusArea as string | undefined;
+    const job = findJobForOrg(orgId, runId);
+
+    if (!job?.deliverables) {
+      return "No report data available to generate action items. Complete a business analysis first.";
+    }
+
+    const d = job.deliverables as MVPDeliverables;
+    const items: string[] = [];
+
+    // Pull from action plan
+    if (d.actionPlan?.days) {
+      const todayTasks = d.actionPlan.days.slice(0, 3).flatMap((day) =>
+        day.tasks.map((t) => `[Day ${day.day}] ${t.description} (${t.owner})`)
+      );
+      items.push(...todayTasks.slice(0, 5));
+    }
+
+    // Pull critical issues
+    if (d.issuesRegister?.issues) {
+      const critical = d.issuesRegister.issues
+        .filter((i) => i.severity === "Critical" || i.severity === "HIGH")
+        .slice(0, 3);
+      critical.forEach((i) => {
+        items.push(`[URGENT] ${i.title || i.description} - ${i.recommendedAction || i.recommendation || "Address immediately"}`);
+      });
+    }
+
+    // Pull KPI focus
+    if (d.kpiReport?.kpis) {
+      const atRisk = d.kpiReport.kpis.filter((k) => k.status === "at_risk" || k.status === "behind").slice(0, 2);
+      atRisk.forEach((k) => {
+        items.push(`[KPI] ${k.name}: Currently ${k.currentValue || "unknown"}, target ${k.targetValue || "TBD"} - ${k.status}`);
+      });
+    }
+
+    // Filter by focus area if specified
+    let filtered = items;
+    if (focusArea) {
+      filtered = items.filter((i) => i.toLowerCase().includes(focusArea.toLowerCase()));
+      if (filtered.length === 0) filtered = items; // fall back to all
+    }
+
+    if (filtered.length === 0) {
+      return "No specific action items could be generated from the current report data. Try running a full business analysis first.";
+    }
+
+    return `[Action Items for ${role}${focusArea ? ` - Focus: ${focusArea}` : ""}]\n${filtered.join("\n")}`;
+  }
+
+  return `Unknown tool: ${toolName}`;
+}
+
+// ── Response sanitizer ────────────────────────────────────────────────────────
+
+function sanitize(text: string): string {
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/\u2014/g, " - ")   // em dash
+    .replace(/\u2013/g, " - ")   // en dash
+    .replace(/---/g, " - ")
+    .replace(/--/g, " - ")
+    .trim();
+}
+
+// ── Public interface ──────────────────────────────────────────────────────────
+
+export interface CoachMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface CoachRequest {
+  orgId: string;
+  runId?: string;
+  messages: CoachMessage[];
+  message: string;
+  memberRole?: "owner" | "employee";
+  memberName?: string;
+}
+
+export interface CoachResponse {
+  message: string;
+  toolsUsed: string[];
+}
+
+export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse> {
+  const { orgId, runId, messages, message, memberRole, memberName } = params;
+  const toolsUsed: string[] = [];
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { message: "Coach is not available. GEMINI_API_KEY is not configured.", toolsUsed };
+  }
+
+  // Build business context from report
+  let reportContext = "";
+  const job = findJobForOrg(orgId, runId);
+  if (job?.deliverables) {
+    const d = job.deliverables as MVPDeliverables;
+    const parts: string[] = [];
+    if (d.healthScore) parts.push(`Health Score: ${d.healthScore.score}/100 (${d.healthScore.grade || "N/A"})`);
+    if (d.cashIntelligence) parts.push(`Cash Runway: ${d.cashIntelligence.runwayWeeks ?? "?"} weeks`);
+    if (d.revenueLeakAnalysis) parts.push(`Revenue at Risk: $${d.revenueLeakAnalysis.totalIdentified?.toLocaleString() || "?"}`);
+    if (d.kpiReport) parts.push(`KPIs defined: ${d.kpiReport.kpis?.length || 0}`);
+    if (d.healthChecklist) parts.push(`Health Checklist: ${d.healthChecklist.score}/100 (${d.healthChecklist.grade})`);
+    reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
+  }
+
+  const roleContext =
+    memberRole === "owner"
+      ? "\nThe user is the BUSINESS OWNER. They can ask about team performance, hiring/firing, and strategic decisions."
+      : memberName
+        ? `\nThe user is ${memberName}, an EMPLOYEE. Coach them on their personal performance and daily priorities.`
+        : "";
+
+  const systemPrompt = COACH_SYSTEM_PROMPT + reportContext + roleContext;
+
+  // Build conversation history for Gemini
+  const trimmedHistory = messages.slice(-16);
+  const chatMessages = trimmedHistory.map((m) => ({
+    role: (m.role === "assistant" ? "model" : "user") as "user" | "model",
+    parts: [{ text: m.content }],
+  }));
+  chatMessages.push({ role: "user", parts: [{ text: message }] });
+
+  try {
+    // First call — may request tool use
+    const resp = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-05-20",
+      contents: chatMessages,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.4,
+        maxOutputTokens: 1500,
+        tools: [{ functionDeclarations: TOOLS }],
+        toolConfig: { functionCallingMode: "AUTO" },
+      } as Record<string, unknown>,
+    });
+
+    // Check for tool calls
+    const candidate = resp.candidates?.[0];
+    const parts = candidate?.content?.parts ?? [];
+    const fnCalls = parts.filter((p: any) => p.functionCall);
+
+    if (fnCalls.length > 0) {
+      // Execute all requested tools
+      const toolResults = await Promise.all(
+        fnCalls.map(async (part: any) => {
+          const { name, args: toolArgs } = part.functionCall;
+          toolsUsed.push(name);
+          const result = await executeTool(name, toolArgs as Record<string, unknown>, orgId, runId);
+          return { name, result };
+        })
+      );
+
+      // Second call with tool results
+      const contentsWithTools = [
+        ...chatMessages,
+        { role: "model" as const, parts },
+        {
+          role: "user" as const,
+          parts: toolResults.map((tr) => ({
+            functionResponse: { name: tr.name, response: { result: tr.result } },
+          })),
+        },
+      ];
+
+      const resp2 = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-05-20",
+        contents: contentsWithTools,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.4,
+          maxOutputTokens: 1500,
+        } as Record<string, unknown>,
+      });
+
+      return {
+        message: sanitize(resp2.text ?? "I couldn't generate a response. Please try again."),
+        toolsUsed,
+      };
+    }
+
+    return {
+      message: sanitize(resp.text ?? "I couldn't generate a response. Please try again."),
+      toolsUsed,
+    };
+  } catch (err) {
+    console.error("[Coach] Agent error:", err);
+    return {
+      message: "Coach is temporarily unavailable. Please try again.",
+      toolsUsed,
+    };
+  }
+}

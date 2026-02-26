@@ -310,6 +310,143 @@ export interface MarketingStrategyReport {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Business Terminology — adapts language to business model type
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface BusinessTerminology {
+  businessType: "saas" | "services" | "retail" | "b2b" | "b2c" | "marketplace" | "other";
+  terms: {
+    customer: string;      // "user", "client", "customer", "account"
+    revenue: string;       // "MRR", "retainer revenue", "sales", "deal value"
+    churn: string;         // "churn rate", "client attrition", "customer loss"
+    acquisition: string;   // "signup", "client acquisition", "purchase", "deal close"
+    product: string;       // "platform", "service", "product", "solution"
+    upsell: string;        // "expansion", "upsell", "cross-sell", "add-on"
+    pipeline: string;      // "funnel", "pipeline", "sales cycle", "order flow"
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KPI Identification
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface KPIDefinition {
+  name: string;             // "Monthly Recurring Revenue"
+  abbreviation: string;     // "MRR"
+  currentValue?: string;    // "$42,000" or "Unknown"
+  targetValue?: string;     // "$60,000"
+  unit: string;             // "$", "%", "#", "days"
+  frequency: string;        // "Monthly", "Weekly", "Daily"
+  isNorthStar: boolean;     // true for top 2-3 KPIs
+  category: string;         // "Revenue", "Growth", "Retention", "Operations", "Marketing"
+  benchmark?: string;       // "Industry average: $50K"
+  status: "on_track" | "at_risk" | "behind" | "unknown";
+  sourceData: "from_documents" | "estimated" | "unknown";
+}
+
+export interface KPIReport {
+  businessType: string;
+  kpis: KPIDefinition[];
+  summary: string;
+  missingDataWarning?: string;   // "We couldn't find X data — upload it for better KPI tracking"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Roadmap / Calendar — 30-day action plan with daily tasks
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RoadmapItem {
+  day: number;             // 1-30
+  date?: string;           // "2026-03-01"
+  action: string;          // "Call top 3 at-risk clients"
+  category: string;        // "Revenue Recovery", "Marketing", "Operations", "Sales"
+  priority: "critical" | "high" | "medium" | "low";
+  expectedImpact: string;  // "$15K revenue saved"
+  owner: string;           // "Owner" by default
+  source: string;          // "Quick Win #1" or "Issue Register #3"
+  completed: boolean;
+}
+
+export interface RoadmapReport {
+  items: RoadmapItem[];
+  weeklyThemes: { week: number; theme: string; focus: string }[];
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Business Health Checklist — gold standard checks
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HealthCheckItem {
+  category: string;         // "Sales", "Operations", "Marketing", "Finance", "HR"
+  item: string;             // "CRM System"
+  description: string;      // "A system to track customer interactions and sales pipeline"
+  status: "present" | "absent" | "partial" | "unknown";
+  evidence?: string;        // "Found Salesforce mentions in documents"
+  recommendation?: string;  // "Consider implementing HubSpot CRM (free tier available)"
+  priority: "critical" | "important" | "nice_to_have";
+  estimatedCost?: string;   // "$0 - $50/mo"
+}
+
+export interface HealthChecklist {
+  items: HealthCheckItem[];
+  score: number;            // 0-100 based on how many items are present
+  grade: string;            // A-F
+  summary: string;
+  topGap: string;           // "Your biggest operational gap is..."
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lead Generation — Nyne.ai powered leads
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface Lead {
+  name: string;
+  title?: string;
+  company?: string;
+  companyDomain?: string;
+  industry?: string;
+  location?: string;
+  linkedinUrl?: string;
+  email?: string;
+  estimatedCompanySize?: string;
+  relevanceScore?: number;   // 0-100
+  isDecisionMaker?: boolean;
+  headline?: string;
+}
+
+export interface LeadReport {
+  leads: Lead[];
+  searchCriteria: {
+    industry?: string;
+    location?: string;
+    roles?: string[];
+    companySize?: string;
+  };
+  creditsUsed: number;
+  totalAvailable: number;
+  generatedAt: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coach Agent — team members and coaching
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TeamMember {
+  id: string;
+  orgId: string;
+  name: string;
+  email?: string;
+  role: "owner" | "employee";
+  department?: string;
+  title?: string;
+  salary?: number;
+  startDate?: string;
+  kpis?: string[];          // assigned KPI names
+  performanceNotes?: string; // from uploaded docs
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Deliverables
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -329,6 +466,12 @@ export interface MVPDeliverables {
   marketingStrategy?: MarketingStrategyReport; // marketing channels, social audit, copy recs
   pitchDeckAnalysis?: PitchDeckAnalysis;       // pitch deck review + generation
   dataProvenance?: DataProvenance;              // anti-hallucination metadata
+  // New fields
+  terminology?: BusinessTerminology;
+  kpiReport?: KPIReport;
+  roadmap?: RoadmapReport;
+  healthChecklist?: HealthChecklist;
+  leadReport?: LeadReport;
 }
 
 export interface PitchDeckAnalysis {

@@ -17,6 +17,9 @@ import type {
   PricingIntelligence,
   DataProvenance,
   FinancialFact,
+  KPIReport,
+  RoadmapReport,
+  HealthChecklist,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -872,6 +875,223 @@ function normalizeDeliverables(d: Record<string, unknown>): MVPDeliverables {
     },
     marketIntelligence: d.marketIntelligence as MVPDeliverables["marketIntelligence"],
   };
+}
+
+// ── KPI Identification ────────────────────────────────────────────────────────
+
+export async function synthesizeKPIs(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<KPIReport | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+
+  const schema = `{
+  "businessType": "<saas|services|retail|b2b|b2c|other>",
+  "kpis": [
+    {
+      "name": "e.g. Monthly Recurring Revenue",
+      "abbreviation": "MRR",
+      "currentValue": "$42,000 or Unknown",
+      "targetValue": "$60,000",
+      "unit": "$ or % or # or days",
+      "frequency": "Monthly or Weekly or Daily",
+      "isNorthStar": true,
+      "category": "Revenue or Growth or Retention or Operations or Marketing",
+      "benchmark": "Industry average: $50K (optional)",
+      "status": "on_track or at_risk or behind or unknown",
+      "sourceData": "from_documents or estimated or unknown"
+    }
+  ],
+  "summary": "2-3 sentence KPI overview",
+  "missingDataWarning": "What data we'd need for better KPIs (or null)"
+}`;
+
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+  const prompt = `You are a KPI and business metrics expert.
+
+BUSINESS DATA:
+${ctx}
+
+Business Model: ${questionnaire.businessModel}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+
+Identify 5-7 Key Performance Indicators for this specific business:
+1. 2-3 should be North Star metrics (the most important ones)
+2. Include current value if you can find it in the data — mark as "from_documents"
+3. If you can't find the value, set currentValue to "Unknown" and sourceData to "unknown"
+4. Set realistic target values based on industry benchmarks
+5. NEVER invent specific current values — if data doesn't exist, say "Unknown"
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    const result = await callJson(genai, prompt);
+    return result as unknown as KPIReport;
+  } catch (e) {
+    console.warn("[Pivot] KPI synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Roadmap / 30-Day Calendar ─────────────────────────────────────────────────
+
+export async function synthesizeRoadmap(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<RoadmapReport | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+
+  // Build context from existing deliverables
+  const quickWins = deliverables.marketIntelligence?.quickWins?.slice(0, 5) ?? [];
+  const issues = deliverables.issuesRegister?.issues?.slice(0, 5) ?? [];
+  const actionPlan = deliverables.actionPlan?.days?.slice(0, 5) ?? [];
+  const leaks = deliverables.revenueLeakAnalysis?.items?.slice(0, 3) ?? [];
+
+  const actionContext = `
+QUICK WINS: ${JSON.stringify(quickWins)}
+TOP ISSUES: ${JSON.stringify(issues.map(i => ({ title: i.title, severity: i.severity, impact: i.financialImpact })))}
+ACTION PLAN: ${JSON.stringify(actionPlan)}
+TOP REVENUE LEAKS: ${JSON.stringify(leaks.map(l => ({ desc: l.description, amount: l.amount })))}
+BUSINESS: ${questionnaire.organizationName} (${questionnaire.industry})
+`;
+
+  const schema = `{
+  "items": [
+    {
+      "day": 1,
+      "action": "Call top 3 at-risk clients to schedule retention meetings",
+      "category": "Revenue Recovery or Marketing or Operations or Sales or HR or Finance",
+      "priority": "critical or high or medium or low",
+      "expectedImpact": "$15K revenue saved",
+      "owner": "Owner",
+      "source": "Quick Win #1 or Issue #3 or Revenue Leak #1",
+      "completed": false
+    }
+  ],
+  "weeklyThemes": [
+    { "week": 1, "theme": "Cash Protection", "focus": "Secure existing revenue and reduce immediate risks" }
+  ],
+  "summary": "2-3 sentence roadmap overview"
+}`;
+
+  const prompt = `You are a business execution planner creating a 30-day action roadmap.
+
+${actionContext}
+
+Create a practical 30-day action plan with 1-3 items per day:
+- Days 1-7: Critical actions (cash protection, risk mitigation, quick wins)
+- Days 8-14: Revenue recovery and customer retention
+- Days 15-21: Growth initiatives and marketing
+- Days 22-30: Systems improvement and long-term positioning
+
+Rules:
+- Every action must be specific and actionable (not "improve marketing" but "Post 3 Instagram reels showcasing customer success stories")
+- Reference the actual quick wins, issues, and leaks from the data
+- Set owner as "Owner" by default
+- Include 4 weekly themes
+- Be realistic — a business owner has limited hours
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    const result = await callJson(genai, prompt);
+    return result as unknown as RoadmapReport;
+  } catch (e) {
+    console.warn("[Pivot] Roadmap synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Gold Standard Business Health Checklist ────────────────────────────────────
+
+export async function synthesizeHealthChecklist(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<HealthChecklist | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+
+  const ctx = formatPacketAsContext(packet).slice(0, 30_000);
+  const schema = `{
+  "items": [
+    {
+      "category": "Sales or Operations or Marketing or Finance or HR or Technology",
+      "item": "CRM System",
+      "description": "A system to track customer interactions and sales pipeline",
+      "status": "present or absent or partial or unknown",
+      "evidence": "Found Salesforce mentions in documents (or null)",
+      "recommendation": "Consider HubSpot CRM free tier (or null if present)",
+      "priority": "critical or important or nice_to_have",
+      "estimatedCost": "$0 - $50/mo (or null)"
+    }
+  ],
+  "score": 65,
+  "grade": "C",
+  "summary": "2-3 sentence assessment",
+  "topGap": "Your biggest operational gap is..."
+}`;
+
+  const prompt = `You are a business operations auditor checking for gold-standard business practices.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Model: ${questionnaire.businessModel}
+
+Check for these essential business elements (and any others relevant to their industry):
+
+CRITICAL:
+- CRM / customer tracking system
+- Financial tracking / accounting system
+- Defined sales process / pipeline
+- KPIs and metrics tracking
+- Regular team meetings / communication cadence
+
+IMPORTANT:
+- Documented standard operating procedures
+- Customer feedback collection
+- Employee onboarding process
+- Communication tools (Slack, Teams, etc.)
+- Marketing automation / email marketing
+
+NICE TO HAVE:
+- Project management tool
+- Customer success / NPS tracking
+- Competitive monitoring
+- Data analytics dashboard
+- Backup and disaster recovery
+
+Rules:
+- Mark as "present" ONLY if you find evidence in the uploaded data
+- Mark as "absent" only if you're reasonably confident they don't have it
+- Mark as "unknown" if the data doesn't tell you either way
+- NEVER assume something exists without evidence
+- Give practical, affordable recommendations for absent items
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    const result = await callJson(genai, prompt);
+    return result as unknown as HealthChecklist;
+  } catch (e) {
+    console.warn("[Pivot] Health checklist synthesis failed:", e);
+    return null;
+  }
 }
 
 function getFallbackDeliverables(q: Questionnaire, errorReason: string): MVPDeliverables {
