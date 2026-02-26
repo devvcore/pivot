@@ -793,6 +793,38 @@ export interface MVPDeliverables {
   investorReadiness?: InvestorReadiness;
   maReadiness?: MAReadiness;
   strategicRoadmap?: StrategicRoadmap;
+
+  // Wave 17: Customer Intelligence
+  customerVoice?: CustomerVoice;
+  referralEngine?: ReferralEngine;
+  priceSensitivityIndex?: PriceSensitivityIndex;
+  customerEffortScore?: CustomerEffortScore;
+  accountExpansionMap?: AccountExpansionMap;
+  loyaltyProgramDesign?: LoyaltyProgramDesign;
+
+  // Wave 18: Market Dynamics
+  competitivePricingMatrix?: CompetitivePricingMatrix;
+  marketSentimentIndex?: MarketSentimentIndex;
+  disruptionRadar?: DisruptionRadar;
+  ecosystemMap?: EcosystemMap;
+  categoryCreation?: CategoryCreation;
+  marketVelocity?: MarketVelocity;
+
+  // Wave 19: Execution Excellence
+  okrCascade?: OKRCascade;
+  meetingEffectiveness?: MeetingEffectiveness;
+  communicationAudit?: CommunicationAudit;
+  decisionVelocity?: DecisionVelocity;
+  resourceOptimizer?: ResourceOptimizer;
+  changeManagement?: ChangeManagement;
+
+  // Wave 20: Financial Mastery
+  cashReserveStrategy?: CashReserveStrategy;
+  revenueQualityScore?: RevenueQualityScore;
+  costIntelligence?: CostIntelligence;
+  financialModeling?: FinancialModeling;
+  profitabilityMap?: ProfitabilityMap;
+  capitalAllocation?: CapitalAllocation;
 }
 
 export interface BenchmarkDimension {
@@ -2672,3 +2704,90 @@ export interface StrategicRoadmap {
   okrs: { objective: string; keyResults: string[] }[];
   recommendations: string[];
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 17: Customer Intelligence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface VoiceTheme { theme: string; sentiment: "positive" | "negative" | "neutral"; frequency: string; impact: string; exampleQuotes: string[]; }
+export interface CustomerVoice { summary: string; overallSentiment: string; themes: VoiceTheme[]; topFeatureRequests: string[]; satisfactionDrivers: string[]; dissatisfactionDrivers: string[]; npsAnalysis: string; recommendations: string[]; }
+
+export interface ReferralMetric { channel: string; referrals: number; conversionRate: string; revenueGenerated: string; costPerReferral: string; }
+export interface ReferralEngine { summary: string; viralCoefficient: string; referralRate: string; channels: ReferralMetric[]; topAdvocates: string[]; programEffectiveness: string; revenueFromReferrals: string; recommendations: string[]; }
+
+export interface SensitivitySegment { segment: string; willingnessToPay: string; priceAnchor: string; sensitivity: "high" | "medium" | "low"; optimalPriceRange: string; }
+export interface PriceSensitivityIndex { summary: string; overallSensitivity: string; segments: SensitivitySegment[]; priceFloor: string; priceCeiling: string; elasticityScore: number; recommendations: string[]; }
+
+export interface TouchpointScore { touchpoint: string; effortScore: number; frictionLevel: "high" | "medium" | "low"; resolutionEase: string; improvement: string; }
+export interface CustomerEffortScore { summary: string; overallCES: number; touchpoints: TouchpointScore[]; highestFriction: string; selfServiceRate: string; resolutionRate: string; recommendations: string[]; }
+
+export interface ExpansionOpportunity { account: string; currentSpend: string; expansionPotential: string; trigger: string; product: string; probability: string; }
+export interface AccountExpansionMap { summary: string; totalExpansionRevenue: string; opportunities: ExpansionOpportunity[]; topOpportunity: string; averageWalletShare: string; crossSellRate: string; upsellRate: string; recommendations: string[]; }
+
+export interface LoyaltyTier { tier: string; criteria: string; benefits: string[]; memberCount: string; retention: string; }
+export interface LoyaltyProgramDesign { summary: string; programType: string; tiers: LoyaltyTier[]; estimatedROI: string; implementationCost: string; rewardsStrategy: string; engagementMechanics: string[]; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 18: Market Dynamics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CompetitorPrice { competitor: string; product: string; price: string; positioning: string; differentiator: string; }
+export interface CompetitivePricingMatrix { summary: string; competitorPrices: CompetitorPrice[]; pricePosition: string; premiumJustification: string; gapAnalysis: string; underCutRisk: string; recommendations: string[]; }
+
+export interface SentimentDriver { factor: string; sentiment: "bullish" | "neutral" | "bearish"; weight: number; evidence: string; }
+export interface MarketSentimentIndex { summary: string; overallSentiment: string; sentimentScore: number; drivers: SentimentDriver[]; investorConfidence: string; consumerConfidence: string; industryOutlook: string; recommendations: string[]; }
+
+export interface DisruptionThreat { threat: string; category: "technology" | "regulatory" | "market_entrant" | "consumer_shift" | "economic"; probability: string; timeframe: string; impact: string; preparedness: string; }
+export interface DisruptionRadar { summary: string; threatLevel: string; threats: DisruptionThreat[]; mostImminent: string; biggestImpact: string; preparednessScore: number; recommendations: string[]; }
+
+export interface EcosystemPlayer { name: string; role: string; relationship: "partner" | "supplier" | "competitor" | "complementor" | "platform"; dependencyLevel: string; opportunity: string; }
+export interface EcosystemMap { summary: string; ecosystemPosition: string; players: EcosystemPlayer[]; platformOpportunities: string[]; valueChainPosition: string; networkStrength: number; recommendations: string[]; }
+
+export interface CategoryCreation { summary: string; categoryName: string; marketSize: string; positioningFramework: string; thoughtLeadershipPlan: string[]; narrativeAnchors: string[]; competitiveAdvantage: string; timeToEstablish: string; recommendations: string[]; }
+
+export interface VelocityMetric { metric: string; currentRate: string; benchmark: string; acceleration: "accelerating" | "stable" | "decelerating"; driver: string; }
+export interface MarketVelocity { summary: string; overallVelocity: string; metrics: VelocityMetric[]; accelerationFactors: string[]; decelerationRisks: string[]; marketGrowthRate: string; relativePosition: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 19: Execution Excellence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface OKRTeam { team: string; objective: string; keyResults: string[]; alignmentScore: number; blockers: string[]; }
+export interface OKRCascade { summary: string; companyObjectives: string[]; teams: OKRTeam[]; crossFunctionalDeps: string[]; alignmentScore: number; cascadeDepth: number; recommendations: string[]; }
+
+export interface MeetingType { type: string; frequencyPerWeek: number; avgDuration: string; attendees: number; decisionRate: string; actionItemCompletion: string; effectiveness: "effective" | "needs_improvement" | "wasteful"; }
+export interface MeetingEffectiveness { summary: string; totalMeetingHours: string; meetingTypes: MeetingType[]; decisionVelocity: string; actionItemTracker: string; wastefulMeetings: string; recommendations: string[]; }
+
+export interface CommChannel { channel: string; usage: string; effectiveness: string; gaps: string[]; }
+export interface CommunicationAudit { summary: string; overallHealth: number; channels: CommChannel[]; informationFlowScore: number; alignmentGaps: string[]; siloBridges: string[]; recommendations: string[]; }
+
+export interface DecisionBottleneck { area: string; avgTimeToDecision: string; cause: string; impact: string; fix: string; }
+export interface DecisionVelocity { summary: string; overallScore: number; avgTimeToDecision: string; bottlenecks: DecisionBottleneck[]; delegationEffectiveness: string; autonomyLevel: string; recommendations: string[]; }
+
+export interface ResourceGap { resource: string; currentAllocation: string; optimalAllocation: string; gap: string; priority: string; }
+export interface ResourceOptimizer { summary: string; overallEfficiency: number; gaps: ResourceGap[]; underutilized: string[]; overloaded: string[]; rebalancingPlan: string; recommendations: string[]; }
+
+export interface ChangeInitiative { initiative: string; phase: "planning" | "execution" | "adoption" | "complete"; adoptionRate: string; resistanceLevel: string; champion: string; timeline: string; }
+export interface ChangeManagement { summary: string; readinessScore: number; initiatives: ChangeInitiative[]; resistanceMap: string; adoptionStrategy: string; communicationPlan: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 20: Financial Mastery
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ReserveScenario { scenario: string; requiredReserve: string; currentCoverage: string; gap: string; }
+export interface CashReserveStrategy { summary: string; optimalReserve: string; currentReserve: string; reserveRatio: string; scenarios: ReserveScenario[]; investmentAllocation: string; contingencyPlan: string; recommendations: string[]; }
+
+export interface QualityDimension { dimension: string; score: number; weight: number; trend: "improving" | "stable" | "declining"; evidence: string; }
+export interface RevenueQualityScore { summary: string; overallScore: number; recurringRevenuePct: string; concentrationRisk: string; predictability: string; durability: string; dimensions: QualityDimension[]; recommendations: string[]; }
+
+export interface CostCategory { category: string; currentSpend: string; benchmark: string; variance: string; savingsOpportunity: string; }
+export interface CostIntelligence { summary: string; totalCosts: string; costCategories: CostCategory[]; topSavings: string; spendTrend: string; costPerRevenueDollar: string; benchmarkPosition: string; recommendations: string[]; }
+
+export interface FinancialScenario { name: string; assumptions: string[]; projectedRevenue: string; projectedProfit: string; breakEvenPoint: string; probability: string; }
+export interface FinancialModeling { summary: string; baseCase: FinancialScenario; scenarios: FinancialScenario[]; sensitivityVariables: string[]; breakEvenAnalysis: string; keyAssumptions: string[]; recommendations: string[]; }
+
+export interface ProfitSegment { segment: string; revenue: string; costs: string; margin: string; contribution: string; trend: string; }
+export interface ProfitabilityMap { summary: string; overallMargin: string; segments: ProfitSegment[]; mostProfitable: string; leastProfitable: string; crossSubsidies: string[]; recommendations: string[]; }
+
+export interface InvestmentOption { option: string; amount: string; expectedROIC: string; paybackPeriod: string; riskLevel: string; strategicFit: string; }
+export interface CapitalAllocation { summary: string; totalCapital: string; investments: InvestmentOption[]; roicTarget: string; currentROIC: string; allocationStrategy: string; rebalancingNeeds: string[]; recommendations: string[]; }

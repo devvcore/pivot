@@ -107,6 +107,34 @@ import {
   synthesizeInvestorReadiness,
   synthesizeMAReadiness,
   synthesizeStrategicRoadmap,
+  // Wave 17
+  synthesizeCustomerVoice,
+  synthesizeReferralEngine,
+  synthesizePriceSensitivityIndex,
+  synthesizeCustomerEffortScore,
+  synthesizeAccountExpansionMap,
+  synthesizeLoyaltyProgramDesign,
+  // Wave 18
+  synthesizeCompetitivePricingMatrix,
+  synthesizeMarketSentimentIndex,
+  synthesizeDisruptionRadar,
+  synthesizeEcosystemMap,
+  synthesizeCategoryCreation,
+  synthesizeMarketVelocity,
+  // Wave 19
+  synthesizeOKRCascade,
+  synthesizeMeetingEffectiveness,
+  synthesizeCommunicationAudit,
+  synthesizeDecisionVelocity,
+  synthesizeResourceOptimizer,
+  synthesizeChangeManagement,
+  // Wave 20
+  synthesizeCashReserveStrategy,
+  synthesizeRevenueQualityScore,
+  synthesizeCostIntelligence,
+  synthesizeFinancialModeling,
+  synthesizeProfitabilityMap,
+  synthesizeCapitalAllocation,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -1083,6 +1111,198 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] MAReadiness/StrategicRoadmap failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4as: Wave 17 intelligence (customer voice, referral engine) ──
+    if (!deliverables.customerVoice || !deliverables.referralEngine) {
+      try {
+        console.log("[Pivot] Synthesizing customer voice + referral engine...");
+        const [cv, re] = await Promise.allSettled([
+          deliverables.customerVoice ? Promise.resolve(null) : synthesizeCustomerVoice(businessPacket, job.questionnaire),
+          deliverables.referralEngine ? Promise.resolve(null) : synthesizeReferralEngine(businessPacket, job.questionnaire),
+        ]);
+        if (cv.status === "fulfilled" && cv.value) deliverables = { ...deliverables, customerVoice: cv.value };
+        if (re.status === "fulfilled" && re.value) deliverables = { ...deliverables, referralEngine: re.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CustomerVoice/ReferralEngine failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4at: Wave 17 intelligence (price sensitivity index, customer effort score) ──
+    if (!deliverables.priceSensitivityIndex || !deliverables.customerEffortScore) {
+      try {
+        console.log("[Pivot] Synthesizing price sensitivity index + customer effort score...");
+        const [psi, ces] = await Promise.allSettled([
+          deliverables.priceSensitivityIndex ? Promise.resolve(null) : synthesizePriceSensitivityIndex(businessPacket, job.questionnaire),
+          deliverables.customerEffortScore ? Promise.resolve(null) : synthesizeCustomerEffortScore(businessPacket, job.questionnaire),
+        ]);
+        if (psi.status === "fulfilled" && psi.value) deliverables = { ...deliverables, priceSensitivityIndex: psi.value };
+        if (ces.status === "fulfilled" && ces.value) deliverables = { ...deliverables, customerEffortScore: ces.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] PriceSensitivityIndex/CustomerEffortScore failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4au: Wave 17 intelligence (account expansion map, loyalty program design) ──
+    if (!deliverables.accountExpansionMap || !deliverables.loyaltyProgramDesign) {
+      try {
+        console.log("[Pivot] Synthesizing account expansion map + loyalty program design...");
+        const [aem, lpd] = await Promise.allSettled([
+          deliverables.accountExpansionMap ? Promise.resolve(null) : synthesizeAccountExpansionMap(businessPacket, job.questionnaire),
+          deliverables.loyaltyProgramDesign ? Promise.resolve(null) : synthesizeLoyaltyProgramDesign(businessPacket, job.questionnaire),
+        ]);
+        if (aem.status === "fulfilled" && aem.value) deliverables = { ...deliverables, accountExpansionMap: aem.value };
+        if (lpd.status === "fulfilled" && lpd.value) deliverables = { ...deliverables, loyaltyProgramDesign: lpd.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] AccountExpansionMap/LoyaltyProgramDesign failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4av: Wave 18 intelligence (competitive pricing matrix, market sentiment index) ──
+    if (!deliverables.competitivePricingMatrix || !deliverables.marketSentimentIndex) {
+      try {
+        console.log("[Pivot] Synthesizing competitive pricing matrix + market sentiment index...");
+        const [cpm, msi] = await Promise.allSettled([
+          deliverables.competitivePricingMatrix ? Promise.resolve(null) : synthesizeCompetitivePricingMatrix(businessPacket, job.questionnaire),
+          deliverables.marketSentimentIndex ? Promise.resolve(null) : synthesizeMarketSentimentIndex(businessPacket, job.questionnaire),
+        ]);
+        if (cpm.status === "fulfilled" && cpm.value) deliverables = { ...deliverables, competitivePricingMatrix: cpm.value };
+        if (msi.status === "fulfilled" && msi.value) deliverables = { ...deliverables, marketSentimentIndex: msi.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CompetitivePricingMatrix/MarketSentimentIndex failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4aw: Wave 18 intelligence (disruption radar, ecosystem map) ──
+    if (!deliverables.disruptionRadar || !deliverables.ecosystemMap) {
+      try {
+        console.log("[Pivot] Synthesizing disruption radar + ecosystem map...");
+        const [dr, em] = await Promise.allSettled([
+          deliverables.disruptionRadar ? Promise.resolve(null) : synthesizeDisruptionRadar(businessPacket, job.questionnaire),
+          deliverables.ecosystemMap ? Promise.resolve(null) : synthesizeEcosystemMap(businessPacket, job.questionnaire),
+        ]);
+        if (dr.status === "fulfilled" && dr.value) deliverables = { ...deliverables, disruptionRadar: dr.value };
+        if (em.status === "fulfilled" && em.value) deliverables = { ...deliverables, ecosystemMap: em.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] DisruptionRadar/EcosystemMap failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ax: Wave 18 intelligence (category creation, market velocity) ──
+    if (!deliverables.categoryCreation || !deliverables.marketVelocity) {
+      try {
+        console.log("[Pivot] Synthesizing category creation + market velocity...");
+        const [cc, mv] = await Promise.allSettled([
+          deliverables.categoryCreation ? Promise.resolve(null) : synthesizeCategoryCreation(businessPacket, job.questionnaire),
+          deliverables.marketVelocity ? Promise.resolve(null) : synthesizeMarketVelocity(businessPacket, job.questionnaire),
+        ]);
+        if (cc.status === "fulfilled" && cc.value) deliverables = { ...deliverables, categoryCreation: cc.value };
+        if (mv.status === "fulfilled" && mv.value) deliverables = { ...deliverables, marketVelocity: mv.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CategoryCreation/MarketVelocity failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ay: Wave 19 intelligence (OKR cascade, meeting effectiveness) ──
+    if (!deliverables.okrCascade || !deliverables.meetingEffectiveness) {
+      try {
+        console.log("[Pivot] Synthesizing OKR cascade + meeting effectiveness...");
+        const [okr, me] = await Promise.allSettled([
+          deliverables.okrCascade ? Promise.resolve(null) : synthesizeOKRCascade(businessPacket, job.questionnaire),
+          deliverables.meetingEffectiveness ? Promise.resolve(null) : synthesizeMeetingEffectiveness(businessPacket, job.questionnaire),
+        ]);
+        if (okr.status === "fulfilled" && okr.value) deliverables = { ...deliverables, okrCascade: okr.value };
+        if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, meetingEffectiveness: me.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] OKRCascade/MeetingEffectiveness failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4az: Wave 19 intelligence (communication audit, decision velocity) ──
+    if (!deliverables.communicationAudit || !deliverables.decisionVelocity) {
+      try {
+        console.log("[Pivot] Synthesizing communication audit + decision velocity...");
+        const [ca, dv] = await Promise.allSettled([
+          deliverables.communicationAudit ? Promise.resolve(null) : synthesizeCommunicationAudit(businessPacket, job.questionnaire),
+          deliverables.decisionVelocity ? Promise.resolve(null) : synthesizeDecisionVelocity(businessPacket, job.questionnaire),
+        ]);
+        if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, communicationAudit: ca.value };
+        if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, decisionVelocity: dv.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CommunicationAudit/DecisionVelocity failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ba: Wave 19 intelligence (resource optimizer, change management) ──
+    if (!deliverables.resourceOptimizer || !deliverables.changeManagement) {
+      try {
+        console.log("[Pivot] Synthesizing resource optimizer + change management...");
+        const [ro, cm] = await Promise.allSettled([
+          deliverables.resourceOptimizer ? Promise.resolve(null) : synthesizeResourceOptimizer(businessPacket, job.questionnaire),
+          deliverables.changeManagement ? Promise.resolve(null) : synthesizeChangeManagement(businessPacket, job.questionnaire),
+        ]);
+        if (ro.status === "fulfilled" && ro.value) deliverables = { ...deliverables, resourceOptimizer: ro.value };
+        if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, changeManagement: cm.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] ResourceOptimizer/ChangeManagement failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bb: Wave 20 intelligence (cash reserve strategy, revenue quality score) ──
+    if (!deliverables.cashReserveStrategy || !deliverables.revenueQualityScore) {
+      try {
+        console.log("[Pivot] Synthesizing cash reserve strategy + revenue quality score...");
+        const [crs, rqs] = await Promise.allSettled([
+          deliverables.cashReserveStrategy ? Promise.resolve(null) : synthesizeCashReserveStrategy(businessPacket, job.questionnaire),
+          deliverables.revenueQualityScore ? Promise.resolve(null) : synthesizeRevenueQualityScore(businessPacket, job.questionnaire),
+        ]);
+        if (crs.status === "fulfilled" && crs.value) deliverables = { ...deliverables, cashReserveStrategy: crs.value };
+        if (rqs.status === "fulfilled" && rqs.value) deliverables = { ...deliverables, revenueQualityScore: rqs.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CashReserveStrategy/RevenueQualityScore failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bc: Wave 20 intelligence (cost intelligence, financial modeling) ──
+    if (!deliverables.costIntelligence || !deliverables.financialModeling) {
+      try {
+        console.log("[Pivot] Synthesizing cost intelligence + financial modeling...");
+        const [ci, fm] = await Promise.allSettled([
+          deliverables.costIntelligence ? Promise.resolve(null) : synthesizeCostIntelligence(businessPacket, job.questionnaire),
+          deliverables.financialModeling ? Promise.resolve(null) : synthesizeFinancialModeling(businessPacket, job.questionnaire),
+        ]);
+        if (ci.status === "fulfilled" && ci.value) deliverables = { ...deliverables, costIntelligence: ci.value };
+        if (fm.status === "fulfilled" && fm.value) deliverables = { ...deliverables, financialModeling: fm.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CostIntelligence/FinancialModeling failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4bd: Wave 20 intelligence (profitability map, capital allocation) ──
+    if (!deliverables.profitabilityMap || !deliverables.capitalAllocation) {
+      try {
+        console.log("[Pivot] Synthesizing profitability map + capital allocation...");
+        const [pm, cal] = await Promise.allSettled([
+          deliverables.profitabilityMap ? Promise.resolve(null) : synthesizeProfitabilityMap(businessPacket, job.questionnaire),
+          deliverables.capitalAllocation ? Promise.resolve(null) : synthesizeCapitalAllocation(businessPacket, job.questionnaire),
+        ]);
+        if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, profitabilityMap: pm.value };
+        if (cal.status === "fulfilled" && cal.value) deliverables = { ...deliverables, capitalAllocation: cal.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] ProfitabilityMap/CapitalAllocation failed (non-fatal):", e);
       }
     }
 

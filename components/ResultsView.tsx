@@ -144,6 +144,34 @@ const TABS = [
   { id: 107, label: "Investor Ready",icon: Briefcase,     dataKey: "investorReadiness"     },
   { id: 108, label: "M&A Ready",     icon: Target,        dataKey: "maReadiness"           },
   { id: 109, label: "Roadmap",       icon: Flag,          dataKey: "strategicRoadmap"      },
+  // Wave 17
+  { id: 110, label: "Cust Voice",    icon: Users,         dataKey: "customerVoice"         },
+  { id: 111, label: "Referrals",     icon: UserPlus,      dataKey: "referralEngine"        },
+  { id: 112, label: "Price Sense",   icon: DollarSign,    dataKey: "priceSensitivityIndex"  },
+  { id: 113, label: "Effort Score",  icon: Gauge,         dataKey: "customerEffortScore"   },
+  { id: 114, label: "Expansion",     icon: TrendingUp,    dataKey: "accountExpansionMap"    },
+  { id: 115, label: "Loyalty",       icon: Trophy,        dataKey: "loyaltyProgramDesign"  },
+  // Wave 18
+  { id: 116, label: "Price Matrix",  icon: Calculator,    dataKey: "competitivePricingMatrix" },
+  { id: 117, label: "Sentiment",     icon: BarChart3,     dataKey: "marketSentimentIndex"  },
+  { id: 118, label: "Disruption",    icon: Zap,           dataKey: "disruptionRadar"       },
+  { id: 119, label: "Ecosystem",     icon: GitBranch,     dataKey: "ecosystemMap"          },
+  { id: 120, label: "Category",      icon: Sparkles,      dataKey: "categoryCreation"      },
+  { id: 121, label: "Mkt Velocity",  icon: LineChart,     dataKey: "marketVelocity"        },
+  // Wave 19
+  { id: 122, label: "OKR Cascade",   icon: Target,        dataKey: "okrCascade"            },
+  { id: 123, label: "Meetings",      icon: Clock,         dataKey: "meetingEffectiveness"  },
+  { id: 124, label: "Comms Audit",   icon: Megaphone,     dataKey: "communicationAudit"    },
+  { id: 125, label: "Decisions",     icon: Crosshair,     dataKey: "decisionVelocity"      },
+  { id: 126, label: "Resources",     icon: Server,        dataKey: "resourceOptimizer"     },
+  { id: 127, label: "Change Mgmt",   icon: ArrowRight,    dataKey: "changeManagement"      },
+  // Wave 20
+  { id: 128, label: "Cash Reserve",  icon: DollarSign,    dataKey: "cashReserveStrategy"   },
+  { id: 129, label: "Rev Quality",   icon: PieChart,      dataKey: "revenueQualityScore"   },
+  { id: 130, label: "Cost Intel",    icon: Calculator,    dataKey: "costIntelligence"      },
+  { id: 131, label: "Fin Model",     icon: LineChart,     dataKey: "financialModeling"     },
+  { id: 132, label: "Profit Map",    icon: TrendingUp,    dataKey: "profitabilityMap"      },
+  { id: 133, label: "Cap Alloc",     icon: Briefcase,     dataKey: "capitalAllocation"     },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -11719,6 +11747,1833 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                                 ))}
                               </ul>
                             )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 110: Customer Voice ──────────────────────────────────────── */}
+            {activeTab === 110 && (d as any).customerVoice && (() => {
+              const cv = (d as any).customerVoice;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Voice</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cv.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cv.npsScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">NPS Score</p>
+                          <p className="text-3xl font-light">{cv.npsScore}</p>
+                        </div>
+                      )}
+                      {cv.satisfactionScore && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Satisfaction</p>
+                          <p className="text-2xl font-light text-emerald-300">{cv.satisfactionScore}</p>
+                        </div>
+                      )}
+                      {cv.responseRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Response Rate</p>
+                          <p className="text-2xl font-light">{cv.responseRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cv.themes?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Key Themes</SectionHeader>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {cv.themes.map((theme: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-1">{typeof theme === "string" ? theme : theme.name || theme.theme}</p>
+                            {theme.description && <p className="text-xs text-zinc-600">{theme.description}</p>}
+                            {theme.sentiment && <p className="text-xs text-zinc-500 mt-1">Sentiment: {theme.sentiment}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {cv.feedbackChannels?.length > 0 && (
+                    <div>
+                      <SectionHeader><Megaphone className="w-3 h-3" /> Feedback Channels</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Channel</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Volume</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Sentiment</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cv.feedbackChannels.map((ch: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{ch.name || ch.channel}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ch.volume || ch.count}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ch.sentiment || ch.score}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {cv.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cv.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 111: Referral Engine ─────────────────────────────────────── */}
+            {activeTab === 111 && (d as any).referralEngine && (() => {
+              const re = (d as any).referralEngine;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserPlus className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Referral Engine</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{re.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {re.referralRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Referral Rate</p>
+                          <p className="text-3xl font-light">{re.referralRate}</p>
+                        </div>
+                      )}
+                      {re.viralCoefficient && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Viral Coefficient</p>
+                          <p className="text-2xl font-light text-emerald-300">{re.viralCoefficient}</p>
+                        </div>
+                      )}
+                      {re.revenueFromReferrals && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Revenue from Referrals</p>
+                          <p className="text-2xl font-light">{re.revenueFromReferrals}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {re.programs?.length > 0 && (
+                    <div>
+                      <SectionHeader><UserPlus className="w-3 h-3" /> Referral Programs</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Program</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Incentive</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Conversion</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {re.programs.map((prog: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{prog.name || prog.program}</td>
+                                <td className="py-2 px-3 text-zinc-600">{prog.incentive || prog.reward}</td>
+                                <td className="py-2 px-3 text-zinc-600">{prog.conversion || prog.conversionRate}</td>
+                                <td className="py-2 px-3 text-zinc-600">{prog.impact || prog.revenue}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {re.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {re.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 112: Price Sensitivity Index ────────────────────────────── */}
+            {activeTab === 112 && (d as any).priceSensitivityIndex && (() => {
+              const ps = (d as any).priceSensitivityIndex;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Price Sensitivity Index</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ps.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ps.sensitivityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Sensitivity Score</p>
+                          <p className="text-3xl font-light">{ps.sensitivityScore}</p>
+                        </div>
+                      )}
+                      {ps.optimalPriceRange && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Optimal Range</p>
+                          <p className="text-2xl font-light text-emerald-300">{ps.optimalPriceRange}</p>
+                        </div>
+                      )}
+                      {ps.elasticity && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Elasticity</p>
+                          <p className="text-2xl font-light">{ps.elasticity}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ps.segments?.length > 0 && (
+                    <div>
+                      <SectionHeader><DollarSign className="w-3 h-3" /> Segment Sensitivity</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Segment</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Sensitivity</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Willingness to Pay</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Strategy</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ps.segments.map((seg: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{seg.name || seg.segment}</td>
+                                <td className="py-2 px-3 text-zinc-600">{seg.sensitivity || seg.level}</td>
+                                <td className="py-2 px-3 text-zinc-600">{seg.willingnessToPay || seg.wtp}</td>
+                                <td className="py-2 px-3 text-zinc-600">{seg.strategy || seg.approach}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ps.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ps.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 113: Customer Effort Score ──────────────────────────────── */}
+            {activeTab === 113 && (d as any).customerEffortScore && (() => {
+              const ces = (d as any).customerEffortScore;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Gauge className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Effort Score</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ces.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ces.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall CES</p>
+                          <p className="text-3xl font-light">{ces.overallScore}</p>
+                        </div>
+                      )}
+                      {ces.benchmarkScore && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Benchmark</p>
+                          <p className="text-2xl font-light text-emerald-300">{ces.benchmarkScore}</p>
+                        </div>
+                      )}
+                      {ces.improvementTarget && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Improvement Target</p>
+                          <p className="text-2xl font-light">{ces.improvementTarget}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ces.touchpoints?.length > 0 && (
+                    <div>
+                      <SectionHeader><Gauge className="w-3 h-3" /> Touchpoint Scores</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Touchpoint</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Score</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Friction</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Priority</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ces.touchpoints.map((tp: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{tp.name || tp.touchpoint}</td>
+                                <td className="py-2 px-3 text-zinc-600">{tp.score || tp.ces}</td>
+                                <td className="py-2 px-3 text-zinc-600">{tp.friction || tp.painPoint}</td>
+                                <td className="py-2 px-3 text-zinc-600">{tp.priority || tp.urgency}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ces.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ces.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 114: Account Expansion Map ──────────────────────────────── */}
+            {activeTab === 114 && (d as any).accountExpansionMap && (() => {
+              const ae = (d as any).accountExpansionMap;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Account Expansion Map</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ae.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ae.expansionRevenue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Expansion Revenue</p>
+                          <p className="text-3xl font-light">{ae.expansionRevenue}</p>
+                        </div>
+                      )}
+                      {ae.expansionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Expansion Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{ae.expansionRate}</p>
+                        </div>
+                      )}
+                      {ae.upsellPotential && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Upsell Potential</p>
+                          <p className="text-2xl font-light">{ae.upsellPotential}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ae.accounts?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Top Expansion Accounts</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Account</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current ARR</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Potential</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Strategy</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ae.accounts.map((acct: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{acct.name || acct.account}</td>
+                                <td className="py-2 px-3 text-zinc-600">{acct.currentARR || acct.revenue}</td>
+                                <td className="py-2 px-3 text-zinc-600">{acct.potential || acct.opportunity}</td>
+                                <td className="py-2 px-3 text-zinc-600">{acct.strategy || acct.approach}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ae.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ae.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 115: Loyalty Program Design ─────────────────────────────── */}
+            {activeTab === 115 && (d as any).loyaltyProgramDesign && (() => {
+              const lp = (d as any).loyaltyProgramDesign;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Loyalty Program Design</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{lp.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {lp.projectedROI && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Projected ROI</p>
+                          <p className="text-3xl font-light">{lp.projectedROI}</p>
+                        </div>
+                      )}
+                      {lp.retentionLift && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Retention Lift</p>
+                          <p className="text-2xl font-light text-emerald-300">{lp.retentionLift}</p>
+                        </div>
+                      )}
+                      {lp.implementationCost && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Implementation Cost</p>
+                          <p className="text-2xl font-light">{lp.implementationCost}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {lp.tiers?.length > 0 && (
+                    <div>
+                      <SectionHeader><Trophy className="w-3 h-3" /> Program Tiers</SectionHeader>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {lp.tiers.map((tier: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-1">{tier.name || tier.tier}</p>
+                            {tier.benefits && <p className="text-xs text-zinc-600">{typeof tier.benefits === "string" ? tier.benefits : Array.isArray(tier.benefits) ? tier.benefits.join(", ") : JSON.stringify(tier.benefits)}</p>}
+                            {tier.threshold && <p className="text-xs text-zinc-500 mt-1">Threshold: {tier.threshold}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {lp.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {lp.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 116: Competitive Pricing Matrix ─────────────────────────── */}
+            {activeTab === 116 && (d as any).competitivePricingMatrix && (() => {
+              const cpm = (d as any).competitivePricingMatrix;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calculator className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Competitive Pricing Matrix</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cpm.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cpm.pricePosition && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Price Position</p>
+                          <p className="text-3xl font-light">{cpm.pricePosition}</p>
+                        </div>
+                      )}
+                      {cpm.priceGap && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Price Gap</p>
+                          <p className="text-2xl font-light text-emerald-300">{cpm.priceGap}</p>
+                        </div>
+                      )}
+                      {cpm.revenueOpportunity && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Revenue Opportunity</p>
+                          <p className="text-2xl font-light">{cpm.revenueOpportunity}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cpm.competitors?.length > 0 && (
+                    <div>
+                      <SectionHeader><Calculator className="w-3 h-3" /> Competitor Pricing</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Competitor</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Price</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Model</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Difference</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cpm.competitors.map((comp: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{comp.name || comp.competitor}</td>
+                                <td className="py-2 px-3 text-zinc-600">{comp.price || comp.pricing}</td>
+                                <td className="py-2 px-3 text-zinc-600">{comp.model || comp.pricingModel}</td>
+                                <td className="py-2 px-3 text-zinc-600">{comp.difference || comp.gap}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {cpm.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cpm.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 117: Market Sentiment Index ─────────────────────────────── */}
+            {activeTab === 117 && (d as any).marketSentimentIndex && (() => {
+              const msi = (d as any).marketSentimentIndex;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Market Sentiment Index</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{msi.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {msi.overallSentiment && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Sentiment</p>
+                          <p className="text-3xl font-light">{msi.overallSentiment}</p>
+                        </div>
+                      )}
+                      {msi.trendDirection && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Trend</p>
+                          <p className="text-2xl font-light text-emerald-300">{msi.trendDirection}</p>
+                        </div>
+                      )}
+                      {msi.confidenceLevel && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Confidence</p>
+                          <p className="text-2xl font-light">{msi.confidenceLevel}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {msi.signals?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Sentiment Signals</SectionHeader>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {msi.signals.map((sig: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-1">{sig.name || sig.signal || sig.source}</p>
+                            {sig.sentiment && <p className="text-xs text-zinc-600">Sentiment: {sig.sentiment}</p>}
+                            {sig.impact && <p className="text-xs text-zinc-500 mt-1">Impact: {sig.impact}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {msi.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {msi.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 118: Disruption Radar ───────────────────────────────────── */}
+            {activeTab === 118 && (d as any).disruptionRadar && (() => {
+              const dr = (d as any).disruptionRadar;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Disruption Radar</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dr.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {dr.disruptionRisk && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Disruption Risk</p>
+                          <p className="text-3xl font-light">{dr.disruptionRisk}</p>
+                        </div>
+                      )}
+                      {dr.timeHorizon && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Time Horizon</p>
+                          <p className="text-2xl font-light text-emerald-300">{dr.timeHorizon}</p>
+                        </div>
+                      )}
+                      {dr.readinessScore && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Readiness</p>
+                          <p className="text-2xl font-light">{dr.readinessScore}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {dr.threats?.length > 0 && (
+                    <div>
+                      <SectionHeader><Zap className="w-3 h-3" /> Disruption Threats</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Threat</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Likelihood</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Response</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dr.threats.map((threat: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{threat.name || threat.threat}</td>
+                                <td className="py-2 px-3 text-zinc-600">{threat.likelihood || threat.probability}</td>
+                                <td className="py-2 px-3 text-zinc-600">{threat.impact || threat.severity}</td>
+                                <td className="py-2 px-3 text-zinc-600">{threat.response || threat.mitigation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {dr.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {dr.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 119: Ecosystem Map ──────────────────────────────────────── */}
+            {activeTab === 119 && (d as any).ecosystemMap && (() => {
+              const em = (d as any).ecosystemMap;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Ecosystem Map</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{em.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {em.ecosystemSize && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Ecosystem Size</p>
+                          <p className="text-3xl font-light">{em.ecosystemSize}</p>
+                        </div>
+                      )}
+                      {em.partnerCount != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Partners</p>
+                          <p className="text-2xl font-light text-emerald-300">{em.partnerCount}</p>
+                        </div>
+                      )}
+                      {em.ecosystemValue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Ecosystem Value</p>
+                          <p className="text-2xl font-light">{em.ecosystemValue}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {em.players?.length > 0 && (
+                    <div>
+                      <SectionHeader><GitBranch className="w-3 h-3" /> Ecosystem Players</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Player</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Role</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Relationship</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {em.players.map((player: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{player.name || player.player}</td>
+                                <td className="py-2 px-3 text-zinc-600">{player.role || player.type}</td>
+                                <td className="py-2 px-3 text-zinc-600">{player.relationship || player.connection}</td>
+                                <td className="py-2 px-3 text-zinc-600">{player.value || player.contribution}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {em.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {em.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 120: Category Creation ──────────────────────────────────── */}
+            {activeTab === 120 && (d as any).categoryCreation && (() => {
+              const cc = (d as any).categoryCreation;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Category Creation</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cc.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cc.categoryName && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Category Name</p>
+                          <p className="text-3xl font-light">{cc.categoryName}</p>
+                        </div>
+                      )}
+                      {cc.marketSize && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Market Size</p>
+                          <p className="text-2xl font-light text-emerald-300">{cc.marketSize}</p>
+                        </div>
+                      )}
+                      {cc.readinessScore && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Readiness</p>
+                          <p className="text-2xl font-light">{cc.readinessScore}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cc.pillars?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Category Pillars</SectionHeader>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {cc.pillars.map((pillar: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-1">{typeof pillar === "string" ? pillar : pillar.name || pillar.pillar}</p>
+                            {pillar.description && <p className="text-xs text-zinc-600">{pillar.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {cc.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cc.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 121: Market Velocity ────────────────────────────────────── */}
+            {activeTab === 121 && (d as any).marketVelocity && (() => {
+              const mv = (d as any).marketVelocity;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <LineChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Market Velocity</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{mv.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {mv.velocityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Velocity Score</p>
+                          <p className="text-3xl font-light">{mv.velocityScore}</p>
+                        </div>
+                      )}
+                      {mv.growthRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Growth Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{mv.growthRate}</p>
+                        </div>
+                      )}
+                      {mv.marketMomentum && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Momentum</p>
+                          <p className="text-2xl font-light">{mv.marketMomentum}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {mv.drivers?.length > 0 && (
+                    <div>
+                      <SectionHeader><LineChart className="w-3 h-3" /> Velocity Drivers</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Driver</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Trend</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {mv.drivers.map((drv: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{drv.name || drv.driver}</td>
+                                <td className="py-2 px-3 text-zinc-600">{drv.impact || drv.contribution}</td>
+                                <td className="py-2 px-3 text-zinc-600">{drv.trend || drv.direction}</td>
+                                <td className="py-2 px-3 text-zinc-600">{drv.action || drv.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {mv.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {mv.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 122: OKR Cascade ────────────────────────────────────────── */}
+            {activeTab === 122 && (d as any).okrCascade && (() => {
+              const okr = (d as any).okrCascade;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">OKR Cascade</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{okr.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {okr.alignmentScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Alignment Score</p>
+                          <p className="text-3xl font-light">{okr.alignmentScore}</p>
+                        </div>
+                      )}
+                      {okr.completionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Completion Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{okr.completionRate}</p>
+                        </div>
+                      )}
+                      {okr.totalOKRs != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total OKRs</p>
+                          <p className="text-2xl font-light">{okr.totalOKRs}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {okr.objectives?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Objectives & Key Results</SectionHeader>
+                      <div className="space-y-4">
+                        {okr.objectives.map((obj: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-2">{obj.name || obj.objective}</p>
+                            {obj.owner && <p className="text-xs text-zinc-500 mb-2">Owner: {obj.owner}</p>}
+                            {obj.keyResults?.length > 0 && (
+                              <ul className="list-disc list-inside space-y-1">
+                                {obj.keyResults.map((kr: any, j: number) => (
+                                  <li key={j} className="text-xs text-zinc-600">{typeof kr === "string" ? kr : kr.result || kr.name} {kr.progress ? `(${kr.progress})` : ""}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {okr.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {okr.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 123: Meeting Effectiveness ──────────────────────────────── */}
+            {activeTab === 123 && (d as any).meetingEffectiveness && (() => {
+              const me = (d as any).meetingEffectiveness;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Meeting Effectiveness</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{me.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {me.effectivenessScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Effectiveness Score</p>
+                          <p className="text-3xl font-light">{me.effectivenessScore}</p>
+                        </div>
+                      )}
+                      {me.hoursPerWeek && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Hours/Week</p>
+                          <p className="text-2xl font-light text-emerald-300">{me.hoursPerWeek}</p>
+                        </div>
+                      )}
+                      {me.costPerYear && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Annual Cost</p>
+                          <p className="text-2xl font-light">{me.costPerYear}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {me.meetings?.length > 0 && (
+                    <div>
+                      <SectionHeader><Clock className="w-3 h-3" /> Meeting Analysis</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Meeting</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Frequency</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Score</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {me.meetings.map((mtg: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{mtg.name || mtg.meeting}</td>
+                                <td className="py-2 px-3 text-zinc-600">{mtg.frequency || mtg.cadence}</td>
+                                <td className="py-2 px-3 text-zinc-600">{mtg.score || mtg.effectiveness}</td>
+                                <td className="py-2 px-3 text-zinc-600">{mtg.action || mtg.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {me.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {me.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 124: Communication Audit ────────────────────────────────── */}
+            {activeTab === 124 && (d as any).communicationAudit && (() => {
+              const ca = (d as any).communicationAudit;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Megaphone className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Communication Audit</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ca.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ca.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Score</p>
+                          <p className="text-3xl font-light">{ca.overallScore}</p>
+                        </div>
+                      )}
+                      {ca.channelCount != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Channels</p>
+                          <p className="text-2xl font-light text-emerald-300">{ca.channelCount}</p>
+                        </div>
+                      )}
+                      {ca.informationOverload && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Info Overload</p>
+                          <p className="text-2xl font-light">{ca.informationOverload}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ca.channels?.length > 0 && (
+                    <div>
+                      <SectionHeader><Megaphone className="w-3 h-3" /> Channel Analysis</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Channel</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Effectiveness</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Usage</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ca.channels.map((ch: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{ch.name || ch.channel}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ch.effectiveness || ch.score}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ch.usage || ch.volume}</td>
+                                <td className="py-2 px-3 text-zinc-600">{ch.action || ch.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ca.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ca.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 125: Decision Velocity ──────────────────────────────────── */}
+            {activeTab === 125 && (d as any).decisionVelocity && (() => {
+              const dv = (d as any).decisionVelocity;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Crosshair className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Decision Velocity</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dv.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {dv.velocityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Velocity Score</p>
+                          <p className="text-3xl font-light">{dv.velocityScore}</p>
+                        </div>
+                      )}
+                      {dv.avgDecisionTime && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Avg Decision Time</p>
+                          <p className="text-2xl font-light text-emerald-300">{dv.avgDecisionTime}</p>
+                        </div>
+                      )}
+                      {dv.bottleneckCount != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Bottlenecks</p>
+                          <p className="text-2xl font-light">{dv.bottleneckCount}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {dv.decisions?.length > 0 && (
+                    <div>
+                      <SectionHeader><Crosshair className="w-3 h-3" /> Decision Analysis</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Decision Type</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Avg Time</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stakeholders</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Bottleneck</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dv.decisions.map((dec: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{dec.type || dec.name || dec.decision}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dec.avgTime || dec.duration}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dec.stakeholders || dec.approvers}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dec.bottleneck || dec.blocker}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {dv.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {dv.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 126: Resource Optimizer ─────────────────────────────────── */}
+            {activeTab === 126 && (d as any).resourceOptimizer && (() => {
+              const ro = (d as any).resourceOptimizer;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Server className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Resource Optimizer</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ro.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ro.utilizationRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Utilization Rate</p>
+                          <p className="text-3xl font-light">{ro.utilizationRate}</p>
+                        </div>
+                      )}
+                      {ro.savingsOpportunity && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Savings Opportunity</p>
+                          <p className="text-2xl font-light text-emerald-300">{ro.savingsOpportunity}</p>
+                        </div>
+                      )}
+                      {ro.efficiencyScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Efficiency Score</p>
+                          <p className="text-2xl font-light">{ro.efficiencyScore}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ro.resources?.length > 0 && (
+                    <div>
+                      <SectionHeader><Server className="w-3 h-3" /> Resource Allocation</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Resource</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Utilization</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Cost</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Optimization</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ro.resources.map((res: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{res.name || res.resource}</td>
+                                <td className="py-2 px-3 text-zinc-600">{res.utilization || res.usage}</td>
+                                <td className="py-2 px-3 text-zinc-600">{res.cost || res.spend}</td>
+                                <td className="py-2 px-3 text-zinc-600">{res.optimization || res.action}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ro.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ro.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 127: Change Management ──────────────────────────────────── */}
+            {activeTab === 127 && (d as any).changeManagement && (() => {
+              const cm = (d as any).changeManagement;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ArrowRight className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Change Management</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cm.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cm.readinessScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Readiness Score</p>
+                          <p className="text-3xl font-light">{cm.readinessScore}</p>
+                        </div>
+                      )}
+                      {cm.adoptionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Adoption Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{cm.adoptionRate}</p>
+                        </div>
+                      )}
+                      {cm.riskLevel && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Risk Level</p>
+                          <p className="text-2xl font-light">{cm.riskLevel}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cm.initiatives?.length > 0 && (
+                    <div>
+                      <SectionHeader><ArrowRight className="w-3 h-3" /> Change Initiatives</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Initiative</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Timeline</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cm.initiatives.map((init: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{init.name || init.initiative}</td>
+                                <td className="py-2 px-3 text-zinc-600">{init.status || init.phase}</td>
+                                <td className="py-2 px-3 text-zinc-600">{init.impact || init.scope}</td>
+                                <td className="py-2 px-3 text-zinc-600">{init.timeline || init.duration}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {cm.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cm.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 128: Cash Reserve Strategy ──────────────────────────────── */}
+            {activeTab === 128 && (d as any).cashReserveStrategy && (() => {
+              const crs = (d as any).cashReserveStrategy;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Cash Reserve Strategy</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{crs.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {crs.currentReserve && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Current Reserve</p>
+                          <p className="text-3xl font-light">{crs.currentReserve}</p>
+                        </div>
+                      )}
+                      {crs.targetReserve && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Target Reserve</p>
+                          <p className="text-2xl font-light text-emerald-300">{crs.targetReserve}</p>
+                        </div>
+                      )}
+                      {crs.runwayMonths != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Runway (Months)</p>
+                          <p className="text-2xl font-light">{crs.runwayMonths}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {crs.allocations?.length > 0 && (
+                    <div>
+                      <SectionHeader><DollarSign className="w-3 h-3" /> Reserve Allocations</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Category</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Amount</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Purpose</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Liquidity</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {crs.allocations.map((alloc: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{alloc.name || alloc.category}</td>
+                                <td className="py-2 px-3 text-zinc-600">{alloc.amount || alloc.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{alloc.purpose || alloc.use}</td>
+                                <td className="py-2 px-3 text-zinc-600">{alloc.liquidity || alloc.access}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {crs.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {crs.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 129: Revenue Quality Score ──────────────────────────────── */}
+            {activeTab === 129 && (d as any).revenueQualityScore && (() => {
+              const rqs = (d as any).revenueQualityScore;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PieChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Revenue Quality Score</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{rqs.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {rqs.qualityScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Quality Score</p>
+                          <p className="text-3xl font-light">{rqs.qualityScore}</p>
+                        </div>
+                      )}
+                      {rqs.recurringPercentage && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Recurring %</p>
+                          <p className="text-2xl font-light text-emerald-300">{rqs.recurringPercentage}</p>
+                        </div>
+                      )}
+                      {rqs.concentrationRisk && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Concentration Risk</p>
+                          <p className="text-2xl font-light">{rqs.concentrationRisk}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {rqs.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><PieChart className="w-3 h-3" /> Quality Dimensions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Dimension</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Score</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Benchmark</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rqs.dimensions.map((dim: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{dim.name || dim.dimension}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.score || dim.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.benchmark || dim.target}</td>
+                                <td className="py-2 px-3 text-zinc-600">{dim.action || dim.recommendation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {rqs.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {rqs.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 130: Cost Intelligence ──────────────────────────────────── */}
+            {activeTab === 130 && (d as any).costIntelligence && (() => {
+              const ci = (d as any).costIntelligence;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calculator className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Cost Intelligence</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ci.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ci.totalCosts && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Costs</p>
+                          <p className="text-3xl font-light">{ci.totalCosts}</p>
+                        </div>
+                      )}
+                      {ci.savingsIdentified && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Savings Identified</p>
+                          <p className="text-2xl font-light text-emerald-300">{ci.savingsIdentified}</p>
+                        </div>
+                      )}
+                      {ci.costEfficiencyScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Efficiency Score</p>
+                          <p className="text-2xl font-light">{ci.costEfficiencyScore}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ci.categories?.length > 0 && (
+                    <div>
+                      <SectionHeader><Calculator className="w-3 h-3" /> Cost Categories</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Category</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Amount</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">% of Total</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Optimization</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ci.categories.map((cat: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{cat.name || cat.category}</td>
+                                <td className="py-2 px-3 text-zinc-600">{cat.amount || cat.cost}</td>
+                                <td className="py-2 px-3 text-zinc-600">{cat.percentage || cat.share}</td>
+                                <td className="py-2 px-3 text-zinc-600">{cat.optimization || cat.savings}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {ci.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {ci.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 131: Financial Modeling ─────────────────────────────────── */}
+            {activeTab === 131 && (d as any).financialModeling && (() => {
+              const fm = (d as any).financialModeling;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <LineChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Financial Modeling</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{fm.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {fm.projectedRevenue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Projected Revenue</p>
+                          <p className="text-3xl font-light">{fm.projectedRevenue}</p>
+                        </div>
+                      )}
+                      {fm.projectedProfit && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Projected Profit</p>
+                          <p className="text-2xl font-light text-emerald-300">{fm.projectedProfit}</p>
+                        </div>
+                      )}
+                      {fm.breakEvenPoint && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Break-Even</p>
+                          <p className="text-2xl font-light">{fm.breakEvenPoint}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {fm.scenarios?.length > 0 && (
+                    <div>
+                      <SectionHeader><LineChart className="w-3 h-3" /> Financial Scenarios</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Scenario</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Revenue</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Margin</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Probability</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {fm.scenarios.map((sc: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{sc.name || sc.scenario}</td>
+                                <td className="py-2 px-3 text-zinc-600">{sc.revenue || sc.topLine}</td>
+                                <td className="py-2 px-3 text-zinc-600">{sc.margin || sc.profitMargin}</td>
+                                <td className="py-2 px-3 text-zinc-600">{sc.probability || sc.likelihood}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {fm.assumptions?.length > 0 && (
+                    <div>
+                      <SectionHeader><FileText className="w-3 h-3" /> Key Assumptions</SectionHeader>
+                      <div className="space-y-2">
+                        {fm.assumptions.map((a: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof a === "string" ? a : a.assumption || a.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {fm.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {fm.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 132: Profitability Map ──────────────────────────────────── */}
+            {activeTab === 132 && (d as any).profitabilityMap && (() => {
+              const pm = (d as any).profitabilityMap;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Profitability Map</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{pm.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {pm.overallMargin && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Margin</p>
+                          <p className="text-3xl font-light">{pm.overallMargin}</p>
+                        </div>
+                      )}
+                      {pm.highestMarginProduct && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Highest Margin</p>
+                          <p className="text-2xl font-light text-emerald-300">{pm.highestMarginProduct}</p>
+                        </div>
+                      )}
+                      {pm.marginImprovement && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Improvement Opp.</p>
+                          <p className="text-2xl font-light">{pm.marginImprovement}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {pm.products?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Product Profitability</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Product</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Revenue</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Margin</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Contribution</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pm.products.map((prod: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{prod.name || prod.product}</td>
+                                <td className="py-2 px-3 text-zinc-600">{prod.revenue || prod.sales}</td>
+                                <td className="py-2 px-3 text-zinc-600">{prod.margin || prod.profitMargin}</td>
+                                <td className="py-2 px-3 text-zinc-600">{prod.contribution || prod.profit}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {pm.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {pm.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 133: Capital Allocation ─────────────────────────────────── */}
+            {activeTab === 133 && (d as any).capitalAllocation && (() => {
+              const cal = (d as any).capitalAllocation;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-[#1e1e2f] text-white rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Briefcase className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Capital Allocation</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cal.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {cal.totalCapital && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Capital</p>
+                          <p className="text-3xl font-light">{cal.totalCapital}</p>
+                        </div>
+                      )}
+                      {cal.roic && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">ROIC</p>
+                          <p className="text-2xl font-light text-emerald-300">{cal.roic}</p>
+                        </div>
+                      )}
+                      {cal.deploymentRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Deployment Rate</p>
+                          <p className="text-2xl font-light">{cal.deploymentRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {cal.allocations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Briefcase className="w-3 h-3" /> Allocation Breakdown</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-200">
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Category</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Amount</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">% Share</th>
+                              <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Expected Return</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cal.allocations.map((alloc: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-100">
+                                <td className="py-2 px-3 font-medium text-zinc-900">{alloc.name || alloc.category}</td>
+                                <td className="py-2 px-3 text-zinc-600">{alloc.amount || alloc.value}</td>
+                                <td className="py-2 px-3 text-zinc-600">{alloc.percentage || alloc.share}</td>
+                                <td className="py-2 px-3 text-zinc-600">{alloc.expectedReturn || alloc.roi}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {cal.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">
+                        {cal.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
                           </div>
                         ))}
                       </div>

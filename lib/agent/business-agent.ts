@@ -133,6 +133,10 @@ const TOOLS = [
             "processEfficiency", "vendorRisk", "qualityMetrics", "capacityPlanning", "knowledgeManagement", "complianceScorecard",
             "marketPenetration", "flywheelAnalysis", "partnershipsStrategy", "internationalExpansion", "rdEffectiveness", "brandEquity",
             "workingCapital", "debtStrategy", "taxStrategy", "investorReadiness", "maReadiness", "strategicRoadmap",
+            "customerVoice", "referralEngine", "priceSensitivityIndex", "customerEffortScore", "accountExpansionMap", "loyaltyProgramDesign",
+            "competitivePricingMatrix", "marketSentimentIndex", "disruptionRadar", "ecosystemMap", "categoryCreation", "marketVelocity",
+            "okrCascade", "meetingEffectiveness", "communicationAudit", "decisionVelocity", "resourceOptimizer", "changeManagement",
+            "cashReserveStrategy", "revenueQualityScore", "costIntelligence", "financialModeling", "profitabilityMap", "capitalAllocation",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -383,6 +387,10 @@ Wave 13: revenueDrivers, marginOptimization, demandForecasting, cohortAnalysis, 
 Wave 14: processEfficiency, vendorRisk, qualityMetrics, capacityPlanning, knowledgeManagement, complianceScorecard
 Wave 15: marketPenetration, flywheelAnalysis, partnershipsStrategy, internationalExpansion, rdEffectiveness, brandEquity
 Wave 16: workingCapital, debtStrategy, taxStrategy, investorReadiness, maReadiness, strategicRoadmap
+Wave 17: customerVoice, referralEngine, priceSensitivityIndex, customerEffortScore, accountExpansionMap, loyaltyProgramDesign
+Wave 18: competitivePricingMatrix, marketSentimentIndex, disruptionRadar, ecosystemMap, categoryCreation, marketVelocity
+Wave 19: okrCascade, meetingEffectiveness, communicationAudit, decisionVelocity, resourceOptimizer, changeManagement
+Wave 20: cashReserveStrategy, revenueQualityScore, costIntelligence, financialModeling, profitabilityMap, capitalAllocation
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

@@ -138,7 +138,31 @@ KEY SECTIONS FOR COACHING:
 - taxStrategy: Tax efficiency, R&D credits, entity structure
 - investorReadiness: Pitch readiness, metrics completeness, due diligence prep
 - maReadiness: M&A valuation, synergy potential, integration planning
-- strategicRoadmap: Strategic pillars, milestones, 1/3/5 year goals, OKRs`;
+- strategicRoadmap: Strategic pillars, milestones, 1/3/5 year goals, OKRs
+- customerVoice: Customer feedback themes, sentiment analysis, NPS drivers, verbatim insights
+- referralEngine: Referral program performance, viral coefficient, program design, referral sources
+- priceSensitivityIndex: Price sensitivity by segment, willingness-to-pay, elasticity curves
+- customerEffortScore: Customer effort score by touchpoint, friction points, ease-of-use metrics
+- accountExpansionMap: Expansion revenue opportunities, upsell/cross-sell readiness, account growth potential
+- loyaltyProgramDesign: Loyalty program structure, reward tiers, engagement mechanics, retention impact
+- competitivePricingMatrix: Competitor pricing comparison, positioning gaps, price-value mapping
+- marketSentimentIndex: Market sentiment tracking, social listening, brand perception trends
+- disruptionRadar: Disruptive threats, emerging technologies, industry shift signals
+- ecosystemMap: Business ecosystem mapping, partner dependencies, platform opportunities
+- categoryCreation: Category design strategy, market education needs, positioning for new categories
+- marketVelocity: Market growth rate, adoption curves, timing windows, momentum indicators
+- okrCascade: OKR hierarchy, team alignment, cascade structure, progress tracking
+- meetingEffectiveness: Meeting audit, time allocation, decision output, meeting ROI
+- communicationAudit: Internal communication channels, information flow gaps, alignment issues
+- decisionVelocity: Decision speed metrics, bottlenecks, authority mapping, approval workflows
+- resourceOptimizer: Resource allocation efficiency, utilization rates, rebalancing recommendations
+- changeManagement: Change readiness, adoption frameworks, resistance mapping, transition plans
+- cashReserveStrategy: Cash reserve targets, emergency fund sizing, liquidity buffers, reserve allocation
+- revenueQualityScore: Revenue quality metrics, recurring vs one-time, predictability, concentration
+- costIntelligence: Cost structure analysis, cost drivers, benchmarking, reduction opportunities
+- financialModeling: Financial model scenarios, assumptions, sensitivity analysis, projections
+- profitabilityMap: Profitability by product/customer/channel, margin analysis, contribution mapping
+- capitalAllocation: Capital deployment strategy, investment priorities, ROI ranking, funding allocation`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -234,6 +258,10 @@ const TOOLS = [
             "processEfficiency", "vendorRisk", "qualityMetrics", "capacityPlanning", "knowledgeManagement", "complianceScorecard",
             "marketPenetration", "flywheelAnalysis", "partnershipsStrategy", "internationalExpansion", "rdEffectiveness", "brandEquity",
             "workingCapital", "debtStrategy", "taxStrategy", "investorReadiness", "maReadiness", "strategicRoadmap",
+            "customerVoice", "referralEngine", "priceSensitivityIndex", "customerEffortScore", "accountExpansionMap", "loyaltyProgramDesign",
+            "competitivePricingMatrix", "marketSentimentIndex", "disruptionRadar", "ecosystemMap", "categoryCreation", "marketVelocity",
+            "okrCascade", "meetingEffectiveness", "communicationAudit", "decisionVelocity", "resourceOptimizer", "changeManagement",
+            "cashReserveStrategy", "revenueQualityScore", "costIntelligence", "financialModeling", "profitabilityMap", "capitalAllocation",
           ],
           description: "Which report section to retrieve",
         },
@@ -533,6 +561,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).investorReadiness) parts.push(`Investor Readiness: Score: ${(d as any).investorReadiness.overallScore ?? "N/A"}/100, Gaps: ${(d as any).investorReadiness.gaps?.length ?? 0}`);
     if ((d as any).maReadiness) parts.push(`M&A Readiness: Score: ${(d as any).maReadiness.overallScore ?? "N/A"}/100, Valuation: ${(d as any).maReadiness.estimatedValuation || "N/A"}`);
     if ((d as any).strategicRoadmap) parts.push(`Strategic Roadmap: Pillars: ${(d as any).strategicRoadmap.strategicPillars?.length ?? 0}, Next milestone: ${(d as any).strategicRoadmap.nextMilestone || "N/A"}`);
+    if ((d as any).customerVoice) parts.push(`Customer Voice: Sentiment: ${(d as any).customerVoice.overallSentiment || "N/A"}, NPS: ${(d as any).customerVoice.nps ?? "N/A"}, Themes: ${(d as any).customerVoice.topThemes?.length ?? 0}`);
+    if ((d as any).referralEngine) parts.push(`Referral Engine: Viral coefficient: ${(d as any).referralEngine.viralCoefficient ?? "N/A"}, Referral rate: ${(d as any).referralEngine.referralRate || "N/A"}`);
+    if ((d as any).priceSensitivityIndex) parts.push(`Price Sensitivity: Index: ${(d as any).priceSensitivityIndex.overallIndex ?? "N/A"}, Most sensitive segment: ${(d as any).priceSensitivityIndex.mostSensitiveSegment || "N/A"}`);
+    if ((d as any).customerEffortScore) parts.push(`Customer Effort Score: Overall: ${(d as any).customerEffortScore.overallScore ?? "N/A"}, Highest friction: ${(d as any).customerEffortScore.highestFrictionPoint || "N/A"}`);
+    if ((d as any).accountExpansionMap) parts.push(`Account Expansion: Expansion potential: ${(d as any).accountExpansionMap.totalExpansionPotential || "N/A"}, Ready accounts: ${(d as any).accountExpansionMap.readyAccounts?.length ?? 0}`);
+    if ((d as any).loyaltyProgramDesign) parts.push(`Loyalty Program: Recommended model: ${(d as any).loyaltyProgramDesign.recommendedModel || "N/A"}, Retention impact: ${(d as any).loyaltyProgramDesign.projectedRetentionImpact || "N/A"}`);
+    if ((d as any).competitivePricingMatrix) parts.push(`Competitive Pricing: Position: ${(d as any).competitivePricingMatrix.pricePosition || "N/A"}, Gap: ${(d as any).competitivePricingMatrix.pricingGap || "N/A"}`);
+    if ((d as any).marketSentimentIndex) parts.push(`Market Sentiment: Score: ${(d as any).marketSentimentIndex.overallSentiment ?? "N/A"}/100, Trend: ${(d as any).marketSentimentIndex.trend || "N/A"}`);
+    if ((d as any).disruptionRadar) parts.push(`Disruption Radar: Threats: ${(d as any).disruptionRadar.threats?.length ?? 0}, Urgency: ${(d as any).disruptionRadar.highestUrgency || "N/A"}`);
+    if ((d as any).ecosystemMap) parts.push(`Ecosystem Map: Partners: ${(d as any).ecosystemMap.partners?.length ?? 0}, Platform opportunities: ${(d as any).ecosystemMap.platformOpportunities?.length ?? 0}`);
+    if ((d as any).categoryCreation) parts.push(`Category Creation: Feasibility: ${(d as any).categoryCreation.feasibilityScore ?? "N/A"}/100, Strategy: ${(d as any).categoryCreation.strategy || "N/A"}`);
+    if ((d as any).marketVelocity) parts.push(`Market Velocity: Growth rate: ${(d as any).marketVelocity.growthRate || "N/A"}, Momentum: ${(d as any).marketVelocity.momentum || "N/A"}`);
+    if ((d as any).okrCascade) parts.push(`OKR Cascade: Objectives: ${(d as any).okrCascade.objectives?.length ?? 0}, Alignment score: ${(d as any).okrCascade.alignmentScore ?? "N/A"}/100`);
+    if ((d as any).meetingEffectiveness) parts.push(`Meeting Effectiveness: Score: ${(d as any).meetingEffectiveness.overallScore ?? "N/A"}/100, Hours/week: ${(d as any).meetingEffectiveness.totalHoursPerWeek ?? "N/A"}`);
+    if ((d as any).communicationAudit) parts.push(`Communication Audit: Score: ${(d as any).communicationAudit.overallScore ?? "N/A"}/100, Gaps: ${(d as any).communicationAudit.gaps?.length ?? 0}`);
+    if ((d as any).decisionVelocity) parts.push(`Decision Velocity: Speed: ${(d as any).decisionVelocity.averageDecisionTime || "N/A"}, Bottlenecks: ${(d as any).decisionVelocity.bottlenecks?.length ?? 0}`);
+    if ((d as any).resourceOptimizer) parts.push(`Resource Optimizer: Utilization: ${(d as any).resourceOptimizer.overallUtilization || "N/A"}, Rebalancing opportunities: ${(d as any).resourceOptimizer.rebalancingOpportunities?.length ?? 0}`);
+    if ((d as any).changeManagement) parts.push(`Change Management: Readiness: ${(d as any).changeManagement.readinessScore ?? "N/A"}/100, Active changes: ${(d as any).changeManagement.activeChanges?.length ?? 0}`);
+    if ((d as any).cashReserveStrategy) parts.push(`Cash Reserve Strategy: Target reserve: ${(d as any).cashReserveStrategy.targetReserve || "N/A"}, Current reserve: ${(d as any).cashReserveStrategy.currentReserve || "N/A"}`);
+    if ((d as any).revenueQualityScore) parts.push(`Revenue Quality: Score: ${(d as any).revenueQualityScore.overallScore ?? "N/A"}/100, Recurring: ${(d as any).revenueQualityScore.recurringPercentage || "N/A"}`);
+    if ((d as any).costIntelligence) parts.push(`Cost Intelligence: Total costs: ${(d as any).costIntelligence.totalCosts || "N/A"}, Reduction opportunities: ${(d as any).costIntelligence.reductionOpportunities?.length ?? 0}`);
+    if ((d as any).financialModeling) parts.push(`Financial Modeling: Scenarios: ${(d as any).financialModeling.scenarios?.length ?? 0}, Base case: ${(d as any).financialModeling.baseCase || "N/A"}`);
+    if ((d as any).profitabilityMap) parts.push(`Profitability Map: Most profitable: ${(d as any).profitabilityMap.mostProfitable || "N/A"}, Least profitable: ${(d as any).profitabilityMap.leastProfitable || "N/A"}`);
+    if ((d as any).capitalAllocation) parts.push(`Capital Allocation: Total capital: ${(d as any).capitalAllocation.totalCapital || "N/A"}, Top priority: ${(d as any).capitalAllocation.topPriority || "N/A"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 
