@@ -27,6 +27,14 @@ import {
   synthesizeGoalTracker,
   synthesizeBenchmarkScore,
   synthesizeExecutiveSummary,
+  synthesizeMilestoneTracker,
+  synthesizeRiskRegister,
+  synthesizePartnershipOpportunities,
+  synthesizeFundingReadiness,
+  synthesizeMarketSizing,
+  synthesizeScenarioPlanner,
+  synthesizeOperationalEfficiency,
+  synthesizeCLVAnalysis,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -366,6 +374,67 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Benchmark/ExecSummary failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4e: Wave 4 intelligence (milestones, risk, partnerships, etc.) ──
+    if (!deliverables.milestoneTracker || !deliverables.riskRegister) {
+      try {
+        console.log("[Pivot] Synthesizing milestone tracker + risk register...");
+        const [mt, rr] = await Promise.allSettled([
+          deliverables.milestoneTracker ? Promise.resolve(null) : synthesizeMilestoneTracker(businessPacket, job.questionnaire),
+          deliverables.riskRegister ? Promise.resolve(null) : synthesizeRiskRegister(businessPacket, job.questionnaire),
+        ]);
+        if (mt.status === "fulfilled" && mt.value) deliverables = { ...deliverables, milestoneTracker: mt.value };
+        if (rr.status === "fulfilled" && rr.value) deliverables = { ...deliverables, riskRegister: rr.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Milestone/Risk failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.partnershipOpportunities || !deliverables.fundingReadiness) {
+      try {
+        console.log("[Pivot] Synthesizing partnership opportunities + funding readiness...");
+        const [po, fr] = await Promise.allSettled([
+          deliverables.partnershipOpportunities ? Promise.resolve(null) : synthesizePartnershipOpportunities(businessPacket, job.questionnaire),
+          deliverables.fundingReadiness ? Promise.resolve(null) : synthesizeFundingReadiness(businessPacket, job.questionnaire, deliverables),
+        ]);
+        if (po.status === "fulfilled" && po.value) deliverables = { ...deliverables, partnershipOpportunities: po.value };
+        if (fr.status === "fulfilled" && fr.value) deliverables = { ...deliverables, fundingReadiness: fr.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Partnership/Funding failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.marketSizing || !deliverables.scenarioPlanner) {
+      try {
+        console.log("[Pivot] Synthesizing market sizing + scenario planner...");
+        const [ms, sp] = await Promise.allSettled([
+          deliverables.marketSizing ? Promise.resolve(null) : synthesizeMarketSizing(businessPacket, job.questionnaire),
+          deliverables.scenarioPlanner ? Promise.resolve(null) : synthesizeScenarioPlanner(businessPacket, job.questionnaire),
+        ]);
+        if (ms.status === "fulfilled" && ms.value) deliverables = { ...deliverables, marketSizing: ms.value };
+        if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, scenarioPlanner: sp.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] MarketSizing/Scenario failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.operationalEfficiency || !deliverables.clvAnalysis) {
+      try {
+        console.log("[Pivot] Synthesizing operational efficiency + CLV analysis...");
+        const [oe, clv] = await Promise.allSettled([
+          deliverables.operationalEfficiency ? Promise.resolve(null) : synthesizeOperationalEfficiency(businessPacket, job.questionnaire),
+          deliverables.clvAnalysis ? Promise.resolve(null) : synthesizeCLVAnalysis(businessPacket, job.questionnaire),
+        ]);
+        if (oe.status === "fulfilled" && oe.value) deliverables = { ...deliverables, operationalEfficiency: oe.value };
+        if (clv.status === "fulfilled" && clv.value) deliverables = { ...deliverables, clvAnalysis: clv.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] OpsEfficiency/CLV failed (non-fatal):", e);
       }
     }
 

@@ -696,6 +696,15 @@ export interface MVPDeliverables {
   // Wave 3 features
   benchmarkScore?: BenchmarkScore;
   executiveSummary?: ExecutiveSummary;
+  // Wave 4 features
+  milestoneTracker?: MilestoneTracker;
+  riskRegister?: RiskRegister;
+  partnershipOpportunities?: PartnershipOpportunities;
+  fundingReadiness?: FundingReadiness;
+  marketSizing?: MarketSizing;
+  scenarioPlanner?: ScenarioPlanner;
+  operationalEfficiency?: OperationalEfficiency;
+  clvAnalysis?: CLVAnalysis;
 }
 
 export interface BenchmarkDimension {
@@ -725,6 +734,154 @@ export interface ExecutiveSummary {
   financialSummary: string;
   outlook: string;         // "cautiously optimistic", etc.
   fullSummary: string;     // 2-3 paragraphs
+}
+
+// ── Wave 4 Types ─────────────────────────────────────────────────────────────
+
+export interface Milestone {
+  title: string;
+  description: string;
+  targetDate: string;
+  status: "not_started" | "in_progress" | "completed" | "at_risk" | "blocked";
+  category: "revenue" | "product" | "team" | "funding" | "market" | "operations";
+  impact: string;
+  dependencies?: string[];
+  owner?: string;
+}
+
+export interface MilestoneTracker {
+  milestones: Milestone[];
+  nextMilestone: string;
+  completionRate: number;
+  criticalPath: string[];
+  timeline: string;
+  summary: string;
+}
+
+export interface RiskItem {
+  risk: string;
+  category: "financial" | "operational" | "market" | "legal" | "technology" | "team";
+  likelihood: number;    // 1-5
+  impact: number;        // 1-5
+  riskScore: number;     // likelihood * impact
+  status: "open" | "mitigating" | "accepted" | "closed";
+  mitigation: string;
+  owner?: string;
+  timeline?: string;
+}
+
+export interface RiskRegister {
+  risks: RiskItem[];
+  overallRiskLevel: "low" | "moderate" | "high" | "critical";
+  topRisks: string[];
+  mitigationBudget?: string;
+  summary: string;
+}
+
+export interface PartnerCandidate {
+  name: string;
+  type: "technology" | "distribution" | "strategic" | "content" | "referral";
+  synergy: string;
+  revenueImpact: string;
+  approachStrategy: string;
+  priority: "high" | "medium" | "low";
+  contactSuggestion?: string;
+}
+
+export interface PartnershipOpportunities {
+  partners: PartnerCandidate[];
+  partnershipStrategy: string;
+  quickWins: string[];
+  longTermPlays: string[];
+  summary: string;
+}
+
+export interface FundingReadiness {
+  overallScore: number;       // 0-100
+  grade: string;              // A-F
+  readinessLevel: string;     // "Seed Ready", "Series A Ready", etc.
+  strengths: string[];
+  gaps: { area: string; current: string; needed: string; action: string }[];
+  suggestedRaise: string;
+  valuationRange: string;
+  investorTypes: string[];
+  pitchReadiness: { section: string; score: number; feedback: string }[];
+  nextSteps: string[];
+  summary: string;
+}
+
+export interface MarketSizing {
+  tam: { value: string; methodology: string; sources: string[] };
+  sam: { value: string; methodology: string; filters: string[] };
+  som: { value: string; methodology: string; assumptions: string[] };
+  growthRate: string;
+  marketTrends: string[];
+  entryBarriers: string[];
+  competitiveIntensity: string;
+  summary: string;
+}
+
+export interface BusinessScenario {
+  name: string;
+  description: string;
+  probability: string;
+  revenueImpact: string;
+  costImpact: string;
+  netOutcome: string;
+  triggers: string[];
+  actions: string[];
+  timeline: string;
+}
+
+export interface ScenarioPlanner {
+  scenarios: BusinessScenario[];
+  baseCase: string;
+  bestCase: string;
+  worstCase: string;
+  recommendedStrategy: string;
+  contingencyPlans: string[];
+  summary: string;
+}
+
+export interface EfficiencyMetric {
+  process: string;
+  currentScore: number;     // 0-100
+  industryBenchmark: number;
+  gap: number;
+  improvement: string;
+  estimatedSavings: string;
+  effort: "low" | "medium" | "high";
+  priority: number;
+}
+
+export interface OperationalEfficiency {
+  overallScore: number;
+  metrics: EfficiencyMetric[];
+  quickWins: string[];
+  majorInitiatives: string[];
+  estimatedTotalSavings: string;
+  summary: string;
+}
+
+export interface CLVSegment {
+  segment: string;
+  avgCLV: string;
+  acquisitionCost: string;
+  clvCacRatio: number;
+  retentionRate: string;
+  avgLifespan: string;
+  revenueContribution: string;
+}
+
+export interface CLVAnalysis {
+  overallCLV: string;
+  overallCACRatio: number;
+  segments: CLVSegment[];
+  highValueDrivers: string[];
+  churnRiskFactors: string[];
+  optimizationStrategies: string[];
+  projectedImpact: string;
+  summary: string;
 }
 
 export interface PitchDeckAnalysis {
