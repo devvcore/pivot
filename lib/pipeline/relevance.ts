@@ -316,6 +316,102 @@ const SECTION_CATEGORIES: Record<string, SectionCategory[]> = {
   sustainableSourcing: ["physical", "esg"],
   facilityOptimization: ["physical", "operations"],
   fleetManagement: ["physical"],
+
+  // ── Wave 81: Strategic Growth Planning ──
+  growthPlaybook: ["core", "startup"],
+  revenueRunRate: ["financial", "saas", "startup"],
+  breakEvenModel: ["financial", "startup"],
+  operatingLeverageIndex: ["financial", "saas"],
+  grossMarginAnalysis: ["financial"],
+  fundingScenarioModel: ["startup", "investor"],
+
+  // ── Wave 82: Competitive Wargaming ──
+  competitiveWargame: ["b2b", "enterprise", "saas"],
+  marketDisruptionModel: ["enterprise", "tech", "saas"],
+  firstMoverAnalysis: ["startup", "tech"],
+  defensibilityAudit: ["startup", "saas", "platform"],
+  pivotReadiness: ["startup"],
+  competitiveTimingModel: ["startup", "enterprise"],
+
+  // ── Wave 83: Customer Success Advanced ──
+  customerMaturityModel: ["b2b", "saas"],
+  expansionSignals: ["b2b", "saas"],
+  adoptionScorecard: ["saas", "product"],
+  stakeholderSentiment: ["b2b", "enterprise"],
+  valueRealization: ["b2b", "saas"],
+  renewalPlaybook: ["saas", "b2b"],
+
+  // ── Wave 84: Business Model Design ──
+  businessModelInnovation: ["startup", "enterprise"],
+  monetizationExperiment: ["startup", "saas"],
+  pricingArchitecture: ["saas", "b2c", "b2b"],
+  revenueStreamMap: ["financial", "startup"],
+  costDriverAnalysis: ["financial", "enterprise"],
+  valueCapture: ["startup", "saas", "platform"],
+
+  // ── Wave 85: Revenue Operations ──
+  revenueProcessMap: ["saas", "b2b", "enterprise"],
+  billingHealthCheck: ["saas", "b2b"],
+  quoteToCloseAnalysis: ["b2b", "sales"],
+  revenueLeakDetector: ["financial", "saas"],
+  forecastAccuracyModel: ["financial", "enterprise", "sales"],
+  dealDeskOptimization: ["b2b", "sales", "enterprise"],
+
+  // ── Wave 86: Workforce Strategy ──
+  talentMarketIntel: ["hr", "enterprise"],
+  employeeLifecycleMap: ["hr", "enterprise"],
+  skillsInventory: ["hr", "tech", "enterprise"],
+  teamDynamicsAnalysis: ["hr"],
+  hybridWorkModel: ["hr", "enterprise", "tech"],
+  compensationPhilosophy: ["hr", "enterprise"],
+
+  // ── Wave 87: Data & Intelligence ──
+  dataMaturityAssessment: ["tech", "enterprise"],
+  insightsPrioritization: ["enterprise", "tech"],
+  experimentVelocity: ["tech", "saas", "startup"],
+  decisionIntelligence: ["enterprise"],
+  feedbackIntelligence: ["b2b", "b2c", "saas"],
+  benchmarkingEngine: ["core"],
+
+  // ── Wave 88: Ecosystem & Partnerships ──
+  partnerValueMap: ["b2b", "platform", "enterprise"],
+  coInnovationPipeline: ["enterprise", "tech"],
+  ecosystemRevenue: ["platform", "enterprise"],
+  allianceScorecard: ["b2b", "enterprise"],
+  partnerEnablementPlan: ["b2b", "platform"],
+  marketplaceReadiness: ["platform", "saas"],
+
+  // ── Wave 89: Strategic Execution ──
+  strategyExecution: ["core", "enterprise"],
+  initiativeTracking: ["enterprise"],
+  resourceAllocationModel: ["enterprise", "startup"],
+  strategicBetting: ["startup", "enterprise"],
+  executionCadence: ["enterprise"],
+  alignmentIndex: ["enterprise"],
+
+  // ── Wave 90: Market Intelligence Advanced ──
+  marketSignalRadar: ["enterprise", "b2b", "saas"],
+  competitorMoveTracker: ["b2b", "saas", "enterprise"],
+  customerVoiceAggregator: ["b2b", "b2c", "saas"],
+  industryConvergenceMap: ["enterprise", "tech"],
+  emergingTechRadar: ["tech", "enterprise"],
+  regulatoryHorizon: ["enterprise", "compliance"],
+
+  // ── Wave 91: Financial Health Deep ──
+  cashFlowForecaster: ["financial", "startup"],
+  profitDriverTree: ["financial"],
+  revenueQualityIndex: ["financial", "saas"],
+  financialResilienceScore: ["financial", "enterprise"],
+  workingCapitalOptimizer: ["financial", "physical"],
+  investmentReadinessGate: ["startup", "investor"],
+
+  // ── Wave 92: Customer Intelligence Platform ──
+  customerDnaProfile: ["b2b", "b2c", "saas"],
+  propensityModel: ["b2b", "saas"],
+  churnEarlyWarning: ["saas", "b2b"],
+  customerEffortOptimizer: ["b2c", "saas"],
+  loyaltyDriver: ["b2c", "saas"],
+  accountIntelligence: ["b2b", "enterprise"],
 };
 
 // ── Business Profile Classification ─────────────────────────────────────────

@@ -522,7 +522,79 @@ KEY SECTIONS FOR COACHING:
 - brandHierarchy: Brand hierarchy with architecture type, sub-brands, and brand level management
 - reputationAnalysis: Reputation analysis with sentiment scoring, trust index, and risk factors
 - messagingFramework: Messaging framework with consistency, clarity index, and tone alignment
-- visualBranding: Visual branding with design system maturity, brand consistency, and asset coverage`;
+- visualBranding: Visual branding with design system maturity, brand consistency, and asset coverage
+- growthPlaybook: Growth playbook with growth levers, execution plans, and confidence scoring
+- revenueRunRate: Revenue run rate with MRR, ARR, growth velocity, and trajectory analysis
+- breakEvenModel: Break-even model with fixed/variable cost analysis and margin of safety
+- operatingLeverageIndex: Operating leverage index with DOL ratio, scalability, and cost structure
+- grossMarginAnalysis: Gross margin analysis with COGS ratios, margin trends, and improvement potential
+- fundingScenarioModel: Funding scenario model with scenario comparison, dilution impact, and optimal paths
+- competitiveWargame: Competitive wargame with threat modeling, scenario testing, and win probability
+- marketDisruptionModel: Market disruption model with disruption vectors, impact timeline, and preparedness
+- firstMoverAnalysis: First mover analysis with advantage type, window duration, and sustainability
+- defensibilityAudit: Defensibility audit with moat types, barrier strength, and vulnerability assessment
+- pivotReadiness: Pivot readiness with pivot options, execution speed, and risk assessment
+- competitiveTimingModel: Competitive timing model with market windows, response times, and urgency
+- customerMaturityModel: Customer maturity model with maturity stages, progression rates, and at-risk segments
+- expansionSignals: Expansion signals with signal detection, expansion readiness, and revenue potential
+- adoptionScorecard: Adoption scorecard with adoption rates, feature usage, and stickiness metrics
+- stakeholderSentiment: Stakeholder sentiment with positive rates, key concerns, and trend direction
+- valueRealization: Value realization with ROI tracking, time to value, and value delivered
+- renewalPlaybook: Renewal playbook with renewal rates, at-risk identification, and expansion revenue
+- businessModelInnovation: Business model innovation with model types, disruption potential, and viability
+- monetizationExperiment: Monetization experiment with test velocity, win rates, and revenue impact
+- pricingArchitecture: Pricing architecture with tier design, value alignment, and revenue optimization
+- revenueStreamMap: Revenue stream map with active streams, diversification, and growth potential
+- costDriverAnalysis: Cost driver analysis with top drivers, savings potential, and efficiency index
+- valueCapture: Value capture with capture rates, leakage detection, and optimization gaps
+- revenueProcessMap: Revenue process map with bottlenecks, cycle time, and automation rate
+- billingHealthCheck: Billing health check with error rates, collection rates, and days sales outstanding
+- quoteToCloseAnalysis: Quote-to-close analysis with cycle days, win rate, and drop-off stages
+- revenueLeakDetector: Revenue leak detector with leaks detected, revenue at risk, and recovery potential
+- forecastAccuracyModel: Forecast accuracy model with variance, confidence level, and bias direction
+- dealDeskOptimization: Deal desk optimization with approval speed, discount discipline, and deal quality
+- talentMarketIntel: Talent market intel with supply, demand pressure, and salary benchmarks
+- employeeLifecycleMap: Employee lifecycle map with tenure, attrition rate, and engagement score
+- skillsInventory: Skills inventory with skills mapped, gap count, and reskill priority
+- teamDynamicsAnalysis: Team dynamics analysis with collaboration index, conflict level, and trust score
+- hybridWorkModel: Hybrid work model with remote ratio, productivity index, and satisfaction
+- compensationPhilosophy: Compensation philosophy with market position, equity mix, and pay equity
+- dataMaturityAssessment: Data maturity assessment with maturity stage, data quality, and governance level
+- insightsPrioritization: Insights prioritization with impact potential, actionability, and insights queued
+- experimentVelocity: Experiment velocity with experiments running, win rate, and learning cycle
+- decisionIntelligence: Decision intelligence with decision speed, data coverage, and outcome quality
+- feedbackIntelligence: Feedback intelligence with volume, sentiment, and action rate
+- benchmarkingEngine: Benchmarking engine with percentile rank, metrics tracked, and peer group
+- partnerValueMap: Partner value map with active partners, value generated, and ROI
+- coInnovationPipeline: Co-innovation pipeline with joint projects, pipeline value, and success rate
+- ecosystemRevenue: Ecosystem revenue with partner revenue, revenue share, and growth rate
+- allianceScorecard: Alliance scorecard with active alliances, performance, and strategic fit
+- partnerEnablementPlan: Partner enablement plan with certification rate and time to productivity
+- marketplaceReadiness: Marketplace readiness with integration count, listing quality, and marketplace revenue
+- strategyExecution: Strategy execution with completion rates, velocity, and on-track items
+- initiativeTracking: Initiative tracking with active initiatives, progress rates, and at-risk items
+- resourceAllocationModel: Resource allocation model with utilization, efficiency, and rebalance needs
+- strategicBetting: Strategic betting with active bets, win rates, and expected value
+- executionCadence: Execution cadence with rhythm health, review cycles, and delivery pace
+- alignmentIndex: Alignment index with team alignment, goal coherence, and strategy fit
+- marketSignalRadar: Market signal radar with signals detected, urgency levels, and opportunity counts
+- competitorMoveTracker: Competitor move tracker with moves tracked, threat levels, and response needs
+- customerVoiceAggregator: Customer voice aggregator with feedback volume, sentiment, and action items
+- industryConvergenceMap: Industry convergence map with industries mapped, overlap areas, and opportunity value
+- emergingTechRadar: Emerging tech radar with technologies tracked, readiness levels, and impact potential
+- regulatoryHorizon: Regulatory horizon with regulations tracked, compliance risk, and upcoming deadlines
+- cashFlowForecaster: Cash flow forecaster with projected cash, accuracy, and risk levels
+- profitDriverTree: Profit driver tree with top drivers, margin impact, and optimization potential
+- revenueQualityIndex: Revenue quality index with recurring ratio, predictability, and concentration risk
+- financialResilienceScore: Financial resilience score with stress tolerance, recovery speed, and buffer adequacy
+- workingCapitalOptimizer: Working capital optimizer with cash freed, cycle days, and efficiency gains
+- investmentReadinessGate: Investment readiness gate with gates passed, gaps remaining, and timeline
+- customerDnaProfile: Customer DNA profile with segments, behavioral patterns, and data completeness
+- propensityModel: Propensity model with accuracy, top signals, and revenue potential
+- churnEarlyWarning: Churn early warning with at-risk accounts, revenue at risk, and early signals
+- customerEffortOptimizer: Customer effort optimizer with friction points, ease of use, and improvement potential
+- loyaltyDriver: Loyalty driver with top drivers, retention impact, and NPS correlation
+- accountIntelligence: Account intelligence with accounts profiled, growth potential, and risk accounts`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -682,6 +754,18 @@ const TOOLS = [
             "salesMotionDesign", "dealAnalytics", "territoryOptimization", "salesCompensation", "revenuePrediction", "accountPenetration",
             "productVision", "featureRoadmap", "pmfAssessment", "userActivation", "productInsights", "releaseStrategy",
             "brandPositionMap", "brandValuation", "brandHierarchy", "reputationAnalysis", "messagingFramework", "visualBranding",
+            "growthPlaybook", "revenueRunRate", "breakEvenModel", "operatingLeverageIndex", "grossMarginAnalysis", "fundingScenarioModel",
+            "competitiveWargame", "marketDisruptionModel", "firstMoverAnalysis", "defensibilityAudit", "pivotReadiness", "competitiveTimingModel",
+            "customerMaturityModel", "expansionSignals", "adoptionScorecard", "stakeholderSentiment", "valueRealization", "renewalPlaybook",
+            "businessModelInnovation", "monetizationExperiment", "pricingArchitecture", "revenueStreamMap", "costDriverAnalysis", "valueCapture",
+            "revenueProcessMap", "billingHealthCheck", "quoteToCloseAnalysis", "revenueLeakDetector", "forecastAccuracyModel", "dealDeskOptimization",
+            "talentMarketIntel", "employeeLifecycleMap", "skillsInventory", "teamDynamicsAnalysis", "hybridWorkModel", "compensationPhilosophy",
+            "dataMaturityAssessment", "insightsPrioritization", "experimentVelocity", "decisionIntelligence", "feedbackIntelligence", "benchmarkingEngine",
+            "partnerValueMap", "coInnovationPipeline", "ecosystemRevenue", "allianceScorecard", "partnerEnablementPlan", "marketplaceReadiness",
+            "strategyExecution", "initiativeTracking", "resourceAllocationModel", "strategicBetting", "executionCadence", "alignmentIndex",
+            "marketSignalRadar", "competitorMoveTracker", "customerVoiceAggregator", "industryConvergenceMap", "emergingTechRadar", "regulatoryHorizon",
+            "cashFlowForecaster", "profitDriverTree", "revenueQualityIndex", "financialResilienceScore", "workingCapitalOptimizer", "investmentReadinessGate",
+            "customerDnaProfile", "propensityModel", "churnEarlyWarning", "customerEffortOptimizer", "loyaltyDriver", "accountIntelligence",
           ],
           description: "Which report section to retrieve",
         },

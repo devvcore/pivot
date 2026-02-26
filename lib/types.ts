@@ -1206,6 +1206,90 @@ export interface MVPDeliverables {
   reputationAnalysis?: ReputationAnalysis;
   messagingFramework?: MessagingFramework;
   visualBranding?: VisualBranding;
+  // Wave 81: Strategic Growth Planning
+  growthPlaybook?: GrowthPlaybook;
+  revenueRunRate?: RevenueRunRate;
+  breakEvenModel?: BreakEvenModel;
+  operatingLeverageIndex?: OperatingLeverageIndex;
+  grossMarginAnalysis?: GrossMarginAnalysis;
+  fundingScenarioModel?: FundingScenarioModel;
+  // Wave 82: Competitive Wargaming
+  competitiveWargame?: CompetitiveWargame;
+  marketDisruptionModel?: MarketDisruptionModel;
+  firstMoverAnalysis?: FirstMoverAnalysis;
+  defensibilityAudit?: DefensibilityAudit;
+  pivotReadiness?: PivotReadiness;
+  competitiveTimingModel?: CompetitiveTimingModel;
+  // Wave 83: Customer Success Advanced
+  customerMaturityModel?: CustomerMaturityModel;
+  expansionSignals?: ExpansionSignals;
+  adoptionScorecard?: AdoptionScorecard;
+  stakeholderSentiment?: StakeholderSentiment;
+  valueRealization?: ValueRealization;
+  renewalPlaybook?: RenewalPlaybook;
+  // Wave 84: Business Model Design
+  businessModelInnovation?: BusinessModelInnovation;
+  monetizationExperiment?: MonetizationExperiment;
+  pricingArchitecture?: PricingArchitecture;
+  revenueStreamMap?: RevenueStreamMap;
+  costDriverAnalysis?: CostDriverAnalysis;
+  valueCapture?: ValueCapture;
+  // Wave 85: Revenue Operations
+  revenueProcessMap?: RevenueProcessMap;
+  billingHealthCheck?: BillingHealthCheck;
+  quoteToCloseAnalysis?: QuoteToCloseAnalysis;
+  revenueLeakDetector?: RevenueLeakDetector;
+  forecastAccuracyModel?: ForecastAccuracyModel;
+  dealDeskOptimization?: DealDeskOptimization;
+  // Wave 86: Workforce Strategy
+  talentMarketIntel?: TalentMarketIntel;
+  employeeLifecycleMap?: EmployeeLifecycleMap;
+  skillsInventory?: SkillsInventory;
+  teamDynamicsAnalysis?: TeamDynamicsAnalysis;
+  hybridWorkModel?: HybridWorkModel;
+  compensationPhilosophy?: CompensationPhilosophy;
+  // Wave 87: Data & Intelligence
+  dataMaturityAssessment?: DataMaturityAssessment;
+  insightsPrioritization?: InsightsPrioritization;
+  experimentVelocity?: ExperimentVelocity;
+  decisionIntelligence?: DecisionIntelligence;
+  feedbackIntelligence?: FeedbackIntelligence;
+  benchmarkingEngine?: BenchmarkingEngine;
+  // Wave 88: Ecosystem & Partnerships
+  partnerValueMap?: PartnerValueMap;
+  coInnovationPipeline?: CoInnovationPipeline;
+  ecosystemRevenue?: EcosystemRevenue;
+  allianceScorecard?: AllianceScorecard;
+  partnerEnablementPlan?: PartnerEnablementPlan;
+  marketplaceReadiness?: MarketplaceReadiness;
+  // Wave 89: Strategic Execution
+  strategyExecution?: StrategyExecution;
+  initiativeTracking?: InitiativeTracking;
+  resourceAllocationModel?: ResourceAllocationModel;
+  strategicBetting?: StrategicBetting;
+  executionCadence?: ExecutionCadence;
+  alignmentIndex?: AlignmentIndex;
+  // Wave 90: Market Intelligence Advanced
+  marketSignalRadar?: MarketSignalRadar;
+  competitorMoveTracker?: CompetitorMoveTracker;
+  customerVoiceAggregator?: CustomerVoiceAggregator;
+  industryConvergenceMap?: IndustryConvergenceMap;
+  emergingTechRadar?: EmergingTechRadar;
+  regulatoryHorizon?: RegulatoryHorizon;
+  // Wave 91: Financial Health Deep
+  cashFlowForecaster?: CashFlowForecaster;
+  profitDriverTree?: ProfitDriverTree;
+  revenueQualityIndex?: RevenueQualityIndex;
+  financialResilienceScore?: FinancialResilienceScore;
+  workingCapitalOptimizer?: WorkingCapitalOptimizer;
+  investmentReadinessGate?: InvestmentReadinessGate;
+  // Wave 92: Customer Intelligence Platform
+  customerDnaProfile?: CustomerDnaProfile;
+  propensityModel?: PropensityModel;
+  churnEarlyWarning?: ChurnEarlyWarning;
+  customerEffortOptimizer?: CustomerEffortOptimizer;
+  loyaltyDriver?: LoyaltyDriver;
+  accountIntelligence?: AccountIntelligence;
 }
 
 export interface BenchmarkDimension {
@@ -3261,8 +3345,8 @@ export interface AcquisitionIntegration { summary: string; workstreams: Integrat
 export interface ReadinessArea { area: string; score: number; requirement: string; currentState: string; gap: string; action: string; }
 export interface InternationalReadiness { summary: string; overallScore: number; areas: ReadinessArea[]; topMarkets: string[]; regulatoryBarriers: string[]; localizationNeeds: string[]; recommendations: string[]; }
 
-export interface RevenueStream { stream: string; revenue: string; margin: string; growth: string; scalability: string; moatStrength: string; }
-export interface RevenueModelAnalysis { summary: string; streams: RevenueStream[]; primaryModel: string; recurringPercentage: string; diversificationScore: number; modelFit: string; recommendations: string[]; }
+export interface RevModelStream { stream: string; revenue: string; margin: string; growth: string; scalability: string; moatStrength: string; }
+export interface RevenueModelAnalysis { summary: string; streams: RevModelStream[]; primaryModel: string; recurringPercentage: string; diversificationScore: number; modelFit: string; recommendations: string[]; }
 
 export interface Experiment { name: string; hypothesis: string; metric: string; status: string; result: string; nextStep: string; }
 export interface GrowthExperiments { summary: string; experiments: Experiment[]; activeExperiments: number; winRate: string; topLearning: string; velocityScore: number; recommendations: string[]; }
@@ -3948,3 +4032,171 @@ export interface MessagePillar { pillar: string; headline: string; proofPoints: 
 export interface MessagingFramework { summary: string; pillars: MessagePillar[]; tagline: string; elevatorPitch: string; toneOfVoice: string; topPillar: string; recommendations: string[]; }
 export interface VisualElement { element: string; current: string; assessment: string; recommendation: string; priority: string; impact: string; }
 export interface VisualBranding { summary: string; elements: VisualElement[]; consistencyScore: number; modernityScore: number; distinctiveness: string; topImprovement: string; recommendations: string[]; }
+
+// ── Wave 81: Strategic Growth Planning ───────────────────────────────────────
+export interface GrowthLever { lever: string; impact: string; effort: string; timeline: string; owner: string; status: string; }
+export interface GrowthPlaybook { summary: string; levers: GrowthLever[]; topLever: string; growthRate: string; targetGrowth: string; confidenceScore: number; recommendations: string[]; }
+export interface RunRatePeriod { period: string; revenue: number; growth: string; annualized: number; trend: string; driver: string; }
+export interface RevenueRunRate { summary: string; periods: RunRatePeriod[]; currentRunRate: number; projectedAnnual: number; growthTrend: string; topRisk: string; recommendations: string[]; }
+export interface BreakEvenScenario { scenario: string; fixedCosts: number; variableCostPct: number; breakEvenRevenue: number; unitsRequired: number; timeToBreakEven: string; }
+export interface BreakEvenModel { summary: string; scenarios: BreakEvenScenario[]; currentStatus: string; breakEvenDate: string; marginOfSafety: string; sensitivityFactor: string; recommendations: string[]; }
+export interface LeverageMetric { metric: string; value: number; benchmark: string; trend: string; impact: string; action: string; }
+export interface OperatingLeverageIndex { summary: string; metrics: LeverageMetric[]; leverageRatio: number; fixedCostPct: string; scalabilityScore: number; topOpportunity: string; recommendations: string[]; }
+export interface MarginDriver { driver: string; currentMargin: string; targetMargin: string; gap: string; action: string; impact: string; }
+export interface GrossMarginAnalysis { summary: string; drivers: MarginDriver[]; overallMargin: string; industryBenchmark: string; marginTrend: string; topImprovement: string; recommendations: string[]; }
+export interface FundingScenario { scenario: string; amountNeeded: number; timeline: string; dilution: string; useOfFunds: string; outcome: string; }
+export interface FundingScenarioModel { summary: string; scenarios: FundingScenario[]; currentRunway: string; optimalRaise: string; bestTiming: string; topPriority: string; recommendations: string[]; }
+
+// ── Wave 82: Competitive Wargaming ──────────────────────────────────────────
+export interface WargameScenario { scenario: string; competitorMove: string; ourResponse: string; expectedOutcome: string; probability: string; prepAction: string; }
+export interface CompetitiveWargame { summary: string; scenarios: WargameScenario[]; biggestThreat: string; bestDefense: string; offensiveOpportunity: string; readinessScore: number; recommendations: string[]; }
+export interface DisruptionVector { vector: string; probability: string; timeHorizon: string; impact: string; currentPrep: string; action: string; }
+export interface MarketDisruptionModel { summary: string; vectors: DisruptionVector[]; disruptionRisk: string; mostLikelyDisruptor: string; adaptabilityScore: number; topAction: string; recommendations: string[]; }
+export interface MoverAdvantage { advantage: string; currentHolder: string; sustainability: string; ourPosition: string; action: string; value: string; }
+export interface FirstMoverAnalysis { summary: string; advantages: MoverAdvantage[]; firstMoverScore: number; fastFollowerViability: string; windowOfOpportunity: string; topAdvantage: string; recommendations: string[]; }
+export interface DefensibilityLayer { layer: string; strength: string; durability: string; investment: string; competitorAbility: string; action: string; }
+export interface DefensibilityAudit { summary: string; layers: DefensibilityLayer[]; overallScore: number; strongestMoat: string; weakestPoint: string; investmentNeeded: string; recommendations: string[]; }
+export interface PivotDimension { dimension: string; currentState: string; pivotOption: string; effort: string; risk: string; potential: string; }
+export interface PivotReadiness { summary: string; dimensions: PivotDimension[]; readinessScore: number; bestPivotOption: string; pivotCost: string; timeToExecute: string; recommendations: string[]; }
+export interface CompTimingFactor { factor: string; signal: string; status: string; window: string; confidence: string; action: string; }
+export interface CompetitiveTimingModel { summary: string; factors: CompTimingFactor[]; optimalTiming: string; marketReadiness: string; competitorReadiness: string; urgencyScore: number; recommendations: string[]; }
+
+// ── Wave 83: Customer Success Advanced ──────────────────────────────────────
+export interface MaturityStage { stage: string; criteria: string; customerPct: string; avgRevenue: string; churnRate: string; action: string; }
+export interface CustomerMaturityModel { summary: string; stages: MaturityStage[]; avgMaturity: string; maturationRate: string; topBlocker: string; revenueByStage: string; recommendations: string[]; }
+export interface ExpansionSignal { signal: string; strength: string; accounts: number; potentialRevenue: string; action: string; timeline: string; }
+export interface ExpansionSignals { summary: string; signals: ExpansionSignal[]; totalPotential: string; topSignal: string; readyAccounts: number; avgExpansionRate: string; recommendations: string[]; }
+export interface AdoptionMetric { metric: string; score: number; benchmark: string; trend: string; segment: string; action: string; }
+export interface AdoptionScorecard { summary: string; metrics: AdoptionMetric[]; overallAdoption: number; topFeature: string; lowestAdoption: string; adoptionTrend: string; recommendations: string[]; }
+export interface SentimentDimension { dimension: string; score: number; trend: string; verbatims: string; keyDriver: string; action: string; }
+export interface StakeholderSentiment { summary: string; dimensions: SentimentDimension[]; overallSentiment: number; topPositive: string; topNegative: string; npsCorrelation: string; recommendations: string[]; }
+export interface ValueMilestone { milestone: string; achievedPct: string; avgTimeToAchieve: string; impact: string; blocker: string; action: string; }
+export interface ValueRealization { summary: string; milestones: ValueMilestone[]; overallRealization: string; timeToFirstValue: string; valueGap: string; topAccelerator: string; recommendations: string[]; }
+export interface RenewalTactic { tactic: string; applicability: string; impact: string; effort: string; timing: string; owner: string; }
+export interface RenewalPlaybook { summary: string; tactics: RenewalTactic[]; renewalRate: string; atRiskRevenue: string; topTactic: string; renewalForecast: string; recommendations: string[]; }
+
+// ── Wave 84: Business Model Design ──────────────────────────────────────────
+export interface InnovationOption { option: string; description: string; feasibility: string; revenue: string; risk: string; timeline: string; }
+export interface BusinessModelInnovation { summary: string; options: InnovationOption[]; currentModelStrength: string; topOpportunity: string; disruptionRisk: string; innovationScore: number; recommendations: string[]; }
+export interface MonetizationTest { test: string; hypothesis: string; metric: string; targetOutcome: string; duration: string; status: string; }
+export interface MonetizationExperiment { summary: string; tests: MonetizationTest[]; topExperiment: string; expectedUplift: string; testVelocity: string; successRate: string; recommendations: string[]; }
+export interface PricingComponent { component: string; model: string; rationale: string; elasticity: string; competitorApproach: string; optimization: string; }
+export interface PricingArchitecture { summary: string; components: PricingComponent[]; architectureType: string; complexity: string; customerClarity: number; revenueImpact: string; recommendations: string[]; }
+export interface RevStreamItem { stream: string; revenue: string; growth: string; margin: string; risk: string; strategy: string; }
+export interface RevenueStreamMap { summary: string; streams: RevStreamItem[]; totalStreams: number; topStream: string; diversificationScore: number; concentrationRisk: string; recommendations: string[]; }
+export interface CostDriver { driver: string; amount: string; pctOfTotal: string; trend: string; controllability: string; action: string; }
+export interface CostDriverAnalysis { summary: string; drivers: CostDriver[]; totalCosts: string; topDriver: string; fixedVsVariable: string; optimizationPotential: string; recommendations: string[]; }
+export interface ValueCaptureMethod { method: string; currentCapture: string; potential: string; gap: string; barrier: string; action: string; }
+export interface ValueCapture { summary: string; methods: ValueCaptureMethod[]; captureRate: string; totalValueCreated: string; leakageRate: string; topOpportunity: string; recommendations: string[]; }
+
+// ── Wave 85: Revenue Operations ─────────────────────────────────────────────
+export interface RevenueProcess { process: string; owner: string; cycleTime: string; automationLevel: string; bottleneck: string; improvement: string; }
+export interface RevenueProcessMap { summary: string; processes: RevenueProcess[]; totalProcesses: number; avgCycleTime: string; automationRate: string; topBottleneck: string; recommendations: string[]; }
+export interface BillingIssue { issue: string; severity: string; impactAmount: string; frequency: string; rootCause: string; fix: string; }
+export interface BillingHealthCheck { summary: string; issues: BillingIssue[]; overallHealth: number; errorRate: string; revenueLost: string; topIssue: string; recommendations: string[]; }
+export interface QuoteStage { stage: string; avgDuration: string; conversionRate: string; dropReason: string; automationLevel: string; improvement: string; }
+export interface QuoteToCloseAnalysis { summary: string; stages: QuoteStage[]; totalCycleTime: string; overallConversion: string; biggestDelay: string; topImprovement: string; recommendations: string[]; }
+export interface RevenueLeak { leak: string; amount: string; source: string; detectability: string; prevention: string; priority: string; }
+export interface RevenueLeakDetector { summary: string; leaks: RevenueLeak[]; totalLeakage: string; topLeak: string; detectionRate: string; recoverable: string; recommendations: string[]; }
+export interface ForecastDimension { dimension: string; accuracy: string; bias: string; method: string; improvement: string; impact: string; }
+export interface ForecastAccuracyModel { summary: string; dimensions: ForecastDimension[]; overallAccuracy: string; avgBias: string; bestMethod: string; worstSegment: string; recommendations: string[]; }
+export interface DealDeskMetric { metric: string; value: string; benchmark: string; trend: string; bottleneck: string; action: string; }
+export interface DealDeskOptimization { summary: string; metrics: DealDeskMetric[]; avgDealTime: string; approvalRate: string; discountRate: string; topImprovement: string; recommendations: string[]; }
+
+// ── Wave 86: Workforce Strategy ─────────────────────────────────────────────
+export interface TalentMarketSignal { signal: string; market: string; supply: string; demand: string; salary: string; action: string; }
+export interface TalentMarketIntel { summary: string; signals: TalentMarketSignal[]; talentAvailability: string; competitivePosition: string; criticalRole: string; salaryTrend: string; recommendations: string[]; }
+export interface LifecyclePhase { phase: string; duration: string; satisfaction: string; attritionRisk: string; keyMoment: string; action: string; }
+export interface EmployeeLifecycleMap { summary: string; phases: LifecyclePhase[]; avgTenure: string; criticalPhase: string; satisfactionTrend: string; topRisk: string; recommendations: string[]; }
+export interface SkillCategory { category: string; currentLevel: string; requiredLevel: string; gap: string; urgency: string; developmentPlan: string; }
+export interface SkillsInventory { summary: string; categories: SkillCategory[]; totalSkillGaps: number; criticalGap: string; readinessScore: number; topPriority: string; recommendations: string[]; }
+export interface DynamicsDimension { dimension: string; score: number; trend: string; driver: string; risk: string; action: string; }
+export interface TeamDynamicsAnalysis { summary: string; dimensions: DynamicsDimension[]; overallHealth: number; strongestDimension: string; weakestDimension: string; interventionNeeded: string; recommendations: string[]; }
+export interface WorkDimension { dimension: string; policy: string; effectiveness: string; satisfaction: string; productivity: string; recommendation: string; }
+export interface HybridWorkModel { summary: string; dimensions: WorkDimension[]; hybridScore: number; remoteReadiness: string; collaborationScore: string; topChallenge: string; recommendations: string[]; }
+export interface CompPhilosophyElement { element: string; approach: string; marketPosition: string; competitiveness: string; alignment: string; action: string; }
+export interface CompensationPhilosophy { summary: string; elements: CompPhilosophyElement[]; marketPosition: string; totalRewardsScore: number; equityApproach: string; topGap: string; recommendations: string[]; }
+
+// ── Wave 87: Data & Intelligence ────────────────────────────────────────────
+export interface DataMaturityDimension { dimension: string; currentLevel: string; targetLevel: string; gap: string; investment: string; action: string; }
+export interface DataMaturityAssessment { summary: string; dimensions: DataMaturityDimension[]; overallMaturity: number; strongestArea: string; weakestArea: string; investmentNeeded: string; recommendations: string[]; }
+export interface InsightOpportunity { insight: string; value: string; effort: string; dataReady: string; stakeholder: string; priority: string; }
+export interface InsightsPrioritization { summary: string; opportunities: InsightOpportunity[]; totalOpportunities: number; topInsight: string; quickWins: number; dataGaps: string; recommendations: string[]; }
+export interface ExperimentMetric { metric: string; velocity: string; successRate: string; avgDuration: string; learnings: string; action: string; }
+export interface ExperimentVelocity { summary: string; metrics: ExperimentMetric[]; totalExperiments: number; avgCycleTime: string; winRate: string; topLearning: string; recommendations: string[]; }
+export interface DecisionArea { area: string; decisionSpeed: string; quality: string; dataUsage: string; bottleneck: string; improvement: string; }
+export interface DecisionIntelligence { summary: string; areas: DecisionArea[]; overallScore: number; avgDecisionTime: string; dataDrivernPct: string; topBottleneck: string; recommendations: string[]; }
+export interface FeedbackIntelChannel { channel: string; volume: string; sentiment: string; responseTime: string; actionRate: string; insight: string; }
+export interface FeedbackIntelligence { summary: string; channels: FeedbackIntelChannel[]; totalFeedback: string; netSentiment: string; topTheme: string; actionRate: string; recommendations: string[]; }
+export interface BenchmarkCategory { category: string; ourScore: number; industryAvg: number; topPerformer: number; percentile: string; action: string; }
+export interface BenchmarkingEngine { summary: string; categories: BenchmarkCategory[]; overallPercentile: string; topStrength: string; biggestGap: string; improvementPotential: string; recommendations: string[]; }
+
+// ── Wave 88: Ecosystem & Partnerships ───────────────────────────────────────
+export interface PartnerValue { partner: string; revenueContribution: string; strategicValue: string; health: string; risk: string; action: string; }
+export interface PartnerValueMap { summary: string; partners: PartnerValue[]; totalPartnerRevenue: string; topPartner: string; avgPartnerHealth: number; atRiskPartners: number; recommendations: string[]; }
+export interface CoInnovationProject { project: string; partner: string; stage: string; investment: string; expectedReturn: string; timeline: string; }
+export interface CoInnovationPipeline { summary: string; projects: CoInnovationProject[]; totalProjects: number; totalInvestment: string; topProject: string; avgTimeline: string; recommendations: string[]; }
+export interface EcosystemStream { stream: string; revenue: string; growth: string; margin: string; partner: string; strategy: string; }
+export interface EcosystemRevenue { summary: string; streams: EcosystemStream[]; totalEcoRevenue: string; growthRate: string; topStream: string; diversification: string; recommendations: string[]; }
+export interface AllianceDimension { dimension: string; score: number; target: number; gap: string; initiative: string; owner: string; }
+export interface AllianceScorecard { summary: string; dimensions: AllianceDimension[]; overallScore: number; topAlliance: string; weakestDimension: string; roi: string; recommendations: string[]; }
+export interface EnablementComponent { component: string; status: string; adoption: string; effectiveness: string; gap: string; action: string; }
+export interface PartnerEnablementPlan { summary: string; components: EnablementComponent[]; overallReadiness: number; topPriority: string; adoptionRate: string; investmentNeeded: string; recommendations: string[]; }
+export interface ReadinessDimension { dimension: string; score: number; requirement: string; gap: string; timeline: string; action: string; }
+export interface MarketplaceReadiness { summary: string; dimensions: ReadinessDimension[]; overallReadiness: number; launchDate: string; topBlocker: string; revenueProjection: string; recommendations: string[]; }
+
+// ── Wave 89: Strategic Execution ────────────────────────────────────────────
+export interface ExecutionPillar { pillar: string; status: string; progress: string; owner: string; blocker: string; action: string; }
+export interface StrategyExecution { summary: string; pillars: ExecutionPillar[]; overallProgress: string; onTrackPct: string; topBlocker: string; executionScore: number; recommendations: string[]; }
+export interface InitiativeItem { initiative: string; status: string; progress: string; impact: string; deadline: string; owner: string; }
+export interface InitiativeTracking { summary: string; initiatives: InitiativeItem[]; totalInitiatives: number; onTrackPct: string; completedPct: string; topPriority: string; recommendations: string[]; }
+export interface AllocationUnit { unit: string; budget: string; headcount: string; utilization: string; roi: string; rebalance: string; }
+export interface ResourceAllocationModel { summary: string; units: AllocationUnit[]; totalBudget: string; utilizationRate: string; topImbalance: string; optimizationPotential: string; recommendations: string[]; }
+export interface StrategicBet { bet: string; thesis: string; investment: string; expectedReturn: string; risk: string; timeframe: string; }
+export interface StrategicBetting { summary: string; bets: StrategicBet[]; totalInvestment: string; topBet: string; portfolioBalance: string; riskTolerance: string; recommendations: string[]; }
+export interface CadenceElement { element: string; frequency: string; participants: string; purpose: string; effectiveness: string; improvement: string; }
+export interface ExecutionCadence { summary: string; elements: CadenceElement[]; cadenceScore: number; meetingLoad: string; decisionSpeed: string; topGap: string; recommendations: string[]; }
+export interface AlignmentDimension { dimension: string; score: number; gap: string; driver: string; barrier: string; action: string; }
+export interface AlignmentIndex { summary: string; dimensions: AlignmentDimension[]; overallAlignment: number; strongestArea: string; weakestArea: string; improvementPlan: string; recommendations: string[]; }
+
+// ── Wave 90: Market Intelligence Advanced ───────────────────────────────────
+export interface MarketSignal { signal: string; source: string; strength: string; implication: string; timeframe: string; action: string; }
+export interface MarketSignalRadar { summary: string; signals: MarketSignal[]; totalSignals: number; strongestSignal: string; emergingTrend: string; urgency: string; recommendations: string[]; }
+export interface CompetitorMove { competitor: string; move: string; impact: string; timing: string; ourResponse: string; urgency: string; }
+export interface CompetitorMoveTracker { summary: string; moves: CompetitorMove[]; totalMoves: number; biggestThreat: string; opportunityFromMoves: string; responseReadiness: string; recommendations: string[]; }
+export interface AggVoiceTheme { theme: string; frequency: string; sentiment: string; source: string; trend: string; action: string; }
+export interface CustomerVoiceAggregator { summary: string; themes: AggVoiceTheme[]; totalVoices: number; topTheme: string; sentimentTrend: string; actionableInsights: number; recommendations: string[]; }
+export interface ConvergencePoint { point: string; industries: string; timeline: string; opportunity: string; threat: string; action: string; }
+export interface IndustryConvergenceMap { summary: string; points: ConvergencePoint[]; convergenceLevel: string; topOpportunity: string; disruptionRisk: string; readiness: string; recommendations: string[]; }
+export interface EmergingTech { technology: string; maturity: string; relevance: string; timeToImpact: string; investment: string; action: string; }
+export interface EmergingTechRadar { summary: string; technologies: EmergingTech[]; totalTracked: number; topTech: string; adoptionReadiness: string; investmentNeeded: string; recommendations: string[]; }
+export interface RegulatoryChange { regulation: string; jurisdiction: string; effectiveDate: string; impact: string; readiness: string; action: string; }
+export interface RegulatoryHorizon { summary: string; changes: RegulatoryChange[]; totalChanges: number; highestImpact: string; complianceGap: string; prepTime: string; recommendations: string[]; }
+
+// ── Wave 91: Financial Health Deep ──────────────────────────────────────────
+export interface CashFlowPeriod { period: string; inflow: number; outflow: number; netCash: number; runwayMonths: number; driver: string; }
+export interface CashFlowForecaster { summary: string; periods: CashFlowPeriod[]; currentCash: number; burnRate: string; runwayMonths: number; criticalDate: string; recommendations: string[]; }
+export interface ProfitDriver { driver: string; contribution: string; trend: string; leverage: string; controllability: string; action: string; }
+export interface ProfitDriverTree { summary: string; drivers: ProfitDriver[]; topDriver: string; profitMargin: string; improvementPotential: string; sensitivityFactor: string; recommendations: string[]; }
+export interface QualityDimension { dimension: string; score: number; trend: string; benchmark: string; risk: string; action: string; }
+export interface RevenueQualityIndex { summary: string; dimensions: QualityDimension[]; overallQuality: number; recurringPct: string; concentrationRisk: string; topImprovement: string; recommendations: string[]; }
+export interface ResilienceFactor { factor: string; score: number; stressTest: string; threshold: string; buffer: string; action: string; }
+export interface FinancialResilienceScore { summary: string; factors: ResilienceFactor[]; overallResilience: number; stressCapacity: string; recoveryTime: string; topVulnerability: string; recommendations: string[]; }
+export interface CapitalComponent { component: string; amount: string; cycleTime: string; efficiency: string; benchmark: string; action: string; }
+export interface WorkingCapitalOptimizer { summary: string; components: CapitalComponent[]; totalWorkingCapital: string; cycleDays: number; efficiencyScore: number; topOpportunity: string; recommendations: string[]; }
+export interface ReadinessGate { gate: string; status: string; criteria: string; gap: string; effort: string; timeline: string; }
+export interface InvestmentReadinessGate { summary: string; gates: ReadinessGate[]; overallReadiness: number; passedGates: number; totalGates: number; topBlocker: string; recommendations: string[]; }
+
+// ── Wave 92: Customer Intelligence Platform ─────────────────────────────────
+export interface DnaDimension { dimension: string; value: string; segment: string; behavior: string; prediction: string; action: string; }
+export interface CustomerDnaProfile { summary: string; dimensions: DnaDimension[]; dominantSegment: string; avgLifetimeValue: string; retentionProbability: string; topInsight: string; recommendations: string[]; }
+export interface PropensityFactor { factor: string; score: number; direction: string; confidence: string; segment: string; action: string; }
+export interface PropensityModel { summary: string; factors: PropensityFactor[]; buyPropensity: string; churnPropensity: string; expandPropensity: string; topFactor: string; recommendations: string[]; }
+export interface WarningSignal { signal: string; severity: string; accounts: number; revenueAtRisk: string; leadTime: string; intervention: string; }
+export interface ChurnEarlyWarning { summary: string; signals: WarningSignal[]; totalAtRisk: number; revenueAtRisk: string; avgLeadTime: string; interventionSuccessRate: string; recommendations: string[]; }
+export interface EffortPoint { point: string; effortScore: number; frequency: string; impact: string; rootCause: string; action: string; }
+export interface CustomerEffortOptimizer { summary: string; points: EffortPoint[]; overallEffortScore: number; topFrictionPoint: string; automationOpportunity: string; satisfactionCorrelation: string; recommendations: string[]; }
+export interface LoyaltyFactor { factor: string; impact: string; current: string; potential: string; gap: string; action: string; }
+export interface LoyaltyDriver { summary: string; factors: LoyaltyFactor[]; overallLoyalty: number; topDriver: string; biggestDetractor: string; npsImpact: string; recommendations: string[]; }
+export interface AccountDimension { dimension: string; value: string; trend: string; benchmark: string; opportunity: string; action: string; }
+export interface AccountIntelligence { summary: string; dimensions: AccountDimension[]; totalAccounts: number; topAccount: string; growthOpportunity: string; riskConcentration: string; recommendations: string[]; }
