@@ -23,6 +23,7 @@ import { IssuesSeverityChart } from "./charts/IssuesSeverityChart";
 import { TechSavingsChart } from "./charts/TechSavingsChart";
 import { PricingComparisonChart } from "./charts/PricingComparisonChart";
 import { CompetitorRadarChart } from "./charts/CompetitorRadarChart";
+import { ChartInteraction } from "./charts/ChartInteraction";
 
 interface ResultsViewProps {
   runId: string;
@@ -244,6 +245,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
   const db2 = d.decisionBrief;
   const ap = d.actionPlan;
   const mi = d.marketIntelligence;
+  const chartOrgId = job.questionnaire.orgId ?? "default-org";
 
   const radarData = (hs.dimensions || []).map((dim) => ({
     dimension: dim.name.split(" ")[0],
@@ -435,6 +437,20 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
 
                 {/* Cash flow charts */}
                 <CashFlowChart projections={(ci as any).weeklyProjections ?? []} />
+                <ChartInteraction
+                  section="cash"
+                  orgId={chartOrgId}
+                  prompts={[
+                    "What weeks are most dangerous for cash?",
+                    "How can I extend my runway by 4 weeks?",
+                    "What expenses should I cut first?",
+                  ]}
+                  projectionConfig={{
+                    type: "cash_forecast",
+                    scenario: "Continue current burn rate with no changes to revenue or expenses",
+                    months: 3,
+                  }}
+                />
 
                 {weeklyModel.length > 0 && (
                   <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
@@ -507,6 +523,20 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
 
                 {/* Revenue leak charts */}
                 <RevenueLeakChart items={rl.items || []} />
+                <ChartInteraction
+                  section="revenue"
+                  orgId={chartOrgId}
+                  prompts={[
+                    "Which leak should I fix first for fastest ROI?",
+                    "What if I recovered the top 3 leaks?",
+                    "Break down the root causes of my biggest leak",
+                  ]}
+                  projectionConfig={{
+                    type: "revenue_recovery",
+                    scenario: "Fix the top 3 revenue leaks over the next 10 weeks",
+                    months: 3,
+                  }}
+                />
 
                 {(rl.items || []).map((item, i) => (
                   <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
@@ -556,6 +586,20 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
 
                 {/* Issues charts */}
                 <IssuesSeverityChart issues={ir.issues || []} />
+                <ChartInteraction
+                  section="issues"
+                  orgId={chartOrgId}
+                  prompts={[
+                    "What's the total financial exposure from critical issues?",
+                    "Which issue should I tackle this week?",
+                    "How do these issues affect my cash runway?",
+                  ]}
+                  projectionConfig={{
+                    type: "growth_scenario",
+                    scenario: "Resolve all critical and high-severity issues over the next 10 weeks",
+                    months: 3,
+                  }}
+                />
 
                 {(ir.issues || []).map((issue, i) => (
                   <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
@@ -603,6 +647,20 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
 
                 {/* Customer risk scatter chart */}
                 <CustomerRiskScatter customers={arc.customers || []} />
+                <ChartInteraction
+                  section="customers"
+                  orgId={chartOrgId}
+                  prompts={[
+                    "What happens if I lose my highest-risk customer?",
+                    "Which customer should I call first and what do I say?",
+                    "What's my total revenue exposure from at-risk clients?",
+                  ]}
+                  projectionConfig={{
+                    type: "customer_churn",
+                    scenario: "Lose the highest-risk customer within 4 weeks with no replacement revenue",
+                    months: 3,
+                  }}
+                />
 
                 {(arc.customers || []).map((c, i) => (
                   <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
@@ -1074,6 +1132,15 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     competitors={[...ca.competitors, ...ca.industryLeaders]}
                     yourGrade={d.websiteAnalysis?.grade}
                   />
+                  <ChartInteraction
+                    section="competitors"
+                    orgId={chartOrgId}
+                    prompts={[
+                      "How do I differentiate from my top competitor?",
+                      "What are competitors doing that I should copy?",
+                      "Where am I strongest vs weakest against competition?",
+                    ]}
+                  />
 
                   {/* Competitor cards */}
                   {[...ca.competitors, ...ca.industryLeaders].length > 0 && (
@@ -1144,7 +1211,23 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
 
                   {/* Tech savings chart */}
                   {to.recommendations?.length > 0 && (
-                    <TechSavingsChart recommendations={to.recommendations} />
+                    <>
+                      <TechSavingsChart recommendations={to.recommendations} />
+                      <ChartInteraction
+                        section="tech"
+                        orgId={chartOrgId}
+                        prompts={[
+                          "Which migration gives the best ROI?",
+                          "What's my total possible savings if I do all?",
+                          "Which tools are critical vs nice-to-have?",
+                        ]}
+                        projectionConfig={{
+                          type: "growth_scenario",
+                          scenario: "Implement all tech cost optimizations over 10 weeks, saving estimated monthly amounts",
+                          months: 3,
+                        }}
+                      />
+                    </>
                   )}
 
                   {/* Recommendations */}
@@ -1189,7 +1272,23 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
 
                   {/* Pricing chart */}
                   {pi.suggestedPricing?.length > 0 && (
-                    <PricingComparisonChart tiers={pi.suggestedPricing} />
+                    <>
+                      <PricingComparisonChart tiers={pi.suggestedPricing} />
+                      <ChartInteraction
+                        section="pricing"
+                        orgId={chartOrgId}
+                        prompts={[
+                          "What if I raise prices by 15%?",
+                          "Which tier has the highest margin potential?",
+                          "How does my pricing compare to competitors?",
+                        ]}
+                        projectionConfig={{
+                          type: "revenue_recovery",
+                          scenario: "Implement recommended pricing tiers over the next 10 weeks with gradual customer migration",
+                          months: 3,
+                        }}
+                      />
+                    </>
                   )}
 
                   {/* Pricing tiers */}
@@ -1264,6 +1363,20 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   <MarketingChannelChart
                     channels={ms.channelRecommendations ?? []}
                     socialStrategy={ms.socialMediaStrategy ?? []}
+                  />
+                  <ChartInteraction
+                    section="marketing"
+                    orgId={chartOrgId}
+                    prompts={[
+                      "What's my best marketing channel right now?",
+                      "How should I split my ad budget?",
+                      "What content should I post this week?",
+                    ]}
+                    projectionConfig={{
+                      type: "growth_scenario",
+                      scenario: "Execute top 3 recommended marketing channels for 10 weeks with consistent effort",
+                      months: 3,
+                    }}
                   />
 
                   {/* Channel recommendations */}
