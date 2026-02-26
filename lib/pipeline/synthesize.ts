@@ -20,6 +20,16 @@ import type {
   KPIReport,
   RoadmapReport,
   HealthChecklist,
+  SWOTAnalysis,
+  UnitEconomics,
+  CustomerSegmentation,
+  CompetitiveWinLoss,
+  InvestorOnePager,
+  HiringPlan,
+  RevenueForecast,
+  ChurnPlaybook,
+  SalesPlaybook,
+  GoalTracker,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -1090,6 +1100,735 @@ ${schema}`;
     return result as unknown as HealthChecklist;
   } catch (e) {
     console.warn("[Pivot] Health checklist synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── SWOT Analysis ──────────────────────────────────────────────────────────
+
+export async function synthesizeSWOT(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SWOTAnalysis | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "strengths": [{ "point": "...", "evidence": "...", "leverage": "..." }],
+  "weaknesses": [{ "point": "...", "evidence": "...", "mitigation": "..." }],
+  "opportunities": [{ "point": "...", "timeframe": "...", "potentialImpact": "...", "actionRequired": "..." }],
+  "threats": [{ "point": "...", "likelihood": "high|medium|low", "severity": "...", "contingency": "..." }],
+  "strategicPriorities": [{ "priority": "...", "rationale": "...", "timeline": "..." }],
+  "summary": "2-3 sentence SWOT overview"
+}`;
+
+  const prompt = `You are a strategic business analyst performing a SWOT analysis.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Model: ${questionnaire.businessModel}
+
+Analyze this specific business for Strengths, Weaknesses, Opportunities, and Threats.
+Each item MUST cite evidence from the data — no generic advice.
+- Strengths: what this business does well, backed by numbers or facts from documents
+- Weaknesses: internal problems with evidence (revenue gaps, team gaps, operational issues)
+- Opportunities: external and internal growth levers with timeframes and dollar impact estimates
+- Threats: competitive, market, financial, or operational threats with likelihood ratings
+- Strategic Priorities: rank the top 3-5 priorities by impact, combining insights from all four quadrants
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+
+Minimum: 3 items per SWOT quadrant, 3 strategic priorities.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating SWOT Analysis…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SWOTAnalysis;
+  } catch (e) {
+    console.warn("[Pivot] SWOT synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Unit Economics ─────────────────────────────────────────────────────────
+
+export async function synthesizeUnitEconomics(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<UnitEconomics | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "cac": { "value": "...", "source": "from_documents|estimated", "benchmark": "..." },
+  "ltv": { "value": "...", "source": "from_documents|estimated", "benchmark": "..." },
+  "ltvCacRatio": { "value": "...", "assessment": "...", "benchmark": "..." },
+  "paybackPeriodMonths": { "value": "...", "source": "from_documents|estimated", "assessment": "..." },
+  "grossMargin": { "value": "...", "source": "from_documents|estimated", "benchmark": "..." },
+  "netMargin": { "value": "...", "source": "from_documents|estimated" },
+  "revenuePerCustomer": { "value": "...", "source": "from_documents|estimated" },
+  "burnMultiple": { "value": "...", "assessment": "..." },
+  "recommendations": [{ "metric": "...", "current": "...", "target": "...", "action": "..." }],
+  "summary": "2-3 sentence unit economics overview",
+  "dataQualityNote": "What data was available vs estimated"
+}`;
+
+  const prompt = `You are a financial analyst calculating unit economics.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+
+Calculate unit economics from the uploaded financial data. For each metric:
+- Flag as "from_documents" if calculated from actual document data
+- Flag as "estimated" if you had to estimate based on industry patterns
+- Include: CAC, LTV, LTV:CAC ratio, payback period, gross margin, net margin, revenue per customer, burn multiple
+- Compare each against industry benchmarks
+- Add 3-5 specific recommendations for improving unit economics
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Unit Economics…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as UnitEconomics;
+  } catch (e) {
+    console.warn("[Pivot] Unit Economics synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Customer Segmentation ─────────────────────────────────────────────────
+
+export async function synthesizeCustomerSegmentation(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<CustomerSegmentation | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 35_000);
+
+  const atRisk = deliverables.atRiskCustomers?.customers?.slice(0, 5) ?? [];
+  const leaks = deliverables.revenueLeakAnalysis?.items?.slice(0, 3) ?? [];
+  const deliverablesContext = `
+AT-RISK CUSTOMERS: ${JSON.stringify(atRisk.map(c => ({ name: c.name, risk: c.risk, revenue: c.revenueAtRisk })))}
+TOP REVENUE LEAKS: ${JSON.stringify(leaks.map(l => ({ desc: l.description, amount: l.amount, client: l.clientOrArea })))}
+TOTAL REVENUE AT RISK: ${deliverables.atRiskCustomers?.totalRevenueAtRisk ?? "Unknown"}`;
+
+  const schema = `{
+  "segments": [{
+    "tier": "Enterprise|Mid-Market|SMB|Startup",
+    "name": "...",
+    "customerCount": "~N accounts",
+    "revenueShare": "X% of revenue",
+    "avgDealSize": "$X",
+    "churnRisk": "low|medium|high",
+    "growthPotential": "low|medium|high",
+    "idealProfile": "...",
+    "engagementStrategy": "..."
+  }],
+  "idealCustomerProfile": [{ "characteristic": "...", "importance": "..." }],
+  "concentrationRisk": "Top N clients = X% of revenue — RISK LEVEL",
+  "expansionTargets": [{ "segment": "...", "opportunity": "...", "estimatedRevenue": "..." }],
+  "summary": "2-3 sentence segmentation overview"
+}`;
+
+  const prompt = `You are a customer strategy analyst performing segmentation.
+
+BUSINESS DATA:
+${ctx}
+
+EXISTING ANALYSIS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+
+Segment customers using all available data (customer lists, revenue data, at-risk customers):
+- Create meaningful tiers based on revenue contribution, deal size, and engagement
+- Identify the ideal customer profile (ICP) with specific characteristics
+- Flag concentration risk (% of revenue from top clients)
+- Suggest expansion targets — which segments to grow and why
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Only name customers that ACTUALLY APPEAR in the documents.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Customer Segmentation…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CustomerSegmentation;
+  } catch (e) {
+    console.warn("[Pivot] Customer Segmentation synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Competitive Win/Loss Analysis ─────────────────────────────────────────
+
+export async function synthesizeCompetitiveWinLoss(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<CompetitiveWinLoss | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 35_000);
+
+  const marketIntel = deliverables.marketIntelligence;
+  const competitors = deliverables.competitorAnalysis;
+  const deliverablesContext = `
+COMPETITIVE INTELLIGENCE: ${marketIntel?.competitiveIntelligence ?? "None available"}
+TOP PERFORMERS DO: ${JSON.stringify(marketIntel?.whatTopPerformersDo?.slice(0, 4) ?? [])}
+COMPETITOR ANALYSIS: ${competitors ? JSON.stringify(competitors.competitors.map(c => ({ name: c.name, offer: c.offer, strengths: c.strengths }))) : "None available"}
+SUGGESTED POSITIONING: ${competitors?.suggestedPositioning ?? "Unknown"}`;
+
+  const schema = `{
+  "winReasons": [{ "reason": "...", "frequency": "...", "evidence": "..." }],
+  "lossReasons": [{ "reason": "...", "frequency": "...", "remediation": "..." }],
+  "competitiveAdvantages": [{ "advantage": "...", "sustainability": "durable|temporary|at_risk" }],
+  "competitiveDisadvantages": [{ "disadvantage": "...", "urgency": "immediate|medium_term|long_term", "fix": "..." }],
+  "battleCards": [{ "competitor": "...", "theirStrength": "...", "yourCounter": "...", "talkTrack": "..." }],
+  "summary": "2-3 sentence competitive overview"
+}`;
+
+  const prompt = `You are a competitive intelligence analyst.
+
+BUSINESS DATA:
+${ctx}
+
+EXISTING COMPETITIVE ANALYSIS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Unknown"}
+
+Analyze competitive positioning:
+- Why does this business WIN deals? (identify patterns from customer data, strengths, market position)
+- Why does this business LOSE deals? (identify gaps, weaknesses, competitive disadvantages)
+- Create battle cards for top 3 competitors with specific counter-arguments and talk tracks
+- Rate each competitive advantage as durable, temporary, or at_risk
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Only reference competitors that appear in the data or questionnaire.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Competitive Win/Loss Analysis…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CompetitiveWinLoss;
+  } catch (e) {
+    console.warn("[Pivot] Competitive Win/Loss synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Investor One-Pager ────────────────────────────────────────────────────
+
+export async function synthesizeInvestorOnePager(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<InvestorOnePager | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 35_000);
+
+  const health = deliverables.healthScore;
+  const marketIntel = deliverables.marketIntelligence;
+  const leaks = deliverables.revenueLeakAnalysis;
+  const deliverablesContext = `
+HEALTH SCORE: ${health?.score ?? "Unknown"}/100 (${health?.grade ?? "?"})
+HEADLINE: ${health?.headline ?? "N/A"}
+INDUSTRY: ${marketIntel?.industry ?? questionnaire.industry}
+INDUSTRY CONTEXT: ${marketIntel?.industryContext ?? "N/A"}
+TOTAL REVENUE LEAKS: $${leaks?.totalIdentified ?? 0}
+URGENT OPPORTUNITY: ${marketIntel?.urgentOpportunity ?? "N/A"}`;
+
+  const schema = `{
+  "companyName": "...",
+  "tagline": "One-line pitch",
+  "problem": "The problem being solved",
+  "solution": "How this business solves it",
+  "marketSize": "TAM/SAM/SOM estimate",
+  "businessModel": "How it makes money",
+  "traction": "Key metrics proving momentum",
+  "team": "Team strengths and key members",
+  "competitiveEdge": "Why this business wins",
+  "financialHighlights": [{ "metric": "...", "value": "..." }],
+  "askAmount": "Funding amount if applicable (or null)",
+  "useOfFunds": "How funds would be used (or null)",
+  "keyRisks": ["Risk 1", "Risk 2"],
+  "whyNow": "Why this is the right time",
+  "contactInfo": null,
+  "summary": "2-3 sentence executive summary"
+}`;
+
+  const prompt = `You are an expert pitch consultant generating an investor one-pager.
+
+BUSINESS DATA:
+${ctx}
+
+ANALYSIS HIGHLIGHTS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+
+Generate a compelling investor one-pager that distills ALL business data into:
+- A memorable tagline (under 10 words)
+- Clear problem/solution framing
+- Market size with realistic estimates
+- Traction metrics from actual data (revenue, customers, growth)
+- Financial highlights from VERIFIED data only
+- Honest key risks (investors respect transparency)
+- A compelling "why now" narrative
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Financial highlights MUST come from document data. Do NOT fabricate traction metrics.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Investor One-Pager…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as InvestorOnePager;
+  } catch (e) {
+    console.warn("[Pivot] Investor One-Pager synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Hiring Plan ───────────────────────────────────────────────────────────
+
+export async function synthesizeHiringPlan(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<HiringPlan | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 35_000);
+
+  const issues = deliverables.issuesRegister?.issues?.slice(0, 5) ?? [];
+  const leaks = deliverables.revenueLeakAnalysis?.items?.slice(0, 3) ?? [];
+  const opportunities = deliverables.marketIntelligence?.lowHangingFruit?.slice(0, 3) ?? [];
+  const deliverablesContext = `
+TOP ISSUES: ${JSON.stringify(issues.map(i => ({ title: i.title, category: i.category, severity: i.severity })))}
+REVENUE LEAKS: ${JSON.stringify(leaks.map(l => ({ desc: l.description, amount: l.amount })))}
+GROWTH OPPORTUNITIES: ${JSON.stringify(opportunities.map(o => ({ opportunity: o.opportunity, revenue: o.monthlyRevenuePotential })))}
+EMPLOYEE COUNT: ${packet.keyMetrics.employeeCount ?? "Unknown"}`;
+
+  const schema = `{
+  "recommendations": [{
+    "rank": 1,
+    "role": "VP of Sales",
+    "department": "Sales|Engineering|Marketing|Operations|Finance|HR",
+    "urgency": "immediate|next_quarter|next_half",
+    "rationale": "Why this hire matters for THIS business",
+    "expectedROI": "Could generate $X in Y timeframe",
+    "estimatedSalary": "$80K-$120K",
+    "alternativeToHiring": "Could outsource to agency for $X/mo instead",
+    "keyResponsibilities": ["resp 1", "resp 2", "resp 3"]
+  }],
+  "currentTeamGaps": [{ "area": "...", "gap": "...", "impact": "..." }],
+  "totalBudgetNeeded": "$X for first Y hires",
+  "priorityOrder": "Sales first, then marketing, then ops",
+  "summary": "2-3 sentence hiring plan overview"
+}`;
+
+  const prompt = `You are an HR strategy advisor analyzing team gaps and hiring needs.
+
+BUSINESS DATA:
+${ctx}
+
+IDENTIFIED GAPS & OPPORTUNITIES:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+
+Based on the business's gaps, revenue leaks, and growth opportunities, recommend hires ranked by ROI:
+- Each hire should directly address an identified issue, leak, or opportunity
+- Include realistic salary ranges for the industry and location
+- ALWAYS suggest an alternative to hiring (outsource, automate, fractional, contractor)
+- Include 3-5 key responsibilities for each role
+- Identify current team gaps even if no hire is recommended
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+
+Recommend 3-5 hires. Rank by expected ROI.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Hiring Plan…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as HiringPlan;
+  } catch (e) {
+    console.warn("[Pivot] Hiring Plan synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Revenue Forecast ──────────────────────────────────────────────────────
+
+export async function synthesizeRevenueForecast(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<RevenueForecast | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "scenarios": [{
+    "name": "Conservative|Base Case|Optimistic",
+    "assumptions": ["assumption 1", "assumption 2"],
+    "monthly": [{ "month": "Month 1", "revenue": 0, "costs": 0, "profit": 0 }],
+    "totalRevenue12Mo": 0,
+    "totalProfit12Mo": 0,
+    "breakEvenMonth": "Month N or null"
+  }],
+  "currentMRR": "$X or Insufficient data",
+  "currentARR": "$X or Insufficient data",
+  "growthRate": "X% MoM or Insufficient data",
+  "keyDrivers": [{ "driver": "...", "impact": "...", "confidence": "high|medium|low" }],
+  "risks": [{ "risk": "...", "revenueImpact": "...", "mitigant": "..." }],
+  "summary": "2-3 sentence forecast overview",
+  "dataQualityNote": "What data was used vs estimated"
+}`;
+
+  const prompt = `You are a financial modeling expert building revenue forecasts.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+
+Build 3 revenue forecast scenarios with 12-month monthly projections:
+1. Conservative: assumes minimal growth, some customer loss
+2. Base Case: assumes current trajectory continues with modest improvements
+3. Optimistic: assumes key actions are taken (revenue leaks plugged, new opportunities captured)
+
+For each scenario:
+- Use real financial data as the baseline (MRR, expenses, margins from documents)
+- State assumptions explicitly
+- Include monthly revenue, costs, and profit
+- Calculate total 12-month revenue and profit
+- Identify break-even month if applicable
+
+Also identify key growth drivers, risks, and their revenue impact.
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+If baseline revenue is unknown, note it clearly and use the revenue range as a rough guide.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Revenue Forecast…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as RevenueForecast;
+  } catch (e) {
+    console.warn("[Pivot] Revenue Forecast synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Churn Playbook ────────────────────────────────────────────────────────
+
+export async function synthesizeChurnPlaybook(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<ChurnPlaybook | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 35_000);
+
+  const atRisk = deliverables.atRiskCustomers?.customers ?? [];
+  const deliverablesContext = `
+AT-RISK CUSTOMERS: ${JSON.stringify(atRisk.map(c => ({
+    name: c.name,
+    risk: c.risk,
+    revenue: c.revenueAtRisk,
+    riskScore: c.riskScore,
+    signals: c.warningSignals,
+    churnProbability: c.churnProbability
+  })))}
+TOTAL REVENUE AT RISK: ${deliverables.atRiskCustomers?.totalRevenueAtRisk ?? "Unknown"}
+IMMEDIATE ACTION: ${deliverables.atRiskCustomers?.immediateAction ?? "N/A"}`;
+
+  const schema = `{
+  "entries": [{
+    "customerName": "...",
+    "riskLevel": "critical|high|medium",
+    "revenueAtRisk": "$X",
+    "warningSignals": ["signal 1", "signal 2"],
+    "predictedChurnWindow": "Within 30 days|60-90 days",
+    "interventionPlan": [{ "step": 1, "action": "...", "owner": "...", "deadline": "..." }],
+    "talkingPoints": ["What to say point 1", "point 2"],
+    "offerToMake": "Discount, upgrade, or null",
+    "successMetric": "How to know the intervention worked"
+  }],
+  "totalRevenueAtRisk": "$X",
+  "overallStrategy": "2-3 sentence retention strategy",
+  "retentionTactics": [{ "tactic": "...", "effort": "...", "impact": "..." }],
+  "summary": "2-3 sentence churn playbook overview"
+}`;
+
+  const prompt = `You are a customer success expert creating retention intervention plans.
+
+BUSINESS DATA:
+${ctx}
+
+IDENTIFIED AT-RISK CUSTOMERS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+
+For each at-risk customer from the data, create a specific retention intervention plan:
+- Talking points for the retention conversation (specific to this customer's situation)
+- Concrete offers to make (discount, free upgrade, dedicated support, etc.)
+- Step-by-step intervention timeline with deadlines
+- Success metrics to measure if the intervention worked
+
+Also include 3-5 general retention tactics applicable to this business.
+
+CRITICAL: ONLY create entries for customers that appear in the at-risk customer data above. Do NOT invent customer names.
+If no at-risk customers were identified, return an empty entries array and focus on general retention tactics.
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Churn Playbook…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ChurnPlaybook;
+  } catch (e) {
+    console.warn("[Pivot] Churn Playbook synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Sales Playbook ────────────────────────────────────────────────────────
+
+export async function synthesizeSalesPlaybook(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<SalesPlaybook | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 35_000);
+
+  const marketIntel = deliverables.marketIntelligence;
+  const pricing = deliverables.pricingIntelligence;
+  const competitors = deliverables.competitorAnalysis;
+  const deliverablesContext = `
+COMPETITIVE POSITION: ${marketIntel?.competitiveIntelligence ?? "Unknown"}
+PRICING ASSESSMENT: ${pricing?.currentPricingAssessment ?? "Unknown"}
+PRICING TIERS: ${JSON.stringify(pricing?.suggestedPricing?.slice(0, 3) ?? [])}
+COMPETITOR POSITIONING: ${competitors?.suggestedPositioning ?? "Unknown"}
+TOP PERFORMERS DO: ${JSON.stringify(marketIntel?.whatTopPerformersDo?.slice(0, 4) ?? [])}`;
+
+  const schema = `{
+  "idealBuyerPersona": [{
+    "title": "CTO at Mid-Market SaaS",
+    "painPoints": ["pain 1", "pain 2"],
+    "motivations": ["motivation 1"],
+    "objections": ["objection 1"]
+  }],
+  "salesProcess": [{
+    "stage": "Discovery|Qualification|Demo|Proposal|Negotiation|Close",
+    "actions": ["action 1", "action 2"],
+    "exitCriteria": "What must be true to advance",
+    "avgDuration": "3-5 days"
+  }],
+  "objectionHandling": [{ "objection": "...", "response": "...", "proof": "..." }],
+  "emailTemplates": [{ "purpose": "Cold outreach|Follow-up|Proposal", "subject": "...", "body": "..." }],
+  "coldCallScript": {
+    "opening": "...",
+    "qualifyingQuestions": ["q1", "q2"],
+    "pitchPoints": ["point 1", "point 2"],
+    "closingAsk": "..."
+  },
+  "pricingTalkTrack": "How to discuss pricing confidently",
+  "competitiveHandling": "How to handle competitor mentions",
+  "closingTechniques": [{ "technique": "...", "whenToUse": "...", "example": "..." }],
+  "summary": "2-3 sentence sales playbook overview"
+}`;
+
+  const prompt = `You are a sales strategy expert building a complete sales playbook.
+
+BUSINESS DATA:
+${ctx}
+
+EXISTING ANALYSIS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Model: ${questionnaire.businessModel}
+
+Generate a complete, tailored sales playbook:
+- Buyer personas derived from EXISTING customer data (who actually buys from this business)
+- Sales process stages with specific actions and exit criteria for each
+- Top 5 objection responses with proof points from the business's actual strengths
+- 2-3 email templates (cold outreach, follow-up, proposal) written for this specific business
+- A cold call script tailored to this industry and offering
+- Pricing talk track based on their actual pricing and competitive position
+- 3 closing techniques suited to their deal size and sales cycle
+
+EVERYTHING must be tailored to THIS specific business — no generic sales advice.
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Sales Playbook…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SalesPlaybook;
+  } catch (e) {
+    console.warn("[Pivot] Sales Playbook synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Goal Tracker / OKR System ─────────────────────────────────────────────
+
+export async function synthesizeGoalTracker(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<GoalTracker | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 30_000);
+
+  const kpis = deliverables.kpiReport?.kpis?.slice(0, 5) ?? [];
+  const issues = deliverables.issuesRegister?.issues?.slice(0, 5) ?? [];
+  const leaks = deliverables.revenueLeakAnalysis?.items?.slice(0, 3) ?? [];
+  const opportunities = deliverables.marketIntelligence?.lowHangingFruit?.slice(0, 3) ?? [];
+  const healthScore = deliverables.healthScore;
+  const deliverablesContext = `
+HEALTH SCORE: ${healthScore?.score ?? "Unknown"}/100
+KPIs: ${JSON.stringify(kpis.map(k => ({ name: k.name, current: k.currentValue, target: k.targetValue, status: k.status })))}
+TOP ISSUES: ${JSON.stringify(issues.map(i => ({ title: i.title, severity: i.severity, impact: i.financialImpact })))}
+REVENUE LEAKS: ${JSON.stringify(leaks.map(l => ({ desc: l.description, amount: l.amount })))}
+OPPORTUNITIES: ${JSON.stringify(opportunities.map(o => ({ opportunity: o.opportunity, revenue: o.monthlyRevenuePotential })))}`;
+
+  const schema = `{
+  "objectives": [{
+    "id": "OBJ-1",
+    "objective": "Increase monthly revenue to $100K",
+    "category": "Revenue|Growth|Operations|Product|Customer|Team",
+    "timeframe": "Q1 2026|Next 90 days",
+    "keyResults": [{
+      "id": "KR-1-1",
+      "description": "Close 5 enterprise deals",
+      "metric": "enterprise_deals_closed",
+      "current": "2",
+      "target": "5",
+      "unit": "#|$|%",
+      "progress": 40,
+      "status": "on_track|at_risk|behind|completed"
+    }],
+    "overallProgress": 0,
+    "status": "on_track|at_risk|behind|completed",
+    "linkedDeliverable": "revenueLeakAnalysis|kpiReport|etc"
+  }],
+  "suggestedObjectives": [{ "objective": "...", "rationale": "...", "category": "...", "keyResults": ["kr1", "kr2"] }],
+  "quarterlyTheme": "Revenue Recovery & Stabilization",
+  "summary": "2-3 sentence OKR overview"
+}`;
+
+  const prompt = `You are an OKR and business strategy expert setting quarterly goals.
+
+BUSINESS DATA:
+${ctx}
+
+ALL DELIVERABLE INSIGHTS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Primary Objective: ${questionnaire.primaryObjective ?? questionnaire.oneDecisionKeepingOwnerUpAtNight ?? "Growth"}
+
+Based on ALL deliverables (KPIs, issues, leaks, opportunities, health score), suggest 3-5 quarterly OKRs:
+- Each objective should directly address a finding from the analysis
+- Key results must be measurable with specific numeric targets
+- Set REALISTIC targets based on the actual data (not aspirational moonshots)
+- Link each objective to the deliverable that inspired it
+- Include a quarterly theme that ties all objectives together
+- Set current progress to 0 for new objectives
+- Also suggest 2-3 additional objectives the business could adopt later
+
+Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Goal Tracker…");
+    const result = await callJson(genai, prompt);
+    return result as unknown as GoalTracker;
+  } catch (e) {
+    console.warn("[Pivot] Goal Tracker synthesis failed:", e);
     return null;
   }
 }

@@ -15,6 +15,16 @@ import {
   synthesizeKPIs,
   synthesizeRoadmap,
   synthesizeHealthChecklist,
+  synthesizeSWOT,
+  synthesizeUnitEconomics,
+  synthesizeCustomerSegmentation,
+  synthesizeCompetitiveWinLoss,
+  synthesizeInvestorOnePager,
+  synthesizeHiringPlan,
+  synthesizeRevenueForecast,
+  synthesizeChurnPlaybook,
+  synthesizeSalesPlaybook,
+  synthesizeGoalTracker,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -262,6 +272,83 @@ export async function runPipeline(runId: string): Promise<void> {
         }
       } catch (e) {
         console.warn("[Pivot] Roadmap synthesis failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4d: Wave 2 intelligence (SWOT, unit economics, etc.) ──────────
+    // Run pairs in parallel where possible to save time
+    if (!deliverables.swotAnalysis || !deliverables.unitEconomics) {
+      try {
+        console.log("[Pivot] Synthesizing SWOT + unit economics...");
+        const [swot, ue] = await Promise.allSettled([
+          deliverables.swotAnalysis ? Promise.resolve(null) : synthesizeSWOT(businessPacket, job.questionnaire),
+          deliverables.unitEconomics ? Promise.resolve(null) : synthesizeUnitEconomics(businessPacket, job.questionnaire),
+        ]);
+        if (swot.status === "fulfilled" && swot.value) deliverables = { ...deliverables, swotAnalysis: swot.value };
+        if (ue.status === "fulfilled" && ue.value) deliverables = { ...deliverables, unitEconomics: ue.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] SWOT/UnitEcon failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.customerSegmentation || !deliverables.competitiveWinLoss) {
+      try {
+        console.log("[Pivot] Synthesizing customer segmentation + competitive win/loss...");
+        const [cs, cwl] = await Promise.allSettled([
+          deliverables.customerSegmentation ? Promise.resolve(null) : synthesizeCustomerSegmentation(businessPacket, job.questionnaire, deliverables),
+          deliverables.competitiveWinLoss ? Promise.resolve(null) : synthesizeCompetitiveWinLoss(businessPacket, job.questionnaire, deliverables),
+        ]);
+        if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, customerSegmentation: cs.value };
+        if (cwl.status === "fulfilled" && cwl.value) deliverables = { ...deliverables, competitiveWinLoss: cwl.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Segmentation/WinLoss failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.revenueForecast || !deliverables.hiringPlan) {
+      try {
+        console.log("[Pivot] Synthesizing revenue forecast + hiring plan...");
+        const [rf, hp] = await Promise.allSettled([
+          deliverables.revenueForecast ? Promise.resolve(null) : synthesizeRevenueForecast(businessPacket, job.questionnaire),
+          deliverables.hiringPlan ? Promise.resolve(null) : synthesizeHiringPlan(businessPacket, job.questionnaire, deliverables),
+        ]);
+        if (rf.status === "fulfilled" && rf.value) deliverables = { ...deliverables, revenueForecast: rf.value };
+        if (hp.status === "fulfilled" && hp.value) deliverables = { ...deliverables, hiringPlan: hp.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Forecast/Hiring failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.churnPlaybook || !deliverables.salesPlaybook) {
+      try {
+        console.log("[Pivot] Synthesizing churn playbook + sales playbook...");
+        const [cp, sp] = await Promise.allSettled([
+          deliverables.churnPlaybook ? Promise.resolve(null) : synthesizeChurnPlaybook(businessPacket, job.questionnaire, deliverables),
+          deliverables.salesPlaybook ? Promise.resolve(null) : synthesizeSalesPlaybook(businessPacket, job.questionnaire, deliverables),
+        ]);
+        if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, churnPlaybook: cp.value };
+        if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, salesPlaybook: sp.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Churn/Sales playbook failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.investorOnePager || !deliverables.goalTracker) {
+      try {
+        console.log("[Pivot] Synthesizing investor one-pager + goal tracker...");
+        const [io, gt] = await Promise.allSettled([
+          deliverables.investorOnePager ? Promise.resolve(null) : synthesizeInvestorOnePager(businessPacket, job.questionnaire, deliverables),
+          deliverables.goalTracker ? Promise.resolve(null) : synthesizeGoalTracker(businessPacket, job.questionnaire, deliverables),
+        ]);
+        if (io.status === "fulfilled" && io.value) deliverables = { ...deliverables, investorOnePager: io.value };
+        if (gt.status === "fulfilled" && gt.value) deliverables = { ...deliverables, goalTracker: gt.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Investor/Goals failed (non-fatal):", e);
       }
     }
 

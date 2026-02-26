@@ -447,6 +447,216 @@ export interface TeamMember {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SWOT Analysis
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SWOTAnalysis {
+  strengths: { point: string; evidence: string; leverage: string }[];
+  weaknesses: { point: string; evidence: string; mitigation: string }[];
+  opportunities: { point: string; timeframe: string; potentialImpact: string; actionRequired: string }[];
+  threats: { point: string; likelihood: "high" | "medium" | "low"; severity: string; contingency: string }[];
+  strategicPriorities: { priority: string; rationale: string; timeline: string }[];
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit Economics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface UnitEconomics {
+  cac: { value: string; source: "from_documents" | "estimated"; benchmark?: string };
+  ltv: { value: string; source: "from_documents" | "estimated"; benchmark?: string };
+  ltvCacRatio: { value: string; assessment: string; benchmark: string };
+  paybackPeriodMonths: { value: string; source: "from_documents" | "estimated"; assessment: string };
+  grossMargin: { value: string; source: "from_documents" | "estimated"; benchmark?: string };
+  netMargin: { value: string; source: "from_documents" | "estimated" };
+  revenuePerCustomer: { value: string; source: "from_documents" | "estimated" };
+  burnMultiple: { value: string; assessment: string };
+  recommendations: { metric: string; current: string; target: string; action: string }[];
+  summary: string;
+  dataQualityNote: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Customer Segmentation
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CustomerSegment {
+  tier: string;                // "Enterprise", "Mid-Market", "SMB", "Startup"
+  name: string;                // "High-Value Accounts"
+  customerCount: string;       // "~15 accounts"
+  revenueShare: string;        // "68% of revenue"
+  avgDealSize: string;
+  churnRisk: "low" | "medium" | "high";
+  growthPotential: "low" | "medium" | "high";
+  idealProfile: string;        // "B2B SaaS companies, 50-200 employees, $5-20M revenue"
+  engagementStrategy: string;
+}
+
+export interface CustomerSegmentation {
+  segments: CustomerSegment[];
+  idealCustomerProfile: { characteristic: string; importance: string }[];
+  concentrationRisk: string;   // "Top 3 clients = 45% of revenue — HIGH RISK"
+  expansionTargets: { segment: string; opportunity: string; estimatedRevenue: string }[];
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Competitive Win/Loss Analysis
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CompetitiveWinLoss {
+  winReasons: { reason: string; frequency: string; evidence: string }[];
+  lossReasons: { reason: string; frequency: string; remediation: string }[];
+  competitiveAdvantages: { advantage: string; sustainability: "durable" | "temporary" | "at_risk" }[];
+  competitiveDisadvantages: { disadvantage: string; urgency: "immediate" | "medium_term" | "long_term"; fix: string }[];
+  battleCards: { competitor: string; theirStrength: string; yourCounter: string; talkTrack: string }[];
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Investor One-Pager
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface InvestorOnePager {
+  companyName: string;
+  tagline: string;             // One-line pitch
+  problem: string;
+  solution: string;
+  marketSize: string;
+  businessModel: string;
+  traction: string;            // Key metrics proving momentum
+  team: string;
+  competitiveEdge: string;
+  financialHighlights: { metric: string; value: string }[];
+  askAmount?: string;
+  useOfFunds?: string;
+  keyRisks: string[];
+  whyNow: string;
+  contactInfo?: string;
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hiring Recommendations
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HiringRecommendation {
+  rank: number;
+  role: string;                // "VP of Sales", "Senior Developer"
+  department: string;          // "Sales", "Engineering", "Marketing"
+  urgency: "immediate" | "next_quarter" | "next_half";
+  rationale: string;           // Why this hire matters
+  expectedROI: string;         // "Could close $200K in new revenue within 6 months"
+  estimatedSalary: string;     // "$80K-$120K"
+  alternativeToHiring?: string; // "Could outsource to agency for $3K/mo instead"
+  keyResponsibilities: string[];
+}
+
+export interface HiringPlan {
+  recommendations: HiringRecommendation[];
+  currentTeamGaps: { area: string; gap: string; impact: string }[];
+  totalBudgetNeeded: string;
+  priorityOrder: string;       // "Sales first, then marketing, then ops"
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Revenue Forecast Model
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RevenueForecastScenario {
+  name: string;                // "Conservative", "Base Case", "Optimistic"
+  assumptions: string[];
+  monthly: { month: string; revenue: number; costs: number; profit: number }[];
+  totalRevenue12Mo: number;
+  totalProfit12Mo: number;
+  breakEvenMonth?: string;
+}
+
+export interface RevenueForecast {
+  scenarios: RevenueForecastScenario[];
+  currentMRR: string;
+  currentARR: string;
+  growthRate: string;
+  keyDrivers: { driver: string; impact: string; confidence: "high" | "medium" | "low" }[];
+  risks: { risk: string; revenueImpact: string; mitigant: string }[];
+  summary: string;
+  dataQualityNote: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Churn Prevention Playbook
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ChurnPlaybookEntry {
+  customerName: string;
+  riskLevel: "critical" | "high" | "medium";
+  revenueAtRisk: string;
+  warningSignals: string[];
+  predictedChurnWindow: string;  // "Within 30 days", "60-90 days"
+  interventionPlan: { step: number; action: string; owner: string; deadline: string }[];
+  talkingPoints: string[];       // What to say on the call
+  offerToMake?: string;          // Discount, upgrade, etc.
+  successMetric: string;         // How to know the intervention worked
+}
+
+export interface ChurnPlaybook {
+  entries: ChurnPlaybookEntry[];
+  totalRevenueAtRisk: string;
+  overallStrategy: string;
+  retentionTactics: { tactic: string; effort: string; impact: string }[];
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sales Playbook
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SalesPlaybook {
+  idealBuyerPersona: { title: string; painPoints: string[]; motivations: string[]; objections: string[] }[];
+  salesProcess: { stage: string; actions: string[]; exitCriteria: string; avgDuration: string }[];
+  objectionHandling: { objection: string; response: string; proof: string }[];
+  emailTemplates: { purpose: string; subject: string; body: string }[];
+  coldCallScript: { opening: string; qualifyingQuestions: string[]; pitchPoints: string[]; closingAsk: string };
+  pricingTalkTrack: string;
+  competitiveHandling: string;
+  closingTechniques: { technique: string; whenToUse: string; example: string }[];
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Goal Tracker / OKR System
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface OKRObjective {
+  id: string;
+  objective: string;           // "Increase monthly revenue to $100K"
+  category: string;            // "Revenue", "Growth", "Operations", "Product"
+  timeframe: string;           // "Q1 2026", "Next 90 days"
+  keyResults: {
+    id: string;
+    description: string;       // "Close 5 enterprise deals"
+    metric: string;            // "enterprise_deals_closed"
+    current: string;           // "2"
+    target: string;            // "5"
+    unit: string;              // "#", "$", "%"
+    progress: number;          // 0-100
+    status: "on_track" | "at_risk" | "behind" | "completed";
+  }[];
+  overallProgress: number;     // 0-100
+  status: "on_track" | "at_risk" | "behind" | "completed";
+  linkedDeliverable?: string;  // "revenueLeakAnalysis", "kpiReport"
+}
+
+export interface GoalTracker {
+  objectives: OKRObjective[];
+  suggestedObjectives: { objective: string; rationale: string; category: string; keyResults: string[] }[];
+  quarterlyTheme: string;      // "Revenue Recovery & Stabilization"
+  summary: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Deliverables
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -472,6 +682,17 @@ export interface MVPDeliverables {
   roadmap?: RoadmapReport;
   healthChecklist?: HealthChecklist;
   leadReport?: LeadReport;
+  // Wave 2 features
+  swotAnalysis?: SWOTAnalysis;
+  unitEconomics?: UnitEconomics;
+  customerSegmentation?: CustomerSegmentation;
+  competitiveWinLoss?: CompetitiveWinLoss;
+  investorOnePager?: InvestorOnePager;
+  hiringPlan?: HiringPlan;
+  revenueForecast?: RevenueForecast;
+  churnPlaybook?: ChurnPlaybook;
+  salesPlaybook?: SalesPlaybook;
+  goalTracker?: GoalTracker;
 }
 
 export interface PitchDeckAnalysis {

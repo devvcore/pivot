@@ -6,7 +6,8 @@ import {
   ShieldAlert, Sparkles, ChevronRight, Loader2, ShieldCheck, Globe, Zap,
   BarChart3, GitBranch, Trophy, FileText, Clock, ArrowRight, Server, Megaphone,
   Presentation, Gauge, Calendar, ClipboardCheck, UserSearch, CheckCircle2,
-  XCircle, MinusCircle, HelpCircle,
+  XCircle, MinusCircle, HelpCircle, Crosshair, Calculator, PieChart,
+  Swords, Briefcase, UserPlus, LineChart, ShieldOff, BookOpen, Flag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -52,6 +53,16 @@ const TABS = [
   { id: 15, label: "30-Day Roadmap",  icon: Calendar,     dataKey: "roadmap"               },
   { id: 16, label: "Health Check",    icon: ClipboardCheck, dataKey: "healthChecklist"      },
   { id: 17, label: "Lead Gen",        icon: UserSearch,   dataKey: "leadReport"            },
+  { id: 18, label: "SWOT",            icon: Crosshair,    dataKey: "swotAnalysis"          },
+  { id: 19, label: "Unit Economics",  icon: Calculator,   dataKey: "unitEconomics"         },
+  { id: 20, label: "Segments",        icon: PieChart,     dataKey: "customerSegmentation"  },
+  { id: 21, label: "Win/Loss",        icon: Swords,       dataKey: "competitiveWinLoss"    },
+  { id: 22, label: "Investor Brief",  icon: Briefcase,    dataKey: "investorOnePager"      },
+  { id: 23, label: "Hiring Plan",     icon: UserPlus,     dataKey: "hiringPlan"            },
+  { id: 24, label: "Forecast",        icon: LineChart,    dataKey: "revenueForecast"       },
+  { id: 25, label: "Churn Playbook",  icon: ShieldOff,    dataKey: "churnPlaybook"         },
+  { id: 26, label: "Sales Playbook",  icon: BookOpen,     dataKey: "salesPlaybook"         },
+  { id: 27, label: "Goals & OKRs",    icon: Flag,         dataKey: "goalTracker"           },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -1995,6 +2006,1044 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       </div>
                     ))}
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 18: SWOT Analysis ──────────────────────────────────── */}
+            {activeTab === 18 && d.swotAnalysis && (() => {
+              const sw = d.swotAnalysis!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Crosshair className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">SWOT Analysis</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{sw.summary}</p>
+                  </div>
+
+                  {/* 2x2 Grid */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Strengths */}
+                    <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                      <SectionHeader><CheckCircle2 className="w-3 h-3 text-green-600" /> Strengths</SectionHeader>
+                      <div className="space-y-3">
+                        {sw.strengths.map((s, i) => (
+                          <div key={i} className="bg-white/70 rounded-xl p-3">
+                            <p className="font-medium text-green-900 text-sm">{s.point}</p>
+                            <p className="text-xs text-green-700 mt-1">{s.evidence}</p>
+                            <p className="text-xs text-green-800 font-medium mt-1">Leverage: {s.leverage}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Weaknesses */}
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                      <SectionHeader><XCircle className="w-3 h-3 text-red-500" /> Weaknesses</SectionHeader>
+                      <div className="space-y-3">
+                        {sw.weaknesses.map((w, i) => (
+                          <div key={i} className="bg-white/70 rounded-xl p-3">
+                            <p className="font-medium text-red-900 text-sm">{w.point}</p>
+                            <p className="text-xs text-red-700 mt-1">{w.evidence}</p>
+                            <p className="text-xs text-red-800 font-medium mt-1">Mitigation: {w.mitigation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Opportunities */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                      <SectionHeader><Zap className="w-3 h-3 text-blue-600" /> Opportunities</SectionHeader>
+                      <div className="space-y-3">
+                        {sw.opportunities.map((o, i) => (
+                          <div key={i} className="bg-white/70 rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-blue-900 text-sm">{o.point}</p>
+                              <span className="text-[9px] font-mono bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{o.timeframe}</span>
+                            </div>
+                            <p className="text-xs text-blue-700">{o.potentialImpact}</p>
+                            <p className="text-xs text-blue-800 font-medium mt-1">Action: {o.actionRequired}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Threats */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+                      <SectionHeader><ShieldAlert className="w-3 h-3 text-amber-600" /> Threats</SectionHeader>
+                      <div className="space-y-3">
+                        {sw.threats.map((t, i) => (
+                          <div key={i} className="bg-white/70 rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-amber-900 text-sm">{t.point}</p>
+                              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                t.likelihood === "high" ? "bg-red-100 text-red-700" :
+                                t.likelihood === "medium" ? "bg-amber-100 text-amber-700" :
+                                "bg-zinc-100 text-zinc-600"
+                              }`}>{t.likelihood} likelihood</span>
+                            </div>
+                            <p className="text-xs text-amber-700">{t.severity}</p>
+                            <p className="text-xs text-amber-800 font-medium mt-1">Contingency: {t.contingency}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Strategic Priorities */}
+                  {sw.strategicPriorities?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Strategic Priorities</SectionHeader>
+                      <div className="space-y-3">
+                        {sw.strategicPriorities.map((p, i) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <div>
+                                <p className="font-semibold text-zinc-900">{p.priority}</p>
+                                <p className="text-sm text-zinc-500 mt-1">{p.rationale}</p>
+                                <span className="text-[9px] font-mono bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded mt-2 inline-block">{p.timeline}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 19: Unit Economics ────────────────────────────────────── */}
+            {activeTab === 19 && d.unitEconomics && (() => {
+              const ue = d.unitEconomics!;
+              const sourceTag = (s: string) =>
+                s === "from_documents" ? "text-green-700 bg-green-50 border-green-200" :
+                s === "estimated" ? "text-amber-700 bg-amber-50 border-amber-200" :
+                "text-zinc-500 bg-zinc-50 border-zinc-200";
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calculator className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Unit Economics</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ue.summary}</p>
+                    {ue.dataQualityNote && (
+                      <div className="mt-4 bg-amber-600/20 border border-amber-500/30 rounded-xl p-3">
+                        <p className="text-amber-200 text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{ue.dataQualityNote}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Key metrics cards */}
+                  <div className="grid md:grid-cols-4 gap-4">
+                    {[
+                      { label: "CAC", ...ue.cac },
+                      { label: "LTV", ...ue.ltv },
+                      { label: "LTV:CAC Ratio", value: ue.ltvCacRatio.value, source: "estimated" as const, benchmark: ue.ltvCacRatio.benchmark },
+                      { label: "Payback Period", value: ue.paybackPeriodMonths.value, source: ue.paybackPeriodMonths.source },
+                    ].map((m, i) => (
+                      <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm text-center">
+                        <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">{m.label}</p>
+                        <p className="text-2xl font-light text-zinc-900">{m.value}</p>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded border mt-2 inline-block ${sourceTag(m.source)}`}>
+                          {m.source === "from_documents" ? "Verified" : "Estimated"}
+                        </span>
+                        {m.benchmark && <p className="text-[10px] text-zinc-400 mt-1">{m.benchmark}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {[
+                      { label: "Gross Margin", ...ue.grossMargin },
+                      { label: "Net Margin", ...ue.netMargin },
+                      { label: "Revenue/Customer", ...ue.revenuePerCustomer },
+                    ].map((m, i) => (
+                      <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm text-center">
+                        <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">{m.label}</p>
+                        <p className="text-xl font-light text-zinc-900">{m.value}</p>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 rounded border mt-2 inline-block ${sourceTag(m.source)}`}>
+                          {m.source === "from_documents" ? "Verified" : "Estimated"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Burn multiple */}
+                  <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Burn Multiple</p>
+                        <p className="text-3xl font-light text-zinc-900">{ue.burnMultiple.value}</p>
+                      </div>
+                      <p className="text-sm text-zinc-600 max-w-sm text-right">{ue.burnMultiple.assessment}</p>
+                    </div>
+                  </div>
+
+                  {/* Recommendations */}
+                  {ue.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Improvement Recommendations</SectionHeader>
+                      <div className="space-y-3">
+                        {ue.recommendations.map((r, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm flex items-center gap-4">
+                            <div className="flex-1">
+                              <p className="font-medium text-zinc-900 text-sm">{r.metric}</p>
+                              <p className="text-xs text-zinc-500">Current: {r.current} | Target: {r.target}</p>
+                            </div>
+                            <p className="text-xs text-zinc-700 font-medium max-w-xs">{r.action}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 20: Customer Segmentation ────────────────────────────── */}
+            {activeTab === 20 && d.customerSegmentation && (() => {
+              const cs = d.customerSegmentation!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PieChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Segmentation</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cs.summary}</p>
+                    {cs.concentrationRisk && (
+                      <div className="mt-4 bg-red-600/20 border border-red-500/30 rounded-xl p-3">
+                        <p className="text-red-200 text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{cs.concentrationRisk}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Segment cards */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {cs.segments.map((seg, i) => (
+                      <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">{seg.tier}</p>
+                            <p className="text-lg font-semibold text-zinc-900">{seg.name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-zinc-900">{seg.revenueShare}</p>
+                            <p className="text-[10px] text-zinc-400">{seg.customerCount}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-zinc-500 mb-3">Avg deal: {seg.avgDealSize}</p>
+                        <div className="flex gap-2 mb-3">
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                            seg.churnRisk === "low" ? "bg-green-50 text-green-700 border-green-200" :
+                            seg.churnRisk === "medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            "bg-red-50 text-red-700 border-red-200"
+                          }`}>Churn: {seg.churnRisk}</span>
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                            seg.growthPotential === "high" ? "bg-green-50 text-green-700 border-green-200" :
+                            seg.growthPotential === "medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            "bg-zinc-50 text-zinc-500 border-zinc-200"
+                          }`}>Growth: {seg.growthPotential}</span>
+                        </div>
+                        <p className="text-xs text-zinc-600 italic">{seg.idealProfile}</p>
+                        <div className="mt-3 pt-3 border-t border-zinc-100">
+                          <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Engagement Strategy</p>
+                          <p className="text-xs text-zinc-700">{seg.engagementStrategy}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ICP */}
+                  {cs.idealCustomerProfile?.length > 0 && (
+                    <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6">
+                      <SectionHeader><Target className="w-3 h-3" /> Ideal Customer Profile</SectionHeader>
+                      <div className="space-y-2">
+                        {cs.idealCustomerProfile.map((c, i) => (
+                          <div key={i} className="flex items-center gap-4 text-sm">
+                            <span className="font-medium text-zinc-900 w-40 shrink-0">{c.characteristic}</span>
+                            <span className="text-zinc-500">{c.importance}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Expansion targets */}
+                  {cs.expansionTargets?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Expansion Opportunities</SectionHeader>
+                      <div className="space-y-3">
+                        {cs.expansionTargets.map((et, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm flex items-center gap-4">
+                            <span className="text-[9px] font-mono bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded">{et.segment}</span>
+                            <p className="flex-1 text-sm text-zinc-700">{et.opportunity}</p>
+                            <p className="text-sm font-bold text-green-600 shrink-0">{et.estimatedRevenue}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 21: Competitive Win/Loss ─────────────────────────────── */}
+            {activeTab === 21 && d.competitiveWinLoss && (() => {
+              const wl = d.competitiveWinLoss!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Swords className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Competitive Win/Loss Analysis</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{wl.summary}</p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Win Reasons */}
+                    <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                      <SectionHeader><CheckCircle2 className="w-3 h-3 text-green-600" /> Why You Win</SectionHeader>
+                      <div className="space-y-3">
+                        {wl.winReasons.map((w, i) => (
+                          <div key={i} className="bg-white/70 rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-green-900 text-sm">{w.reason}</p>
+                              <span className="text-[9px] font-mono bg-green-100 text-green-700 px-1.5 py-0.5 rounded">{w.frequency}</span>
+                            </div>
+                            <p className="text-xs text-green-700">{w.evidence}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Loss Reasons */}
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                      <SectionHeader><XCircle className="w-3 h-3 text-red-500" /> Why You Lose</SectionHeader>
+                      <div className="space-y-3">
+                        {wl.lossReasons.map((l, i) => (
+                          <div key={i} className="bg-white/70 rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-red-900 text-sm">{l.reason}</p>
+                              <span className="text-[9px] font-mono bg-red-100 text-red-700 px-1.5 py-0.5 rounded">{l.frequency}</span>
+                            </div>
+                            <p className="text-xs text-red-800 font-medium">Fix: {l.remediation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Battle Cards */}
+                  {wl.battleCards?.length > 0 && (
+                    <div>
+                      <SectionHeader><Swords className="w-3 h-3" /> Battle Cards</SectionHeader>
+                      <div className="space-y-4">
+                        {wl.battleCards.map((bc, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                            <p className="font-semibold text-zinc-900 text-lg mb-3">vs. {bc.competitor}</p>
+                            <div className="grid md:grid-cols-3 gap-4">
+                              <div className="bg-red-50 rounded-xl p-3">
+                                <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mb-1">Their Strength</p>
+                                <p className="text-xs text-red-900">{bc.theirStrength}</p>
+                              </div>
+                              <div className="bg-green-50 rounded-xl p-3">
+                                <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Your Counter</p>
+                                <p className="text-xs text-green-900">{bc.yourCounter}</p>
+                              </div>
+                              <div className="bg-zinc-50 rounded-xl p-3">
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Talk Track</p>
+                                <p className="text-xs text-zinc-700 italic">&quot;{bc.talkTrack}&quot;</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Advantages/Disadvantages */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {wl.competitiveAdvantages?.length > 0 && (
+                      <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                        <SectionHeader><CheckCircle2 className="w-3 h-3" /> Competitive Advantages</SectionHeader>
+                        <div className="space-y-2">
+                          {wl.competitiveAdvantages.map((a, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <p className="text-sm text-zinc-900 flex-1">{a.advantage}</p>
+                              <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                a.sustainability === "durable" ? "bg-green-50 text-green-700 border-green-200" :
+                                a.sustainability === "temporary" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                "bg-red-50 text-red-700 border-red-200"
+                              }`}>{a.sustainability}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {wl.competitiveDisadvantages?.length > 0 && (
+                      <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                        <SectionHeader><AlertCircle className="w-3 h-3" /> Disadvantages to Fix</SectionHeader>
+                        <div className="space-y-2">
+                          {wl.competitiveDisadvantages.map((d2, i) => (
+                            <div key={i}>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-zinc-900">{d2.disadvantage}</p>
+                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                  d2.urgency === "immediate" ? "bg-red-100 text-red-700" :
+                                  d2.urgency === "medium_term" ? "bg-amber-100 text-amber-700" :
+                                  "bg-zinc-100 text-zinc-500"
+                                }`}>{d2.urgency}</span>
+                              </div>
+                              <p className="text-xs text-zinc-500 mt-0.5">{d2.fix}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 22: Investor One-Pager ───────────────────────────────── */}
+            {activeTab === 22 && d.investorOnePager && (() => {
+              const io = d.investorOnePager!;
+              return (
+                <div className="space-y-6">
+                  {/* Hero */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <p className="text-3xl font-light mb-2">{io.companyName}</p>
+                    <p className="text-xl text-zinc-300 italic">{io.tagline}</p>
+                  </div>
+
+                  {/* Core sections */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mb-2">The Problem</p>
+                      <p className="text-sm text-zinc-700">{io.problem}</p>
+                    </div>
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-2">Our Solution</p>
+                      <p className="text-sm text-zinc-700">{io.solution}</p>
+                    </div>
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Market Size</p>
+                      <p className="text-sm text-zinc-700">{io.marketSize}</p>
+                    </div>
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Business Model</p>
+                      <p className="text-sm text-zinc-700">{io.businessModel}</p>
+                    </div>
+                  </div>
+
+                  {/* Traction + Team */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Traction & Proof Points</p>
+                      <p className="text-sm text-zinc-700">{io.traction}</p>
+                    </div>
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Team</p>
+                      <p className="text-sm text-zinc-700">{io.team}</p>
+                    </div>
+                  </div>
+
+                  {/* Competitive Edge */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-6">
+                    <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Competitive Edge</p>
+                    <p className="text-lg leading-relaxed">{io.competitiveEdge}</p>
+                  </div>
+
+                  {/* Financial Highlights */}
+                  {io.financialHighlights?.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {io.financialHighlights.map((fh, i) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 text-center shadow-sm">
+                          <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">{fh.metric}</p>
+                          <p className="text-xl font-light text-zinc-900">{fh.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Why Now */}
+                  <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                    <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-2">Why Now?</p>
+                    <p className="text-sm text-green-900 font-medium">{io.whyNow}</p>
+                  </div>
+
+                  {/* Key Risks */}
+                  {io.keyRisks?.length > 0 && (
+                    <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <SectionHeader><AlertCircle className="w-3 h-3" /> Key Risks (Transparency)</SectionHeader>
+                      <ul className="space-y-2">
+                        {io.keyRisks.map((r, i) => (
+                          <li key={i} className="text-sm text-zinc-700 flex gap-2">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />{r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 23: Hiring Plan ──────────────────────────────────────── */}
+            {activeTab === 23 && d.hiringPlan && (() => {
+              const hp = d.hiringPlan!;
+              const urgencyColors: Record<string, string> = {
+                immediate: "bg-red-50 text-red-700 border-red-200",
+                next_quarter: "bg-amber-50 text-amber-700 border-amber-200",
+                next_half: "bg-zinc-50 text-zinc-600 border-zinc-200",
+              };
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserPlus className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Hiring Plan</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{hp.summary}</p>
+                    <div className="flex items-center gap-4 mt-4 text-sm">
+                      <div>
+                        <p className="text-zinc-500 text-[9px] font-mono uppercase">Est. Budget</p>
+                        <p className="text-white font-medium">{hp.totalBudgetNeeded}</p>
+                      </div>
+                      <div>
+                        <p className="text-zinc-500 text-[9px] font-mono uppercase">Priority Order</p>
+                        <p className="text-zinc-300 text-xs">{hp.priorityOrder}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Current gaps */}
+                  {hp.currentTeamGaps?.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-red-500" /> Current Team Gaps</SectionHeader>
+                      <div className="space-y-2">
+                        {hp.currentTeamGaps.map((g, i) => (
+                          <div key={i} className="flex items-start gap-3 bg-white/70 rounded-xl p-3">
+                            <span className="text-[9px] font-mono bg-red-100 text-red-700 px-2 py-0.5 rounded shrink-0">{g.area}</span>
+                            <div>
+                              <p className="text-sm text-zinc-900 font-medium">{g.gap}</p>
+                              <p className="text-xs text-zinc-500">{g.impact}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hire recommendations */}
+                  {hp.recommendations.map((rec) => (
+                    <div key={rec.rank} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <div className="flex items-start gap-4">
+                        <span className="w-8 h-8 bg-zinc-900 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">{rec.rank}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 flex-wrap mb-2">
+                            <p className="text-xl font-medium text-zinc-900">{rec.role}</p>
+                            <span className="text-[9px] font-mono bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded">{rec.department}</span>
+                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${urgencyColors[rec.urgency] || urgencyColors.next_half}`}>
+                              {rec.urgency.replace("_", " ")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-zinc-600 mb-3">{rec.rationale}</p>
+                          <div className="grid md:grid-cols-2 gap-3">
+                            <div className="bg-green-50 rounded-xl p-3 border border-green-100">
+                              <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Expected ROI</p>
+                              <p className="text-xs text-green-800 font-medium">{rec.expectedROI}</p>
+                            </div>
+                            <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Est. Salary</p>
+                              <p className="text-xs text-zinc-700">{rec.estimatedSalary}</p>
+                            </div>
+                          </div>
+                          {rec.alternativeToHiring && (
+                            <div className="mt-3 bg-amber-50 rounded-xl p-3 border border-amber-100">
+                              <p className="text-[9px] font-mono text-amber-600 uppercase tracking-widest mb-1">Alternative</p>
+                              <p className="text-xs text-amber-800">{rec.alternativeToHiring}</p>
+                            </div>
+                          )}
+                          {rec.keyResponsibilities?.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1">
+                              {rec.keyResponsibilities.map((kr, ki) => (
+                                <span key={ki} className="text-[9px] bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded">{kr}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 24: Revenue Forecast ─────────────────────────────────── */}
+            {activeTab === 24 && d.revenueForecast && (() => {
+              const rf = d.revenueForecast!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <LineChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Revenue Forecast Model</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{rf.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      <div>
+                        <p className="text-zinc-500 text-[9px] font-mono uppercase">Current MRR</p>
+                        <p className="text-white text-xl font-light">{rf.currentMRR}</p>
+                      </div>
+                      <div>
+                        <p className="text-zinc-500 text-[9px] font-mono uppercase">Current ARR</p>
+                        <p className="text-white text-xl font-light">{rf.currentARR}</p>
+                      </div>
+                      <div>
+                        <p className="text-zinc-500 text-[9px] font-mono uppercase">Growth Rate</p>
+                        <p className="text-white text-xl font-light">{rf.growthRate}</p>
+                      </div>
+                    </div>
+                    {rf.dataQualityNote && (
+                      <div className="mt-4 bg-amber-600/20 border border-amber-500/30 rounded-xl p-3">
+                        <p className="text-amber-200 text-xs flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" />{rf.dataQualityNote}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Scenario cards */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {rf.scenarios.map((sc, i) => {
+                      const colors = sc.name.toLowerCase().includes("optimist") ? "border-green-300 bg-green-50" :
+                        sc.name.toLowerCase().includes("conserv") ? "border-amber-300 bg-amber-50" :
+                        "border-blue-300 bg-blue-50";
+                      return (
+                        <div key={i} className={`border-2 rounded-2xl p-6 ${colors}`}>
+                          <p className="text-sm font-bold text-zinc-900 mb-2">{sc.name}</p>
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase">12Mo Revenue</p>
+                              <p className="text-lg font-light text-zinc-900">{fmt(sc.totalRevenue12Mo)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase">12Mo Profit</p>
+                              <p className={`text-lg font-light ${sc.totalProfit12Mo >= 0 ? "text-green-700" : "text-red-600"}`}>{fmt(sc.totalProfit12Mo)}</p>
+                            </div>
+                          </div>
+                          {sc.breakEvenMonth && <p className="text-xs text-zinc-600">Break-even: {sc.breakEvenMonth}</p>}
+                          {sc.assumptions?.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-zinc-200">
+                              <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Assumptions</p>
+                              {sc.assumptions.map((a, ai) => (
+                                <p key={ai} className="text-[10px] text-zinc-600">- {a}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Key drivers */}
+                  {rf.keyDrivers?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Key Growth Drivers</SectionHeader>
+                      <div className="space-y-2">
+                        {rf.keyDrivers.map((d2, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm flex items-center gap-4">
+                            <p className="flex-1 text-sm text-zinc-900 font-medium">{d2.driver}</p>
+                            <p className="text-xs text-zinc-500">{d2.impact}</p>
+                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                              d2.confidence === "high" ? "bg-green-50 text-green-700 border-green-200" :
+                              d2.confidence === "medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                              "bg-red-50 text-red-700 border-red-200"
+                            }`}>{d2.confidence}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Risks */}
+                  {rf.risks?.length > 0 && (
+                    <div>
+                      <SectionHeader><AlertCircle className="w-3 h-3" /> Revenue Risks</SectionHeader>
+                      <div className="space-y-2">
+                        {rf.risks.map((r, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="text-sm text-zinc-900 font-medium">{r.risk}</p>
+                              <p className="text-sm text-red-600 font-medium">{r.revenueImpact}</p>
+                            </div>
+                            <p className="text-xs text-zinc-500">{r.mitigant}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 25: Churn Playbook ───────────────────────────────────── */}
+            {activeTab === 25 && d.churnPlaybook && (() => {
+              const cp = d.churnPlaybook!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldOff className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Churn Prevention Playbook</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{cp.summary}</p>
+                    <div className="mt-4 bg-red-600/20 border border-red-500/30 rounded-xl p-3">
+                      <p className="text-red-200 text-sm font-medium">Total Revenue at Risk: {cp.totalRevenueAtRisk}</p>
+                    </div>
+                  </div>
+
+                  {/* Overall retention tactics */}
+                  {cp.retentionTactics?.length > 0 && (
+                    <div className="grid md:grid-cols-3 gap-3">
+                      {cp.retentionTactics.map((t, i) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                          <p className="font-medium text-zinc-900 text-sm mb-1">{t.tactic}</p>
+                          <div className="flex gap-2">
+                            <span className="text-[9px] font-mono bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">{t.effort} effort</span>
+                            <span className="text-[9px] font-mono bg-green-50 text-green-700 px-1.5 py-0.5 rounded">{t.impact} impact</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Per-customer playbook */}
+                  {cp.entries.map((entry, i) => (
+                    <div key={i} className={`bg-white border-2 rounded-2xl p-6 shadow-sm ${
+                      entry.riskLevel === "critical" ? "border-red-400" :
+                      entry.riskLevel === "high" ? "border-orange-300" :
+                      "border-amber-200"
+                    }`}>
+                      <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+                        <div>
+                          <p className="text-xl font-medium text-zinc-900">{entry.customerName}</p>
+                          <p className="text-sm text-zinc-500">Revenue at risk: <span className="text-red-600 font-medium">{entry.revenueAtRisk}</span></p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] font-mono font-bold px-2 py-1 rounded border uppercase ${
+                            entry.riskLevel === "critical" ? "bg-red-50 text-red-700 border-red-200" :
+                            entry.riskLevel === "high" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                            "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}>{entry.riskLevel}</span>
+                          <span className="text-[9px] font-mono bg-zinc-100 text-zinc-600 px-2 py-1 rounded">{entry.predictedChurnWindow}</span>
+                        </div>
+                      </div>
+
+                      {/* Warning signals */}
+                      {entry.warningSignals?.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Warning Signals</p>
+                          <div className="flex flex-wrap gap-2">
+                            {entry.warningSignals.map((ws, wi) => (
+                              <span key={wi} className="text-[10px] bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded">{ws}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Intervention plan */}
+                      <div className="bg-zinc-50 rounded-xl p-4 mb-3">
+                        <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Intervention Plan</p>
+                        <div className="space-y-2">
+                          {entry.interventionPlan.map((step) => (
+                            <div key={step.step} className="flex items-center gap-3 text-xs">
+                              <span className="w-5 h-5 bg-zinc-900 text-white rounded-full flex items-center justify-center text-[10px] shrink-0">{step.step}</span>
+                              <p className="flex-1 text-zinc-700">{step.action}</p>
+                              <span className="text-zinc-400 shrink-0">{step.owner}</span>
+                              <span className="text-zinc-400 shrink-0">{step.deadline}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Talking points */}
+                      {entry.talkingPoints?.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">What to Say on the Call</p>
+                          <ul className="space-y-1">
+                            {entry.talkingPoints.map((tp, ti) => (
+                              <li key={ti} className="text-xs text-zinc-700 italic">&quot;{tp}&quot;</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {entry.offerToMake && (
+                        <div className="bg-green-50 border border-green-100 rounded-lg p-3">
+                          <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Offer to Make</p>
+                          <p className="text-xs text-green-800 font-medium">{entry.offerToMake}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 26: Sales Playbook ───────────────────────────────────── */}
+            {activeTab === 26 && d.salesPlaybook && (() => {
+              const sp = d.salesPlaybook!;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Sales Playbook</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{sp.summary}</p>
+                  </div>
+
+                  {/* Buyer Personas */}
+                  {sp.idealBuyerPersona?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Ideal Buyer Personas</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {sp.idealBuyerPersona.map((bp, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                            <p className="font-semibold text-zinc-900 text-lg mb-3">{bp.title}</p>
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mb-1">Pain Points</p>
+                                {bp.painPoints.map((pp, pi) => <p key={pi} className="text-xs text-zinc-700">- {pp}</p>)}
+                              </div>
+                              <div>
+                                <p className="text-[9px] font-mono text-green-600 uppercase tracking-widest mb-1">Motivations</p>
+                                {bp.motivations.map((m, mi) => <p key={mi} className="text-xs text-zinc-700">- {m}</p>)}
+                              </div>
+                              <div>
+                                <p className="text-[9px] font-mono text-amber-600 uppercase tracking-widest mb-1">Common Objections</p>
+                                {bp.objections.map((o, oi) => <p key={oi} className="text-xs text-zinc-700">- {o}</p>)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sales Process */}
+                  {sp.salesProcess?.length > 0 && (
+                    <div>
+                      <SectionHeader><ArrowRight className="w-3 h-3" /> Sales Process</SectionHeader>
+                      <div className="flex flex-col gap-3">
+                        {sp.salesProcess.map((stage, i) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-xl p-5 shadow-sm">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="w-6 h-6 bg-zinc-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
+                              <p className="font-semibold text-zinc-900">{stage.stage}</p>
+                              <span className="text-[9px] font-mono bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded ml-auto">{stage.avgDuration}</span>
+                            </div>
+                            <div className="ml-9 space-y-1">
+                              {stage.actions.map((a, ai) => <p key={ai} className="text-xs text-zinc-700">- {a}</p>)}
+                              <p className="text-xs text-zinc-500 italic mt-2">Exit criteria: {stage.exitCriteria}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Objection Handling */}
+                  {sp.objectionHandling?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldAlert className="w-3 h-3" /> Objection Handling</SectionHeader>
+                      <div className="space-y-3">
+                        {sp.objectionHandling.map((oh, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm">
+                            <p className="text-sm font-medium text-red-700 mb-2">&quot;{oh.objection}&quot;</p>
+                            <p className="text-sm text-zinc-700 mb-1"><span className="font-medium text-green-700">Response:</span> {oh.response}</p>
+                            <p className="text-xs text-zinc-500 italic">Proof: {oh.proof}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email Templates */}
+                  {sp.emailTemplates?.length > 0 && (
+                    <div>
+                      <SectionHeader><FileText className="w-3 h-3" /> Email Templates</SectionHeader>
+                      <div className="space-y-4">
+                        {sp.emailTemplates.map((et, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                            <span className="text-[9px] font-mono bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded mb-2 inline-block">{et.purpose}</span>
+                            <p className="font-semibold text-zinc-900 mt-1">Subject: {et.subject}</p>
+                            <pre className="text-xs text-zinc-700 whitespace-pre-wrap mt-3 bg-zinc-50 rounded-xl p-4 border border-zinc-100 font-sans leading-relaxed">{et.body}</pre>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cold Call Script */}
+                  {sp.coldCallScript && (
+                    <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                      <SectionHeader><Megaphone className="w-3 h-3 text-zinc-400" /> <span className="text-zinc-400">Cold Call Script</span></SectionHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Opening</p>
+                          <p className="text-zinc-300 text-sm italic">&quot;{sp.coldCallScript.opening}&quot;</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Qualifying Questions</p>
+                          {sp.coldCallScript.qualifyingQuestions.map((q, qi) => (
+                            <p key={qi} className="text-zinc-300 text-sm">- {q}</p>
+                          ))}
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Key Pitch Points</p>
+                          {sp.coldCallScript.pitchPoints.map((p, pi) => (
+                            <p key={pi} className="text-zinc-300 text-sm">- {p}</p>
+                          ))}
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-mono text-green-400 uppercase tracking-widest mb-1">Closing Ask</p>
+                          <p className="text-white text-sm font-medium">&quot;{sp.coldCallScript.closingAsk}&quot;</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Closing Techniques */}
+                  {sp.closingTechniques?.length > 0 && (
+                    <div>
+                      <SectionHeader><Trophy className="w-3 h-3" /> Closing Techniques</SectionHeader>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        {sp.closingTechniques.map((ct, i) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                            <p className="font-medium text-zinc-900 text-sm">{ct.technique}</p>
+                            <p className="text-xs text-zinc-500 mt-1">{ct.whenToUse}</p>
+                            <p className="text-xs text-zinc-700 mt-2 italic">&quot;{ct.example}&quot;</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 27: Goals & OKRs ─────────────────────────────────────── */}
+            {activeTab === 27 && d.goalTracker && (() => {
+              const gt = d.goalTracker!;
+              const statusColors: Record<string, string> = {
+                on_track: "bg-green-50 text-green-700 border-green-200",
+                at_risk: "bg-amber-50 text-amber-700 border-amber-200",
+                behind: "bg-red-50 text-red-700 border-red-200",
+                completed: "bg-blue-50 text-blue-700 border-blue-200",
+              };
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Flag className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Goals & OKRs</p>
+                    </div>
+                    <p className="text-2xl font-light mb-2">{gt.quarterlyTheme}</p>
+                    <p className="text-zinc-400 text-sm">{gt.summary}</p>
+                  </div>
+
+                  {/* Active objectives */}
+                  {gt.objectives.map((obj, i) => (
+                    <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                          <span className="text-[9px] font-mono bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded">{obj.category}</span>
+                          <p className="text-lg font-semibold text-zinc-900 mt-1">{obj.objective}</p>
+                          <p className="text-xs text-zinc-400">{obj.timeframe}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-light text-zinc-900">{obj.overallProgress}%</div>
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${statusColors[obj.status] || statusColors.on_track}`}>
+                            {obj.status.replace("_", " ")}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden mb-4">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${obj.overallProgress}%` }}
+                          transition={{ duration: 1, delay: i * 0.1 }}
+                          className={`h-full rounded-full ${
+                            obj.status === "on_track" ? "bg-green-500" :
+                            obj.status === "at_risk" ? "bg-amber-500" :
+                            obj.status === "behind" ? "bg-red-500" :
+                            "bg-blue-500"
+                          }`}
+                        />
+                      </div>
+                      {/* Key Results */}
+                      <div className="space-y-3">
+                        {obj.keyResults.map((kr, ki) => (
+                          <div key={ki} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-200 flex items-center justify-center text-[10px] font-bold text-zinc-600 shrink-0">
+                              {kr.progress}%
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-zinc-900">{kr.description}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-zinc-400">Current: {kr.current}{kr.unit !== "#" && kr.unit !== "$" && kr.unit !== "%" ? "" : ""}</span>
+                                <span className="text-[10px] text-zinc-400">/</span>
+                                <span className="text-[10px] text-zinc-400">Target: {kr.target}</span>
+                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${statusColors[kr.status] || statusColors.on_track}`}>
+                                  {kr.status.replace("_", " ")}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-20 h-1.5 bg-zinc-100 rounded-full overflow-hidden shrink-0">
+                              <div className={`h-full rounded-full ${
+                                kr.status === "on_track" ? "bg-green-500" :
+                                kr.status === "at_risk" ? "bg-amber-500" :
+                                kr.status === "behind" ? "bg-red-500" :
+                                "bg-blue-500"
+                              }`} style={{ width: `${kr.progress}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Suggested objectives */}
+                  {gt.suggestedObjectives?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Suggested Additional Objectives</SectionHeader>
+                      <div className="space-y-3">
+                        {gt.suggestedObjectives.map((so, i) => (
+                          <div key={i} className="bg-zinc-50 border border-zinc-200 rounded-xl p-5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[9px] font-mono bg-zinc-200 text-zinc-600 px-2 py-0.5 rounded">{so.category}</span>
+                              <p className="font-medium text-zinc-900 text-sm">{so.objective}</p>
+                            </div>
+                            <p className="text-xs text-zinc-500 mb-2">{so.rationale}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {so.keyResults.map((kr, ki) => (
+                                <span key={ki} className="text-[9px] bg-white text-zinc-600 border border-zinc-200 px-2 py-0.5 rounded">{kr}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
