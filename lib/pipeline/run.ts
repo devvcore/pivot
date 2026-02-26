@@ -199,6 +199,34 @@ import {
   // Wave 32 (new functions only)
   synthesizeTalentAcquisition,
   synthesizeDiversityInclusion,
+  // Wave 33
+  synthesizeMarketEntryPlaybook,
+  synthesizePartnerChannelStrategy,
+  synthesizeAcquisitionIntegration,
+  synthesizeInternationalReadiness,
+  synthesizeRevenueModelAnalysis,
+  synthesizeGrowthExperiments,
+  // Wave 34
+  synthesizeCustomerAcquisitionCost,
+  synthesizeLifetimeValueOptimization,
+  synthesizeChurnPrediction,
+  synthesizeNetRevenueRetention,
+  synthesizeCustomerAdvocacy,
+  synthesizeFeedbackLoop,
+  // Wave 35
+  synthesizeProcessAutomation,
+  synthesizeCostBenchmark,
+  synthesizeVendorNegotiation,
+  synthesizeScalabilityAssessment,
+  synthesizeIncidentReadiness,
+  synthesizeOperationalRisk,
+  // Wave 36
+  synthesizeDataStrategy,
+  synthesizeAiUseCases,
+  synthesizeAnalyticsRoadmap,
+  synthesizeDataPrivacy,
+  synthesizeMlOpsReadiness,
+  synthesizeDigitalTransformation,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -1908,6 +1936,162 @@ export async function runPipeline(runId: string): Promise<void> {
         if (ca.status === "fulfilled" && ca.value) deliverables.cultureAssessment = ca.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cn failed:", e); }
+    }
+
+    // ── Step 4co: Market Entry Playbook + Partner Channel Strategy ──
+    if (!deliverables.marketEntryPlaybook || !deliverables.partnerChannelStrategy) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeMarketEntryPlaybook(businessPacket, job.questionnaire),
+          synthesizePartnerChannelStrategy(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.marketEntryPlaybook = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.partnerChannelStrategy = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4co failed:", e); }
+    }
+
+    // ── Step 4cp: Acquisition Integration + International Readiness ──
+    if (!deliverables.acquisitionIntegration || !deliverables.internationalReadiness) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeAcquisitionIntegration(businessPacket, job.questionnaire),
+          synthesizeInternationalReadiness(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.acquisitionIntegration = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.internationalReadiness = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cp failed:", e); }
+    }
+
+    // ── Step 4cq: Revenue Model Analysis + Growth Experiments ──
+    if (!deliverables.revenueModelAnalysis || !deliverables.growthExperiments) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeRevenueModelAnalysis(businessPacket, job.questionnaire),
+          synthesizeGrowthExperiments(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.revenueModelAnalysis = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.growthExperiments = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cq failed:", e); }
+    }
+
+    // ── Step 4cr: Customer Acquisition Cost + Lifetime Value Optimization ──
+    if (!deliverables.customerAcquisitionCost || !deliverables.lifetimeValueOptimization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCustomerAcquisitionCost(businessPacket, job.questionnaire),
+          synthesizeLifetimeValueOptimization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.customerAcquisitionCost = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.lifetimeValueOptimization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cr failed:", e); }
+    }
+
+    // ── Step 4cs: Churn Prediction + Net Revenue Retention ──
+    if (!deliverables.churnPrediction || !deliverables.netRevenueRetention) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeChurnPrediction(businessPacket, job.questionnaire),
+          synthesizeNetRevenueRetention(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.churnPrediction = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.netRevenueRetention = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cs failed:", e); }
+    }
+
+    // ── Step 4ct: Customer Advocacy + Feedback Loop ──
+    if (!deliverables.customerAdvocacy || !deliverables.feedbackLoop) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCustomerAdvocacy(businessPacket, job.questionnaire),
+          synthesizeFeedbackLoop(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.customerAdvocacy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.feedbackLoop = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ct failed:", e); }
+    }
+
+    // ── Step 4cu: Process Automation + Cost Benchmark ──
+    if (!deliverables.processAutomation || !deliverables.costBenchmark) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeProcessAutomation(businessPacket, job.questionnaire),
+          synthesizeCostBenchmark(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.processAutomation = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.costBenchmark = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cu failed:", e); }
+    }
+
+    // ── Step 4cv: Vendor Negotiation + Scalability Assessment ──
+    if (!deliverables.vendorNegotiation || !deliverables.scalabilityAssessment) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeVendorNegotiation(businessPacket, job.questionnaire),
+          synthesizeScalabilityAssessment(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.vendorNegotiation = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.scalabilityAssessment = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cv failed:", e); }
+    }
+
+    // ── Step 4cw: Incident Readiness + Operational Risk ──
+    if (!deliverables.incidentReadiness || !deliverables.operationalRisk) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeIncidentReadiness(businessPacket, job.questionnaire),
+          synthesizeOperationalRisk(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.incidentReadiness = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.operationalRisk = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cw failed:", e); }
+    }
+
+    // ── Step 4cx: Data Strategy + AI Use Cases ──
+    if (!deliverables.dataStrategy || !deliverables.aiUseCases) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeDataStrategy(businessPacket, job.questionnaire),
+          synthesizeAiUseCases(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.dataStrategy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.aiUseCases = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cx failed:", e); }
+    }
+
+    // ── Step 4cy: Analytics Roadmap + Data Privacy ──
+    if (!deliverables.analyticsRoadmap || !deliverables.dataPrivacy) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeAnalyticsRoadmap(businessPacket, job.questionnaire),
+          synthesizeDataPrivacy(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.analyticsRoadmap = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.dataPrivacy = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cy failed:", e); }
+    }
+
+    // ── Step 4cz: MLOps Readiness + Digital Transformation ──
+    if (!deliverables.mlOpsReadiness || !deliverables.digitalTransformation) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeMlOpsReadiness(businessPacket, job.questionnaire),
+          synthesizeDigitalTransformation(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.mlOpsReadiness = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.digitalTransformation = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4cz failed:", e); }
     }
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────

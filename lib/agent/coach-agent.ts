@@ -234,7 +234,31 @@ KEY SECTIONS FOR COACHING:
 - compensationBenchmark: Compensation analysis with market benchmarking, pay equity, and total rewards optimization
 - successionPlanning: Succession planning with critical role mapping, bench strength, and development paths
 - diversityInclusion: DEI analytics with representation metrics, inclusion index, and equity analysis
-- cultureAssessment: Culture health assessment with values alignment, team dynamics, and organizational climate`;
+- cultureAssessment: Culture health assessment with values alignment, team dynamics, and organizational climate
+- marketEntryPlaybook: Market entry strategies with target markets, barriers, entry modes, and readiness scoring
+- partnerChannelStrategy: Partner channel optimization with channel performance, revenue attribution, and partner satisfaction
+- acquisitionIntegration: M&A integration playbook with workstreams, synergy capture, and integration timelines
+- internationalReadiness: Global expansion readiness with compliance gaps, market readiness, and localization needs
+- revenueModelAnalysis: Revenue model evaluation with stream analysis, recurring ratios, and model scoring
+- growthExperiments: Growth experiment framework with hypothesis testing, win rates, and expected lift
+- customerAcquisitionCost: CAC analysis by channel with payback periods, efficiency metrics, and trend tracking
+- lifetimeValueOptimization: LTV optimization strategies with segment analysis, expansion revenue, and LTV:CAC ratios
+- churnPrediction: Predictive churn modeling with at-risk accounts, churn signals, and revenue at risk
+- netRevenueRetention: NRR/GRR analysis with cohort performance, expansion rates, and contraction tracking
+- customerAdvocacy: Advocacy program design with advocate identification, referral rates, and program impact
+- feedbackLoop: Customer feedback systems with loop closure rates, response times, and feedback sources
+- processAutomation: Automation opportunity assessment with hours recovered, cost savings, and priority ranking
+- costBenchmark: Cost benchmarking analysis with industry comparisons, gap identification, and savings opportunities
+- vendorNegotiation: Vendor negotiation strategies with savings opportunities, leverage points, and contract timing
+- scalabilityAssessment: Scalability readiness with bottleneck identification, headroom analysis, and dimension scoring
+- incidentReadiness: Incident response preparedness with scenario planning, response times, and gap assessment
+- operationalRisk: Operational risk assessment with risk scoring, mitigation rates, and critical risk identification
+- dataStrategy: Enterprise data strategy with maturity scoring, pillar assessment, and quality metrics
+- aiUseCases: AI use case prioritization with ROI estimation, readiness levels, and department mapping
+- analyticsRoadmap: Analytics capability roadmap with phase planning, investment requirements, and milestone tracking
+- dataPrivacy: Data privacy compliance with privacy scoring, gap identification, and risk exposure assessment
+- mlOpsReadiness: MLOps maturity assessment with capability gaps, production model tracking, and readiness scoring
+- digitalTransformation: Digital transformation roadmap with initiative tracking, maturity levels, and investment planning`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -346,6 +370,10 @@ const TOOLS = [
             "productMarketFit", "featurePrioritization", "userOnboarding", "productAnalytics", "marketTiming", "competitiveResponse",
             "scenarioPlanning", "capitalStructure", "workingCapital", "taxStrategy", "fundraisingReadiness", "exitStrategy",
             "talentAcquisition", "employeeEngagement", "compensationBenchmark", "successionPlanning", "diversityInclusion", "cultureAssessment",
+            "marketEntryPlaybook", "partnerChannelStrategy", "acquisitionIntegration", "internationalReadiness", "revenueModelAnalysis", "growthExperiments",
+            "customerAcquisitionCost", "lifetimeValueOptimization", "churnPrediction", "netRevenueRetention", "customerAdvocacy", "feedbackLoop",
+            "processAutomation", "costBenchmark", "vendorNegotiation", "scalabilityAssessment", "incidentReadiness", "operationalRisk",
+            "dataStrategy", "aiUseCases", "analyticsRoadmap", "dataPrivacy", "mlOpsReadiness", "digitalTransformation",
           ],
           description: "Which report section to retrieve",
         },
@@ -741,6 +769,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).successionPlanning) parts.push(`Succession Planning: ${JSON.stringify((d as any).successionPlanning).slice(0, 300)}`);
     if ((d as any).diversityInclusion) parts.push(`Diversity Inclusion: ${JSON.stringify((d as any).diversityInclusion).slice(0, 300)}`);
     if ((d as any).cultureAssessment) parts.push(`Culture Assessment: ${JSON.stringify((d as any).cultureAssessment).slice(0, 300)}`);
+    if ((d as any).marketEntryPlaybook) parts.push(`Market Entry: ${JSON.stringify((d as any).marketEntryPlaybook).slice(0, 300)}`);
+    if ((d as any).partnerChannelStrategy) parts.push(`Partner Channels: ${JSON.stringify((d as any).partnerChannelStrategy).slice(0, 300)}`);
+    if ((d as any).acquisitionIntegration) parts.push(`Acquisition Integration: ${JSON.stringify((d as any).acquisitionIntegration).slice(0, 300)}`);
+    if ((d as any).internationalReadiness) parts.push(`International Readiness: ${JSON.stringify((d as any).internationalReadiness).slice(0, 300)}`);
+    if ((d as any).revenueModelAnalysis) parts.push(`Revenue Model: ${JSON.stringify((d as any).revenueModelAnalysis).slice(0, 300)}`);
+    if ((d as any).growthExperiments) parts.push(`Growth Experiments: ${JSON.stringify((d as any).growthExperiments).slice(0, 300)}`);
+    if ((d as any).customerAcquisitionCost) parts.push(`CAC Analysis: ${JSON.stringify((d as any).customerAcquisitionCost).slice(0, 300)}`);
+    if ((d as any).lifetimeValueOptimization) parts.push(`LTV Optimization: ${JSON.stringify((d as any).lifetimeValueOptimization).slice(0, 300)}`);
+    if ((d as any).churnPrediction) parts.push(`Churn Prediction: ${JSON.stringify((d as any).churnPrediction).slice(0, 300)}`);
+    if ((d as any).netRevenueRetention) parts.push(`Net Revenue Retention: ${JSON.stringify((d as any).netRevenueRetention).slice(0, 300)}`);
+    if ((d as any).customerAdvocacy) parts.push(`Customer Advocacy: ${JSON.stringify((d as any).customerAdvocacy).slice(0, 300)}`);
+    if ((d as any).feedbackLoop) parts.push(`Feedback Loop: ${JSON.stringify((d as any).feedbackLoop).slice(0, 300)}`);
+    if ((d as any).processAutomation) parts.push(`Process Automation: ${JSON.stringify((d as any).processAutomation).slice(0, 300)}`);
+    if ((d as any).costBenchmark) parts.push(`Cost Benchmark: ${JSON.stringify((d as any).costBenchmark).slice(0, 300)}`);
+    if ((d as any).vendorNegotiation) parts.push(`Vendor Negotiation: ${JSON.stringify((d as any).vendorNegotiation).slice(0, 300)}`);
+    if ((d as any).scalabilityAssessment) parts.push(`Scalability: ${JSON.stringify((d as any).scalabilityAssessment).slice(0, 300)}`);
+    if ((d as any).incidentReadiness) parts.push(`Incident Readiness: ${JSON.stringify((d as any).incidentReadiness).slice(0, 300)}`);
+    if ((d as any).operationalRisk) parts.push(`Operational Risk: ${JSON.stringify((d as any).operationalRisk).slice(0, 300)}`);
+    if ((d as any).dataStrategy) parts.push(`Data Strategy: ${JSON.stringify((d as any).dataStrategy).slice(0, 300)}`);
+    if ((d as any).aiUseCases) parts.push(`AI Use Cases: ${JSON.stringify((d as any).aiUseCases).slice(0, 300)}`);
+    if ((d as any).analyticsRoadmap) parts.push(`Analytics Roadmap: ${JSON.stringify((d as any).analyticsRoadmap).slice(0, 300)}`);
+    if ((d as any).dataPrivacy) parts.push(`Data Privacy: ${JSON.stringify((d as any).dataPrivacy).slice(0, 300)}`);
+    if ((d as any).mlOpsReadiness) parts.push(`MLOps Readiness: ${JSON.stringify((d as any).mlOpsReadiness).slice(0, 300)}`);
+    if ((d as any).digitalTransformation) parts.push(`Digital Transformation: ${JSON.stringify((d as any).digitalTransformation).slice(0, 300)}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

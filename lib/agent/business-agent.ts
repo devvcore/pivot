@@ -149,6 +149,10 @@ const TOOLS = [
             "productMarketFit", "featurePrioritization", "userOnboarding", "productAnalytics", "marketTiming", "competitiveResponse",
             "scenarioPlanning", "capitalStructure", "workingCapital", "taxStrategy", "fundraisingReadiness", "exitStrategy",
             "talentAcquisition", "employeeEngagement", "compensationBenchmark", "successionPlanning", "diversityInclusion", "cultureAssessment",
+            "marketEntryPlaybook", "partnerChannelStrategy", "acquisitionIntegration", "internationalReadiness", "revenueModelAnalysis", "growthExperiments",
+            "customerAcquisitionCost", "lifetimeValueOptimization", "churnPrediction", "netRevenueRetention", "customerAdvocacy", "feedbackLoop",
+            "processAutomation", "costBenchmark", "vendorNegotiation", "scalabilityAssessment", "incidentReadiness", "operationalRisk",
+            "dataStrategy", "aiUseCases", "analyticsRoadmap", "dataPrivacy", "mlOpsReadiness", "digitalTransformation",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -415,6 +419,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 30 (Product Strategy): productMarketFit (PMF assessment), featurePrioritization (RICE scoring), userOnboarding (funnel analysis), productAnalytics (usage metrics), marketTiming (market windows), competitiveResponse (response playbook)
 - Wave 31 (Financial Strategy): scenarioPlanning (financial scenarios), capitalStructure (capital optimization), workingCapital (cash conversion), taxStrategy (tax optimization), fundraisingReadiness (round readiness), exitStrategy (exit planning)
 - Wave 32 (People & Culture): talentAcquisition (hiring strategy), employeeEngagement (engagement scores), compensationBenchmark (comp analysis), successionPlanning (succession plans), diversityInclusion (DEI analytics), cultureAssessment (culture health)
+- Wave 33 (Market Expansion): marketEntryPlaybook (market entry strategies), partnerChannelStrategy (partner channel optimization), acquisitionIntegration (M&A integration playbook), internationalReadiness (global expansion readiness), revenueModelAnalysis (revenue model evaluation), growthExperiments (growth experiment framework)
+- Wave 34 (Customer Economics): customerAcquisitionCost (CAC analysis by channel), lifetimeValueOptimization (LTV optimization strategies), churnPrediction (predictive churn modeling), netRevenueRetention (NRR/GRR analysis), customerAdvocacy (advocacy program design), feedbackLoop (customer feedback systems)
+- Wave 35 (Operational Excellence): processAutomation (automation opportunity assessment), costBenchmark (cost benchmarking analysis), vendorNegotiation (vendor negotiation strategies), scalabilityAssessment (scalability readiness), incidentReadiness (incident response preparedness), operationalRisk (operational risk assessment)
+- Wave 36 (Data & AI): dataStrategy (enterprise data strategy), aiUseCases (AI use case prioritization), analyticsRoadmap (analytics capability roadmap), dataPrivacy (data privacy compliance), mlOpsReadiness (MLOps maturity assessment), digitalTransformation (digital transformation roadmap)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

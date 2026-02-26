@@ -869,6 +869,34 @@ export interface MVPDeliverables {
   // Wave 32: People & Culture Analytics (new fields only)
   talentAcquisition?: TalentAcquisition;
   diversityInclusion?: DiversityInclusion;
+  // Wave 33: Strategic Growth
+  marketEntryPlaybook?: MarketEntryPlaybook;
+  partnerChannelStrategy?: PartnerChannelStrategy;
+  acquisitionIntegration?: AcquisitionIntegration;
+  internationalReadiness?: InternationalReadiness;
+  revenueModelAnalysis?: RevenueModelAnalysis;
+  growthExperiments?: GrowthExperiments;
+  // Wave 34: Customer Intelligence
+  customerAcquisitionCost?: CustomerAcquisitionCost;
+  lifetimeValueOptimization?: LifetimeValueOptimization;
+  churnPrediction?: ChurnPrediction;
+  netRevenueRetention?: NetRevenueRetention;
+  customerAdvocacy?: CustomerAdvocacy;
+  feedbackLoop?: FeedbackLoop;
+  // Wave 35: Operational Excellence
+  processAutomation?: ProcessAutomation;
+  costBenchmark?: CostBenchmark;
+  vendorNegotiation?: VendorNegotiation;
+  scalabilityAssessment?: ScalabilityAssessment;
+  incidentReadiness?: IncidentReadiness;
+  operationalRisk?: OperationalRisk;
+  // Wave 36: Data & AI Strategy
+  dataStrategy?: DataStrategy;
+  aiUseCases?: AiUseCases;
+  analyticsRoadmap?: AnalyticsRoadmap;
+  dataPrivacy?: DataPrivacy;
+  mlOpsReadiness?: MlOpsReadiness;
+  digitalTransformation?: DigitalTransformation;
 }
 
 export interface BenchmarkDimension {
@@ -2907,3 +2935,91 @@ export interface TalentAcquisition { summary: string; openRoles: number; needs: 
 
 export interface DeiMetric { category: string; currentState: string; benchmark: string; trend: string; gap: string; initiative: string; }
 export interface DiversityInclusion { summary: string; metrics: DeiMetric[]; overallScore: number; representationGaps: string[]; inclusionIndex: string; payEquity: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 33: Strategic Growth
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MarketEntry { market: string; strategy: string; investmentRequired: string; timeToBreakeven: string; riskLevel: string; competitors: string; keyBarrier: string; }
+export interface MarketEntryPlaybook { summary: string; entries: MarketEntry[]; topOpportunity: string; totalInvestmentNeeded: string; sequencingStrategy: string; riskMitigation: string[]; recommendations: string[]; }
+
+export interface ChannelPartner { partner: string; channel: string; revenueContribution: string; margin: string; performance: string; growthPotential: string; }
+export interface PartnerChannelStrategy { summary: string; partners: ChannelPartner[]; channelMix: string; topChannel: string; underperformingChannels: string[]; newChannelOpportunities: string[]; recommendations: string[]; }
+
+export interface IntegrationWorkstream { workstream: string; status: string; completion: string; blockers: string; owner: string; deadline: string; }
+export interface AcquisitionIntegration { summary: string; workstreams: IntegrationWorkstream[]; synergyRealized: string; culturalAlignment: string; retentionRate: string; topRisk: string; recommendations: string[]; }
+
+export interface ReadinessArea { area: string; score: number; requirement: string; currentState: string; gap: string; action: string; }
+export interface InternationalReadiness { summary: string; overallScore: number; areas: ReadinessArea[]; topMarkets: string[]; regulatoryBarriers: string[]; localizationNeeds: string[]; recommendations: string[]; }
+
+export interface RevenueStream { stream: string; revenue: string; margin: string; growth: string; scalability: string; moatStrength: string; }
+export interface RevenueModelAnalysis { summary: string; streams: RevenueStream[]; primaryModel: string; recurringPercentage: string; diversificationScore: number; modelFit: string; recommendations: string[]; }
+
+export interface Experiment { name: string; hypothesis: string; metric: string; status: string; result: string; nextStep: string; }
+export interface GrowthExperiments { summary: string; experiments: Experiment[]; activeExperiments: number; winRate: string; topLearning: string; velocityScore: number; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 34: Customer Intelligence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CacChannel { channel: string; spend: string; customers: number; cac: string; paybackPeriod: string; trend: string; }
+export interface CustomerAcquisitionCost { summary: string; blendedCac: string; channels: CacChannel[]; cacToLtvRatio: string; topChannel: string; improvementPotential: string; recommendations: string[]; }
+
+export interface LtvSegment { segment: string; avgLtv: string; retentionRate: string; expansionRevenue: string; costToServe: string; netLtv: string; }
+export interface LifetimeValueOptimization { summary: string; overallLtv: string; segments: LtvSegment[]; topDriver: string; expansionOpportunity: string; costReduction: string; recommendations: string[]; }
+
+export interface ChurnSignal { signal: string; strength: string; leadTime: string; affectedSegment: string; preventionAction: string; confidence: string; }
+export interface ChurnPrediction { summary: string; predictedChurnRate: string; signals: ChurnSignal[]; highRiskAccounts: number; revenueAtRisk: string; interventionROI: string; recommendations: string[]; }
+
+export interface RetentionCohortNRR { cohort: string; startingMrr: string; expansion: string; contraction: string; churn: string; netRetention: string; }
+export interface NetRevenueRetention { summary: string; overallNrr: string; cohorts: RetentionCohortNRR[]; expansionRate: string; contractionRate: string; topExpansionDriver: string; recommendations: string[]; }
+
+export interface AdvocateMetric { program: string; participants: number; referrals: string; revenue: string; satisfaction: string; nps: string; }
+export interface CustomerAdvocacy { summary: string; programs: AdvocateMetric[]; totalAdvocates: number; referralRevenue: string; advocateNps: string; topProgram: string; recommendations: string[]; }
+
+export interface FeedbackChannel { channel: string; volume: number; responseRate: string; avgResolutionTime: string; satisfaction: string; topTheme: string; }
+export interface FeedbackLoop { summary: string; channels: FeedbackChannel[]; totalFeedback: number; actionRate: string; closedLoopPercentage: string; topInsight: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 35: Operational Excellence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AutomationOpportunity { process: string; currentTime: string; automatedTime: string; savingsPerYear: string; complexity: string; priority: string; }
+export interface ProcessAutomation { summary: string; opportunities: AutomationOpportunity[]; totalSavings: string; quickWins: string[]; roiTimeline: string; techRequirements: string[]; recommendations: string[]; }
+
+export interface CostArea { area: string; currentCost: string; benchmark: string; gap: string; savingsPotential: string; difficulty: string; }
+export interface CostBenchmark { summary: string; areas: CostArea[]; totalOverspend: string; topSavingsArea: string; industryPosition: string; quickSavings: string[]; recommendations: string[]; }
+
+export interface NegotiationItem { vendor: string; currentTerms: string; targetTerms: string; leverage: string; savingsPotential: string; strategy: string; }
+export interface VendorNegotiation { summary: string; items: NegotiationItem[]; totalSavings: string; topPriority: string; timelineToSavings: string; riskFactors: string[]; recommendations: string[]; }
+
+export interface ScalabilityDimension { dimension: string; currentCapacity: string; projectedNeed: string; headroom: string; bottleneck: string; investmentNeeded: string; }
+export interface ScalabilityAssessment { summary: string; overallScore: number; dimensions: ScalabilityDimension[]; criticalBottleneck: string; scalingTimeline: string; totalInvestment: string; recommendations: string[]; }
+
+export interface IncidentScenario { scenario: string; likelihood: string; impact: string; currentReadiness: string; gap: string; requiredAction: string; }
+export interface IncidentReadiness { summary: string; overallReadiness: number; scenarios: IncidentScenario[]; responseTime: string; recoveryCapability: string; lastDrillDate: string; recommendations: string[]; }
+
+export interface RiskArea { area: string; riskLevel: string; likelihood: string; impact: string; currentMitigation: string; residualRisk: string; }
+export interface OperationalRisk { summary: string; overallRisk: string; areas: RiskArea[]; topRisk: string; mitigationBudget: string; insuranceCoverage: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 36: Data & AI Strategy
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DataDomain { domain: string; maturity: string; quality: string; accessibility: string; owner: string; priority: string; }
+export interface DataStrategy { summary: string; domains: DataDomain[]; overallMaturity: number; dataDebtLevel: string; governanceScore: string; topPriority: string; recommendations: string[]; }
+
+export interface AiUseCase { useCase: string; businessImpact: string; feasibility: string; dataReadiness: string; estimatedROI: string; timeline: string; }
+export interface AiUseCases { summary: string; useCases: AiUseCase[]; topOpportunity: string; totalEstimatedROI: string; readinessScore: number; barriers: string[]; recommendations: string[]; }
+
+export interface AnalyticsMilestone { milestone: string; quarter: string; owner: string; dependencies: string; status: string; impact: string; }
+export interface AnalyticsRoadmap { summary: string; milestones: AnalyticsMilestone[]; currentMaturity: number; targetMaturity: number; investmentNeeded: string; quickWins: string[]; recommendations: string[]; }
+
+export interface PrivacyArea { area: string; compliance: string; regulation: string; gap: string; risk: string; action: string; }
+export interface DataPrivacy { summary: string; areas: PrivacyArea[]; overallCompliance: string; regulations: string[]; consentRate: string; breachReadiness: string; recommendations: string[]; }
+
+export interface MlOpsCapability { capability: string; maturity: string; tooling: string; gap: string; investment: string; priority: string; }
+export interface MlOpsReadiness { summary: string; capabilities: MlOpsCapability[]; overallScore: number; modelsInProduction: number; deploymentFrequency: string; monitoringCoverage: string; recommendations: string[]; }
+
+export interface TransformationPillar { pillar: string; currentState: string; targetState: string; progress: string; investment: string; timeline: string; }
+export interface DigitalTransformation { summary: string; pillars: TransformationPillar[]; overallProgress: number; totalInvestment: string; biggestGap: string; changeReadiness: string; recommendations: string[]; }
