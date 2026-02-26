@@ -129,6 +129,10 @@ const TOOLS = [
             "scenarioStressTest",
             "pricingStrategyMatrix", "customerHealthScore", "revenueWaterfall", "techDebtAssessment", "teamPerformance", "marketEntryStrategy",
             "competitiveIntelFeed", "cashFlowSensitivity", "digitalMaturity", "acquisitionFunnel", "strategicAlignment", "budgetOptimizer",
+            "revenueDrivers", "marginOptimization", "demandForecasting", "cohortAnalysis", "winLossAnalysis", "salesForecast",
+            "processEfficiency", "vendorRisk", "qualityMetrics", "capacityPlanning", "knowledgeManagement", "complianceScorecard",
+            "marketPenetration", "flywheelAnalysis", "partnershipsStrategy", "internationalExpansion", "rdEffectiveness", "brandEquity",
+            "workingCapital", "debtStrategy", "taxStrategy", "investorReadiness", "maReadiness", "strategicRoadmap",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -375,6 +379,10 @@ Wave 9: acquisitionTargets, financialRatios, channelMixModel, supplyChainRisk, r
 Wave 10: aiReadiness, networkEffects, dataMonetization, subscriptionMetrics, marketTiming, scenarioStressTest
 Wave 11: pricingStrategyMatrix, customerHealthScore, revenueWaterfall, techDebtAssessment, teamPerformance, marketEntryStrategy
 Wave 12: competitiveIntelFeed, cashFlowSensitivity, digitalMaturity, acquisitionFunnel, strategicAlignment, budgetOptimizer
+Wave 13: revenueDrivers, marginOptimization, demandForecasting, cohortAnalysis, winLossAnalysis, salesForecast
+Wave 14: processEfficiency, vendorRisk, qualityMetrics, capacityPlanning, knowledgeManagement, complianceScorecard
+Wave 15: marketPenetration, flywheelAnalysis, partnershipsStrategy, internationalExpansion, rdEffectiveness, brandEquity
+Wave 16: workingCapital, debtStrategy, taxStrategy, investorReadiness, maReadiness, strategicRoadmap
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

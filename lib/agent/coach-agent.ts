@@ -114,7 +114,31 @@ KEY SECTIONS FOR COACHING:
 - digitalMaturity: digital transformation dimensions, maturity levels, priorities
 - acquisitionFunnel: funnel stages, conversion rates, bottlenecks, CPA
 - strategicAlignment: vision/goals/resources/execution alignment scores
-- budgetOptimizer: budget categories, ROI, efficiency, reallocation suggestions`;
+- budgetOptimizer: budget categories, ROI, efficiency, reallocation suggestions
+- revenueDrivers: Revenue growth drivers, concentration risk, seasonality patterns
+- marginOptimization: Gross/net margins, cost structure, per-product profitability
+- demandForecasting: Demand signals, seasonality, trend direction
+- cohortAnalysis: Retention cohorts, expansion revenue, churn trends
+- winLossAnalysis: Deal win rates, competitive losses, sales objections
+- salesForecast: Pipeline forecasting, quota attainment, deal conversion
+- processEfficiency: Process bottlenecks, automation savings, lean metrics
+- vendorRisk: Vendor dependencies, concentration risk, SLA compliance
+- qualityMetrics: Quality scores, CSAT/NPS, defect rates
+- capacityPlanning: Resource utilization, scaling triggers, headcount planning
+- knowledgeManagement: Documentation gaps, tribal knowledge risks
+- complianceScorecard: Regulatory compliance, audit readiness, policy gaps
+- marketPenetration: Market share, penetration rates, untapped segments
+- flywheelAnalysis: Growth loops, momentum, friction points
+- partnershipsStrategy: Partner candidates, ecosystem strategy, integration planning
+- internationalExpansion: International market opportunities, regulatory barriers
+- rdEffectiveness: R&D ROI, project success rates, innovation velocity
+- brandEquity: Brand awareness, perception, loyalty, competitive positioning
+- workingCapital: Cash conversion cycle, DSO/DPO/DIO, working capital optimization
+- debtStrategy: Debt structure, capacity, refinancing opportunities
+- taxStrategy: Tax efficiency, R&D credits, entity structure
+- investorReadiness: Pitch readiness, metrics completeness, due diligence prep
+- maReadiness: M&A valuation, synergy potential, integration planning
+- strategicRoadmap: Strategic pillars, milestones, 1/3/5 year goals, OKRs`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -206,6 +230,10 @@ const TOOLS = [
             "scenarioStressTest",
             "pricingStrategyMatrix", "customerHealthScore", "revenueWaterfall", "techDebtAssessment", "teamPerformance", "marketEntryStrategy",
             "competitiveIntelFeed", "cashFlowSensitivity", "digitalMaturity", "acquisitionFunnel", "strategicAlignment", "budgetOptimizer",
+            "revenueDrivers", "marginOptimization", "demandForecasting", "cohortAnalysis", "winLossAnalysis", "salesForecast",
+            "processEfficiency", "vendorRisk", "qualityMetrics", "capacityPlanning", "knowledgeManagement", "complianceScorecard",
+            "marketPenetration", "flywheelAnalysis", "partnershipsStrategy", "internationalExpansion", "rdEffectiveness", "brandEquity",
+            "workingCapital", "debtStrategy", "taxStrategy", "investorReadiness", "maReadiness", "strategicRoadmap",
           ],
           description: "Which report section to retrieve",
         },
@@ -481,6 +509,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).acquisitionFunnel) parts.push(`Acquisition Funnel: ${(d as any).acquisitionFunnel.overallConversionRate || "N/A"} conversion, CPA: ${(d as any).acquisitionFunnel.costPerAcquisition || "N/A"}`);
     if ((d as any).strategicAlignment) parts.push(`Strategic Alignment: ${(d as any).strategicAlignment.overallScore ?? "N/A"}/100`);
     if ((d as any).budgetOptimizer) parts.push(`Budget: ${(d as any).budgetOptimizer.totalBudget || "N/A"}, Savings: ${(d as any).budgetOptimizer.savingsOpportunity || "N/A"}`);
+    if ((d as any).revenueDrivers) parts.push(`Revenue Drivers: Top driver: ${(d as any).revenueDrivers.topDriver || "N/A"}, Concentration risk: ${(d as any).revenueDrivers.concentrationRisk || "N/A"}`);
+    if ((d as any).marginOptimization) parts.push(`Margin Optimization: Gross margin: ${(d as any).marginOptimization.grossMargin || "N/A"}, Net margin: ${(d as any).marginOptimization.netMargin || "N/A"}`);
+    if ((d as any).demandForecasting) parts.push(`Demand Forecast: Trend: ${(d as any).demandForecasting.trendDirection || "N/A"}, Confidence: ${(d as any).demandForecasting.confidence || "N/A"}`);
+    if ((d as any).cohortAnalysis) parts.push(`Cohort Analysis: Retention rate: ${(d as any).cohortAnalysis.overallRetention || "N/A"}, Best cohort: ${(d as any).cohortAnalysis.bestCohort || "N/A"}`);
+    if ((d as any).winLossAnalysis) parts.push(`Win/Loss: Win rate: ${(d as any).winLossAnalysis.winRate || "N/A"}, Top loss reason: ${(d as any).winLossAnalysis.topLossReason || "N/A"}`);
+    if ((d as any).salesForecast) parts.push(`Sales Forecast: Pipeline value: ${(d as any).salesForecast.pipelineValue || "N/A"}, Forecast accuracy: ${(d as any).salesForecast.forecastAccuracy || "N/A"}`);
+    if ((d as any).processEfficiency) parts.push(`Process Efficiency: Score: ${(d as any).processEfficiency.overallScore ?? "N/A"}/100, Bottlenecks: ${(d as any).processEfficiency.bottlenecks?.length ?? 0}`);
+    if ((d as any).vendorRisk) parts.push(`Vendor Risk: Overall risk: ${(d as any).vendorRisk.overallRisk || "N/A"}, Critical vendors: ${(d as any).vendorRisk.criticalVendors?.length ?? 0}`);
+    if ((d as any).qualityMetrics) parts.push(`Quality Metrics: CSAT: ${(d as any).qualityMetrics.csat || "N/A"}, NPS: ${(d as any).qualityMetrics.nps ?? "N/A"}`);
+    if ((d as any).capacityPlanning) parts.push(`Capacity Planning: Utilization: ${(d as any).capacityPlanning.currentUtilization || "N/A"}, Scaling trigger: ${(d as any).capacityPlanning.scalingTrigger || "N/A"}`);
+    if ((d as any).knowledgeManagement) parts.push(`Knowledge Management: Documentation coverage: ${(d as any).knowledgeManagement.coverageScore ?? "N/A"}%, Tribal knowledge risks: ${(d as any).knowledgeManagement.tribalKnowledgeRisks?.length ?? 0}`);
+    if ((d as any).complianceScorecard) parts.push(`Compliance Scorecard: Score: ${(d as any).complianceScorecard.overallScore ?? "N/A"}/100, Gaps: ${(d as any).complianceScorecard.gaps?.length ?? 0}`);
+    if ((d as any).marketPenetration) parts.push(`Market Penetration: Current share: ${(d as any).marketPenetration.currentShare || "N/A"}, Penetration rate: ${(d as any).marketPenetration.penetrationRate || "N/A"}`);
+    if ((d as any).flywheelAnalysis) parts.push(`Flywheel Analysis: Momentum: ${(d as any).flywheelAnalysis.momentum || "N/A"}, Friction points: ${(d as any).flywheelAnalysis.frictionPoints?.length ?? 0}`);
+    if ((d as any).partnershipsStrategy) parts.push(`Partnerships Strategy: Partners identified: ${(d as any).partnershipsStrategy.partnerCandidates?.length ?? 0}, Ecosystem: ${(d as any).partnershipsStrategy.ecosystemStrategy || "N/A"}`);
+    if ((d as any).internationalExpansion) parts.push(`International Expansion: Priority market: ${(d as any).internationalExpansion.priorityMarket || "N/A"}, Readiness: ${(d as any).internationalExpansion.readinessScore ?? "N/A"}/100`);
+    if ((d as any).rdEffectiveness) parts.push(`R&D Effectiveness: ROI: ${(d as any).rdEffectiveness.rdRoi || "N/A"}, Success rate: ${(d as any).rdEffectiveness.projectSuccessRate || "N/A"}`);
+    if ((d as any).brandEquity) parts.push(`Brand Equity: Score: ${(d as any).brandEquity.overallScore ?? "N/A"}/100, Awareness: ${(d as any).brandEquity.awareness || "N/A"}`);
+    if ((d as any).workingCapital) parts.push(`Working Capital: Cash conversion cycle: ${(d as any).workingCapital.cashConversionCycle || "N/A"} days, DSO: ${(d as any).workingCapital.dso || "N/A"}`);
+    if ((d as any).debtStrategy) parts.push(`Debt Strategy: Total debt: ${(d as any).debtStrategy.totalDebt || "N/A"}, Capacity: ${(d as any).debtStrategy.debtCapacity || "N/A"}`);
+    if ((d as any).taxStrategy) parts.push(`Tax Strategy: Effective rate: ${(d as any).taxStrategy.effectiveRate || "N/A"}, Savings opportunities: ${(d as any).taxStrategy.savingsOpportunities?.length ?? 0}`);
+    if ((d as any).investorReadiness) parts.push(`Investor Readiness: Score: ${(d as any).investorReadiness.overallScore ?? "N/A"}/100, Gaps: ${(d as any).investorReadiness.gaps?.length ?? 0}`);
+    if ((d as any).maReadiness) parts.push(`M&A Readiness: Score: ${(d as any).maReadiness.overallScore ?? "N/A"}/100, Valuation: ${(d as any).maReadiness.estimatedValuation || "N/A"}`);
+    if ((d as any).strategicRoadmap) parts.push(`Strategic Roadmap: Pillars: ${(d as any).strategicRoadmap.strategicPillars?.length ?? 0}, Next milestone: ${(d as any).strategicRoadmap.nextMilestone || "N/A"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

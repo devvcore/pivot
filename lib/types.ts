@@ -761,6 +761,38 @@ export interface MVPDeliverables {
   acquisitionFunnel?: AcquisitionFunnel;
   strategicAlignment?: StrategicAlignment;
   budgetOptimizer?: BudgetOptimizer;
+
+  // Wave 13: Revenue Intelligence & Optimization
+  revenueDrivers?: RevenueDrivers;
+  marginOptimization?: MarginOptimization;
+  demandForecasting?: DemandForecasting;
+  cohortAnalysis?: CohortAnalysis;
+  winLossAnalysis?: WinLossAnalysis;
+  salesForecast?: SalesForecast;
+
+  // Wave 14: Operational Excellence
+  processEfficiency?: ProcessEfficiency;
+  vendorRisk?: VendorRisk;
+  qualityMetrics?: QualityMetrics;
+  capacityPlanning?: CapacityPlanning;
+  knowledgeManagement?: KnowledgeManagement;
+  complianceScorecard?: ComplianceScorecard;
+
+  // Wave 15: Growth & Market Intelligence
+  marketPenetration?: MarketPenetration;
+  flywheelAnalysis?: FlywheelAnalysis;
+  partnershipsStrategy?: PartnershipsStrategy;
+  internationalExpansion?: InternationalExpansion;
+  rdEffectiveness?: RDEffectiveness;
+  brandEquity?: BrandEquity;
+
+  // Wave 16: Financial Planning & Strategy
+  workingCapital?: WorkingCapital;
+  debtStrategy?: DebtStrategy;
+  taxStrategy?: TaxStrategy;
+  investorReadiness?: InvestorReadiness;
+  maReadiness?: MAReadiness;
+  strategicRoadmap?: StrategicRoadmap;
 }
 
 export interface BenchmarkDimension {
@@ -2140,5 +2172,503 @@ export interface BudgetOptimizer {
   roiImprovementPotential: string;
   topReallocation: string;
   wastageAreas: string[];
+  recommendations: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 13: Revenue Intelligence & Optimization
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RevenueDriver {
+  driver: string;
+  contribution: string;
+  growth: string;
+  trend: "accelerating" | "stable" | "decelerating";
+  leverage: "high" | "medium" | "low";
+  actionability: string;
+}
+
+export interface RevenueDrivers {
+  summary: string;
+  topDrivers: RevenueDriver[];
+  primaryGrowthEngine: string;
+  revenueConcentrationRisk: string;
+  growthRate: string;
+  organicVsPaid: string;
+  seasonalityPattern: string;
+  recommendations: string[];
+}
+
+export interface MarginItem {
+  product: string;
+  grossMargin: string;
+  netMargin: string;
+  costBreakdown: { category: string; amount: string; percentage: string }[];
+  optimizationPotential: string;
+}
+
+export interface MarginOptimization {
+  summary: string;
+  overallGrossMargin: string;
+  overallNetMargin: string;
+  items: MarginItem[];
+  biggestMarginDrain: string;
+  quickWins: string[];
+  totalOptimizationPotential: string;
+  costStructureHealth: "healthy" | "needs_attention" | "critical";
+  recommendations: string[];
+}
+
+export interface DemandSignal {
+  signal: string;
+  strength: "strong" | "moderate" | "weak";
+  timeframe: string;
+  confidence: number;
+  dataSource: string;
+}
+
+export interface DemandForecasting {
+  summary: string;
+  shortTermForecast: string;
+  mediumTermForecast: string;
+  longTermForecast: string;
+  signals: DemandSignal[];
+  seasonalityIndex: string;
+  trendDirection: "growing" | "stable" | "declining";
+  peakPeriod: string;
+  troughPeriod: string;
+  recommendations: string[];
+}
+
+export interface Cohort {
+  period: string;
+  startingCustomers: number;
+  retainedMonth1: string;
+  retainedMonth3: string;
+  retainedMonth6: string;
+  retainedMonth12: string;
+  revenueRetention: string;
+  expansionRevenue: string;
+}
+
+export interface CohortAnalysis {
+  summary: string;
+  cohorts: Cohort[];
+  bestCohort: string;
+  worstCohort: string;
+  averageRetention12Month: string;
+  netRevenueRetention: string;
+  churnTrend: "improving" | "stable" | "worsening";
+  recommendations: string[];
+}
+
+export interface WinLossDeal {
+  dealType: string;
+  outcome: "won" | "lost";
+  reason: string;
+  competitor?: string;
+  dealSize: string;
+  salesCycle: string;
+}
+
+export interface WinLossAnalysis {
+  summary: string;
+  overallWinRate: string;
+  deals: WinLossDeal[];
+  topWinReasons: string[];
+  topLossReasons: string[];
+  competitiveLosses: { competitor: string; lossRate: string }[];
+  averageSalesCycle: string;
+  commonObjections: string[];
+  recommendations: string[];
+}
+
+export interface ForecastQuarter {
+  quarter: string;
+  pipelineWeighted: string;
+  bestCase: string;
+  worstCase: string;
+  confidence: number;
+}
+
+export interface SalesForecast {
+  summary: string;
+  forecastPeriod: string;
+  quarters: ForecastQuarter[];
+  totalForecast: string;
+  quotaAttainment: string;
+  dealStageConversion: { stage: string; conversionRate: string; avgDaysInStage: number }[];
+  pipelineHealth: "strong" | "adequate" | "weak";
+  recommendations: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 14: Operational Excellence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ProcessBottleneck {
+  process: string;
+  currentCycleTime: string;
+  benchmarkCycleTime: string;
+  bottleneck: string;
+  automationPotential: "high" | "medium" | "low";
+  estimatedSavings: string;
+}
+
+export interface ProcessEfficiency {
+  summary: string;
+  overallEfficiencyScore: number;
+  processes: ProcessBottleneck[];
+  topBottleneck: string;
+  totalAutomationSavings: string;
+  leanScore: number;
+  wastageAreas: string[];
+  recommendations: string[];
+}
+
+export interface VendorProfile {
+  vendor: string;
+  category: string;
+  dependencyLevel: "critical" | "high" | "medium" | "low";
+  concentrationRisk: string;
+  slaCompliance: string;
+  alternativeAvailable: boolean;
+  contractExpiry: string;
+}
+
+export interface VendorRisk {
+  summary: string;
+  overallRiskScore: number;
+  vendors: VendorProfile[];
+  criticalDependencies: string[];
+  singlePointsOfFailure: string[];
+  diversificationScore: number;
+  recommendations: string[];
+}
+
+export interface QualityIndicator {
+  metric: string;
+  current: string;
+  benchmark: string;
+  trend: "improving" | "stable" | "declining";
+  impact: string;
+}
+
+export interface QualityMetrics {
+  summary: string;
+  overallQualityScore: number;
+  csatScore: string;
+  npsScore: string;
+  indicators: QualityIndicator[];
+  defectRate: string;
+  resolutionTime: string;
+  costOfQuality: string;
+  recommendations: string[];
+}
+
+export interface CapacityDimension {
+  resource: string;
+  currentUtilization: string;
+  maxCapacity: string;
+  scalingTrigger: string;
+  timeToScalingTrigger: string;
+  headcountNeeded: number;
+}
+
+export interface CapacityPlanning {
+  summary: string;
+  overallUtilization: string;
+  dimensions: CapacityDimension[];
+  bottleneckResource: string;
+  scalingTimeline: string;
+  headcountPlan: { role: string; count: number; timeline: string }[];
+  recommendations: string[];
+}
+
+export interface KnowledgeGap {
+  area: string;
+  riskLevel: "critical" | "high" | "medium" | "low";
+  tribalKnowledgeHolder: string;
+  documentationStatus: "none" | "partial" | "complete";
+  impact: string;
+}
+
+export interface KnowledgeManagement {
+  summary: string;
+  overallMaturityScore: number;
+  gaps: KnowledgeGap[];
+  criticalRisks: string[];
+  onboardingEfficiency: string;
+  documentationCoverage: string;
+  knowledgeSharingScore: number;
+  recommendations: string[];
+}
+
+export interface ComplianceArea {
+  regulation: string;
+  status: "compliant" | "partial" | "non_compliant";
+  riskExposure: string;
+  gapDescription: string;
+  remediationEffort: string;
+  deadline?: string;
+}
+
+export interface ComplianceScorecard {
+  summary: string;
+  overallComplianceScore: number;
+  areas: ComplianceArea[];
+  auditReadiness: "ready" | "needs_work" | "not_ready";
+  criticalGaps: string[];
+  upcomingDeadlines: string[];
+  riskExposure: string;
+  recommendations: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 15: Growth & Market Intelligence
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PenetrationSegment {
+  segment: string;
+  totalAddressable: string;
+  currentCapture: string;
+  penetrationRate: string;
+  growthOpportunity: string;
+  strategy: string;
+}
+
+export interface MarketPenetration {
+  summary: string;
+  overallPenetrationRate: string;
+  shareOfWallet: string;
+  segments: PenetrationSegment[];
+  untappedMarket: string;
+  expansionPriority: string;
+  competitiveGap: string;
+  timeToFullPenetration: string;
+  recommendations: string[];
+}
+
+export interface GrowthLoop {
+  name: string;
+  type: "viral" | "content" | "paid" | "product" | "sales";
+  velocity: string;
+  frictionPoints: string[];
+  amplificationFactors: string[];
+  impactScore: number;
+}
+
+export interface FlywheelAnalysis {
+  summary: string;
+  overallMomentum: number;
+  loops: GrowthLoop[];
+  primaryFlywheel: string;
+  biggestFriction: string;
+  biggestAmplifier: string;
+  recommendations: string[];
+}
+
+export interface PartnerCandidate {
+  name: string;
+  partnerType: "technology" | "channel" | "strategic" | "distribution" | "co-marketing";
+  revenueShareModel: string;
+  integrationComplexity: "low" | "medium" | "high";
+  estimatedImpact: string;
+  synergy: string;
+}
+
+export interface PartnershipsStrategy {
+  summary: string;
+  overallPartnershipReadiness: number;
+  partners: PartnerCandidate[];
+  priorityPartnership: string;
+  ecosystemStrategy: string;
+  partnershipModels: string[];
+  recommendations: string[];
+}
+
+export interface MarketOpportunity {
+  country: string;
+  region: string;
+  marketSize: string;
+  growthRate: string;
+  attractivenessScore: number;
+  regulatoryBarrier: "low" | "medium" | "high";
+  localizationNeeds: string[];
+  entryStrategy: string;
+}
+
+export interface InternationalExpansion {
+  summary: string;
+  expansionReadiness: number;
+  markets: MarketOpportunity[];
+  priorityMarket: string;
+  totalAddressableMarket: string;
+  regulatoryComplexity: string;
+  recommendations: string[];
+}
+
+export interface RDProject {
+  project: string;
+  investment: string;
+  roi: string;
+  timeToValue: string;
+  successProbability: string;
+  stage: "research" | "development" | "testing" | "launched" | "retired";
+  learnings: string;
+}
+
+export interface RDEffectiveness {
+  summary: string;
+  rdSpendAsPercentRevenue: string;
+  overallROI: string;
+  projects: RDProject[];
+  successRate: string;
+  averageTimeToValue: string;
+  innovationVelocity: string;
+  portfolioBalance: string;
+  biggestWin: string;
+  recommendations: string[];
+}
+
+export interface BrandDimension {
+  dimension: string;       // "Awareness", "Perception", "Loyalty", "Advocacy"
+  score: number;
+  benchmark: number;
+  strengths: string[];
+  weaknesses: string[];
+}
+
+export interface BrandEquity {
+  summary: string;
+  overallBrandScore: number;
+  estimatedBrandValue: string;
+  dimensions: BrandDimension[];
+  brandPromise: string;
+  brandPersonality: string;
+  competitivePositioning: string;
+  recommendations: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 16: Financial Planning & Strategy
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WorkingCapitalMetric {
+  metric: string;          // "DSO", "DPO", "DIO"
+  current: string;
+  benchmark: string;
+  trend: "improving" | "stable" | "worsening";
+  impact: string;
+}
+
+export interface WorkingCapital {
+  summary: string;
+  cashConversionCycleDays: number;
+  metrics: WorkingCapitalMetric[];
+  currentWorkingCapital: string;
+  optimizedWorkingCapital: string;
+  freeableCash: string;
+  recommendations: string[];
+}
+
+export interface DebtInstrument {
+  type: string;
+  amount: string;
+  interestRate: string;
+  maturity: string;
+  covenantStatus: "in_compliance" | "at_risk" | "breached";
+  refinancingOpportunity: boolean;
+}
+
+export interface DebtStrategy {
+  summary: string;
+  totalDebt: string;
+  debtToEquity: string;
+  interestCoverage: string;
+  instruments: DebtInstrument[];
+  optimalStructure: string;
+  debtCapacity: string;
+  refinancingSavings: string;
+  recommendations: string[];
+}
+
+export interface TaxOpportunity {
+  strategy: string;
+  estimatedSavings: string;
+  complexity: "low" | "medium" | "high";
+  timeline: string;
+  requirements: string[];
+}
+
+export interface TaxStrategy {
+  summary: string;
+  effectiveTaxRate: string;
+  optimizedTaxRate: string;
+  opportunities: TaxOpportunity[];
+  rdCredits: string;
+  entityStructure: string;
+  jurisdictionAnalysis: string;
+  totalPotentialSavings: string;
+  recommendations: string[];
+}
+
+export interface InvestorReadinessArea {
+  area: string;
+  score: number;
+  gaps: string[];
+  actions: string[];
+}
+
+export interface InvestorReadiness {
+  summary: string;
+  overallScore: number;
+  areas: InvestorReadinessArea[];
+  pitchDeckReadiness: string;
+  metricsCompleteness: string;
+  governanceScore: number;
+  dueDiligencePrep: string;
+  targetValuation: string;
+  fundingStage: string;
+  recommendations: string[];
+}
+
+export interface SynergyArea {
+  area: string;
+  type: "revenue" | "cost" | "strategic";
+  estimatedValue: string;
+  probability: string;
+  timeline: string;
+}
+
+export interface MAReadiness {
+  summary: string;
+  overallReadiness: number;
+  valuationMultiple: string;
+  estimatedValuation: string;
+  synergies: SynergyArea[];
+  integrationComplexity: "low" | "medium" | "high";
+  dealStructure: string;
+  keyRisks: string[];
+  recommendations: string[];
+}
+
+export interface StrategicMilestone {
+  milestone: string;
+  timeframe: string;        // "Q1 2025", "Year 2", etc.
+  status: "on_track" | "at_risk" | "behind" | "not_started";
+  dependencies: string[];
+  kpis: string[];
+}
+
+export interface StrategicRoadmap {
+  summary: string;
+  vision: string;
+  strategicPillars: string[];
+  milestones: StrategicMilestone[];
+  yearOneGoals: string[];
+  yearThreeGoals: string[];
+  yearFiveGoals: string[];
+  okrs: { objective: string; keyResults: string[] }[];
   recommendations: string[];
 }
