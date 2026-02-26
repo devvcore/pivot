@@ -165,6 +165,10 @@ const TOOLS = [
             "digitalMaturityIndex", "cloudMigrationReadiness", "automationRoi", "digitalWorkplace", "cybersecurityPosture", "techVendorConsolidation",
             "revenueSourceMapping", "channelMixOptimization", "crossSellEngine", "priceOptimizationModel", "promotionEffectiveness", "revenueHealthIndex",
             "organizationalNetwork", "decisionEfficiency", "meetingEfficiency", "knowledgeCapital", "changeManagementScore", "cultureAlignment",
+            "partnerPerformance", "ecosystemMapping", "allianceStrategy", "channelPartnerHealth", "coSellingPipeline", "integrationMarketplace",
+            "brandEquityIndex", "sentimentDashboard", "mediaShareOfVoice", "crisisCommsReadiness", "thoughtLeadership", "brandConsistency",
+            "monetizationModel", "freeTrialConversion", "usageBasedPricing", "bundleOptimization", "discountDiscipline", "revenueLeakageDetection",
+            "customerAcademy", "contentEngagement", "communityHealth", "certificationProgram", "selfServiceAdoption", "supportDeflection",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -447,6 +451,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 46 (Digital Transformation): digitalMaturityIndex (digital maturity scoring), cloudMigrationReadiness (cloud migration readiness assessment), automationRoi (automation ROI analysis), digitalWorkplace (digital workplace effectiveness), cybersecurityPosture (cybersecurity posture assessment), techVendorConsolidation (technology vendor consolidation opportunities)
 - Wave 47 (Revenue Acceleration): revenueSourceMapping (revenue source identification and mapping), channelMixOptimization (channel mix optimization analysis), crossSellEngine (cross-sell opportunity engine), priceOptimizationModel (price optimization modeling), promotionEffectiveness (promotion effectiveness analysis), revenueHealthIndex (revenue health index scoring)
 - Wave 48 (Organizational Health): organizationalNetwork (organizational network analysis), decisionEfficiency (decision-making efficiency metrics), meetingEfficiency (meeting efficiency and ROI), knowledgeCapital (knowledge capital assessment), changeManagementScore (change management scoring), cultureAlignment (culture alignment measurement)
+- Wave 49 (Partnership & Ecosystem): partnerPerformance (partner performance tracking), ecosystemMapping (ecosystem mapping and analysis), allianceStrategy (strategic alliance planning), channelPartnerHealth (channel partner health metrics), coSellingPipeline (co-selling pipeline management), integrationMarketplace (integration marketplace strategy)
+- Wave 50 (Brand & Reputation): brandEquityIndex (brand equity scoring and tracking), sentimentDashboard (sentiment analysis dashboard), mediaShareOfVoice (media share of voice analysis), crisisCommsReadiness (crisis communications readiness), thoughtLeadership (thought leadership strategy), brandConsistency (brand consistency audit)
+- Wave 51 (Pricing & Monetization): monetizationModel (monetization model analysis), freeTrialConversion (free trial conversion optimization), usageBasedPricing (usage-based pricing strategy), bundleOptimization (product bundle optimization), discountDiscipline (discount discipline assessment), revenueLeakageDetection (revenue leakage detection)
+- Wave 52 (Customer Education): customerAcademy (customer academy and training programs), contentEngagement (content engagement analytics), communityHealth (community health metrics), certificationProgram (certification program design), selfServiceAdoption (self-service adoption tracking), supportDeflection (support deflection analysis)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

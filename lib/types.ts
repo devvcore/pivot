@@ -1009,6 +1009,34 @@ export interface MVPDeliverables {
   certificationProgram?: CertificationProgram;
   selfServiceAdoption?: SelfServiceAdoption;
   supportDeflection?: SupportDeflection;
+  // Wave 53: Investor Relations
+  investorDeck?: InvestorDeck;
+  fundingTimeline?: FundingTimeline;
+  valuationModel?: ValuationModel;
+  capTableManagement?: CapTableManagement;
+  investorCommunication?: InvestorCommunication;
+  boardReporting?: BoardReporting;
+  // Wave 54: Market Expansion
+  geoExpansionStrategy?: GeoExpansionStrategy;
+  localMarketEntry?: LocalMarketEntry;
+  marketRegulations?: MarketRegulations;
+  partnerLocalization?: PartnerLocalization;
+  culturalAdaptation?: CulturalAdaptation;
+  expansionRoi?: ExpansionRoi;
+  // Wave 55: Product-Led Growth
+  productLedMetrics?: ProductLedMetrics;
+  activationFunnel?: ActivationFunnel;
+  featureAdoption?: FeatureAdoption;
+  virality?: Virality;
+  productQualifiedLeads?: ProductQualifiedLeads;
+  timeToValue?: TimeToValue;
+  // Wave 56: AI & Automation Readiness
+  aiReadinessScore?: AiReadinessScore;
+  mlUseCasePriority?: MlUseCasePriority;
+  dataInfrastructure?: DataInfrastructure;
+  aiTalentGap?: AiTalentGap;
+  ethicalAiFramework?: EthicalAiFramework;
+  aiRoiProjection?: AiRoiProjection;
 }
 
 export interface BenchmarkDimension {
@@ -3359,3 +3387,59 @@ export interface SelfServiceChannel { channel: string; usage: string; resolution
 export interface SelfServiceAdoption { summary: string; channels: SelfServiceChannel[]; overallAdoption: string; avgResolution: string; costSavings: string; topChannel: string; recommendations: string[]; }
 export interface DeflectionCategory { category: string; totalTickets: string; deflected: string; deflectionRate: string; savings: string; topArticle: string; }
 export interface SupportDeflection { summary: string; categories: DeflectionCategory[]; overallDeflection: string; totalSavings: string; topCategory: string; improvementArea: string; recommendations: string[]; }
+
+// ── Wave 53: Investor Relations ───────────────────────────────────────────────
+export interface DeckSection { section: string; status: string; strength: string; weakness: string; investorAppeal: string; improvement: string; }
+export interface InvestorDeck { summary: string; sections: DeckSection[]; overallReadiness: string; strongestSection: string; weakestSection: string; narrativeScore: number; recommendations: string[]; }
+export interface FundingMilestone { milestone: string; targetDate: string; status: string; amount: string; dependency: string; risk: string; }
+export interface FundingTimeline { summary: string; milestones: FundingMilestone[]; nextRound: string; targetAmount: string; runway: string; readinessScore: number; recommendations: string[]; }
+export interface ValuationDriver { driver: string; impact: string; currentValue: string; benchmark: string; improvement: string; confidence: string; }
+export interface ValuationModel { summary: string; drivers: ValuationDriver[]; estimatedRange: string; methodology: string; multipleUsed: string; keyAssumption: string; recommendations: string[]; }
+export interface StakeholderEntry { stakeholder: string; ownership: string; shareClass: string; votingRights: string; vestingStatus: string; notes: string; }
+export interface CapTableManagement { summary: string; stakeholders: StakeholderEntry[]; totalShares: string; dilutionRisk: string; optionPoolRemaining: string; cleanlinessScore: number; recommendations: string[]; }
+export interface InvestorUpdate { topic: string; frequency: string; format: string; engagement: string; effectiveness: string; improvement: string; }
+export interface InvestorCommunication { summary: string; updates: InvestorUpdate[]; overallTransparency: string; responseTime: string; reportingCadence: string; investorSatisfaction: string; recommendations: string[]; }
+export interface BoardMetric { metric: string; currentValue: string; target: string; status: string; trend: string; actionItem: string; }
+export interface BoardReporting { summary: string; metrics: BoardMetric[]; reportingFrequency: string; dashboardReadiness: string; keyDecisionsPending: number; governanceScore: number; recommendations: string[]; }
+
+// ── Wave 54: Market Expansion ─────────────────────────────────────────────────
+export interface GeoMarketTarget { market: string; tam: string; competition: string; readiness: string; investmentRequired: string; timeline: string; }
+export interface GeoExpansionStrategy { summary: string; markets: GeoMarketTarget[]; topMarket: string; totalTam: string; expansionMode: string; riskLevel: string; recommendations: string[]; }
+export interface EntryBarrier { barrier: string; severity: string; mitigationStrategy: string; cost: string; timeline: string; precedent: string; }
+export interface LocalMarketEntry { summary: string; barriers: EntryBarrier[]; entryMode: string; estimatedCost: string; breakEvenTimeline: string; localPartnerNeed: string; recommendations: string[]; }
+export interface RegulationArea { area: string; requirement: string; complianceStatus: string; risk: string; cost: string; deadline: string; }
+export interface MarketRegulations { summary: string; areas: RegulationArea[]; overallCompliance: string; criticalGaps: number; estimatedComplianceCost: string; highestRisk: string; recommendations: string[]; }
+export interface LocalizationArea { area: string; currentState: string; targetState: string; effort: string; cost: string; priority: string; }
+export interface PartnerLocalization { summary: string; areas: LocalizationArea[]; overallReadiness: string; topPriority: string; totalInvestment: string; timeToMarket: string; recommendations: string[]; }
+export interface CulturalFactor { factor: string; homeMarket: string; targetMarket: string; gap: string; risk: string; adaptation: string; }
+export interface CulturalAdaptation { summary: string; factors: CulturalFactor[]; overallReadiness: string; biggestGap: string; trainingNeed: string; adaptationTimeline: string; recommendations: string[]; }
+export interface ExpansionCostLine { category: string; investment: string; expectedReturn: string; paybackPeriod: string; risk: string; confidence: string; }
+export interface ExpansionRoi { summary: string; costs: ExpansionCostLine[]; totalInvestment: string; projectedRoi: string; breakEven: string; irr: string; recommendations: string[]; }
+
+// ── Wave 55: Product-Led Growth ───────────────────────────────────────────────
+export interface PlgMetric { metric: string; value: string; benchmark: string; trend: string; impact: string; action: string; }
+export interface ProductLedMetrics { summary: string; metrics: PlgMetric[]; overallPlgScore: number; topMetric: string; biggestGap: string; growthRate: string; recommendations: string[]; }
+export interface FunnelStage { stage: string; users: string; conversionRate: string; dropoffRate: string; avgTime: string; improvement: string; }
+export interface ActivationFunnel { summary: string; stages: FunnelStage[]; overallConversion: string; biggestDropoff: string; activationRate: string; medianTimeToActivate: string; recommendations: string[]; }
+export interface FeatureMetric { feature: string; adoption: string; frequency: string; satisfaction: string; retention: string; revenue: string; }
+export interface FeatureAdoption { summary: string; features: FeatureMetric[]; overallAdoption: string; topFeature: string; underusedFeature: string; stickinessScore: number; recommendations: string[]; }
+export interface ViralLoop { loop: string; kFactor: string; cycleTime: string; inviteRate: string; acceptRate: string; contribution: string; }
+export interface Virality { summary: string; loops: ViralLoop[]; overallKFactor: string; viralCycleTime: string; organicGrowthRate: string; topLoop: string; recommendations: string[]; }
+export interface PqlCriteria { criteria: string; weight: string; threshold: string; currentRate: string; conversionToSql: string; optimization: string; }
+export interface ProductQualifiedLeads { summary: string; criteria: PqlCriteria[]; totalPqls: string; pqlToSqlRate: string; avgDealSize: string; topCriteria: string; recommendations: string[]; }
+export interface ValueMilestone { milestone: string; timeToReach: string; usersReaching: string; impact: string; correlationToRetention: string; optimization: string; }
+export interface TimeToValue { summary: string; milestones: ValueMilestone[]; medianTtv: string; topMilestone: string; biggestDelay: string; retentionCorrelation: string; recommendations: string[]; }
+
+// ── Wave 56: AI & Automation Readiness ────────────────────────────────────────
+export interface AiDimension { dimension: string; readinessLevel: number; gap: string; investment: string; priority: string; timeline: string; }
+export interface AiReadinessScore { summary: string; dimensions: AiDimension[]; overallScore: number; topStrength: string; topGap: string; estimatedInvestment: string; recommendations: string[]; }
+export interface MlUseCase { useCase: string; businessValue: string; feasibility: string; dataReadiness: string; estimatedRoi: string; priority: string; }
+export interface MlUseCasePriority { summary: string; useCases: MlUseCase[]; topUseCase: string; totalEstimatedValue: string; avgFeasibility: string; quickWins: number; recommendations: string[]; }
+export interface InfraComponent { component: string; currentState: string; targetState: string; gap: string; cost: string; urgency: string; }
+export interface DataInfrastructure { summary: string; components: InfraComponent[]; overallReadiness: string; biggestGap: string; totalInvestment: string; modernizationScore: number; recommendations: string[]; }
+export interface TalentNeed { role: string; current: number; needed: number; gap: number; urgency: string; hiringDifficulty: string; }
+export interface AiTalentGap { summary: string; needs: TalentNeed[]; totalGap: number; criticalRoles: number; buildVsBuy: string; trainingPotential: string; recommendations: string[]; }
+export interface EthicalPrinciple { principle: string; implementation: string; compliance: string; gap: string; risk: string; action: string; }
+export interface EthicalAiFramework { summary: string; principles: EthicalPrinciple[]; overallMaturity: string; biggestRisk: string; auditFrequency: string; transparencyScore: number; recommendations: string[]; }
+export interface AiProjection { scenario: string; investment: string; expectedReturn: string; timeline: string; risk: string; confidence: string; }
+export interface AiRoiProjection { summary: string; projections: AiProjection[]; totalInvestment: string; expectedRoi: string; paybackPeriod: string; topScenario: string; recommendations: string[]; }

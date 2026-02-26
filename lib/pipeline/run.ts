@@ -311,6 +311,34 @@ import {
   synthesizeKnowledgeCapital,
   synthesizeChangeManagementScore,
   synthesizeCultureAlignment,
+  // Wave 49
+  synthesizePartnerPerformance,
+  synthesizeEcosystemMapping,
+  synthesizeAllianceStrategy,
+  synthesizeChannelPartnerHealth,
+  synthesizeCoSellingPipeline,
+  synthesizeIntegrationMarketplace,
+  // Wave 50
+  synthesizeBrandEquityIndex,
+  synthesizeSentimentDashboard,
+  synthesizeMediaShareOfVoice,
+  synthesizeCrisisCommsReadiness,
+  synthesizeThoughtLeadership,
+  synthesizeBrandConsistency,
+  // Wave 51
+  synthesizeMonetizationModel,
+  synthesizeFreeTrialConversion,
+  synthesizeUsageBasedPricing,
+  synthesizeBundleOptimization,
+  synthesizeDiscountDiscipline,
+  synthesizeRevenueLeakageDetection,
+  // Wave 52
+  synthesizeCustomerAcademy,
+  synthesizeContentEngagement,
+  synthesizeCommunityHealth,
+  synthesizeCertificationProgram,
+  synthesizeSelfServiceAdoption,
+  synthesizeSupportDeflection,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -2644,6 +2672,162 @@ export async function runPipeline(runId: string): Promise<void> {
         if (b.status === "fulfilled" && b.value) deliverables.cultureAlignment = b.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ej failed:", e); }
+    }
+
+    // ── Step 4ek: Partner Performance + Ecosystem Mapping ──
+    if (!deliverables.partnerPerformance || !deliverables.ecosystemMapping) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePartnerPerformance(businessPacket, job.questionnaire),
+          synthesizeEcosystemMapping(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.partnerPerformance = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.ecosystemMapping = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ek failed:", e); }
+    }
+
+    // ── Step 4el: Alliance Strategy + Channel Partner Health ──
+    if (!deliverables.allianceStrategy || !deliverables.channelPartnerHealth) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeAllianceStrategy(businessPacket, job.questionnaire),
+          synthesizeChannelPartnerHealth(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.allianceStrategy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.channelPartnerHealth = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4el failed:", e); }
+    }
+
+    // ── Step 4em: Co-Selling Pipeline + Integration Marketplace ──
+    if (!deliverables.coSellingPipeline || !deliverables.integrationMarketplace) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCoSellingPipeline(businessPacket, job.questionnaire),
+          synthesizeIntegrationMarketplace(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.coSellingPipeline = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.integrationMarketplace = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4em failed:", e); }
+    }
+
+    // ── Step 4en: Brand Equity Index + Sentiment Dashboard ──
+    if (!deliverables.brandEquityIndex || !deliverables.sentimentDashboard) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeBrandEquityIndex(businessPacket, job.questionnaire),
+          synthesizeSentimentDashboard(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.brandEquityIndex = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.sentimentDashboard = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4en failed:", e); }
+    }
+
+    // ── Step 4eo: Media Share of Voice + Crisis Comms Readiness ──
+    if (!deliverables.mediaShareOfVoice || !deliverables.crisisCommsReadiness) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeMediaShareOfVoice(businessPacket, job.questionnaire),
+          synthesizeCrisisCommsReadiness(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.mediaShareOfVoice = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.crisisCommsReadiness = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4eo failed:", e); }
+    }
+
+    // ── Step 4ep: Thought Leadership + Brand Consistency ──
+    if (!deliverables.thoughtLeadership || !deliverables.brandConsistency) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeThoughtLeadership(businessPacket, job.questionnaire),
+          synthesizeBrandConsistency(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.thoughtLeadership = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.brandConsistency = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ep failed:", e); }
+    }
+
+    // ── Step 4eq: Monetization Model + Free Trial Conversion ──
+    if (!deliverables.monetizationModel || !deliverables.freeTrialConversion) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeMonetizationModel(businessPacket, job.questionnaire),
+          synthesizeFreeTrialConversion(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.monetizationModel = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.freeTrialConversion = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4eq failed:", e); }
+    }
+
+    // ── Step 4er: Usage-Based Pricing + Bundle Optimization ──
+    if (!deliverables.usageBasedPricing || !deliverables.bundleOptimization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeUsageBasedPricing(businessPacket, job.questionnaire),
+          synthesizeBundleOptimization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.usageBasedPricing = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.bundleOptimization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4er failed:", e); }
+    }
+
+    // ── Step 4es: Discount Discipline + Revenue Leakage Detection ──
+    if (!deliverables.discountDiscipline || !deliverables.revenueLeakageDetection) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeDiscountDiscipline(businessPacket, job.questionnaire),
+          synthesizeRevenueLeakageDetection(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.discountDiscipline = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.revenueLeakageDetection = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4es failed:", e); }
+    }
+
+    // ── Step 4et: Customer Academy + Content Engagement ──
+    if (!deliverables.customerAcademy || !deliverables.contentEngagement) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCustomerAcademy(businessPacket, job.questionnaire),
+          synthesizeContentEngagement(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.customerAcademy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.contentEngagement = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4et failed:", e); }
+    }
+
+    // ── Step 4eu: Community Health + Certification Program ──
+    if (!deliverables.communityHealth || !deliverables.certificationProgram) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCommunityHealth(businessPacket, job.questionnaire),
+          synthesizeCertificationProgram(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.communityHealth = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.certificationProgram = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4eu failed:", e); }
+    }
+
+    // ── Step 4ev: Self-Service Adoption + Support Deflection ──
+    if (!deliverables.selfServiceAdoption || !deliverables.supportDeflection) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeSelfServiceAdoption(businessPacket, job.questionnaire),
+          synthesizeSupportDeflection(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.selfServiceAdoption = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.supportDeflection = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ev failed:", e); }
     }
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────

@@ -330,7 +330,31 @@ KEY SECTIONS FOR COACHING:
 - meetingEfficiency: Meeting efficiency and ROI with time allocation, decision output, and cost analysis
 - knowledgeCapital: Knowledge capital assessment with intellectual asset inventory, documentation coverage, and knowledge risk
 - changeManagementScore: Change management scoring with adoption rates, resistance mapping, and readiness assessment
-- cultureAlignment: Culture alignment measurement with values fit, team cohesion, and organizational health indicators`;
+- cultureAlignment: Culture alignment measurement with values fit, team cohesion, and organizational health indicators
+- partnerPerformance: Partner performance tracking with revenue contribution, deal velocity, and satisfaction scoring
+- ecosystemMapping: Ecosystem mapping and analysis with partner dependencies, integration opportunities, and platform strategy
+- allianceStrategy: Strategic alliance planning with partner selection criteria, value exchange design, and governance models
+- channelPartnerHealth: Channel partner health metrics with activation rates, pipeline contribution, and enablement scoring
+- coSellingPipeline: Co-selling pipeline management with joint opportunity tracking, win rates, and revenue attribution
+- integrationMarketplace: Integration marketplace strategy with partner integrations, adoption metrics, and marketplace revenue
+- brandEquityIndex: Brand equity scoring with awareness, perception, loyalty, and competitive positioning dimensions
+- sentimentDashboard: Sentiment analysis dashboard with social listening, review monitoring, and trend tracking
+- mediaShareOfVoice: Media share of voice analysis with earned, owned, and paid media tracking across channels
+- crisisCommsReadiness: Crisis communications readiness with response plans, stakeholder mapping, and drill assessment
+- thoughtLeadership: Thought leadership strategy with content pillars, distribution channels, and authority metrics
+- brandConsistency: Brand consistency audit with visual identity, messaging alignment, and channel coherence scoring
+- monetizationModel: Monetization model analysis with revenue stream evaluation, pricing architecture, and model scoring
+- freeTrialConversion: Free trial conversion optimization with funnel analysis, activation metrics, and conversion drivers
+- usageBasedPricing: Usage-based pricing strategy with metering design, tier analysis, and revenue predictability
+- bundleOptimization: Product bundle optimization with attachment rates, margin impact, and customer value analysis
+- discountDiscipline: Discount discipline assessment with discount frequency, margin erosion, and approval compliance
+- revenueLeakageDetection: Revenue leakage detection with billing accuracy, contract compliance, and recovery opportunities
+- customerAcademy: Customer academy and training programs with course completion, certification rates, and knowledge retention
+- contentEngagement: Content engagement analytics with consumption patterns, effectiveness scoring, and content ROI
+- communityHealth: Community health metrics with member activity, engagement depth, and community-driven support
+- certificationProgram: Certification program design with curriculum structure, pass rates, and professional development impact
+- selfServiceAdoption: Self-service adoption tracking with feature utilization, resolution rates, and cost avoidance
+- supportDeflection: Support deflection analysis with deflection rates, channel effectiveness, and customer satisfaction impact`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -458,6 +482,10 @@ const TOOLS = [
             "digitalMaturityIndex", "cloudMigrationReadiness", "automationRoi", "digitalWorkplace", "cybersecurityPosture", "techVendorConsolidation",
             "revenueSourceMapping", "channelMixOptimization", "crossSellEngine", "priceOptimizationModel", "promotionEffectiveness", "revenueHealthIndex",
             "organizationalNetwork", "decisionEfficiency", "meetingEfficiency", "knowledgeCapital", "changeManagementScore", "cultureAlignment",
+            "partnerPerformance", "ecosystemMapping", "allianceStrategy", "channelPartnerHealth", "coSellingPipeline", "integrationMarketplace",
+            "brandEquityIndex", "sentimentDashboard", "mediaShareOfVoice", "crisisCommsReadiness", "thoughtLeadership", "brandConsistency",
+            "monetizationModel", "freeTrialConversion", "usageBasedPricing", "bundleOptimization", "discountDiscipline", "revenueLeakageDetection",
+            "customerAcademy", "contentEngagement", "communityHealth", "certificationProgram", "selfServiceAdoption", "supportDeflection",
           ],
           description: "Which report section to retrieve",
         },
@@ -949,6 +977,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).knowledgeCapital) parts.push(`Knowledge Capital: ${(d as any).knowledgeCapital.summary}`);
     if ((d as any).changeManagementScore) parts.push(`Change Management Score: ${(d as any).changeManagementScore.summary}`);
     if ((d as any).cultureAlignment) parts.push(`Culture Alignment: ${(d as any).cultureAlignment.summary}`);
+    if ((d as any).partnerPerformance) parts.push(`Partner Performance: ${(d as any).partnerPerformance.summary}`);
+    if ((d as any).ecosystemMapping) parts.push(`Ecosystem Mapping: ${(d as any).ecosystemMapping.summary}`);
+    if ((d as any).allianceStrategy) parts.push(`Alliance Strategy: ${(d as any).allianceStrategy.summary}`);
+    if ((d as any).channelPartnerHealth) parts.push(`Channel Partner Health: ${(d as any).channelPartnerHealth.summary}`);
+    if ((d as any).coSellingPipeline) parts.push(`Co-Selling Pipeline: ${(d as any).coSellingPipeline.summary}`);
+    if ((d as any).integrationMarketplace) parts.push(`Integration Marketplace: ${(d as any).integrationMarketplace.summary}`);
+    if ((d as any).brandEquityIndex) parts.push(`Brand Equity Index: ${(d as any).brandEquityIndex.summary}`);
+    if ((d as any).sentimentDashboard) parts.push(`Sentiment Dashboard: ${(d as any).sentimentDashboard.summary}`);
+    if ((d as any).mediaShareOfVoice) parts.push(`Media Share of Voice: ${(d as any).mediaShareOfVoice.summary}`);
+    if ((d as any).crisisCommsReadiness) parts.push(`Crisis Comms Readiness: ${(d as any).crisisCommsReadiness.summary}`);
+    if ((d as any).thoughtLeadership) parts.push(`Thought Leadership: ${(d as any).thoughtLeadership.summary}`);
+    if ((d as any).brandConsistency) parts.push(`Brand Consistency: ${(d as any).brandConsistency.summary}`);
+    if ((d as any).monetizationModel) parts.push(`Monetization Model: ${(d as any).monetizationModel.summary}`);
+    if ((d as any).freeTrialConversion) parts.push(`Free Trial Conversion: ${(d as any).freeTrialConversion.summary}`);
+    if ((d as any).usageBasedPricing) parts.push(`Usage-Based Pricing: ${(d as any).usageBasedPricing.summary}`);
+    if ((d as any).bundleOptimization) parts.push(`Bundle Optimization: ${(d as any).bundleOptimization.summary}`);
+    if ((d as any).discountDiscipline) parts.push(`Discount Discipline: ${(d as any).discountDiscipline.summary}`);
+    if ((d as any).revenueLeakageDetection) parts.push(`Revenue Leakage Detection: ${(d as any).revenueLeakageDetection.summary}`);
+    if ((d as any).customerAcademy) parts.push(`Customer Academy: ${(d as any).customerAcademy.summary}`);
+    if ((d as any).contentEngagement) parts.push(`Content Engagement: ${(d as any).contentEngagement.summary}`);
+    if ((d as any).communityHealth) parts.push(`Community Health: ${(d as any).communityHealth.summary}`);
+    if ((d as any).certificationProgram) parts.push(`Certification Program: ${(d as any).certificationProgram.summary}`);
+    if ((d as any).selfServiceAdoption) parts.push(`Self-Service Adoption: ${(d as any).selfServiceAdoption.summary}`);
+    if ((d as any).supportDeflection) parts.push(`Support Deflection: ${(d as any).supportDeflection.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 
