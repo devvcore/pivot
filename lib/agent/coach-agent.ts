@@ -186,7 +186,31 @@ KEY SECTIONS FOR COACHING:
 - customerDataPlatform: Unified profiles, data sources, identity resolution, activation
 - predictiveModeling: Predictive models, data readiness, implementation cost, expected ROI
 - reportingFramework: Reports inventory, KPI coverage, dashboards, self-service rate
-- dataQualityScore: Data quality dimensions, critical issues, automation, cost of poor quality`;
+- dataQualityScore: Data quality dimensions, critical issues, automation, cost of poor quality
+- supplyChainRisk: Supply chain vulnerability assessment with single-source dependencies and geographic concentration analysis
+- inventoryOptimization: Inventory turnover analysis with carrying costs, reorder points, and dead stock identification
+- vendorScorecard: Vendor performance ratings covering delivery reliability, quality metrics, and cost trends
+- operationalEfficiency: Process bottleneck identification with cycle times and throughput optimization
+- qualityManagement: Defect rate analysis with quality costs and continuous improvement opportunities
+- capacityPlanning: Resource utilization rates with growth headroom and scaling trigger analysis
+- customerJourneyMap: Touchpoint analysis identifying friction points, moments of truth, and drop-off points
+- npsAnalysis: Net Promoter Score breakdown with promoter/detractor analysis and improvement drivers
+- supportTicketIntelligence: Support ticket categorization with resolution trends and self-service opportunities
+- customerHealthScore: Composite customer health metric with churn signals and expansion indicators
+- voiceOfCustomer: Customer sentiment themes covering feature requests, complaints, and praise patterns
+- customerSegmentation: Behavioral customer segments with value tiers and personalization opportunities
+- innovationPipeline: Innovation funnel analysis with stage-gate progress and time-to-market metrics
+- ipPortfolio: Intellectual property inventory with protection gaps and licensing opportunities
+- rdEfficiency: R&D spending analysis with output per dollar and project success rates
+- technologyReadiness: Technology maturity assessment with adoption curves and migration roadmap
+- partnershipEcosystem: Partnership inventory with value exchange analysis and strategic fit scoring
+- mergersAcquisitions: M&A target scoring with synergy assessment and integration complexity analysis
+- esgScorecard: Environmental, social, and governance scoring with industry benchmarks
+- carbonFootprint: Carbon emissions inventory with reduction targets and offset opportunities
+- regulatoryCompliance: Compliance inventory with risk assessment, audit readiness, and fine exposure
+- businessContinuity: Disaster recovery readiness with critical function mapping and recovery objectives
+- ethicsFramework: Ethical risk assessment with policy gaps and governance structure analysis
+- socialImpact: Community impact metrics with social ROI and sustainability reporting`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -290,6 +314,10 @@ const TOOLS = [
             "featurePrioritization", "productUsageAnalytics", "techStackAudit", "apiStrategy", "platformScalability", "userOnboarding",
             "employeeEngagement", "talentAcquisitionFunnel", "compensationBenchmark", "successionPlanning", "diversityMetrics", "employerBrand",
             "dataGovernance", "analyticsMaturity", "customerDataPlatform", "predictiveModeling", "reportingFramework", "dataQualityScore",
+            "supplyChainRisk", "inventoryOptimization", "vendorScorecard", "operationalEfficiency", "qualityManagement", "capacityPlanning",
+            "customerJourneyMap", "npsAnalysis", "supportTicketIntelligence", "customerHealthScore", "voiceOfCustomer", "customerSegmentation",
+            "innovationPipeline", "ipPortfolio", "rdEfficiency", "technologyReadiness", "partnershipEcosystem", "mergersAcquisitions",
+            "esgScorecard", "carbonFootprint", "regulatoryCompliance", "businessContinuity", "ethicsFramework", "socialImpact",
           ],
           description: "Which report section to retrieve",
         },
@@ -637,6 +665,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).predictiveModeling) parts.push(`Predictive: Models: ${(d as any).predictiveModeling.models?.length ?? 0}, ROI: ${(d as any).predictiveModeling.expectedROI || "N/A"}`);
     if ((d as any).reportingFramework) parts.push(`Reporting: Reports: ${(d as any).reportingFramework.reports?.length ?? 0}, Self-service: ${(d as any).reportingFramework.selfServiceRate || "N/A"}`);
     if ((d as any).dataQualityScore) parts.push(`Data Quality: Score: ${(d as any).dataQualityScore.overallScore ?? "N/A"}/100, Issues: ${(d as any).dataQualityScore.criticalIssues?.length ?? 0}`);
+    if ((d as any).supplyChainRisk) parts.push(`Supply Chain Risk Score: ${(d as any).supplyChainRisk.overallRiskScore}/100, Single-Source Dependencies: ${(d as any).supplyChainRisk.singleSourceDependencies}`);
+    if ((d as any).inventoryOptimization) parts.push(`Inventory: Carrying Cost ${(d as any).inventoryOptimization.totalCarryingCost}, Turnover ${(d as any).inventoryOptimization.turnoverRatio}x`);
+    if ((d as any).vendorScorecard) parts.push(`Vendors: ${(d as any).vendorScorecard.totalVendors} total, Top: ${(d as any).vendorScorecard.topPerformer}`);
+    if ((d as any).operationalEfficiency) parts.push(`Ops Efficiency Score: ${(d as any).operationalEfficiency.overallScore}/100, Waste: ${(d as any).operationalEfficiency.totalWaste}`);
+    if ((d as any).qualityManagement) parts.push(`Quality: Defect Rate ${(d as any).qualityManagement.overallDefectRate}, Six Sigma: ${(d as any).qualityManagement.sixSigmaLevel}`);
+    if ((d as any).capacityPlanning) parts.push(`Capacity: ${(d as any).capacityPlanning.overallUtilization} utilized, Headroom: ${(d as any).capacityPlanning.growthHeadroom}`);
+    if ((d as any).customerJourneyMap) parts.push(`Journey Satisfaction: ${(d as any).customerJourneyMap.overallSatisfaction}/100`);
+    if ((d as any).npsAnalysis) parts.push(`NPS: ${(d as any).npsAnalysis.overallNps}, Promoters: ${(d as any).npsAnalysis.promoterPercentage}`);
+    if ((d as any).supportTicketIntelligence) parts.push(`Support: ${(d as any).supportTicketIntelligence.totalTickets} tickets, Avg Resolution: ${(d as any).supportTicketIntelligence.avgResolutionTime}`);
+    if ((d as any).customerHealthScore) parts.push(`Customer Health: ${(d as any).customerHealthScore.overallScore}/100, At Risk: ${(d as any).customerHealthScore.atRiskPercentage}`);
+    if ((d as any).voiceOfCustomer) parts.push(`VoC Sentiment Trend: ${(d as any).voiceOfCustomer.sentimentTrend}`);
+    if ((d as any).customerSegmentation) parts.push(`Segments: High Value ${(d as any).customerSegmentation.highValuePercentage}, Growth: ${(d as any).customerSegmentation.growthSegment}`);
+    if ((d as any).innovationPipeline) parts.push(`Innovation: ${(d as any).innovationPipeline.totalIdeas} ideas, Kill Rate: ${(d as any).innovationPipeline.killRate}`);
+    if ((d as any).ipPortfolio) parts.push(`IP Assets: ${(d as any).ipPortfolio.totalAssets}`);
+    if ((d as any).rdEfficiency) parts.push(`R&D: ${(d as any).rdEfficiency.totalSpend}, Success Rate: ${(d as any).rdEfficiency.successRate}`);
+    if ((d as any).technologyReadiness) parts.push(`Tech Readiness: ${(d as any).technologyReadiness.overallReadiness}/100, Debt: ${(d as any).technologyReadiness.techDebtTotal}`);
+    if ((d as any).partnershipEcosystem) parts.push(`Partners: ${(d as any).partnershipEcosystem.totalPartners}, Revenue: ${(d as any).partnershipEcosystem.revenueFromPartners}`);
+    if ((d as any).mergersAcquisitions) parts.push(`M&A: Top Target: ${(d as any).mergersAcquisitions.topTarget}, Synergy: ${(d as any).mergersAcquisitions.totalSynergyPotential}`);
+    if ((d as any).esgScorecard) parts.push(`ESG Score: ${(d as any).esgScorecard.overallScore}/100, Rank: ${(d as any).esgScorecard.industryRank}`);
+    if ((d as any).carbonFootprint) parts.push(`Carbon: ${(d as any).carbonFootprint.totalEmissions}, Target: ${(d as any).carbonFootprint.reductionTarget}`);
+    if ((d as any).regulatoryCompliance) parts.push(`Compliance: ${(d as any).regulatoryCompliance.overallStatus}, Fine Exposure: ${(d as any).regulatoryCompliance.fineExposure}`);
+    if ((d as any).businessContinuity) parts.push(`BC Readiness: ${(d as any).businessContinuity.overallReadiness}`);
+    if ((d as any).ethicsFramework) parts.push(`Ethics Maturity: ${(d as any).ethicsFramework.overallMaturity}`);
+    if ((d as any).socialImpact) parts.push(`Social Impact: ${(d as any).socialImpact.overallScore}/100, Investment: ${(d as any).socialImpact.communityInvestment}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

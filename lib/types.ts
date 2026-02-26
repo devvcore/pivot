@@ -481,25 +481,6 @@ export interface UnitEconomics {
 // Customer Segmentation
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface CustomerSegment {
-  tier: string;                // "Enterprise", "Mid-Market", "SMB", "Startup"
-  name: string;                // "High-Value Accounts"
-  customerCount: string;       // "~15 accounts"
-  revenueShare: string;        // "68% of revenue"
-  avgDealSize: string;
-  churnRisk: "low" | "medium" | "high";
-  growthPotential: "low" | "medium" | "high";
-  idealProfile: string;        // "B2B SaaS companies, 50-200 employees, $5-20M revenue"
-  engagementStrategy: string;
-}
-
-export interface CustomerSegmentation {
-  segments: CustomerSegment[];
-  idealCustomerProfile: { characteristic: string; importance: string }[];
-  concentrationRisk: string;   // "Top 3 clients = 45% of revenue — HIGH RISK"
-  expansionTargets: { segment: string; opportunity: string; estimatedRevenue: string }[];
-  summary: string;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Competitive Win/Loss Analysis
@@ -685,7 +666,6 @@ export interface MVPDeliverables {
   // Wave 2 features
   swotAnalysis?: SWOTAnalysis;
   unitEconomics?: UnitEconomics;
-  customerSegmentation?: CustomerSegmentation;
   competitiveWinLoss?: CompetitiveWinLoss;
   investorOnePager?: InvestorOnePager;
   hiringPlan?: HiringPlan;
@@ -703,7 +683,6 @@ export interface MVPDeliverables {
   fundingReadiness?: FundingReadiness;
   marketSizing?: MarketSizing;
   scenarioPlanner?: ScenarioPlanner;
-  operationalEfficiency?: OperationalEfficiency;
   clvAnalysis?: CLVAnalysis;
   // Wave 5 features
   retentionPlaybook?: RetentionPlaybook;
@@ -715,29 +694,24 @@ export interface MVPDeliverables {
   // Wave 6 features
   talentGapAnalysis?: TalentGapAnalysis;
   revenueDiversification?: RevenueDiversification;
-  customerJourneyMap?: CustomerJourneyMap;
   complianceChecklist?: ComplianceChecklist;
   expansionPlaybook?: ExpansionPlaybook;
-  vendorScorecard?: VendorScorecard;
   // Wave 7 features
   productMarketFit?: ProductMarketFit;
   brandHealth?: BrandHealth;
   pricingElasticity?: PricingElasticity;
   strategicInitiatives?: StrategicInitiatives;
   cashConversionCycle?: CashConversionCycle;
-  innovationPipeline?: InnovationPipeline;
   // Wave 8 features
   stakeholderMap?: StakeholderMap;
   decisionLog?: DecisionLog;
   cultureAssessment?: CultureAssessment;
-  ipPortfolio?: IPPortfolio;
   exitReadiness?: ExitReadiness;
   sustainabilityScore?: SustainabilityScore;
   // Wave 9 features
   acquisitionTargets?: AcquisitionTargets;
   financialRatios?: FinancialRatios;
   channelMixModel?: ChannelMixModel;
-  supplyChainRisk?: SupplyChainRisk;
   regulatoryLandscape?: RegulatoryLandscape;
   crisisPlaybook?: CrisisPlaybook;
   // Wave 10 features
@@ -749,7 +723,6 @@ export interface MVPDeliverables {
   scenarioStressTest?: ScenarioStressTest;
   // Wave 11 features
   pricingStrategyMatrix?: PricingStrategyMatrix;
-  customerHealthScore?: CustomerHealthScore;
   revenueWaterfall?: RevenueWaterfall;
   techDebtAssessment?: TechDebtAssessment;
   teamPerformance?: TeamPerformance;
@@ -774,7 +747,6 @@ export interface MVPDeliverables {
   processEfficiency?: ProcessEfficiency;
   vendorRisk?: VendorRisk;
   qualityMetrics?: QualityMetrics;
-  capacityPlanning?: CapacityPlanning;
   knowledgeManagement?: KnowledgeManagement;
   complianceScorecard?: ComplianceScorecard;
 
@@ -853,6 +825,34 @@ export interface MVPDeliverables {
   predictiveModeling?: PredictiveModeling;
   reportingFramework?: ReportingFramework;
   dataQualityScore?: DataQualityScore;
+  // Wave 25: Supply Chain & Operations
+  supplyChainRisk?: SupplyChainRisk;
+  inventoryOptimization?: InventoryOptimization;
+  vendorScorecard?: VendorScorecard;
+  operationalEfficiency?: OperationalEfficiency;
+  qualityManagement?: QualityManagement;
+  capacityPlanning?: CapacityPlanning;
+  // Wave 26: Customer Experience & Journey
+  customerJourneyMap?: CustomerJourneyMap;
+  npsAnalysis?: NpsAnalysis;
+  supportTicketIntelligence?: SupportTicketIntelligence;
+  customerHealthScore?: CustomerHealthScore;
+  voiceOfCustomer?: VoiceOfCustomer;
+  customerSegmentation?: CustomerSegmentation;
+  // Wave 27: Innovation & IP
+  innovationPipeline?: InnovationPipeline;
+  ipPortfolio?: IpPortfolio;
+  rdEfficiency?: RdEfficiency;
+  technologyReadiness?: TechnologyReadiness;
+  partnershipEcosystem?: PartnershipEcosystem;
+  mergersAcquisitions?: MergersAcquisitions;
+  // Wave 28: Sustainability & Governance
+  esgScorecard?: EsgScorecard;
+  carbonFootprint?: CarbonFootprint;
+  regulatoryCompliance?: RegulatoryCompliance;
+  businessContinuity?: BusinessContinuity;
+  ethicsFramework?: EthicsFramework;
+  socialImpact?: SocialImpact;
 }
 
 export interface BenchmarkDimension {
@@ -926,7 +926,7 @@ export interface RiskRegister {
   summary: string;
 }
 
-export interface PartnerCandidate {
+export interface PartnerOpportunityCandidate {
   name: string;
   type: "technology" | "distribution" | "strategic" | "content" | "referral";
   synergy: string;
@@ -937,7 +937,7 @@ export interface PartnerCandidate {
 }
 
 export interface PartnershipOpportunities {
-  partners: PartnerCandidate[];
+  partners: PartnerOpportunityCandidate[];
   partnershipStrategy: string;
   quickWins: string[];
   longTermPlays: string[];
@@ -991,25 +991,6 @@ export interface ScenarioPlanner {
   summary: string;
 }
 
-export interface EfficiencyMetric {
-  process: string;
-  currentScore: number;     // 0-100
-  industryBenchmark: number;
-  gap: number;
-  improvement: string;
-  estimatedSavings: string;
-  effort: "low" | "medium" | "high";
-  priority: number;
-}
-
-export interface OperationalEfficiency {
-  overallScore: number;
-  metrics: EfficiencyMetric[];
-  quickWins: string[];
-  majorInitiatives: string[];
-  estimatedTotalSavings: string;
-  summary: string;
-}
 
 export interface CLVSegment {
   segment: string;
@@ -1419,24 +1400,6 @@ export interface RevenueDiversification {
   targetMix: string;              // "Aim for no single stream >40% of revenue"
 }
 
-export interface JourneyStage {
-  name: string;                   // "Awareness", "Consideration", "Purchase", "Onboarding", "Retention", "Advocacy"
-  description: string;
-  touchpoints: string[];
-  frictionPoints: string[];
-  conversionRate?: string;
-  dropOffRate?: string;
-  improvements: string[];
-}
-
-export interface CustomerJourneyMap {
-  summary: string;
-  stages: JourneyStage[];
-  criticalFrictionPoints: string[];
-  quickWins: string[];
-  longTermImprovements: string[];
-  estimatedImpact: string;        // "Improving onboarding could increase retention by 15%"
-}
 
 export interface ComplianceItem {
   requirement: string;            // "GDPR Data Processing Agreement"
@@ -1479,28 +1442,6 @@ export interface ExpansionPlaybook {
   timeline: string;               // "Phase 1: Q1-Q2, Phase 2: Q3-Q4"
 }
 
-export interface VendorAssessment {
-  vendor: string;
-  category: string;               // "Cloud Infrastructure", "Marketing Tools", "Payment Processing"
-  annualCost: string;
-  contractEnd?: string;
-  satisfaction: number;            // 1-10
-  alternatives: string[];
-  potentialSaving: string;
-  recommendation: "keep" | "renegotiate" | "replace" | "consolidate";
-  notes: string;
-}
-
-export interface VendorScorecard {
-  summary: string;
-  totalVendorSpend: string;
-  vendorCount: number;
-  assessments: VendorAssessment[];
-  consolidationOpportunities: string[];
-  renegotiationTargets: string[];
-  totalPotentialSavings: string;
-  recommendations: string[];
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Wave 7: Product-Market Fit, Brand Health, Pricing Elasticity,
@@ -1526,7 +1467,7 @@ export interface ProductMarketFit {
   targetSegmentFit: string;       // best-fit segment description
 }
 
-export interface BrandDimension {
+export interface BrandHealthDimension {
   dimension: string;              // "Awareness", "Perception", "Loyalty", "Differentiation"
   score: number;                  // 1-10
   insight: string;
@@ -1537,7 +1478,7 @@ export interface BrandHealth {
   summary: string;
   overallScore: number;           // 0-100
   brandStrength: "strong" | "developing" | "weak";
-  dimensions: BrandDimension[];
+  dimensions: BrandHealthDimension[];
   brandPositioning: string;
   competitiveDifferentiators: string[];
   brandRisks: string[];
@@ -1607,27 +1548,6 @@ export interface CashConversionCycle {
   recommendations: string[];
 }
 
-export interface InnovationProject {
-  name: string;
-  description: string;
-  stage: "ideation" | "validation" | "development" | "launch" | "scaling";
-  investmentToDate: string;
-  projectedRevenue: string;
-  timeToMarket: string;
-  riskLevel: "low" | "medium" | "high";
-  keyAssumptions: string[];
-}
-
-export interface InnovationPipeline {
-  summary: string;
-  innovationScore: number;        // 0-100
-  projects: InnovationProject[];
-  portfolioBalance: string;       // "70% core, 20% adjacent, 10% transformational"
-  totalInvestment: string;
-  gapAreas: string[];
-  recommendations: string[];
-  innovationCulture: string;      // assessment of org's innovation readiness
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Wave 8: Stakeholder Map, Decision Log, Culture Assessment,
@@ -1697,25 +1617,6 @@ export interface CultureAssessment {
   recommendations: string[];
 }
 
-export interface IPAsset {
-  name: string;
-  type: "patent" | "trademark" | "copyright" | "trade_secret" | "domain" | "software";
-  status: "registered" | "pending" | "unprotected" | "expired";
-  value: string;
-  protectionStrategy: string;
-  expirationDate?: string;
-}
-
-export interface IPPortfolio {
-  summary: string;
-  assets: IPAsset[];
-  totalEstimatedValue: string;
-  protectionGaps: string[];
-  competitiveAdvantage: string;
-  filingRecommendations: string[];
-  risks: string[];
-  recommendations: string[];
-}
 
 export interface ExitDimension {
   dimension: string;              // "Financial Performance", "Growth Trajectory", "Market Position"
@@ -1759,7 +1660,7 @@ export interface SustainabilityScore {
 
 // ── Wave 9 Types ─────────────────────────────────────────────────────────────
 
-export interface AcquisitionTarget {
+export interface AcquisitionTargetCandidate {
   companyName: string;
   industry: string;
   rationale: string;
@@ -1772,7 +1673,7 @@ export interface AcquisitionTarget {
 export interface AcquisitionTargets {
   summary: string;
   strategy: string;               // "horizontal", "vertical", "talent", "technology"
-  targets: AcquisitionTarget[];
+  targets: AcquisitionTargetCandidate[];
   budgetRange: string;
   timeline: string;
   dueDiligenceChecklist: string[];
@@ -1819,25 +1720,6 @@ export interface ChannelMixModel {
   recommendations: string[];
 }
 
-export interface SupplyChainNode {
-  vendor: string;
-  category: string;
-  riskLevel: "high" | "medium" | "low";
-  dependencyScore: number;        // 1-10
-  alternativesAvailable: number;
-  mitigationStrategy: string;
-}
-
-export interface SupplyChainRisk {
-  summary: string;
-  overallRiskScore: number;       // 0-100
-  nodes: SupplyChainNode[];
-  singlePointsOfFailure: string[];
-  geographicConcentration: string[];
-  contingencyPlans: string[];
-  costOfDisruption: string;
-  recommendations: string[];
-}
 
 export interface RegulatoryItem {
   regulation: string;
@@ -2023,26 +1905,6 @@ export interface PricingStrategyMatrix {
   recommendations: string[];
 }
 
-export interface CustomerHealthIndicator {
-  customer: string;
-  healthScore: number;           // 0-100
-  engagementLevel: "high" | "medium" | "low";
-  revenueContribution: string;
-  riskFactors: string[];
-  growthPotential: string;
-  lastInteraction: string;
-}
-
-export interface CustomerHealthScore {
-  summary: string;
-  overallPortfolioHealth: number; // 0-100
-  customers: CustomerHealthIndicator[];
-  atRiskCount: number;
-  healthyCount: number;
-  championCount: number;
-  churnPredictors: string[];
-  recommendations: string[];
-}
 
 export interface RevenueWaterfallItem {
   category: string;              // "Beginning MRR", "New", "Expansion", "Contraction", "Churn", "Ending MRR"
@@ -2179,7 +2041,7 @@ export interface DigitalMaturity {
   recommendations: string[];
 }
 
-export interface FunnelStage {
+export interface AcquisitionFunnelStage {
   stage: string;                 // "Awareness", "Interest", "Consideration", "Intent", "Purchase"
   volume: string;
   conversionRate: string;
@@ -2190,7 +2052,7 @@ export interface FunnelStage {
 
 export interface AcquisitionFunnel {
   summary: string;
-  stages: FunnelStage[];
+  stages: AcquisitionFunnelStage[];
   overallConversionRate: string;
   biggestBottleneck: string;
   costPerAcquisition: string;
@@ -2366,7 +2228,7 @@ export interface SalesForecast {
 // Wave 14: Operational Excellence
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface ProcessBottleneck {
+export interface ProcessEfficiencyBottleneck {
   process: string;
   currentCycleTime: string;
   benchmarkCycleTime: string;
@@ -2378,7 +2240,7 @@ export interface ProcessBottleneck {
 export interface ProcessEfficiency {
   summary: string;
   overallEfficiencyScore: number;
-  processes: ProcessBottleneck[];
+  processes: ProcessEfficiencyBottleneck[];
   topBottleneck: string;
   totalAutomationSavings: string;
   leanScore: number;
@@ -2426,24 +2288,6 @@ export interface QualityMetrics {
   recommendations: string[];
 }
 
-export interface CapacityDimension {
-  resource: string;
-  currentUtilization: string;
-  maxCapacity: string;
-  scalingTrigger: string;
-  timeToScalingTrigger: string;
-  headcountNeeded: number;
-}
-
-export interface CapacityPlanning {
-  summary: string;
-  overallUtilization: string;
-  dimensions: CapacityDimension[];
-  bottleneckResource: string;
-  scalingTimeline: string;
-  headcountPlan: { role: string; count: number; timeline: string }[];
-  recommendations: string[];
-}
 
 export interface KnowledgeGap {
   area: string;
@@ -2464,7 +2308,7 @@ export interface KnowledgeManagement {
   recommendations: string[];
 }
 
-export interface ComplianceArea {
+export interface ComplianceScorecardArea {
   regulation: string;
   status: "compliant" | "partial" | "non_compliant";
   riskExposure: string;
@@ -2476,7 +2320,7 @@ export interface ComplianceArea {
 export interface ComplianceScorecard {
   summary: string;
   overallComplianceScore: number;
-  areas: ComplianceArea[];
+  areas: ComplianceScorecardArea[];
   auditReadiness: "ready" | "needs_work" | "not_ready";
   criticalGaps: string[];
   upcomingDeadlines: string[];
@@ -2805,8 +2649,8 @@ export interface ChangeManagement { summary: string; readinessScore: number; ini
 export interface ReserveScenario { scenario: string; requiredReserve: string; currentCoverage: string; gap: string; }
 export interface CashReserveStrategy { summary: string; optimalReserve: string; currentReserve: string; reserveRatio: string; scenarios: ReserveScenario[]; investmentAllocation: string; contingencyPlan: string; recommendations: string[]; }
 
-export interface QualityDimension { dimension: string; score: number; weight: number; trend: "improving" | "stable" | "declining"; evidence: string; }
-export interface RevenueQualityScore { summary: string; overallScore: number; recurringRevenuePct: string; concentrationRisk: string; predictability: string; durability: string; dimensions: QualityDimension[]; recommendations: string[]; }
+export interface RevenueQualityDimension { dimension: string; score: number; weight: number; trend: "improving" | "stable" | "declining"; evidence: string; }
+export interface RevenueQualityScore { summary: string; overallScore: number; recurringRevenuePct: string; concentrationRisk: string; predictability: string; durability: string; dimensions: RevenueQualityDimension[]; recommendations: string[]; }
 
 export interface CostCategory { category: string; currentSpend: string; benchmark: string; variance: string; savingsOpportunity: string; }
 export interface CostIntelligence { summary: string; totalCosts: string; costCategories: CostCategory[]; topSavings: string; spendTrend: string; costPerRevenueDollar: string; benchmarkPosition: string; recommendations: string[]; }
@@ -2907,3 +2751,91 @@ export interface ReportingFramework { summary: string; reports: ReportItem[]; kp
 
 export interface QualityDimension { dimension: string; score: number; issues: string; impactedProcesses: string; remediation: string; }
 export interface DataQualityScore { summary: string; overallScore: number; dimensions: QualityDimension[]; criticalIssues: string[]; automationLevel: string; costOfPoorQuality: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 25: Supply Chain & Operations
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SupplyChainVulnerability { supplier: string; component: string; riskLevel: "critical" | "high" | "medium" | "low"; singleSource: boolean; geography: string; mitigationPlan: string; }
+export interface SupplyChainRisk { summary: string; overallRiskScore: number; vulnerabilities: SupplyChainVulnerability[]; singleSourceDependencies: number; geographicConcentration: string; contingencyPlans: string[]; recommendations: string[]; }
+
+export interface InventoryItem { category: string; turnoverRate: number; carryingCost: string; daysOnHand: number; reorderPoint: string; deadStockRisk: string; }
+export interface InventoryOptimization { summary: string; totalCarryingCost: string; items: InventoryItem[]; deadStockValue: string; turnoverRatio: number; cashFreedUp: string; recommendations: string[]; }
+
+export interface VendorRating { vendor: string; overallScore: number; deliveryReliability: string; qualityScore: number; costTrend: string; contractStatus: string; risk: string; }
+export interface VendorScorecard { summary: string; totalVendors: number; vendors: VendorRating[]; topPerformer: string; atRiskVendors: string[]; consolidationOpportunities: string[]; recommendations: string[]; }
+
+export interface ProcessBottleneck { process: string; cycleTime: string; throughput: string; utilization: string; bottleneck: string; improvement: string; }
+export interface OperationalEfficiency { summary: string; overallScore: number; processes: ProcessBottleneck[]; totalWaste: string; automationOpportunities: string[]; quickWins: string[]; recommendations: string[]; }
+
+export interface QualityMetric { area: string; defectRate: string; costOfQuality: string; trend: string; rootCause: string; improvement: string; }
+export interface QualityManagement { summary: string; overallDefectRate: string; metrics: QualityMetric[]; costOfPoorQuality: string; sixSigmaLevel: string; continuousImprovements: string[]; recommendations: string[]; }
+
+export interface CapacityResource { resource: string; currentUtilization: string; maxCapacity: string; headroom: string; scalingTrigger: string; investmentNeeded: string; }
+export interface CapacityPlanning { summary: string; overallUtilization: string; resources: CapacityResource[]; growthHeadroom: string; nextBottleneck: string; scalingTimeline: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 26: Customer Experience & Journey
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface JourneyTouchpoint { stage: string; touchpoint: string; satisfaction: number; frictionLevel: string; momentOfTruth: boolean; optimization: string; }
+export interface CustomerJourneyMap { summary: string; stages: JourneyTouchpoint[]; topFrictionPoints: string[]; momentsOfTruth: string[]; dropoffPoints: string[]; overallSatisfaction: number; recommendations: string[]; }
+
+export interface NpsSegment { segment: string; score: number; respondents: number; trend: string; topDriver: string; }
+export interface NpsAnalysis { summary: string; overallNps: number; segments: NpsSegment[]; promoterPercentage: string; detractorPercentage: string; topImprovementDrivers: string[]; recommendations: string[]; }
+
+export interface TicketCategory { category: string; volume: number; avgResolutionTime: string; escalationRate: string; selfServiceable: boolean; trend: string; }
+export interface SupportTicketIntelligence { summary: string; totalTickets: number; categories: TicketCategory[]; avgResolutionTime: string; firstContactResolution: string; selfServiceOpportunity: string; recommendations: string[]; }
+
+export interface HealthIndicator { indicator: string; weight: number; score: number; signal: "positive" | "neutral" | "negative"; detail: string; }
+export interface CustomerHealthScore { summary: string; overallScore: number; indicators: HealthIndicator[]; atRiskPercentage: string; expansionReadyPercentage: string; churnPrediction: string; recommendations: string[]; }
+
+export interface VocTheme { theme: string; sentiment: "positive" | "negative" | "mixed"; frequency: number; impact: string; sampleQuote: string; }
+export interface VoiceOfCustomer { summary: string; themes: VocTheme[]; topFeatureRequests: string[]; topComplaints: string[]; topPraise: string[]; sentimentTrend: string; recommendations: string[]; }
+
+export interface CustomerSegment { segment: string; size: string; revenue: string; avgLifetimeValue: string; behavior: string; engagementLevel: string; strategy: string; }
+export interface CustomerSegmentation { summary: string; segments: CustomerSegment[]; highValuePercentage: string; growthSegment: string; atRiskSegment: string; personalizationOpportunities: string[]; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 27: Innovation & IP
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface InnovationIdea { idea: string; stage: "ideation" | "validation" | "development" | "launch"; potential: string; timeToMarket: string; investmentNeeded: string; status: string; }
+export interface InnovationPipeline { summary: string; totalIdeas: number; ideas: InnovationIdea[]; killRate: string; avgTimeToMarket: string; innovationIndex: string; recommendations: string[]; }
+
+export interface IpAsset { type: "patent" | "trademark" | "copyright" | "trade_secret"; name: string; status: string; jurisdiction: string; expiryDate: string; value: string; }
+export interface IpPortfolio { summary: string; totalAssets: number; assets: IpAsset[]; protectionGaps: string[]; licensingOpportunities: string[]; competitiveIpLandscape: string; recommendations: string[]; }
+
+export interface RdProject { project: string; investment: string; stage: string; successProbability: string; expectedReturn: string; timeline: string; }
+export interface RdEfficiency { summary: string; totalSpend: string; projects: RdProject[]; spendToRevenueRatio: string; successRate: string; portfolioBalance: string; recommendations: string[]; }
+
+export interface TechArea { technology: string; maturityLevel: string; adoptionPhase: string; migrationNeeded: boolean; techDebt: string; readiness: string; }
+export interface TechnologyReadiness { summary: string; overallReadiness: number; areas: TechArea[]; migrationRoadmap: string[]; techDebtTotal: string; modernizationPriorities: string[]; recommendations: string[]; }
+
+export interface Partnership { partner: string; type: string; valueExchange: string; strategicFit: number; revenue: string; status: string; }
+export interface PartnershipEcosystem { summary: string; totalPartners: number; partnerships: Partnership[]; revenueFromPartners: string; strategicGaps: string[]; newOpportunities: string[]; recommendations: string[]; }
+
+export interface AcquisitionTarget { target: string; rationale: string; estimatedValue: string; synergyPotential: string; integrationComplexity: string; fitScore: number; }
+export interface MergersAcquisitions { summary: string; targets: AcquisitionTarget[]; totalSynergyPotential: string; topTarget: string; budgetRequired: string; timelineEstimate: string; recommendations: string[]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 28: Sustainability & Governance
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EsgDimension { dimension: "environmental" | "social" | "governance"; score: number; benchmark: number; topIssue: string; improvement: string; }
+export interface EsgScorecard { summary: string; overallScore: number; dimensions: EsgDimension[]; industryRank: string; reportingReadiness: string; materialIssues: string[]; recommendations: string[]; }
+
+export interface EmissionSource { source: string; scope: "scope1" | "scope2" | "scope3"; annualEmissions: string; percentage: string; reductionPotential: string; }
+export interface CarbonFootprint { summary: string; totalEmissions: string; sources: EmissionSource[]; reductionTarget: string; offsetCost: string; regulatoryRisk: string; recommendations: string[]; }
+
+export interface ComplianceArea { area: string; status: "compliant" | "partial" | "non_compliant"; riskLevel: string; lastAudit: string; nextDeadline: string; gaps: string; }
+export interface RegulatoryCompliance { summary: string; overallStatus: string; areas: ComplianceArea[]; upcomingRegulations: string[]; auditReadiness: string; fineExposure: string; recommendations: string[]; }
+
+export interface CriticalFunction { function: string; rto: string; rpo: string; currentCapability: string; gap: string; priority: string; }
+export interface BusinessContinuity { summary: string; overallReadiness: string; functions: CriticalFunction[]; disasterRecoveryPlan: string; testFrequency: string; singlePointsOfFailure: string[]; recommendations: string[]; }
+
+export interface EthicalRisk { area: string; riskLevel: string; currentPolicy: string; gap: string; stakeholderImpact: string; mitigation: string; }
+export interface EthicsFramework { summary: string; overallMaturity: string; risks: EthicalRisk[]; policyGaps: string[]; governanceStructure: string; trainingCoverage: string; recommendations: string[]; }
+
+export interface ImpactMetric { area: string; metric: string; currentValue: string; target: string; socialROI: string; stakeholder: string; }
+export interface SocialImpact { summary: string; overallScore: number; metrics: ImpactMetric[]; communityInvestment: string; volunteerHours: string; reportingFramework: string; recommendations: string[]; }

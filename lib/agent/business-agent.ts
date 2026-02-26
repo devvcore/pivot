@@ -141,6 +141,10 @@ const TOOLS = [
             "featurePrioritization", "productUsageAnalytics", "techStackAudit", "apiStrategy", "platformScalability", "userOnboarding",
             "employeeEngagement", "talentAcquisitionFunnel", "compensationBenchmark", "successionPlanning", "diversityMetrics", "employerBrand",
             "dataGovernance", "analyticsMaturity", "customerDataPlatform", "predictiveModeling", "reportingFramework", "dataQualityScore",
+            "supplyChainRisk", "inventoryOptimization", "vendorScorecard", "operationalEfficiency", "qualityManagement", "capacityPlanning",
+            "customerJourneyMap", "npsAnalysis", "supportTicketIntelligence", "customerHealthScore", "voiceOfCustomer", "customerSegmentation",
+            "innovationPipeline", "ipPortfolio", "rdEfficiency", "technologyReadiness", "partnershipEcosystem", "mergersAcquisitions",
+            "esgScorecard", "carbonFootprint", "regulatoryCompliance", "businessContinuity", "ethicsFramework", "socialImpact",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -399,6 +403,10 @@ Wave 21: salesPipelineHealth, dealVelocity, winRateOptimizer, salesEnablement, t
 Wave 22: featurePrioritization, productUsageAnalytics, techStackAudit, apiStrategy, platformScalability, userOnboarding
 Wave 23: employeeEngagement, talentAcquisitionFunnel, compensationBenchmark, successionPlanning, diversityMetrics, employerBrand
 Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveModeling, reportingFramework, dataQualityScore
+- Wave 25 (Supply Chain & Operations): supplyChainRisk, inventoryOptimization, vendorScorecard, operationalEfficiency, qualityManagement, capacityPlanning
+- Wave 26 (Customer Experience & Journey): customerJourneyMap, npsAnalysis, supportTicketIntelligence, customerHealthScore, voiceOfCustomer, customerSegmentation
+- Wave 27 (Innovation & IP): innovationPipeline, ipPortfolio, rdEfficiency, technologyReadiness, partnershipEcosystem, mergersAcquisitions
+- Wave 28 (Sustainability & Governance): esgScorecard, carbonFootprint, regulatoryCompliance, businessContinuity, ethicsFramework, socialImpact
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
