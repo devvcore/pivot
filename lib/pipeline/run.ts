@@ -59,6 +59,18 @@ import {
   synthesizeIPPortfolio,
   synthesizeExitReadiness,
   synthesizeSustainabilityScore,
+  synthesizeAcquisitionTargets,
+  synthesizeFinancialRatios,
+  synthesizeChannelMixModel,
+  synthesizeSupplyChainRisk,
+  synthesizeRegulatoryLandscape,
+  synthesizeCrisisPlaybook,
+  synthesizeAIReadiness,
+  synthesizeNetworkEffects,
+  synthesizeDataMonetization,
+  synthesizeSubscriptionMetrics,
+  synthesizeMarketTiming,
+  synthesizeScenarioStressTest,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -651,6 +663,102 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] ExitReadiness/SustainabilityScore failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4u: Wave 9 intelligence (acquisition targets, financial ratios) ──
+    if (!deliverables.acquisitionTargets || !deliverables.financialRatios) {
+      try {
+        console.log("[Pivot] Synthesizing acquisition targets + financial ratios...");
+        const [at, fr] = await Promise.allSettled([
+          deliverables.acquisitionTargets ? Promise.resolve(null) : synthesizeAcquisitionTargets(businessPacket, job.questionnaire),
+          deliverables.financialRatios ? Promise.resolve(null) : synthesizeFinancialRatios(businessPacket, job.questionnaire),
+        ]);
+        if (at.status === "fulfilled" && at.value) deliverables = { ...deliverables, acquisitionTargets: at.value };
+        if (fr.status === "fulfilled" && fr.value) deliverables = { ...deliverables, financialRatios: fr.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] AcquisitionTargets/FinancialRatios failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4v: Wave 9 intelligence (channel mix, supply chain risk) ──
+    if (!deliverables.channelMixModel || !deliverables.supplyChainRisk) {
+      try {
+        console.log("[Pivot] Synthesizing channel mix model + supply chain risk...");
+        const [cm, sc] = await Promise.allSettled([
+          deliverables.channelMixModel ? Promise.resolve(null) : synthesizeChannelMixModel(businessPacket, job.questionnaire),
+          deliverables.supplyChainRisk ? Promise.resolve(null) : synthesizeSupplyChainRisk(businessPacket, job.questionnaire),
+        ]);
+        if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, channelMixModel: cm.value };
+        if (sc.status === "fulfilled" && sc.value) deliverables = { ...deliverables, supplyChainRisk: sc.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] ChannelMixModel/SupplyChainRisk failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4w: Wave 9 intelligence (regulatory landscape, crisis playbook) ──
+    if (!deliverables.regulatoryLandscape || !deliverables.crisisPlaybook) {
+      try {
+        console.log("[Pivot] Synthesizing regulatory landscape + crisis playbook...");
+        const [rl, cp] = await Promise.allSettled([
+          deliverables.regulatoryLandscape ? Promise.resolve(null) : synthesizeRegulatoryLandscape(businessPacket, job.questionnaire),
+          deliverables.crisisPlaybook ? Promise.resolve(null) : synthesizeCrisisPlaybook(businessPacket, job.questionnaire),
+        ]);
+        if (rl.status === "fulfilled" && rl.value) deliverables = { ...deliverables, regulatoryLandscape: rl.value };
+        if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, crisisPlaybook: cp.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] RegulatoryLandscape/CrisisPlaybook failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4x: Wave 10 intelligence (AI readiness, network effects) ──
+    if (!deliverables.aiReadiness || !deliverables.networkEffects) {
+      try {
+        console.log("[Pivot] Synthesizing AI readiness + network effects...");
+        const [ar, ne] = await Promise.allSettled([
+          deliverables.aiReadiness ? Promise.resolve(null) : synthesizeAIReadiness(businessPacket, job.questionnaire),
+          deliverables.networkEffects ? Promise.resolve(null) : synthesizeNetworkEffects(businessPacket, job.questionnaire),
+        ]);
+        if (ar.status === "fulfilled" && ar.value) deliverables = { ...deliverables, aiReadiness: ar.value };
+        if (ne.status === "fulfilled" && ne.value) deliverables = { ...deliverables, networkEffects: ne.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] AIReadiness/NetworkEffects failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4y: Wave 10 intelligence (data monetization, subscription metrics) ──
+    if (!deliverables.dataMonetization || !deliverables.subscriptionMetrics) {
+      try {
+        console.log("[Pivot] Synthesizing data monetization + subscription metrics...");
+        const [dm, sm] = await Promise.allSettled([
+          deliverables.dataMonetization ? Promise.resolve(null) : synthesizeDataMonetization(businessPacket, job.questionnaire),
+          deliverables.subscriptionMetrics ? Promise.resolve(null) : synthesizeSubscriptionMetrics(businessPacket, job.questionnaire),
+        ]);
+        if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, dataMonetization: dm.value };
+        if (sm.status === "fulfilled" && sm.value) deliverables = { ...deliverables, subscriptionMetrics: sm.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] DataMonetization/SubscriptionMetrics failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4z: Wave 10 intelligence (market timing, scenario stress test) ──
+    if (!deliverables.marketTiming || !deliverables.scenarioStressTest) {
+      try {
+        console.log("[Pivot] Synthesizing market timing + scenario stress test...");
+        const [mt, ss] = await Promise.allSettled([
+          deliverables.marketTiming ? Promise.resolve(null) : synthesizeMarketTiming(businessPacket, job.questionnaire),
+          deliverables.scenarioStressTest ? Promise.resolve(null) : synthesizeScenarioStressTest(businessPacket, job.questionnaire),
+        ]);
+        if (mt.status === "fulfilled" && mt.value) deliverables = { ...deliverables, marketTiming: mt.value };
+        if (ss.status === "fulfilled" && ss.value) deliverables = { ...deliverables, scenarioStressTest: ss.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] MarketTiming/ScenarioStressTest failed (non-fatal):", e);
       }
     }
 

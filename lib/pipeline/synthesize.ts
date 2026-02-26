@@ -64,6 +64,18 @@ import type {
   IPPortfolio,
   ExitReadiness,
   SustainabilityScore,
+  AcquisitionTargets,
+  FinancialRatios,
+  ChannelMixModel,
+  SupplyChainRisk,
+  RegulatoryLandscape,
+  CrisisPlaybook,
+  AIReadiness,
+  NetworkEffects,
+  DataMonetization,
+  SubscriptionMetrics,
+  MarketTiming,
+  ScenarioStressTest,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -4780,6 +4792,984 @@ ${schema}`;
     return result as unknown as SustainabilityScore;
   } catch (e) {
     console.warn("[Pivot] Sustainability Score synthesis failed:", e);
+    return null;
+  }
+}
+
+/* ─────────────────────────  Wave 10  ───────────────────────── */
+
+export async function synthesizeAIReadiness(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<AIReadiness | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence AI readiness overview",
+  "overallScore": 0,
+  "dataReadiness": 0,
+  "teamReadiness": 0,
+  "infrastructureReadiness": 0,
+  "capabilities": [{
+    "area": "Customer Service",
+    "currentMaturity": "none|exploring|piloting|scaling|optimized",
+    "opportunity": "description of AI opportunity",
+    "estimatedImpact": "$X/year or X% improvement",
+    "implementationEffort": "low|medium|high",
+    "toolsRecommended": ["tool 1", "..."]
+  }],
+  "quickWins": ["quick win 1", "..."],
+  "investmentRequired": "$X total estimated investment",
+  "roadmap": ["Phase 1: ...", "Phase 2: ...", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an AI strategy consultant assessing a company's readiness to adopt artificial intelligence across its operations.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive AI readiness assessment:
+
+1. SUMMARY: Provide a 2-3 sentence overview of how ready this business is to adopt AI.
+
+2. OVERALL SCORE (0-100): Composite AI readiness score reflecting data, team, and infrastructure.
+
+3. DATA READINESS (0-100): Evaluate the quality, accessibility, and volume of data available for AI use cases. Consider data pipelines, storage, labeling, and governance.
+
+4. TEAM READINESS (0-100): Evaluate whether the team has the skills, culture, and leadership support to implement AI. Consider technical talent, AI literacy, and change management capacity.
+
+5. INFRASTRUCTURE READINESS (0-100): Evaluate whether the technology stack supports AI workloads. Consider cloud infrastructure, APIs, integration points, and compute resources.
+
+6. CAPABILITIES (4-6): For each business area (Customer Service, Operations, Marketing, Product, Finance, HR), assess:
+   - Current AI maturity level (none, exploring, piloting, scaling, optimized)
+   - Specific AI opportunity for this business
+   - Estimated impact in dollar terms or percentage improvement
+   - Implementation effort (low, medium, high)
+   - Specific tools or platforms recommended
+
+7. QUICK WINS (3-5): AI implementations that can deliver value within 30-90 days with minimal investment.
+
+8. INVESTMENT REQUIRED: Total estimated investment to reach next maturity level.
+
+9. ROADMAP (4-6 phases): Phased implementation plan with timelines and milestones.
+
+10. RECOMMENDATIONS (4-6): Prioritized actions to improve AI readiness and adoption.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating AI Readiness...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as AIReadiness;
+  } catch (e) {
+    console.warn("[Pivot] AI Readiness synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeNetworkEffects(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<NetworkEffects | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence network effects overview",
+  "overallScore": 0,
+  "hasNetworkEffects": true,
+  "effectTypes": [{
+    "type": "Direct|Indirect|Data|Platform",
+    "strength": "strong|moderate|weak|none",
+    "description": "how this network effect works for the business",
+    "growthMultiplier": "estimated multiplier effect",
+    "defensibility": "how defensible this effect is"
+  }],
+  "viralCoefficient": "estimated viral coefficient or qualitative assessment",
+  "criticalMass": "users/customers needed for network effects to kick in",
+  "moatStrength": "strong|moderate|weak",
+  "growthStrategies": ["strategy 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a network effects strategist analyzing whether a business has or can build network effects and competitive moats.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive network effects analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the business's network effects potential.
+
+2. OVERALL SCORE (0-100): Composite score reflecting the strength and potential of network effects.
+
+3. HAS NETWORK EFFECTS: Boolean — does this business currently benefit from any network effects?
+
+4. EFFECT TYPES (analyze all 4):
+   a. Direct Network Effects — Does the product become more valuable as more users join? (e.g., messaging apps, social networks)
+   b. Indirect Network Effects — Does growth on one side of the platform attract the other side? (e.g., marketplaces, app stores)
+   c. Data Network Effects — Does more usage generate more data that improves the product? (e.g., recommendation engines, AI products)
+   d. Platform Network Effects — Does the business serve as a platform where third parties build value? (e.g., APIs, ecosystems)
+   For each, assess strength (strong/moderate/weak/none), describe the effect, estimate the growth multiplier, and evaluate defensibility.
+
+5. VIRAL COEFFICIENT: Estimate the viral coefficient (K-factor) — how many new users each existing user brings in. Provide a number or qualitative assessment.
+
+6. CRITICAL MASS: Estimate the number of users/customers needed for network effects to become self-sustaining.
+
+7. MOAT STRENGTH: Overall assessment of competitive moat from network effects (strong/moderate/weak).
+
+8. GROWTH STRATEGIES (3-5): Specific strategies to build, strengthen, or leverage network effects.
+
+9. RECOMMENDATIONS (4-6): Prioritized actions to maximize network effects and defensibility.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Network Effects...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as NetworkEffects;
+  } catch (e) {
+    console.warn("[Pivot] Network Effects synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeDataMonetization(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<DataMonetization | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence data monetization overview",
+  "totalOpportunityValue": "$X total estimated opportunity",
+  "dataAssets": [{
+    "asset": "Customer behavior data",
+    "monetizationMethod": "Analytics product",
+    "estimatedValue": "$X/year",
+    "effortToMonetize": "low|medium|high",
+    "privacyConsiderations": "privacy risks and mitigations",
+    "timeToRevenue": "X months"
+  }],
+  "privacyCompliance": "assessment of privacy compliance posture",
+  "competitiveAdvantage": "how data monetization strengthens competitive position",
+  "implementationRoadmap": ["Phase 1: ...", "Phase 2: ...", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a data strategy consultant identifying opportunities to monetize a company's existing data assets.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive data monetization assessment:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the data monetization opportunity.
+
+2. TOTAL OPPORTUNITY VALUE: Estimate the total annual revenue opportunity from data monetization.
+
+3. DATA ASSETS (4-6): Identify each data asset the business possesses or generates, and for each:
+   - Asset name and description (e.g., "Customer behavior data", "Transaction history", "Usage analytics")
+   - Monetization method (e.g., "Analytics product", "API access", "Insights reports", "Data licensing", "Predictive models")
+   - Estimated annual value in dollars
+   - Effort to monetize (low/medium/high)
+   - Privacy considerations — specific risks and required mitigations (GDPR, CCPA, etc.)
+   - Time to revenue — how long to start generating revenue from this asset
+
+4. PRIVACY COMPLIANCE: Overall assessment of the company's readiness to monetize data while maintaining privacy compliance.
+
+5. COMPETITIVE ADVANTAGE: How data monetization can strengthen the business's competitive moat.
+
+6. IMPLEMENTATION ROADMAP (4-6 phases): Phased plan to build data monetization capabilities, from quick wins to mature data products.
+
+7. RECOMMENDATIONS (4-6): Prioritized actions to capture the data monetization opportunity.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Data Monetization...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as DataMonetization;
+  } catch (e) {
+    console.warn("[Pivot] Data Monetization synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeSubscriptionMetrics(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SubscriptionMetrics | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence subscription health overview",
+  "overallHealth": "strong|moderate|weak",
+  "metrics": [{
+    "metric": "MRR",
+    "currentValue": "$X",
+    "benchmark": "$X or X% (industry benchmark)",
+    "status": "excellent|good|needs_improvement|critical",
+    "trend": "improving|stable|declining",
+    "insight": "specific insight about this metric"
+  }],
+  "cohortAnalysis": "analysis of customer cohort behavior",
+  "expansionRevenue": "assessment of expansion revenue",
+  "netRevenueRetention": "NRR percentage and analysis",
+  "paybackPeriod": "CAC payback period",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a SaaS metrics analyst evaluating a subscription business's key performance indicators.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive subscription metrics analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the subscription business health.
+
+2. OVERALL HEALTH: Assessment of subscription health (strong/moderate/weak).
+
+3. METRICS (analyze all 6 core SaaS metrics):
+   a. MRR (Monthly Recurring Revenue) — Current value, industry benchmark, status, trend, and insight.
+   b. ARR (Annual Recurring Revenue) — Current value, industry benchmark, status, trend, and insight.
+   c. CAC (Customer Acquisition Cost) — Current value, industry benchmark, status, trend, and insight.
+   d. LTV (Lifetime Value) — Current value, industry benchmark, status, trend, and insight.
+   e. Churn Rate — Current value, industry benchmark, status, trend, and insight.
+   f. NRR (Net Revenue Retention) — Current value, industry benchmark, status, trend, and insight.
+   For each: status is excellent/good/needs_improvement/critical, trend is improving/stable/declining.
+
+4. COHORT ANALYSIS: Insights from analyzing customer cohorts — are newer cohorts performing better or worse than older ones?
+
+5. EXPANSION REVENUE: Assessment of upsell, cross-sell, and expansion revenue performance and opportunities.
+
+6. NET REVENUE RETENTION: Detailed NRR analysis — what percentage of revenue is retained and expanded from existing customers?
+
+7. PAYBACK PERIOD: How long does it take to recoup the cost of acquiring a customer?
+
+8. RECOMMENDATIONS (4-6): Prioritized actions to improve subscription metrics.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Subscription Metrics...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SubscriptionMetrics;
+  } catch (e) {
+    console.warn("[Pivot] Subscription Metrics synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeMarketTiming(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<MarketTiming | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence market timing overview",
+  "overallTiming": "excellent|good|fair|poor",
+  "factors": [{
+    "factor": "Market maturity",
+    "timing": "favorable|neutral|unfavorable",
+    "window": "Next 6 months",
+    "confidence": "high|medium|low",
+    "rationale": "why this timing assessment"
+  }],
+  "windowOfOpportunity": "description of the window",
+  "firstMoverAdvantage": "assessment of first mover advantage",
+  "marketCyclePosition": "where in the market cycle",
+  "urgentActions": ["urgent action 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a market timing strategist assessing whether conditions are favorable for a business's key initiatives.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive market timing analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of market timing conditions for this business.
+
+2. OVERALL TIMING: Assessment of overall market timing (excellent/good/fair/poor).
+
+3. FACTORS (analyze at least 4):
+   a. Market Maturity — Is the market early-stage, growing, mature, or declining? Is this favorable for the business?
+   b. Competitor Activity — What are competitors doing? Is there a window before they consolidate?
+   c. Regulatory Changes — Are there upcoming regulatory changes that create opportunity or risk?
+   d. Technology Shifts — Are there technology trends that create a timing advantage?
+   e. Economic Conditions — How do macro-economic conditions affect timing?
+   f. Customer Readiness — Are customers ready to adopt what the business offers?
+   For each: assess timing (favorable/neutral/unfavorable), window of opportunity, confidence level, and rationale.
+
+4. WINDOW OF OPPORTUNITY: Describe the specific window of opportunity — how long it will remain open and what could close it.
+
+5. FIRST MOVER ADVANTAGE: Assess whether there is a first mover advantage and how significant it is.
+
+6. MARKET CYCLE POSITION: Where is this market in its cycle? (early adoption, growth, peak, decline, renewal)
+
+7. URGENT ACTIONS (3-5): Time-sensitive actions that must be taken within the next 90 days to capitalize on favorable timing.
+
+8. RECOMMENDATIONS (4-6): Prioritized strategic actions based on the timing analysis.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Market Timing...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as MarketTiming;
+  } catch (e) {
+    console.warn("[Pivot] Market Timing synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeScenarioStressTest(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ScenarioStressTest | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence stress test overview",
+  "baselineCashRunway": "X months at current burn rate",
+  "scenarios": [{
+    "name": "Revenue -30%",
+    "description": "detailed scenario description",
+    "revenueImpact": "-$X or -X%",
+    "cashRunway": "X months under this scenario",
+    "breakEvenShift": "how break-even point changes",
+    "survivalProbability": 75,
+    "mitigationActions": ["action 1", "..."]
+  }],
+  "worstCaseSurvival": "description of worst case outcome",
+  "resilience": "high|moderate|low",
+  "capitalBuffer": "assessment of capital buffer adequacy",
+  "triggerPoints": ["trigger point 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a financial stress testing analyst evaluating a business's resilience under adverse scenarios.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive scenario stress test:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the business's resilience under stress.
+
+2. BASELINE CASH RUNWAY: How many months of cash runway does the business have at the current burn rate?
+
+3. SCENARIOS (analyze at least 4 adverse scenarios):
+   a. Revenue Drop -30% — What happens if revenue falls by 30%?
+   b. Key Client Loss — What happens if the largest client or revenue source is lost?
+   c. Market Downturn — What happens in a broad economic recession?
+   d. Cost Spike — What happens if key costs (talent, materials, SaaS tools) increase 25%?
+   e. Competitive Disruption — What happens if a well-funded competitor enters the market?
+   For each scenario:
+   - Detailed description of the scenario
+   - Revenue impact in dollars and/or percentage
+   - Adjusted cash runway under the scenario
+   - How the break-even point shifts
+   - Survival probability (0-100)
+   - Specific mitigation actions (3-5 per scenario)
+
+4. WORST CASE SURVIVAL: Description of the worst case outcome and whether the business can survive it.
+
+5. RESILIENCE: Overall resilience rating (high/moderate/low).
+
+6. CAPITAL BUFFER: Is the current capital buffer adequate to weather adverse scenarios? What additional buffer is needed?
+
+7. TRIGGER POINTS (3-5): Early warning indicators that signal a scenario is materializing — the metrics to watch.
+
+8. RECOMMENDATIONS (4-6): Prioritized actions to improve resilience and prepare for adverse scenarios.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Scenario Stress Test...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ScenarioStressTest;
+  } catch (e) {
+    console.warn("[Pivot] Scenario Stress Test synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 9: Acquisition Targets ──────────────────────────────────────────────
+
+export async function synthesizeAcquisitionTargets(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<AcquisitionTargets | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of M&A strategy and opportunities",
+  "strategy": "horizontal|vertical|talent|technology",
+  "targets": [{
+    "companyName": "Target Company",
+    "industry": "Industry",
+    "rationale": "Why this target is a fit",
+    "estimatedValue": "$X-$Y range",
+    "synergies": ["synergy 1", "..."],
+    "risks": ["risk 1", "..."],
+    "fitScore": 8
+  }],
+  "budgetRange": "$X-$Y estimated acquisition budget",
+  "timeline": "Expected timeline for execution",
+  "dueDiligenceChecklist": ["item 1", "..."],
+  "integrationPlan": ["step 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an M&A (Mergers & Acquisitions) strategist analyzing a company for potential acquisition opportunities.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive acquisition target analysis:
+
+1. SUMMARY: 2-3 sentence overview of the company's M&A opportunity landscape.
+
+2. STRATEGY: Identify the most appropriate acquisition strategy type — "horizontal" (same industry competitors), "vertical" (supply chain integration), "talent" (acqui-hires), or "technology" (tech/IP acquisition).
+
+3. TARGETS (3-5): For each potential acquisition target, provide:
+   - Company name or profile (can be hypothetical archetypes if specific names are unavailable)
+   - Industry
+   - Rationale for acquisition
+   - Estimated value range
+   - Expected synergies
+   - Key risks
+   - Fit score (1-10)
+
+4. BUDGET RANGE: Realistic acquisition budget range given the company's financial position.
+
+5. TIMELINE: Expected timeline from target identification through integration.
+
+6. DUE DILIGENCE CHECKLIST (5-8 items): Key items to investigate before proceeding.
+
+7. INTEGRATION PLAN (4-6 steps): Post-acquisition integration roadmap.
+
+8. RECOMMENDATIONS (4-6): Strategic recommendations for the M&A approach.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Acquisition Targets...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as AcquisitionTargets;
+  } catch (e) {
+    console.warn("[Pivot] Acquisition Targets synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 9: Financial Ratios ─────────────────────────────────────────────────
+
+export async function synthesizeFinancialRatios(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<FinancialRatios | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of the company's financial ratio health",
+  "overallHealth": "strong|moderate|weak",
+  "liquidityRatios": [{
+    "name": "Current Ratio",
+    "value": 1.5,
+    "industryAvg": 1.8,
+    "status": "above|at|below",
+    "interpretation": "What this ratio means for the business"
+  }],
+  "profitabilityRatios": [{ "name": "...", "value": 0, "industryAvg": 0, "status": "above|at|below", "interpretation": "..." }],
+  "leverageRatios": [{ "name": "...", "value": 0, "industryAvg": 0, "status": "above|at|below", "interpretation": "..." }],
+  "efficiencyRatios": [{ "name": "...", "value": 0, "industryAvg": 0, "status": "above|at|below", "interpretation": "..." }],
+  "trendInsights": ["insight 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a financial analyst computing and evaluating key financial ratios for a business.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Compute or estimate key financial ratios from the provided data and compare each against industry averages:
+
+1. SUMMARY: 2-3 sentence overview of the company's financial ratio health.
+
+2. OVERALL HEALTH: Rate the overall financial health as "strong", "moderate", or "weak".
+
+3. LIQUIDITY RATIOS (2-4): e.g., Current Ratio, Quick Ratio, Working Capital Ratio.
+   For each: name, computed value, industry average, status (above/at/below), and interpretation.
+
+4. PROFITABILITY RATIOS (2-4): e.g., Gross Margin, Net Profit Margin, ROE, ROA.
+   For each: name, computed value, industry average, status, and interpretation.
+
+5. LEVERAGE RATIOS (2-3): e.g., Debt-to-Equity, Interest Coverage, Debt Ratio.
+   For each: name, computed value, industry average, status, and interpretation.
+
+6. EFFICIENCY RATIOS (2-3): e.g., Inventory Turnover, Receivables Turnover, Asset Turnover.
+   For each: name, computed value, industry average, status, and interpretation.
+
+7. TREND INSIGHTS (3-5): Key trends or patterns visible in the financial data.
+
+8. RECOMMENDATIONS (4-6): Actionable steps to improve financial ratio performance.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Financial Ratios...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as FinancialRatios;
+  } catch (e) {
+    console.warn("[Pivot] Financial Ratios synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 9: Channel Mix Model ────────────────────────────────────────────────
+
+export async function synthesizeChannelMixModel(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ChannelMixModel | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of channel mix performance",
+  "channels": [{
+    "channel": "Organic Search",
+    "attributedRevenue": "$X",
+    "costPerAcquisition": "$X",
+    "roi": "X%",
+    "contribution": 25,
+    "trend": "growing|stable|declining"
+  }],
+  "optimalBudgetAllocation": [{
+    "channel": "Organic Search",
+    "currentPct": 20,
+    "recommendedPct": 30
+  }],
+  "topPerformingChannel": "Channel name",
+  "underperformingChannels": ["channel 1", "..."],
+  "budgetRecommendation": "Overall budget reallocation guidance",
+  "seasonalInsights": ["insight 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a marketing analytics expert analyzing channel performance and recommending optimal budget allocation.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Analyze marketing channel performance and recommend an optimal channel mix:
+
+1. SUMMARY: 2-3 sentence overview of the company's marketing channel performance.
+
+2. CHANNELS (4-8): For each marketing channel (e.g., Organic Search, Paid Social, Email, Direct, Referral, Paid Search, Content Marketing, Events):
+   - Channel name
+   - Attributed revenue (estimated if needed)
+   - Cost per acquisition
+   - ROI percentage
+   - Contribution to total (percentage)
+   - Trend: "growing", "stable", or "declining"
+
+3. OPTIMAL BUDGET ALLOCATION: For each channel, provide the current percentage of budget and the recommended percentage — showing where to shift spend.
+
+4. TOP PERFORMING CHANNEL: Identify the single best-performing channel.
+
+5. UNDERPERFORMING CHANNELS: List channels that are underperforming relative to spend.
+
+6. BUDGET RECOMMENDATION: Overall guidance on budget reallocation strategy.
+
+7. SEASONAL INSIGHTS (2-4): Timing-based patterns or seasonal recommendations.
+
+8. RECOMMENDATIONS (4-6): Actionable steps to optimize the channel mix.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Channel Mix Model...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ChannelMixModel;
+  } catch (e) {
+    console.warn("[Pivot] Channel Mix Model synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 9: Supply Chain Risk ────────────────────────────────────────────────
+
+export async function synthesizeSupplyChainRisk(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SupplyChainRisk | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of supply chain risk posture",
+  "overallRiskScore": 0,
+  "nodes": [{
+    "vendor": "Vendor Name",
+    "category": "Category (e.g., Raw Materials, SaaS, Logistics)",
+    "riskLevel": "high|medium|low",
+    "dependencyScore": 8,
+    "alternativesAvailable": 2,
+    "mitigationStrategy": "Strategy to reduce risk"
+  }],
+  "singlePointsOfFailure": ["point 1", "..."],
+  "geographicConcentration": ["region/risk 1", "..."],
+  "contingencyPlans": ["plan 1", "..."],
+  "costOfDisruption": "Estimated cost if key supplier fails",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a supply chain risk analyst mapping vendor dependencies and assessing concentration risk.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Perform a comprehensive supply chain risk assessment:
+
+1. SUMMARY: 2-3 sentence overview of the company's supply chain risk posture.
+
+2. OVERALL RISK SCORE (0-100): Composite supply chain risk score where 0 = minimal risk and 100 = critical risk.
+
+3. NODES (4-8): For each key vendor or supplier dependency:
+   - Vendor name or category
+   - Category (Raw Materials, SaaS/Technology, Logistics, Manufacturing, Services, etc.)
+   - Risk level: "high", "medium", or "low"
+   - Dependency score (1-10, where 10 = completely dependent)
+   - Number of alternatives available
+   - Mitigation strategy
+
+4. SINGLE POINTS OF FAILURE (2-5): Vendors or dependencies where loss would critically impact operations.
+
+5. GEOGRAPHIC CONCENTRATION (2-4): Regions where supply chain is overly concentrated and associated risks.
+
+6. CONTINGENCY PLANS (3-5): Pre-built contingency plans for key disruption scenarios.
+
+7. COST OF DISRUPTION: Estimated financial impact if a key supplier or vendor fails.
+
+8. RECOMMENDATIONS (4-6): Actionable steps to reduce supply chain risk and improve resilience.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Supply Chain Risk...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SupplyChainRisk;
+  } catch (e) {
+    console.warn("[Pivot] Supply Chain Risk synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 9: Regulatory Landscape ─────────────────────────────────────────────
+
+export async function synthesizeRegulatoryLandscape(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<RegulatoryLandscape | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of the regulatory landscape",
+  "overallComplianceScore": 0,
+  "currentRegulations": [{
+    "regulation": "Regulation Name",
+    "jurisdiction": "Federal/State/EU/etc.",
+    "status": "compliant|partial|non_compliant|not_applicable",
+    "deadline": "Date or ongoing",
+    "impact": "high|medium|low",
+    "actionRequired": "What the company must do"
+  }],
+  "upcomingRegulations": [{
+    "regulation": "Upcoming Regulation",
+    "jurisdiction": "Jurisdiction",
+    "status": "compliant|partial|non_compliant|not_applicable",
+    "deadline": "Expected effective date",
+    "impact": "high|medium|low",
+    "actionRequired": "Preparation steps needed"
+  }],
+  "industrySpecificRisks": ["risk 1", "..."],
+  "complianceCosts": "Estimated total compliance costs",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a regulatory compliance analyst assessing the regulatory landscape for a business.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Analyze current and upcoming regulatory requirements:
+
+1. SUMMARY: 2-3 sentence overview of the company's regulatory landscape and compliance posture.
+
+2. OVERALL COMPLIANCE SCORE (0-100): Composite score reflecting estimated compliance across all relevant regulations.
+
+3. CURRENT REGULATIONS (3-6): For each active regulation affecting this business:
+   - Regulation name
+   - Jurisdiction (Federal, State, EU, Industry body, etc.)
+   - Compliance status: "compliant", "partial", "non_compliant", or "not_applicable"
+   - Deadline or "ongoing"
+   - Impact level: "high", "medium", or "low"
+   - Action required to achieve or maintain compliance
+
+4. UPCOMING REGULATIONS (2-4): For each upcoming or proposed regulation:
+   - Regulation name
+   - Jurisdiction
+   - Status (likely "non_compliant" or "partial" since not yet in force)
+   - Expected effective date
+   - Impact level
+   - Preparation steps needed
+
+5. INDUSTRY-SPECIFIC RISKS (3-5): Regulatory risks unique to this company's industry.
+
+6. COMPLIANCE COSTS: Estimated total cost of achieving and maintaining compliance.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen regulatory compliance.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Regulatory Landscape...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as RegulatoryLandscape;
+  } catch (e) {
+    console.warn("[Pivot] Regulatory Landscape synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 9: Crisis Playbook ──────────────────────────────────────────────────
+
+export async function synthesizeCrisisPlaybook(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CrisisPlaybook | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of crisis preparedness",
+  "scenarios": [{
+    "scenario": "Crisis scenario name",
+    "probability": "high|medium|low",
+    "severity": "critical|major|moderate|minor",
+    "responseSteps": ["step 1", "step 2", "..."],
+    "communicationPlan": "How to communicate during this crisis",
+    "recoveryTimeline": "Expected recovery time"
+  }],
+  "emergencyContacts": ["role/contact 1", "..."],
+  "communicationTemplates": ["template description 1", "..."],
+  "businessContinuityPlan": ["continuity step 1", "..."],
+  "insuranceRecommendations": ["insurance type 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a crisis management consultant building pre-built response plans for common business crises.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+
+Build a comprehensive crisis playbook:
+
+1. SUMMARY: 2-3 sentence overview of the company's crisis preparedness and key vulnerabilities.
+
+2. SCENARIOS (4-7): For each potential crisis scenario relevant to this business:
+   - Scenario name (e.g., "Key employee departure", "Data breach", "Cash flow crisis", "Supply chain disruption", "PR/reputation crisis", "Regulatory action", "Natural disaster")
+   - Probability: "high", "medium", or "low"
+   - Severity: "critical", "major", "moderate", or "minor"
+   - Response steps (4-8 ordered steps)
+   - Communication plan (internal and external messaging approach)
+   - Recovery timeline (estimated time to return to normal operations)
+
+3. EMERGENCY CONTACTS (4-6): Key roles and contact types needed during a crisis (e.g., "Legal counsel", "PR firm", "Insurance broker", "IT security team").
+
+4. COMMUNICATION TEMPLATES (3-5): Brief descriptions of pre-drafted communication templates (e.g., "Customer data breach notification", "Employee all-hands crisis briefing", "Press statement template").
+
+5. BUSINESS CONTINUITY PLAN (4-6 steps): Core steps to maintain operations during a crisis.
+
+6. INSURANCE RECOMMENDATIONS (3-5): Types of insurance coverage relevant to the identified risks.
+
+7. RECOMMENDATIONS (4-6): Actionable steps to improve overall crisis preparedness.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Crisis Playbook...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CrisisPlaybook;
+  } catch (e) {
+    console.warn("[Pivot] Crisis Playbook synthesis failed:", e);
     return null;
   }
 }

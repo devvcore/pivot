@@ -115,6 +115,18 @@ const TOOLS = [
             "ipPortfolio",
             "exitReadiness",
             "sustainabilityScore",
+            "acquisitionTargets",
+            "financialRatios",
+            "channelMixModel",
+            "supplyChainRisk",
+            "regulatoryLandscape",
+            "crisisPlaybook",
+            "aiReadiness",
+            "networkEffects",
+            "dataMonetization",
+            "subscriptionMetrics",
+            "marketTiming",
+            "scenarioStressTest",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -357,6 +369,8 @@ Growth: retentionPlaybook, boardDeck, gtmScorecard, cashOptimization
 Wave 6: talentGapAnalysis, revenueDiversification, customerJourneyMap, complianceChecklist, expansionPlaybook, vendorScorecard
 Wave 7: productMarketFit, brandHealth, pricingElasticity, strategicInitiatives, cashConversionCycle, innovationPipeline
 Wave 8: stakeholderMap, decisionLog, cultureAssessment, ipPortfolio, exitReadiness, sustainabilityScore
+Wave 9: acquisitionTargets, financialRatios, channelMixModel, supplyChainRisk, regulatoryLandscape, crisisPlaybook
+Wave 10: aiReadiness, networkEffects, dataMonetization, subscriptionMetrics, marketTiming, scenarioStressTest
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

@@ -90,7 +90,19 @@ KEY SECTIONS FOR COACHING:
 - cultureAssessment: culture score, dimensions, core values, alignment gaps
 - ipPortfolio: IP assets, protection status, filing recommendations
 - exitReadiness: exit score, valuation range, preparation steps
-- sustainabilityScore: ESG scores, material issues, regulatory requirements`;
+- sustainabilityScore: ESG scores, material issues, regulatory requirements
+- acquisitionTargets: M&A strategy, target companies, synergies, fit scores
+- financialRatios: liquidity, profitability, leverage, efficiency ratios vs industry
+- channelMixModel: marketing channel performance, budget allocation optimization
+- supplyChainRisk: vendor dependencies, single points of failure, contingency plans
+- regulatoryLandscape: compliance scoring, current and upcoming regulations
+- crisisPlaybook: crisis scenarios, response plans, communication templates
+- aiReadiness: AI adoption readiness scores, capabilities, quick wins
+- networkEffects: network effect types, viral coefficient, moat strength
+- dataMonetization: data assets, monetization methods, opportunity value
+- subscriptionMetrics: SaaS metrics (MRR, ARR, CAC, LTV, churn, NRR)
+- marketTiming: timing factors, window of opportunity, market cycle
+- scenarioStressTest: stress scenarios, survival probability, capital buffer`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -168,6 +180,18 @@ const TOOLS = [
             "ipPortfolio",
             "exitReadiness",
             "sustainabilityScore",
+            "acquisitionTargets",
+            "financialRatios",
+            "channelMixModel",
+            "supplyChainRisk",
+            "regulatoryLandscape",
+            "crisisPlaybook",
+            "aiReadiness",
+            "networkEffects",
+            "dataMonetization",
+            "subscriptionMetrics",
+            "marketTiming",
+            "scenarioStressTest",
           ],
           description: "Which report section to retrieve",
         },
@@ -419,6 +443,18 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).exitReadiness) parts.push(`Exit Readiness: Score: ${(d as any).exitReadiness.overallScore ?? "N/A"}/100, Valuation range: ${(d as any).exitReadiness.valuationRange || "N/A"}`);
     if ((d as any).cultureAssessment) parts.push(`Culture Assessment: Score: ${(d as any).cultureAssessment.overallScore ?? "N/A"}/100, Culture type: ${(d as any).cultureAssessment.cultureType || "N/A"}`);
     if ((d as any).sustainabilityScore) parts.push(`Sustainability Score: Score: ${(d as any).sustainabilityScore.overallScore ?? "N/A"}/100, Grade: ${(d as any).sustainabilityScore.grade || "N/A"}`);
+    if ((d as any).acquisitionTargets) parts.push(`M&A Strategy: ${(d as any).acquisitionTargets.strategy || "N/A"}, Targets identified: ${(d as any).acquisitionTargets.targets?.length ?? 0}`);
+    if ((d as any).financialRatios) parts.push(`Financial Health: ${(d as any).financialRatios.overallHealth || "N/A"}`);
+    if ((d as any).channelMixModel) parts.push(`Top Channel: ${(d as any).channelMixModel.topPerformingChannel || "N/A"}`);
+    if ((d as any).supplyChainRisk) parts.push(`Supply Chain Risk: ${(d as any).supplyChainRisk.overallRiskScore ?? "N/A"}/100`);
+    if ((d as any).regulatoryLandscape) parts.push(`Compliance Score: ${(d as any).regulatoryLandscape.overallComplianceScore ?? "N/A"}/100`);
+    if ((d as any).crisisPlaybook) parts.push(`Crisis Scenarios: ${(d as any).crisisPlaybook.scenarios?.length ?? 0} prepared`);
+    if ((d as any).aiReadiness) parts.push(`AI Readiness: ${(d as any).aiReadiness.overallScore ?? "N/A"}/100`);
+    if ((d as any).networkEffects) parts.push(`Network Effects: ${(d as any).networkEffects.moatStrength || "N/A"} moat, Score: ${(d as any).networkEffects.overallScore ?? "N/A"}/100`);
+    if ((d as any).dataMonetization) parts.push(`Data Monetization: ${(d as any).dataMonetization.totalOpportunityValue || "N/A"} opportunity`);
+    if ((d as any).subscriptionMetrics) parts.push(`SaaS Health: ${(d as any).subscriptionMetrics.overallHealth || "N/A"}`);
+    if ((d as any).marketTiming) parts.push(`Market Timing: ${(d as any).marketTiming.overallTiming || "N/A"}`);
+    if ((d as any).scenarioStressTest) parts.push(`Stress Resilience: ${(d as any).scenarioStressTest.resilience || "N/A"}, Baseline Runway: ${(d as any).scenarioStressTest.baselineCashRunway || "N/A"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

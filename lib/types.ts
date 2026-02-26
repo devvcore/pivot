@@ -733,6 +733,20 @@ export interface MVPDeliverables {
   ipPortfolio?: IPPortfolio;
   exitReadiness?: ExitReadiness;
   sustainabilityScore?: SustainabilityScore;
+  // Wave 9 features
+  acquisitionTargets?: AcquisitionTargets;
+  financialRatios?: FinancialRatios;
+  channelMixModel?: ChannelMixModel;
+  supplyChainRisk?: SupplyChainRisk;
+  regulatoryLandscape?: RegulatoryLandscape;
+  crisisPlaybook?: CrisisPlaybook;
+  // Wave 10 features
+  aiReadiness?: AIReadiness;
+  networkEffects?: NetworkEffects;
+  dataMonetization?: DataMonetization;
+  subscriptionMetrics?: SubscriptionMetrics;
+  marketTiming?: MarketTiming;
+  scenarioStressTest?: ScenarioStressTest;
 }
 
 export interface BenchmarkDimension {
@@ -1634,5 +1648,248 @@ export interface SustainabilityScore {
   stakeholderExpectations: string[];
   regulatoryRequirements: string[];
   competitiveAdvantage: string;
+  recommendations: string[];
+}
+
+// ── Wave 9 Types ─────────────────────────────────────────────────────────────
+
+export interface AcquisitionTarget {
+  companyName: string;
+  industry: string;
+  rationale: string;
+  estimatedValue: string;
+  synergies: string[];
+  risks: string[];
+  fitScore: number;               // 1-10
+}
+
+export interface AcquisitionTargets {
+  summary: string;
+  strategy: string;               // "horizontal", "vertical", "talent", "technology"
+  targets: AcquisitionTarget[];
+  budgetRange: string;
+  timeline: string;
+  dueDiligenceChecklist: string[];
+  integrationPlan: string[];
+  recommendations: string[];
+}
+
+export interface FinancialRatio {
+  name: string;                   // "Current Ratio", "Debt-to-Equity", "Gross Margin"
+  value: number;
+  industryAvg: number;
+  status: "above" | "at" | "below";
+  interpretation: string;
+}
+
+export interface FinancialRatios {
+  summary: string;
+  overallHealth: "strong" | "moderate" | "weak";
+  liquidityRatios: FinancialRatio[];
+  profitabilityRatios: FinancialRatio[];
+  leverageRatios: FinancialRatio[];
+  efficiencyRatios: FinancialRatio[];
+  trendInsights: string[];
+  recommendations: string[];
+}
+
+export interface ChannelPerformance {
+  channel: string;                // "Organic Search", "Paid Social", "Email", etc.
+  attributedRevenue: string;
+  costPerAcquisition: string;
+  roi: string;
+  contribution: number;           // percentage of total
+  trend: "growing" | "stable" | "declining";
+}
+
+export interface ChannelMixModel {
+  summary: string;
+  channels: ChannelPerformance[];
+  optimalBudgetAllocation: { channel: string; currentPct: number; recommendedPct: number }[];
+  topPerformingChannel: string;
+  underperformingChannels: string[];
+  budgetRecommendation: string;
+  seasonalInsights: string[];
+  recommendations: string[];
+}
+
+export interface SupplyChainNode {
+  vendor: string;
+  category: string;
+  riskLevel: "high" | "medium" | "low";
+  dependencyScore: number;        // 1-10
+  alternativesAvailable: number;
+  mitigationStrategy: string;
+}
+
+export interface SupplyChainRisk {
+  summary: string;
+  overallRiskScore: number;       // 0-100
+  nodes: SupplyChainNode[];
+  singlePointsOfFailure: string[];
+  geographicConcentration: string[];
+  contingencyPlans: string[];
+  costOfDisruption: string;
+  recommendations: string[];
+}
+
+export interface RegulatoryItem {
+  regulation: string;
+  jurisdiction: string;
+  status: "compliant" | "partial" | "non_compliant" | "not_applicable";
+  deadline: string;
+  impact: "high" | "medium" | "low";
+  actionRequired: string;
+}
+
+export interface RegulatoryLandscape {
+  summary: string;
+  overallComplianceScore: number; // 0-100
+  currentRegulations: RegulatoryItem[];
+  upcomingRegulations: RegulatoryItem[];
+  industrySpecificRisks: string[];
+  complianceCosts: string;
+  recommendations: string[];
+}
+
+export interface CrisisScenario {
+  scenario: string;               // "Key employee departure", "Data breach", "Cash crisis"
+  probability: "high" | "medium" | "low";
+  severity: "critical" | "major" | "moderate" | "minor";
+  responseSteps: string[];
+  communicationPlan: string;
+  recoveryTimeline: string;
+}
+
+export interface CrisisPlaybook {
+  summary: string;
+  scenarios: CrisisScenario[];
+  emergencyContacts: string[];
+  communicationTemplates: string[];
+  businessContinuityPlan: string[];
+  insuranceRecommendations: string[];
+  recommendations: string[];
+}
+
+// ── Wave 10 Types ────────────────────────────────────────────────────────────
+
+export interface AICapability {
+  area: string;                   // "Customer Service", "Operations", "Marketing", "Product"
+  currentMaturity: "none" | "exploring" | "piloting" | "scaling" | "optimized";
+  opportunity: string;
+  estimatedImpact: string;
+  implementationEffort: "low" | "medium" | "high";
+  toolsRecommended: string[];
+}
+
+export interface AIReadiness {
+  summary: string;
+  overallScore: number;           // 0-100
+  dataReadiness: number;          // 0-100
+  teamReadiness: number;          // 0-100
+  infrastructureReadiness: number; // 0-100
+  capabilities: AICapability[];
+  quickWins: string[];
+  investmentRequired: string;
+  roadmap: string[];
+  recommendations: string[];
+}
+
+export interface NetworkEffectType {
+  type: string;                   // "Direct", "Indirect", "Data", "Platform"
+  strength: "strong" | "moderate" | "weak" | "none";
+  description: string;
+  growthMultiplier: string;
+  defensibility: string;
+}
+
+export interface NetworkEffects {
+  summary: string;
+  overallScore: number;           // 0-100
+  hasNetworkEffects: boolean;
+  effectTypes: NetworkEffectType[];
+  viralCoefficient: string;
+  criticalMass: string;
+  moatStrength: "strong" | "moderate" | "weak";
+  growthStrategies: string[];
+  recommendations: string[];
+}
+
+export interface DataAsset {
+  asset: string;                  // "Customer behavior data", "Transaction history"
+  monetizationMethod: string;     // "Analytics product", "API access", "Insights reports"
+  estimatedValue: string;
+  effortToMonetize: "low" | "medium" | "high";
+  privacyConsiderations: string;
+  timeToRevenue: string;
+}
+
+export interface DataMonetization {
+  summary: string;
+  totalOpportunityValue: string;
+  dataAssets: DataAsset[];
+  privacyCompliance: string;
+  competitiveAdvantage: string;
+  implementationRoadmap: string[];
+  recommendations: string[];
+}
+
+export interface SaaSMetric {
+  metric: string;                 // "MRR", "ARR", "CAC", "LTV", "Churn Rate"
+  currentValue: string;
+  benchmark: string;
+  status: "excellent" | "good" | "needs_improvement" | "critical";
+  trend: "improving" | "stable" | "declining";
+  insight: string;
+}
+
+export interface SubscriptionMetrics {
+  summary: string;
+  overallHealth: "strong" | "moderate" | "weak";
+  metrics: SaaSMetric[];
+  cohortAnalysis: string;
+  expansionRevenue: string;
+  netRevenueRetention: string;
+  paybackPeriod: string;
+  recommendations: string[];
+}
+
+export interface TimingFactor {
+  factor: string;                 // "Market maturity", "Competitor activity", "Regulatory"
+  timing: "favorable" | "neutral" | "unfavorable";
+  window: string;                 // "Next 6 months", "12-18 months"
+  confidence: "high" | "medium" | "low";
+  rationale: string;
+}
+
+export interface MarketTiming {
+  summary: string;
+  overallTiming: "excellent" | "good" | "fair" | "poor";
+  factors: TimingFactor[];
+  windowOfOpportunity: string;
+  firstMoverAdvantage: string;
+  marketCyclePosition: string;
+  urgentActions: string[];
+  recommendations: string[];
+}
+
+export interface StressScenario {
+  name: string;                   // "Revenue -30%", "Key client loss", "Market downturn"
+  description: string;
+  revenueImpact: string;
+  cashRunway: string;
+  breakEvenShift: string;
+  survivalProbability: number;    // 0-100
+  mitigationActions: string[];
+}
+
+export interface ScenarioStressTest {
+  summary: string;
+  baselineCashRunway: string;
+  scenarios: StressScenario[];
+  worstCaseSurvival: string;
+  resilience: "high" | "moderate" | "low";
+  capitalBuffer: string;
+  triggerPoints: string[];
   recommendations: string[];
 }
