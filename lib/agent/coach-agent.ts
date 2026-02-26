@@ -52,7 +52,20 @@ STYLE RULES:
 - Use bullet points and structure when listing actions
 - Do NOT use em dashes, en dashes, double dashes, or asterisks. Use plain text only.
 
-You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.`;
+You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.
+
+KEY SECTIONS FOR COACHING:
+- hiringPlan: team gaps, recommended hires, role priorities, and timeline
+- kpiReport: KPIs by role and department, current vs target values, status tracking
+- goalTracker: OKR objectives, key results, quarterly themes, suggested objectives
+- healthChecklist: operational health items, completion status, grades
+- actionPlan: prioritized daily tasks with owners
+- issuesRegister: critical issues that need team attention
+- swotAnalysis: strengths/weaknesses relevant to team development
+- salesPlaybook: sales process, objection handling, talk tracks for sales team coaching
+- churnPlaybook: retention plays and escalation triggers for customer-facing teams
+- benchmarkScore: how the team and business compare to industry peers
+- executiveSummary: high-level view of wins, risks, and priorities`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -80,9 +93,24 @@ const TOOLS = [
             "techOptimization",
             "pricingIntelligence",
             "marketingStrategy",
+            "pitchDeckAnalysis",
+            "terminology",
             "kpiReport",
             "roadmap",
             "healthChecklist",
+            "leadReport",
+            "swotAnalysis",
+            "unitEconomics",
+            "customerSegmentation",
+            "competitiveWinLoss",
+            "investorOnePager",
+            "hiringPlan",
+            "revenueForecast",
+            "churnPlaybook",
+            "salesPlaybook",
+            "goalTracker",
+            "benchmarkScore",
+            "executiveSummary",
           ],
           description: "Which report section to retrieve",
         },
@@ -317,6 +345,9 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if (d.revenueLeakAnalysis) parts.push(`Revenue at Risk: $${d.revenueLeakAnalysis.totalIdentified?.toLocaleString() || "?"}`);
     if (d.kpiReport) parts.push(`KPIs defined: ${d.kpiReport.kpis?.length || 0}`);
     if (d.healthChecklist) parts.push(`Health Checklist: ${d.healthChecklist.score}/100 (${d.healthChecklist.grade})`);
+    if (d.hiringPlan) parts.push(`Hiring Plan: ${d.hiringPlan.recommendations?.length || 0} hiring recommendations, ${d.hiringPlan.currentTeamGaps?.length || 0} team gaps identified`);
+    if (d.goalTracker) parts.push(`Goal Tracker: ${d.goalTracker.objectives?.length || 0} objectives, theme: ${d.goalTracker.quarterlyTheme || "N/A"}`);
+    if (d.benchmarkScore) parts.push(`Benchmark Score: ${d.benchmarkScore.overallScore}/100 (${d.benchmarkScore.overallPercentile || "N/A"})`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

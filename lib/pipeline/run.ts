@@ -25,6 +25,8 @@ import {
   synthesizeChurnPlaybook,
   synthesizeSalesPlaybook,
   synthesizeGoalTracker,
+  synthesizeBenchmarkScore,
+  synthesizeExecutiveSummary,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -349,6 +351,21 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Investor/Goals failed (non-fatal):", e);
+      }
+    }
+
+    if (!deliverables.benchmarkScore || !deliverables.executiveSummary) {
+      try {
+        console.log("[Pivot] Synthesizing benchmark score + executive summary...");
+        const [bs, es] = await Promise.allSettled([
+          deliverables.benchmarkScore ? Promise.resolve(null) : synthesizeBenchmarkScore(businessPacket, job.questionnaire, deliverables),
+          deliverables.executiveSummary ? Promise.resolve(null) : synthesizeExecutiveSummary(businessPacket, job.questionnaire, deliverables),
+        ]);
+        if (bs.status === "fulfilled" && bs.value) deliverables = { ...deliverables, benchmarkScore: bs.value };
+        if (es.status === "fulfilled" && es.value) deliverables = { ...deliverables, executiveSummary: es.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] Benchmark/ExecSummary failed (non-fatal):", e);
       }
     }
 

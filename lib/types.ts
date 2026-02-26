@@ -693,6 +693,38 @@ export interface MVPDeliverables {
   churnPlaybook?: ChurnPlaybook;
   salesPlaybook?: SalesPlaybook;
   goalTracker?: GoalTracker;
+  // Wave 3 features
+  benchmarkScore?: BenchmarkScore;
+  executiveSummary?: ExecutiveSummary;
+}
+
+export interface BenchmarkDimension {
+  name: string;           // "Revenue Growth", "Profit Margin", "Customer Retention"
+  score: number;          // 0-100
+  industryAvg: number;    // 0-100
+  percentile: string;     // "Top 10%", "Bottom 25%", "Average"
+  insight: string;
+}
+
+export interface BenchmarkScore {
+  overallScore: number;    // 0-100
+  overallPercentile: string;
+  dimensions: BenchmarkDimension[];
+  topStrength: string;
+  biggestGap: string;
+  industryContext: string;
+  recommendations: { area: string; current: string; target: string; action: string }[];
+  summary: string;
+}
+
+export interface ExecutiveSummary {
+  subject: string;         // Email subject line
+  greeting: string;
+  keyFindings: string[];   // 3-5 bullet points
+  criticalActions: string[];  // Top 3 urgent actions
+  financialSummary: string;
+  outlook: string;         // "cautiously optimistic", etc.
+  fullSummary: string;     // 2-3 paragraphs
 }
 
 export interface PitchDeckAnalysis {

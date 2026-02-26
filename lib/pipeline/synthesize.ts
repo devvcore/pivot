@@ -30,6 +30,8 @@ import type {
   ChurnPlaybook,
   SalesPlaybook,
   GoalTracker,
+  BenchmarkScore,
+  ExecutiveSummary,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -1829,6 +1831,211 @@ ${schema}`;
     return result as unknown as GoalTracker;
   } catch (e) {
     console.warn("[Pivot] Goal Tracker synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Benchmark Score ───────────────────────────────────────────────────────
+
+export async function synthesizeBenchmarkScore(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<BenchmarkScore | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const healthScore = deliverables.healthScore;
+  const marketIntel = deliverables.marketIntelligence;
+  const unitEcon = deliverables.unitEconomics;
+  const deliverablesContext = `
+HEALTH SCORE: ${healthScore?.score ?? "Unknown"}/100 (${healthScore?.grade ?? "?"})
+DIMENSIONS: ${JSON.stringify(healthScore?.dimensions?.map(d => ({ name: d.name, score: d.score })) ?? [])}
+INDUSTRY BENCHMARKS: ${JSON.stringify(marketIntel?.benchmarks?.slice(0, 5) ?? [])}
+UNIT ECONOMICS: CAC=${unitEcon?.cac?.value ?? "Unknown"}, LTV=${unitEcon?.ltv?.value ?? "Unknown"}, Gross Margin=${unitEcon?.grossMargin?.value ?? "Unknown"}
+INDUSTRY: ${marketIntel?.industry ?? questionnaire.industry}
+INDUSTRY CONTEXT: ${marketIntel?.industryContext ?? "N/A"}`;
+
+  const schema = `{
+  "overallScore": <integer 0-100>,
+  "overallPercentile": "<e.g. Top 25%, Average, Bottom 30%>",
+  "dimensions": [
+    {
+      "name": "<Revenue Growth | Profit Margin | Customer Retention | Operational Efficiency | Market Position | Team & Culture>",
+      "score": <0-100>,
+      "industryAvg": <0-100>,
+      "percentile": "<Top 10% | Top 25% | Average | Below Average | Bottom 25%>",
+      "insight": "<1-2 sentences: what this score means and why>"
+    }
+  ],
+  "topStrength": "<the single strongest area vs industry — name and explain>",
+  "biggestGap": "<the single biggest gap vs industry — name and explain>",
+  "industryContext": "<2-3 sentences: how this industry is performing overall and where the benchmarks come from>",
+  "recommendations": [
+    {
+      "area": "<dimension name>",
+      "current": "<current state/score>",
+      "target": "<target state/score>",
+      "action": "<specific action to close the gap>"
+    }
+  ],
+  "summary": "<2-3 sentence benchmark overview>"
+}`;
+
+  const prompt = `You are an industry benchmarking expert comparing a specific business against industry averages.
+
+BUSINESS DATA:
+${ctx}
+
+EXISTING ANALYSIS:
+${deliverablesContext}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+
+Create a comprehensive benchmark scorecard comparing this business against industry averages across 6 key dimensions:
+1. Revenue Growth — compare growth rate vs industry median
+2. Profit Margin — gross and net margin vs peers
+3. Customer Retention — churn rate, repeat business vs industry
+4. Operational Efficiency — revenue per employee, cost ratios
+5. Market Position — competitive standing, market share indicators
+6. Team & Culture — team utilization, hiring velocity, talent indicators
+
+For each dimension:
+- Score the business 0-100 based on available data
+- Set an industry average score (0-100) based on your knowledge of the industry
+- Determine their percentile ranking
+- Provide a specific insight tied to their actual data
+
+ANTI-HALLUCINATION RULES:
+- Use ONLY data from the VERIFIED FINANCIAL FACTS and uploaded documents for the business scores.
+- Industry averages should come from your knowledge of the specific industry.
+- If data is missing for a dimension, score conservatively (40-50) and note the data gap in the insight.
+- NEVER fabricate specific numbers that aren't in the data.
+- Include 3-5 recommendations, prioritized by gap size.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Benchmark Score...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as BenchmarkScore;
+  } catch (e) {
+    console.warn("[Pivot] Benchmark Score synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Executive Summary ─────────────────────────────────────────────────────
+
+export async function synthesizeExecutiveSummary(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire,
+  deliverables: MVPDeliverables
+): Promise<ExecutiveSummary | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+
+  const health = deliverables.healthScore;
+  const cash = deliverables.cashIntelligence;
+  const leaks = deliverables.revenueLeakAnalysis;
+  const issues = deliverables.issuesRegister;
+  const atRisk = deliverables.atRiskCustomers;
+  const actionPlan = deliverables.actionPlan;
+  const marketIntel = deliverables.marketIntelligence;
+  const benchmark = deliverables.benchmarkScore;
+
+  const deliverablesContext = `
+COMPANY: ${questionnaire.organizationName}
+INDUSTRY: ${questionnaire.industry}
+REVENUE RANGE: ${questionnaire.revenueRange}
+
+HEALTH SCORE: ${health?.score ?? "Unknown"}/100 (Grade: ${health?.grade ?? "?"})
+HEADLINE: ${health?.headline ?? "N/A"}
+HEALTH SUMMARY: ${health?.summary ?? "N/A"}
+
+CASH INTELLIGENCE: ${cash?.summary ?? "N/A"}
+RUNWAY: ${cash?.runwayWeeks ?? "Unknown"} weeks
+CASH POSITION: ${cash?.currentCashPosition != null ? `$${cash.currentCashPosition.toLocaleString()}` : "Unknown"}
+
+REVENUE LEAKS: $${leaks?.totalIdentified?.toLocaleString() ?? "0"} identified
+PRIORITY ACTION: ${leaks?.priorityAction ?? "N/A"}
+
+ISSUES: ${issues?.totalIssues ?? issues?.issues?.length ?? 0} total, ${issues?.criticalCount ?? 0} critical
+TOP ISSUE: ${issues?.issues?.[0]?.title ?? issues?.issues?.[0]?.description ?? "N/A"}
+
+AT-RISK REVENUE: $${atRisk?.totalRevenueAtRisk?.toLocaleString() ?? "0"}
+IMMEDIATE ACTION: ${atRisk?.immediateAction ?? "N/A"}
+
+ACTION PLAN: ${actionPlan?.summary ?? "N/A"}
+
+MARKET INTEL: ${marketIntel?.urgentOpportunity ?? "N/A"}
+
+BENCHMARK: ${benchmark ? `Overall ${benchmark.overallScore}/100 (${benchmark.overallPercentile})` : "Not available"}
+TOP STRENGTH: ${benchmark?.topStrength ?? "N/A"}
+BIGGEST GAP: ${benchmark?.biggestGap ?? "N/A"}`;
+
+  const schema = `{
+  "subject": "<email subject line — punchy, specific, includes company name and key metric>",
+  "greeting": "<professional greeting — e.g. Hi [Owner], here is your Pivot business intelligence report.>",
+  "keyFindings": [
+    "<finding 1 — the most important insight, with a specific number if available>",
+    "<finding 2>",
+    "<finding 3>",
+    "<finding 4 (optional)>",
+    "<finding 5 (optional)>"
+  ],
+  "criticalActions": [
+    "<action 1 — the single most urgent thing to do this week>",
+    "<action 2 — second priority>",
+    "<action 3 — third priority>"
+  ],
+  "financialSummary": "<2-3 sentences: the financial picture — cash position, revenue leaks, risk exposure>",
+  "outlook": "<one phrase: e.g. cautiously optimistic, urgent attention needed, strong momentum, critical crossroads>",
+  "fullSummary": "<2-3 paragraphs: comprehensive summary suitable for an executive email — covers health, risks, opportunities, and recommended path forward>"
+}`;
+
+  const prompt = `You are a senior business advisor writing a concise executive summary email for a business owner.
+
+ALL ANALYSIS RESULTS:
+${deliverablesContext}
+
+Distill the ENTIRE business analysis into a concise, email-ready executive summary. This should be:
+- Professional but direct — no fluff
+- Specific to THIS business with actual numbers from the analysis
+- Actionable — the owner should know exactly what to do after reading this
+- Balanced — acknowledge strengths before addressing weaknesses
+
+The subject line should be compelling enough to open (include the company name and a key metric).
+The greeting should be professional and warm.
+Key findings should be the 3-5 most impactful discoveries from the entire analysis.
+Critical actions should be the top 3 things to do THIS WEEK.
+The financial summary should paint the cash/revenue picture in 2-3 sentences.
+The outlook should be a single honest phrase capturing the overall trajectory.
+The full summary should be 2-3 paragraphs covering: current state, key risks/opportunities, and recommended path forward.
+
+ANTI-HALLUCINATION RULES:
+- Use ONLY numbers and facts from the analysis results above.
+- Do NOT invent specific dollar amounts, customer names, or metrics not present in the data.
+- If a metric is "Unknown" or "N/A", do not reference it as if it were known.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Executive Summary...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ExecutiveSummary;
+  } catch (e) {
+    console.warn("[Pivot] Executive Summary synthesis failed:", e);
     return null;
   }
 }

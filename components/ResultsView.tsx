@@ -63,6 +63,7 @@ const TABS = [
   { id: 25, label: "Churn Playbook",  icon: ShieldOff,    dataKey: "churnPlaybook"         },
   { id: 26, label: "Sales Playbook",  icon: BookOpen,     dataKey: "salesPlaybook"         },
   { id: 27, label: "Goals & OKRs",    icon: Flag,         dataKey: "goalTracker"           },
+  { id: 28, label: "Exec Summary",    icon: FileText,     dataKey: "executiveSummary"      },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -1944,6 +1945,18 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     </p>
                   </div>
 
+                  {/* Export CSV button */}
+                  <div className="flex justify-end">
+                    <a
+                      href={`/api/leads/export?runId=${runId}`}
+                      download
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest rounded-lg hover:bg-zinc-800 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Export CSV
+                    </a>
+                  </div>
+
                   {/* Lead cards */}
                   <div className="space-y-3">
                     {lr.leads.map((lead, i) => (
@@ -3194,6 +3207,133 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-3">Need a New Pitch Deck?</p>
                     <p className="text-sm text-zinc-600 mb-4">Ask Pivvy to generate an investor-ready pitch deck based on your report data.</p>
                     <p className="text-xs text-zinc-500 italic">Try: &quot;Generate a pitch deck for me&quot; in the Pivvy chat</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 28: Executive Summary ──────────────────────────────── */}
+            {activeTab === 28 && d.executiveSummary && (() => {
+              const es = d.executiveSummary!;
+              return (
+                <div className="space-y-6">
+                  {/* Email header */}
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Executive Summary</p>
+                      <span className="text-[9px] font-mono bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full border border-white/10 ml-auto">
+                        {es.outlook}
+                      </span>
+                    </div>
+                    <p className="text-lg leading-relaxed">{es.subject}</p>
+                  </div>
+
+                  {/* Copy to clipboard button */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => {
+                        const text = [
+                          `Subject: ${es.subject}`,
+                          "",
+                          es.greeting,
+                          "",
+                          "KEY FINDINGS:",
+                          ...es.keyFindings.map(f => `  - ${f}`),
+                          "",
+                          "CRITICAL ACTIONS:",
+                          ...es.criticalActions.map((a, i) => `  ${i + 1}. ${a}`),
+                          "",
+                          "FINANCIAL SUMMARY:",
+                          es.financialSummary,
+                          "",
+                          `OUTLOOK: ${es.outlook}`,
+                          "",
+                          es.fullSummary,
+                        ].join("\n");
+                        navigator.clipboard.writeText(text);
+                        // Brief visual feedback via the button text
+                        const btn = document.getElementById("exec-copy-btn");
+                        if (btn) {
+                          btn.textContent = "Copied!";
+                          setTimeout(() => { btn.textContent = "Copy to Clipboard"; }, 2000);
+                        }
+                      }}
+                      id="exec-copy-btn"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest rounded-lg hover:bg-zinc-800 transition-colors"
+                    >
+                      Copy to Clipboard
+                    </button>
+                  </div>
+
+                  {/* Email-style card */}
+                  <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                    {/* Subject line */}
+                    <div className="border-b border-zinc-100 px-8 py-4">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Subject</p>
+                      <p className="text-base font-semibold text-zinc-900">{es.subject}</p>
+                    </div>
+
+                    <div className="px-8 py-6 space-y-6">
+                      {/* Greeting */}
+                      <p className="text-sm text-zinc-700">{es.greeting}</p>
+
+                      {/* Key findings */}
+                      <div>
+                        <SectionHeader><TrendingUp className="w-3 h-3" /> Key Findings</SectionHeader>
+                        <ul className="space-y-2">
+                          {es.keyFindings.map((finding, i) => (
+                            <li key={i} className="flex gap-3 text-sm text-zinc-700">
+                              <span className="w-5 h-5 bg-zinc-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i + 1}</span>
+                              {finding}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Critical actions */}
+                      <div>
+                        <SectionHeader><AlertCircle className="w-3 h-3 text-red-500" /> Critical Actions This Week</SectionHeader>
+                        <div className="space-y-3">
+                          {es.criticalActions.map((action, i) => (
+                            <div key={i} className="flex gap-3 items-start bg-red-50 border border-red-100 rounded-xl p-4">
+                              <span className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <p className="text-sm text-red-900">{action}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Financial summary */}
+                      <div>
+                        <SectionHeader><DollarSign className="w-3 h-3" /> Financial Summary</SectionHeader>
+                        <p className="text-sm text-zinc-700 leading-relaxed bg-zinc-50 border border-zinc-100 rounded-xl p-4">{es.financialSummary}</p>
+                      </div>
+
+                      {/* Outlook badge */}
+                      <div className="flex items-center gap-3">
+                        <SectionHeader><Sparkles className="w-3 h-3" /> Outlook</SectionHeader>
+                        <span className={`text-xs font-mono px-3 py-1 rounded-full border ${
+                          es.outlook.toLowerCase().includes("optimistic") || es.outlook.toLowerCase().includes("strong")
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : es.outlook.toLowerCase().includes("critical") || es.outlook.toLowerCase().includes("urgent")
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {es.outlook}
+                        </span>
+                      </div>
+
+                      {/* Full summary */}
+                      <div className="border-t border-zinc-100 pt-6">
+                        <SectionHeader><FileText className="w-3 h-3" /> Full Summary</SectionHeader>
+                        <div className="prose prose-sm prose-zinc max-w-none">
+                          {es.fullSummary.split("\n").filter(Boolean).map((para, i) => (
+                            <p key={i} className="text-sm text-zinc-700 leading-relaxed mb-4">{para}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );

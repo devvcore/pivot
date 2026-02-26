@@ -66,6 +66,23 @@ const TOOLS = [
             "pricingIntelligence",
             "marketingStrategy",
             "pitchDeckAnalysis",
+            "terminology",
+            "kpiReport",
+            "roadmap",
+            "healthChecklist",
+            "leadReport",
+            "swotAnalysis",
+            "unitEconomics",
+            "customerSegmentation",
+            "competitiveWinLoss",
+            "investorOnePager",
+            "hiringPlan",
+            "revenueForecast",
+            "churnPlaybook",
+            "salesPlaybook",
+            "goalTracker",
+            "benchmarkScore",
+            "executiveSummary",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -297,6 +314,13 @@ YOUR TOOLS:
 - get_report_section(section): Get full details from the intelligence report
 - analyze_website(url): Grade and analyze any website for marketing effectiveness
 - generate_projection(projectionType, timeframeMonths, scenario): Create what-if financial projections that render as interactive charts. Use for cash forecasts, revenue recovery modeling, customer churn impact, or growth scenarios.
+
+AVAILABLE REPORT SECTIONS (for get_report_section):
+Core: healthScore, cashIntelligence, revenueLeakAnalysis, issuesRegister, atRiskCustomers, decisionBrief, actionPlan
+Market: marketIntelligence, competitorAnalysis, pricingIntelligence, websiteAnalysis, marketingStrategy
+Analysis: pitchDeckAnalysis, techOptimization, terminology, kpiReport, roadmap, healthChecklist, leadReport
+Strategy: swotAnalysis, unitEconomics, customerSegmentation, competitiveWinLoss, investorOnePager
+Operations: hiringPlan, revenueForecast, churnPlaybook, salesPlaybook, goalTracker, benchmarkScore, executiveSummary
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
