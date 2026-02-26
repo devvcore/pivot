@@ -384,6 +384,34 @@ const TABS = [
   { id: 323, label: "Certification",  icon: ClipboardCheck, dataKey: "certificationProgram"  },
   { id: 324, label: "Self-Service",   icon: Zap,            dataKey: "selfServiceAdoption"   },
   { id: 325, label: "Support Deflection", icon: HelpCircle, dataKey: "supportDeflection"     },
+  // Wave 53 — Investor Relations
+  { id: 326, label: "Investor Deck",     icon: Presentation,   dataKey: "investorDeck"          },
+  { id: 327, label: "Funding Timeline",  icon: Calendar,       dataKey: "fundingTimeline"       },
+  { id: 328, label: "Valuation",         icon: Calculator,     dataKey: "valuationModel"        },
+  { id: 329, label: "Cap Table",         icon: PieChart,       dataKey: "capTableManagement"    },
+  { id: 330, label: "Investor Comms",    icon: Megaphone,      dataKey: "investorCommunication" },
+  { id: 331, label: "Board Reports",     icon: FileText,       dataKey: "boardReporting"        },
+  // Wave 54 — Market Expansion
+  { id: 332, label: "Geo Expansion",     icon: Globe,          dataKey: "geoExpansionStrategy"  },
+  { id: 333, label: "Market Entry",      icon: ArrowRight,     dataKey: "localMarketEntry"      },
+  { id: 334, label: "Regulations",       icon: ShieldCheck,    dataKey: "marketRegulations"     },
+  { id: 335, label: "Localization",      icon: Globe,          dataKey: "partnerLocalization"   },
+  { id: 336, label: "Cultural Adapt",    icon: Users,          dataKey: "culturalAdaptation"    },
+  { id: 337, label: "Expansion ROI",     icon: TrendingUp,     dataKey: "expansionRoi"          },
+  // Wave 55 — Product-Led Growth
+  { id: 338, label: "PLG Metrics",       icon: BarChart3,      dataKey: "productLedMetrics"     },
+  { id: 339, label: "Activation",        icon: Zap,            dataKey: "activationFunnel"      },
+  { id: 340, label: "Feature Adoption",  icon: Target,         dataKey: "featureAdoption"       },
+  { id: 341, label: "Virality",          icon: TrendingUp,     dataKey: "virality"              },
+  { id: 342, label: "PQLs",             icon: UserSearch,      dataKey: "productQualifiedLeads" },
+  { id: 343, label: "Time-to-Value",    icon: Clock,           dataKey: "timeToValue"           },
+  // Wave 56 — AI & Automation Readiness
+  { id: 344, label: "AI Readiness",      icon: Sparkles,       dataKey: "aiReadinessScore"      },
+  { id: 345, label: "ML Use Cases",      icon: GitBranch,      dataKey: "mlUseCasePriority"     },
+  { id: 346, label: "Data Infra",        icon: Server,         dataKey: "dataInfrastructure"    },
+  { id: 347, label: "AI Talent",         icon: UserPlus,       dataKey: "aiTalentGap"           },
+  { id: 348, label: "Ethical AI",        icon: ShieldCheck,    dataKey: "ethicalAiFramework"    },
+  { id: 349, label: "AI ROI",           icon: LineChart,       dataKey: "aiRoiProjection"       },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -25113,6 +25141,678 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
               return (
                 <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
                   <h2 className="text-2xl font-bold text-white">Support Deflection</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 326 && (d as any).investorDeck && (() => {
+              const data = (d as any).investorDeck;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Investor Deck</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 327 && (d as any).fundingTimeline && (() => {
+              const data = (d as any).fundingTimeline;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Funding Timeline</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 328 && (d as any).valuationModel && (() => {
+              const data = (d as any).valuationModel;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Valuation Model</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 329 && (d as any).capTableManagement && (() => {
+              const data = (d as any).capTableManagement;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Cap Table Management</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 330 && (d as any).investorCommunication && (() => {
+              const data = (d as any).investorCommunication;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Investor Communication</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 331 && (d as any).boardReporting && (() => {
+              const data = (d as any).boardReporting;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Board Reporting</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 332 && (d as any).geoExpansionStrategy && (() => {
+              const data = (d as any).geoExpansionStrategy;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Geo Expansion Strategy</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 333 && (d as any).localMarketEntry && (() => {
+              const data = (d as any).localMarketEntry;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Local Market Entry</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 334 && (d as any).marketRegulations && (() => {
+              const data = (d as any).marketRegulations;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Market Regulations</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 335 && (d as any).partnerLocalization && (() => {
+              const data = (d as any).partnerLocalization;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Partner Localization</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 336 && (d as any).culturalAdaptation && (() => {
+              const data = (d as any).culturalAdaptation;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Cultural Adaptation</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 337 && (d as any).expansionRoi && (() => {
+              const data = (d as any).expansionRoi;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Expansion ROI</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 338 && (d as any).productLedMetrics && (() => {
+              const data = (d as any).productLedMetrics;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Product-Led Growth Metrics</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 339 && (d as any).activationFunnel && (() => {
+              const data = (d as any).activationFunnel;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Activation Funnel</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 340 && (d as any).featureAdoption && (() => {
+              const data = (d as any).featureAdoption;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Feature Adoption</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 341 && (d as any).virality && (() => {
+              const data = (d as any).virality;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Virality</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 342 && (d as any).productQualifiedLeads && (() => {
+              const data = (d as any).productQualifiedLeads;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Product Qualified Leads</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 343 && (d as any).timeToValue && (() => {
+              const data = (d as any).timeToValue;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Time-to-Value</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 344 && (d as any).aiReadinessScore && (() => {
+              const data = (d as any).aiReadinessScore;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">AI Readiness Score</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 345 && (d as any).mlUseCasePriority && (() => {
+              const data = (d as any).mlUseCasePriority;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">ML Use Case Priority</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 346 && (d as any).dataInfrastructure && (() => {
+              const data = (d as any).dataInfrastructure;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Data Infrastructure</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 347 && (d as any).aiTalentGap && (() => {
+              const data = (d as any).aiTalentGap;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">AI Talent Gap</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 348 && (d as any).ethicalAiFramework && (() => {
+              const data = (d as any).ethicalAiFramework;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Ethical AI Framework</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">
+                          {Object.keys(data.items[0]).map((k: string) => (
+                            <th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (
+                          <tr key={i} className="border-b border-zinc-800">
+                            {Object.values(item).map((v: any, j: number) => (
+                              <td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 349 && (d as any).aiRoiProjection && (() => {
+              const data = (d as any).aiRoiProjection;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">AI ROI Projection</h2>
                   <p className="text-zinc-300">{data.summary}</p>
                   {data.items?.length > 0 && (
                     <div className="overflow-x-auto">

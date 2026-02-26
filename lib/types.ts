@@ -1037,6 +1037,34 @@ export interface MVPDeliverables {
   aiTalentGap?: AiTalentGap;
   ethicalAiFramework?: EthicalAiFramework;
   aiRoiProjection?: AiRoiProjection;
+  // Wave 57: Customer Advocacy
+  advocacyProgram?: AdvocacyProgram;
+  referralMechanism?: ReferralMechanism;
+  testimonialPipeline?: TestimonialPipeline;
+  caseStudyFactory?: CaseStudyFactory;
+  customerAdvisoryBoard?: CustomerAdvisoryBoard;
+  npsActionPlan?: NpsActionPlan;
+  // Wave 58: Operational Finance
+  procurementEfficiency?: ProcurementEfficiency;
+  expenseManagement?: ExpenseManagement;
+  invoiceAutomation?: InvoiceAutomation;
+  paymentOptimization?: PaymentOptimization;
+  financialControls?: FinancialControls;
+  treasuryManagement?: TreasuryManagement;
+  // Wave 59: Growth Marketing
+  demandGenEngine?: DemandGenEngine;
+  contentMarketingRoi?: ContentMarketingRoi;
+  seoStrategy?: SeoStrategy;
+  paidMediaOptimization?: PaidMediaOptimization;
+  eventRoi?: EventRoi;
+  influencerStrategy?: InfluencerStrategy;
+  // Wave 60: Platform Strategy
+  platformEconomics?: PlatformEconomics;
+  developerExperience?: DeveloperExperience;
+  apiMonetization?: ApiMonetization;
+  marketplaceStrategy?: MarketplaceStrategy;
+  platformGovernance?: PlatformGovernance;
+  platformNetworkDynamics?: PlatformNetworkDynamics;
 }
 
 export interface BenchmarkDimension {
@@ -3443,3 +3471,59 @@ export interface EthicalPrinciple { principle: string; implementation: string; c
 export interface EthicalAiFramework { summary: string; principles: EthicalPrinciple[]; overallMaturity: string; biggestRisk: string; auditFrequency: string; transparencyScore: number; recommendations: string[]; }
 export interface AiProjection { scenario: string; investment: string; expectedReturn: string; timeline: string; risk: string; confidence: string; }
 export interface AiRoiProjection { summary: string; projections: AiProjection[]; totalInvestment: string; expectedRoi: string; paybackPeriod: string; topScenario: string; recommendations: string[]; }
+
+// ── Wave 57: Customer Advocacy ────────────────────────────────────────────────
+export interface AdvocacyTier { tier: string; advocates: number; activity: string; impact: string; retention: string; program: string; }
+export interface AdvocacyProgram { summary: string; tiers: AdvocacyTier[]; totalAdvocates: number; activeRate: string; revenueInfluenced: string; topTier: string; recommendations: string[]; }
+export interface ReferralChannel { channel: string; referrals: string; conversionRate: string; revenue: string; cost: string; roi: string; }
+export interface ReferralMechanism { summary: string; channels: ReferralChannel[]; totalReferrals: string; overallConversion: string; topChannel: string; viralCoefficient: string; recommendations: string[]; }
+export interface TestimonialAsset { customer: string; type: string; topic: string; quality: string; usage: string; impact: string; }
+export interface TestimonialPipeline { summary: string; assets: TestimonialAsset[]; totalTestimonials: number; pipelineHealth: string; conversionLift: string; topAsset: string; recommendations: string[]; }
+export interface CaseStudyEntry { title: string; customer: string; industry: string; results: string; stage: string; usage: string; }
+export interface CaseStudyFactory { summary: string; studies: CaseStudyEntry[]; totalStudies: number; productionRate: string; avgImpact: string; topStudy: string; recommendations: string[]; }
+export interface AdvisoryMember { member: string; segment: string; tenure: string; engagement: string; feedback: string; value: string; }
+export interface CustomerAdvisoryBoard { summary: string; members: AdvisoryMember[]; totalMembers: number; engagementRate: string; insightsGenerated: string; topInitiative: string; recommendations: string[]; }
+export interface NpsAction { driver: string; segment: string; currentNps: string; target: string; action: string; timeline: string; }
+export interface NpsActionPlan { summary: string; actions: NpsAction[]; overallNps: string; promoterRate: string; detractorRate: string; topPriority: string; recommendations: string[]; }
+
+// ── Wave 58: Operational Finance ──────────────────────────────────────────────
+export interface ProcurementArea { area: string; spend: string; savingsAchieved: string; cycleTime: string; compliance: string; improvement: string; }
+export interface ProcurementEfficiency { summary: string; areas: ProcurementArea[]; totalSpend: string; totalSavings: string; avgCycleTime: string; complianceRate: string; recommendations: string[]; }
+export interface ExpenseCategory { category: string; amount: string; budget: string; variance: string; trend: string; control: string; }
+export interface ExpenseManagement { summary: string; categories: ExpenseCategory[]; totalExpenses: string; budgetVariance: string; topCategory: string; savingsOpportunity: string; recommendations: string[]; }
+export interface InvoiceMetric { metric: string; value: string; benchmark: string; trend: string; impact: string; automation: string; }
+export interface InvoiceAutomation { summary: string; metrics: InvoiceMetric[]; automationRate: string; avgProcessingTime: string; errorRate: string; costPerInvoice: string; recommendations: string[]; }
+export interface PaymentStream { stream: string; volume: string; avgDays: string; earlyPayment: string; latePayment: string; optimization: string; }
+export interface PaymentOptimization { summary: string; streams: PaymentStream[]; avgDaysToPay: string; cashImpact: string; earlyPayDiscount: string; latePayPenalty: string; recommendations: string[]; }
+export interface ControlArea { area: string; effectiveness: string; riskLevel: string; compliance: string; lastAudit: string; gap: string; }
+export interface FinancialControls { summary: string; areas: ControlArea[]; overallEffectiveness: string; criticalGaps: number; auditReadiness: string; fraudRisk: string; recommendations: string[]; }
+export interface TreasuryFunction { function: string; balance: string; yield: string; risk: string; liquidity: string; optimization: string; }
+export interface TreasuryManagement { summary: string; functions: TreasuryFunction[]; totalCash: string; netPosition: string; yieldOptimization: string; liquidityRatio: string; recommendations: string[]; }
+
+// ── Wave 59: Growth Marketing ─────────────────────────────────────────────────
+export interface DemandChannel { channel: string; leads: string; mqls: string; conversionRate: string; cpl: string; roi: string; }
+export interface DemandGenEngine { summary: string; channels: DemandChannel[]; totalLeads: string; totalMqls: string; avgCpl: string; topChannel: string; recommendations: string[]; }
+export interface ContentAsset { asset: string; type: string; traffic: string; leads: string; conversion: string; roi: string; }
+export interface ContentMarketingRoi { summary: string; assets: ContentAsset[]; totalTraffic: string; totalLeads: string; overallRoi: string; topAsset: string; recommendations: string[]; }
+export interface SeoMetric { metric: string; value: string; trend: string; competitor: string; opportunity: string; action: string; }
+export interface SeoStrategy { summary: string; metrics: SeoMetric[]; organicTraffic: string; domainAuthority: string; topKeyword: string; technicalHealth: string; recommendations: string[]; }
+export interface PaidChannel { channel: string; spend: string; impressions: string; clicks: string; conversions: string; roas: string; }
+export interface PaidMediaOptimization { summary: string; channels: PaidChannel[]; totalSpend: string; overallRoas: string; topChannel: string; wastedSpend: string; recommendations: string[]; }
+export interface EventEntry { event: string; type: string; cost: string; attendees: string; leads: string; roi: string; }
+export interface EventRoi { summary: string; events: EventEntry[]; totalSpend: string; totalLeads: string; avgRoi: string; topEvent: string; recommendations: string[]; }
+export interface InfluencerPartner { influencer: string; platform: string; reach: string; engagement: string; cost: string; roi: string; }
+export interface InfluencerStrategy { summary: string; partners: InfluencerPartner[]; totalReach: string; avgEngagement: string; totalSpend: string; topInfluencer: string; recommendations: string[]; }
+
+// ── Wave 60: Platform Strategy ────────────────────────────────────────────────
+export interface PlatformMetric { metric: string; value: string; growth: string; benchmark: string; monetization: string; action: string; }
+export interface PlatformEconomics { summary: string; metrics: PlatformMetric[]; gmv: string; takeRate: string; platformMargin: string; growthRate: string; recommendations: string[]; }
+export interface DxDimension { dimension: string; score: number; satisfaction: string; benchmark: string; gap: string; improvement: string; }
+export interface DeveloperExperience { summary: string; dimensions: DxDimension[]; overallScore: number; devCount: string; sdkAdoption: string; topIssue: string; recommendations: string[]; }
+export interface ApiProduct { api: string; calls: string; revenue: string; growth: string; tier: string; margin: string; }
+export interface ApiMonetization { summary: string; products: ApiProduct[]; totalRevenue: string; avgRevenuePerApi: string; topApi: string; pricingModel: string; recommendations: string[]; }
+export interface MarketplaceMetric { metric: string; value: string; growth: string; benchmark: string; health: string; action: string; }
+export interface MarketplaceStrategy { summary: string; metrics: MarketplaceMetric[]; totalListings: string; transactionVolume: string; sellerSatisfaction: string; buyerSatisfaction: string; recommendations: string[]; }
+export interface GovernancePolicy { policy: string; scope: string; compliance: string; enforcement: string; impact: string; review: string; }
+export interface PlatformGovernance { summary: string; policies: GovernancePolicy[]; overallCompliance: string; disputeRate: string; trustScore: number; topIssue: string; recommendations: string[]; }
+export interface NetworkDynamic { dynamic: string; strength: string; growth: string; moat: string; vulnerability: string; enhancement: string; }
+export interface PlatformNetworkDynamics { summary: string; dynamics: NetworkDynamic[]; overallStrength: string; crossSideEffects: string; sameAsideEffects: string; moatScore: number; recommendations: string[]; }

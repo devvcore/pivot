@@ -339,6 +339,34 @@ import {
   synthesizeCertificationProgram,
   synthesizeSelfServiceAdoption,
   synthesizeSupportDeflection,
+  // Wave 53
+  synthesizeInvestorDeck,
+  synthesizeFundingTimeline,
+  synthesizeValuationModel,
+  synthesizeCapTableManagement,
+  synthesizeInvestorCommunication,
+  synthesizeBoardReporting,
+  // Wave 54
+  synthesizeGeoExpansionStrategy,
+  synthesizeLocalMarketEntry,
+  synthesizeMarketRegulations,
+  synthesizePartnerLocalization,
+  synthesizeCulturalAdaptation,
+  synthesizeExpansionRoi,
+  // Wave 55
+  synthesizeProductLedMetrics,
+  synthesizeActivationFunnel,
+  synthesizeFeatureAdoption,
+  synthesizeVirality,
+  synthesizeProductQualifiedLeads,
+  synthesizeTimeToValue,
+  // Wave 56
+  synthesizeAiReadinessScore,
+  synthesizeMlUseCasePriority,
+  synthesizeDataInfrastructure,
+  synthesizeAiTalentGap,
+  synthesizeEthicalAiFramework,
+  synthesizeAiRoiProjection,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -2828,6 +2856,162 @@ export async function runPipeline(runId: string): Promise<void> {
         if (b.status === "fulfilled" && b.value) deliverables.supportDeflection = b.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ev failed:", e); }
+    }
+
+    // ── Step 4ew: Investor Deck + Funding Timeline ──
+    if (!deliverables.investorDeck || !deliverables.fundingTimeline) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeInvestorDeck(businessPacket, job.questionnaire),
+          synthesizeFundingTimeline(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.investorDeck = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.fundingTimeline = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ew failed:", e); }
+    }
+
+    // ── Step 4ex: Valuation Model + Cap Table Management ──
+    if (!deliverables.valuationModel || !deliverables.capTableManagement) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeValuationModel(businessPacket, job.questionnaire),
+          synthesizeCapTableManagement(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.valuationModel = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.capTableManagement = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ex failed:", e); }
+    }
+
+    // ── Step 4ey: Investor Communication + Board Reporting ──
+    if (!deliverables.investorCommunication || !deliverables.boardReporting) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeInvestorCommunication(businessPacket, job.questionnaire),
+          synthesizeBoardReporting(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.investorCommunication = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.boardReporting = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ey failed:", e); }
+    }
+
+    // ── Step 4ez: Geo Expansion Strategy + Local Market Entry ──
+    if (!deliverables.geoExpansionStrategy || !deliverables.localMarketEntry) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeGeoExpansionStrategy(businessPacket, job.questionnaire),
+          synthesizeLocalMarketEntry(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.geoExpansionStrategy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.localMarketEntry = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ez failed:", e); }
+    }
+
+    // ── Step 4fa: Market Regulations + Partner Localization ──
+    if (!deliverables.marketRegulations || !deliverables.partnerLocalization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeMarketRegulations(businessPacket, job.questionnaire),
+          synthesizePartnerLocalization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.marketRegulations = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.partnerLocalization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fa failed:", e); }
+    }
+
+    // ── Step 4fb: Cultural Adaptation + Expansion ROI ──
+    if (!deliverables.culturalAdaptation || !deliverables.expansionRoi) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCulturalAdaptation(businessPacket, job.questionnaire),
+          synthesizeExpansionRoi(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.culturalAdaptation = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.expansionRoi = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fb failed:", e); }
+    }
+
+    // ── Step 4fc: Product-Led Metrics + Activation Funnel ──
+    if (!deliverables.productLedMetrics || !deliverables.activationFunnel) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeProductLedMetrics(businessPacket, job.questionnaire),
+          synthesizeActivationFunnel(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.productLedMetrics = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.activationFunnel = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fc failed:", e); }
+    }
+
+    // ── Step 4fd: Feature Adoption + Virality ──
+    if (!deliverables.featureAdoption || !deliverables.virality) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeFeatureAdoption(businessPacket, job.questionnaire),
+          synthesizeVirality(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.featureAdoption = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.virality = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fd failed:", e); }
+    }
+
+    // ── Step 4fe: Product Qualified Leads + Time to Value ──
+    if (!deliverables.productQualifiedLeads || !deliverables.timeToValue) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeProductQualifiedLeads(businessPacket, job.questionnaire),
+          synthesizeTimeToValue(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.productQualifiedLeads = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.timeToValue = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fe failed:", e); }
+    }
+
+    // ── Step 4ff: AI Readiness Score + ML Use Case Priority ──
+    if (!deliverables.aiReadinessScore || !deliverables.mlUseCasePriority) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeAiReadinessScore(businessPacket, job.questionnaire),
+          synthesizeMlUseCasePriority(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.aiReadinessScore = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.mlUseCasePriority = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ff failed:", e); }
+    }
+
+    // ── Step 4fg: Data Infrastructure + AI Talent Gap ──
+    if (!deliverables.dataInfrastructure || !deliverables.aiTalentGap) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeDataInfrastructure(businessPacket, job.questionnaire),
+          synthesizeAiTalentGap(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.dataInfrastructure = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.aiTalentGap = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fg failed:", e); }
+    }
+
+    // ── Step 4fh: Ethical AI Framework + AI ROI Projection ──
+    if (!deliverables.ethicalAiFramework || !deliverables.aiRoiProjection) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeEthicalAiFramework(businessPacket, job.questionnaire),
+          synthesizeAiRoiProjection(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.ethicalAiFramework = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.aiRoiProjection = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fh failed:", e); }
     }
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────

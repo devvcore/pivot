@@ -169,6 +169,10 @@ const TOOLS = [
             "brandEquityIndex", "sentimentDashboard", "mediaShareOfVoice", "crisisCommsReadiness", "thoughtLeadership", "brandConsistency",
             "monetizationModel", "freeTrialConversion", "usageBasedPricing", "bundleOptimization", "discountDiscipline", "revenueLeakageDetection",
             "customerAcademy", "contentEngagement", "communityHealth", "certificationProgram", "selfServiceAdoption", "supportDeflection",
+            "investorDeck", "fundingTimeline", "valuationModel", "capTableManagement", "investorCommunication", "boardReporting",
+            "geoExpansionStrategy", "localMarketEntry", "marketRegulations", "partnerLocalization", "culturalAdaptation", "expansionRoi",
+            "productLedMetrics", "activationFunnel", "featureAdoption", "virality", "productQualifiedLeads", "timeToValue",
+            "aiReadinessScore", "mlUseCasePriority", "dataInfrastructure", "aiTalentGap", "ethicalAiFramework", "aiRoiProjection",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -455,6 +459,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 50 (Brand & Reputation): brandEquityIndex (brand equity scoring and tracking), sentimentDashboard (sentiment analysis dashboard), mediaShareOfVoice (media share of voice analysis), crisisCommsReadiness (crisis communications readiness), thoughtLeadership (thought leadership strategy), brandConsistency (brand consistency audit)
 - Wave 51 (Pricing & Monetization): monetizationModel (monetization model analysis), freeTrialConversion (free trial conversion optimization), usageBasedPricing (usage-based pricing strategy), bundleOptimization (product bundle optimization), discountDiscipline (discount discipline assessment), revenueLeakageDetection (revenue leakage detection)
 - Wave 52 (Customer Education): customerAcademy (customer academy and training programs), contentEngagement (content engagement analytics), communityHealth (community health metrics), certificationProgram (certification program design), selfServiceAdoption (self-service adoption tracking), supportDeflection (support deflection analysis)
+- Wave 53 (Investor Relations): investorDeck (investor deck builder), fundingTimeline (funding timeline planning), valuationModel (valuation modeling), capTableManagement (cap table management), investorCommunication (investor communication strategy), boardReporting (board reporting framework)
+- Wave 54 (Market Expansion): geoExpansionStrategy (geographic expansion strategy), localMarketEntry (local market entry planning), marketRegulations (market regulations analysis), partnerLocalization (partner localization strategy), culturalAdaptation (cultural adaptation assessment), expansionRoi (expansion ROI analysis)
+- Wave 55 (Product-Led Growth): productLedMetrics (PLG metrics dashboard), activationFunnel (activation funnel analysis), featureAdoption (feature adoption tracking), virality (virality coefficient analysis), productQualifiedLeads (PQL identification and scoring), timeToValue (time-to-value optimization)
+- Wave 56 (AI & Automation Readiness): aiReadinessScore (AI readiness scoring), mlUseCasePriority (ML use case prioritization), dataInfrastructure (data infrastructure assessment), aiTalentGap (AI talent gap analysis), ethicalAiFramework (ethical AI framework design), aiRoiProjection (AI ROI projection modeling)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

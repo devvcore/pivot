@@ -354,7 +354,31 @@ KEY SECTIONS FOR COACHING:
 - communityHealth: Community health metrics with member activity, engagement depth, and community-driven support
 - certificationProgram: Certification program design with curriculum structure, pass rates, and professional development impact
 - selfServiceAdoption: Self-service adoption tracking with feature utilization, resolution rates, and cost avoidance
-- supportDeflection: Support deflection analysis with deflection rates, channel effectiveness, and customer satisfaction impact`;
+- supportDeflection: Support deflection analysis with deflection rates, channel effectiveness, and customer satisfaction impact
+- investorDeck: Investor deck builder with slide structure, narrative flow, and data visualization recommendations
+- fundingTimeline: Funding timeline planning with round sequencing, milestone triggers, and preparation checklist
+- valuationModel: Valuation modeling with comparable analysis, DCF projections, and multiple-based estimates
+- capTableManagement: Cap table management with ownership structure, dilution modeling, and option pool analysis
+- investorCommunication: Investor communication strategy with update cadence, reporting templates, and relationship management
+- boardReporting: Board reporting framework with KPI dashboards, meeting structure, and governance best practices
+- geoExpansionStrategy: Geographic expansion strategy with market prioritization, entry sequencing, and resource allocation
+- localMarketEntry: Local market entry planning with competitive landscape, regulatory requirements, and go-to-market tactics
+- marketRegulations: Market regulations analysis with compliance requirements, licensing needs, and regulatory risk assessment
+- partnerLocalization: Partner localization strategy with partner selection criteria, onboarding framework, and performance metrics
+- culturalAdaptation: Cultural adaptation assessment with communication style mapping, business practice differences, and localization needs
+- expansionRoi: Expansion ROI analysis with investment requirements, revenue projections, and payback period modeling
+- productLedMetrics: PLG metrics dashboard with activation rates, expansion revenue, and self-serve conversion tracking
+- activationFunnel: Activation funnel analysis with stage conversion rates, drop-off identification, and optimization opportunities
+- featureAdoption: Feature adoption tracking with usage patterns, adoption curves, and engagement correlation
+- virality: Virality coefficient analysis with K-factor measurement, viral loop mapping, and growth amplification strategies
+- productQualifiedLeads: PQL identification and scoring with behavioral triggers, conversion rates, and sales handoff optimization
+- timeToValue: Time-to-value optimization with onboarding milestones, value realization tracking, and acceleration strategies
+- aiReadinessScore: AI readiness scoring with capability assessment, infrastructure evaluation, and adoption roadmap
+- mlUseCasePriority: ML use case prioritization with impact-feasibility matrix, data readiness, and implementation sequencing
+- dataInfrastructure: Data infrastructure assessment with architecture review, scalability analysis, and modernization recommendations
+- aiTalentGap: AI talent gap analysis with skills inventory, hiring needs, and upskilling program design
+- ethicalAiFramework: Ethical AI framework design with bias detection, fairness metrics, and governance policies
+- aiRoiProjection: AI ROI projection modeling with cost-benefit analysis, implementation timeline, and value realization forecasting`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -486,6 +510,10 @@ const TOOLS = [
             "brandEquityIndex", "sentimentDashboard", "mediaShareOfVoice", "crisisCommsReadiness", "thoughtLeadership", "brandConsistency",
             "monetizationModel", "freeTrialConversion", "usageBasedPricing", "bundleOptimization", "discountDiscipline", "revenueLeakageDetection",
             "customerAcademy", "contentEngagement", "communityHealth", "certificationProgram", "selfServiceAdoption", "supportDeflection",
+            "investorDeck", "fundingTimeline", "valuationModel", "capTableManagement", "investorCommunication", "boardReporting",
+            "geoExpansionStrategy", "localMarketEntry", "marketRegulations", "partnerLocalization", "culturalAdaptation", "expansionRoi",
+            "productLedMetrics", "activationFunnel", "featureAdoption", "virality", "productQualifiedLeads", "timeToValue",
+            "aiReadinessScore", "mlUseCasePriority", "dataInfrastructure", "aiTalentGap", "ethicalAiFramework", "aiRoiProjection",
           ],
           description: "Which report section to retrieve",
         },
@@ -1001,6 +1029,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).certificationProgram) parts.push(`Certification Program: ${(d as any).certificationProgram.summary}`);
     if ((d as any).selfServiceAdoption) parts.push(`Self-Service Adoption: ${(d as any).selfServiceAdoption.summary}`);
     if ((d as any).supportDeflection) parts.push(`Support Deflection: ${(d as any).supportDeflection.summary}`);
+    if ((d as any).investorDeck) parts.push(`Investor Deck: ${(d as any).investorDeck.summary}`);
+    if ((d as any).fundingTimeline) parts.push(`Funding Timeline: ${(d as any).fundingTimeline.summary}`);
+    if ((d as any).valuationModel) parts.push(`Valuation Model: ${(d as any).valuationModel.summary}`);
+    if ((d as any).capTableManagement) parts.push(`Cap Table Management: ${(d as any).capTableManagement.summary}`);
+    if ((d as any).investorCommunication) parts.push(`Investor Communication: ${(d as any).investorCommunication.summary}`);
+    if ((d as any).boardReporting) parts.push(`Board Reporting: ${(d as any).boardReporting.summary}`);
+    if ((d as any).geoExpansionStrategy) parts.push(`Geo Expansion Strategy: ${(d as any).geoExpansionStrategy.summary}`);
+    if ((d as any).localMarketEntry) parts.push(`Local Market Entry: ${(d as any).localMarketEntry.summary}`);
+    if ((d as any).marketRegulations) parts.push(`Market Regulations: ${(d as any).marketRegulations.summary}`);
+    if ((d as any).partnerLocalization) parts.push(`Partner Localization: ${(d as any).partnerLocalization.summary}`);
+    if ((d as any).culturalAdaptation) parts.push(`Cultural Adaptation: ${(d as any).culturalAdaptation.summary}`);
+    if ((d as any).expansionRoi) parts.push(`Expansion ROI: ${(d as any).expansionRoi.summary}`);
+    if ((d as any).productLedMetrics) parts.push(`PLG Metrics: ${(d as any).productLedMetrics.summary}`);
+    if ((d as any).activationFunnel) parts.push(`Activation Funnel: ${(d as any).activationFunnel.summary}`);
+    if ((d as any).featureAdoption) parts.push(`Feature Adoption: ${(d as any).featureAdoption.summary}`);
+    if ((d as any).virality) parts.push(`Virality: ${(d as any).virality.summary}`);
+    if ((d as any).productQualifiedLeads) parts.push(`Product Qualified Leads: ${(d as any).productQualifiedLeads.summary}`);
+    if ((d as any).timeToValue) parts.push(`Time-to-Value: ${(d as any).timeToValue.summary}`);
+    if ((d as any).aiReadinessScore) parts.push(`AI Readiness Score: ${(d as any).aiReadinessScore.summary}`);
+    if ((d as any).mlUseCasePriority) parts.push(`ML Use Case Priority: ${(d as any).mlUseCasePriority.summary}`);
+    if ((d as any).dataInfrastructure) parts.push(`Data Infrastructure: ${(d as any).dataInfrastructure.summary}`);
+    if ((d as any).aiTalentGap) parts.push(`AI Talent Gap: ${(d as any).aiTalentGap.summary}`);
+    if ((d as any).ethicalAiFramework) parts.push(`Ethical AI Framework: ${(d as any).ethicalAiFramework.summary}`);
+    if ((d as any).aiRoiProjection) parts.push(`AI ROI Projection: ${(d as any).aiRoiProjection.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 
