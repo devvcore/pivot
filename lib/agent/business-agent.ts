@@ -177,6 +177,10 @@ const TOOLS = [
             "procurementEfficiency", "expenseManagement", "invoiceAutomation", "paymentOptimization", "financialControls", "treasuryManagement",
             "demandGenEngine", "contentMarketingRoi", "seoStrategy", "paidMediaOptimization", "eventRoi", "influencerStrategy",
             "platformEconomics", "developerExperience", "apiMonetization", "marketplaceStrategy", "platformGovernance", "platformNetworkDynamics",
+            "contractLifecycle", "complianceAutomation", "legalRiskRegister", "intellectualPropertyAudit", "regulatoryCalendar", "privacyCompliance",
+            "dataWarehouseStrategy", "biDashboardDesign", "predictiveModelCatalog", "dataLineageMap", "metricsDictionary", "analyticsGovernance",
+            "employeeJourney", "workplaceWellness", "learningPathways", "performanceFramework", "payEquityAnalysis", "deiBenchmark",
+            "businessModelCanvas", "revenueModelDesign", "valueChainOptimization", "costStructureAnalysis", "partnershipModel", "growthLeverAssessment",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -471,6 +475,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 58 (Operational Finance): procurementEfficiency (procurement process optimization), expenseManagement (expense tracking and policy analysis), invoiceAutomation (invoice processing automation), paymentOptimization (payment terms and flow optimization), financialControls (internal financial controls assessment), treasuryManagement (treasury and cash management strategy)
 - Wave 59 (Growth Marketing): demandGenEngine (demand generation engine analysis), contentMarketingRoi (content marketing ROI measurement), seoStrategy (SEO strategy and performance), paidMediaOptimization (paid media spend optimization), eventRoi (event ROI analysis and planning), influencerStrategy (influencer partnership strategy)
 - Wave 60 (Platform Strategy): platformEconomics (platform economics modeling), developerExperience (developer experience assessment), apiMonetization (API monetization strategy), marketplaceStrategy (marketplace design and strategy), platformGovernance (platform governance framework), platformNetworkDynamics (platform network dynamics analysis)
+- Wave 61 (Legal & Compliance Operations): contractLifecycle (contract lifecycle management), complianceAutomation (compliance automation assessment), legalRiskRegister (legal risk register and tracking), intellectualPropertyAudit (IP audit and protection analysis), regulatoryCalendar (regulatory deadline and filing calendar), privacyCompliance (privacy compliance assessment)
+- Wave 62 (Data Analytics): dataWarehouseStrategy (data warehouse architecture strategy), biDashboardDesign (BI dashboard design and adoption), predictiveModelCatalog (predictive model inventory and performance), dataLineageMap (data lineage and flow mapping), metricsDictionary (metrics standardization and dictionary), analyticsGovernance (analytics governance framework)
+- Wave 63 (Employee Experience): employeeJourney (employee journey mapping and optimization), workplaceWellness (workplace wellness program assessment), learningPathways (learning pathway design and tracking), performanceFramework (performance management framework), payEquityAnalysis (pay equity and compensation fairness analysis), deiBenchmark (DEI benchmarking and inclusion scoring)
+- Wave 64 (Business Model Innovation): businessModelCanvas (business model canvas analysis), revenueModelDesign (revenue model design and optimization), valueChainOptimization (value chain efficiency analysis), costStructureAnalysis (cost structure breakdown and optimization), partnershipModel (partnership model design and evaluation), growthLeverAssessment (growth lever identification and prioritization)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

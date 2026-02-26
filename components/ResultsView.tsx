@@ -440,6 +440,34 @@ const TABS = [
   { id: 371, label: "Marketplace",       icon: Globe,           dataKey: "marketplaceStrategy"    },
   { id: 372, label: "Governance",        icon: ShieldAlert,     dataKey: "platformGovernance"     },
   { id: 373, label: "Network Effects",   icon: GitBranch,       dataKey: "platformNetworkDynamics"},
+  // Wave 61 — Legal & Compliance Operations
+  { id: 374, label: "Contract Lifecycle", icon: FileText,       dataKey: "contractLifecycle"       },
+  { id: 375, label: "Compliance Auto",   icon: ShieldCheck,     dataKey: "complianceAutomation"    },
+  { id: 376, label: "Legal Risk",        icon: ShieldAlert,     dataKey: "legalRiskRegister"       },
+  { id: 377, label: "IP Audit",          icon: BookOpen,        dataKey: "intellectualPropertyAudit"},
+  { id: 378, label: "Regulatory Calendar", icon: Calendar,      dataKey: "regulatoryCalendar"      },
+  { id: 379, label: "Privacy Compliance", icon: ShieldCheck,    dataKey: "privacyCompliance"       },
+  // Wave 62 — Data Analytics
+  { id: 380, label: "Data Warehouse",    icon: Server,          dataKey: "dataWarehouseStrategy"   },
+  { id: 381, label: "BI Dashboards",     icon: BarChart3,       dataKey: "biDashboardDesign"       },
+  { id: 382, label: "Predictive Models", icon: TrendingUp,      dataKey: "predictiveModelCatalog"  },
+  { id: 383, label: "Data Lineage",      icon: GitBranch,       dataKey: "dataLineageMap"          },
+  { id: 384, label: "Metrics Dictionary", icon: BookOpen,       dataKey: "metricsDictionary"       },
+  { id: 385, label: "Analytics Gov",     icon: ShieldAlert,     dataKey: "analyticsGovernance"     },
+  // Wave 63 — Employee Experience
+  { id: 386, label: "Employee Journey",  icon: Users,           dataKey: "employeeJourney"         },
+  { id: 387, label: "Workplace Wellness", icon: Sparkles,       dataKey: "workplaceWellness"       },
+  { id: 388, label: "Learning Paths",    icon: BookOpen,        dataKey: "learningPathways"        },
+  { id: 389, label: "Performance KPIs",  icon: Target,          dataKey: "performanceFramework"    },
+  { id: 390, label: "Pay Equity",        icon: DollarSign,      dataKey: "payEquityAnalysis"       },
+  { id: 391, label: "DEI Benchmark",     icon: Users,           dataKey: "deiBenchmark"            },
+  // Wave 64 — Business Model Innovation
+  { id: 392, label: "Business Model",    icon: Briefcase,       dataKey: "businessModelCanvas"     },
+  { id: 393, label: "Revenue Model",     icon: DollarSign,      dataKey: "revenueModelDesign"      },
+  { id: 394, label: "Value Chain",       icon: GitBranch,       dataKey: "valueChainOptimization"  },
+  { id: 395, label: "Cost Structure",    icon: PieChart,        dataKey: "costStructureAnalysis"   },
+  { id: 396, label: "Partnerships",      icon: Users,           dataKey: "partnershipModel"        },
+  { id: 397, label: "Growth Levers",     icon: TrendingUp,      dataKey: "growthLeverAssessment"   },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -26530,6 +26558,731 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                           </tr>
                         ))}</tbody>
                       </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 374 && (d as any).contractLifecycle && (() => {
+              const data = (d as any).contractLifecycle;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Contract Lifecycle Management</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Avg Cycle Time</div><div className="text-lg font-bold text-white">{data.avgCycleTime ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Active Contracts</div><div className="text-lg font-bold text-white">{data.activeContracts ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Renewal Rate</div><div className="text-lg font-bold text-white">{data.renewalRate ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Risk Score</div><div className="text-lg font-bold text-white">{data.riskScore ?? "N/A"}</div></div>
+                  </div>
+                  {data.phases?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Contract Phases</h4>
+                      <div className="space-y-2">{data.phases.map((item: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center py-2 border-b border-white/10">
+                          <span className="text-white">{item.phase ?? item.name}</span>
+                          <span className="text-zinc-400">{item.duration ?? item.status}</span>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (
+                        <li key={i} className="text-zinc-300 text-sm">• {r}</li>
+                      ))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 375 && (d as any).complianceAutomation && (() => {
+              const data = (d as any).complianceAutomation;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Compliance Automation</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Automation Rate</div><div className="text-lg font-bold text-white">{data.automationRate ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Manual Processes</div><div className="text-lg font-bold text-white">{data.manualProcesses ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Cost Savings</div><div className="text-lg font-bold text-white">{data.costSavings ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Compliance Score</div><div className="text-lg font-bold text-white">{data.complianceScore ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 376 && (d as any).legalRiskRegister && (() => {
+              const data = (d as any).legalRiskRegister;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Legal Risk Register</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Total Risks</div><div className="text-lg font-bold text-white">{data.totalRisks ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">High Severity</div><div className="text-lg font-bold text-white">{data.highSeverity ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Mitigated</div><div className="text-lg font-bold text-white">{data.mitigated ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Exposure</div><div className="text-lg font-bold text-white">{data.totalExposure ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 377 && (d as any).intellectualPropertyAudit && (() => {
+              const data = (d as any).intellectualPropertyAudit;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Intellectual Property Audit</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Total IP Assets</div><div className="text-lg font-bold text-white">{data.totalAssets ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Protected</div><div className="text-lg font-bold text-white">{data.protectedCount ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">At Risk</div><div className="text-lg font-bold text-white">{data.atRiskCount ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Valuation</div><div className="text-lg font-bold text-white">{data.estimatedValue ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 378 && (d as any).regulatoryCalendar && (() => {
+              const data = (d as any).regulatoryCalendar;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Regulatory Calendar</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Upcoming Deadlines</div><div className="text-lg font-bold text-white">{data.upcomingDeadlines ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Filings Due</div><div className="text-lg font-bold text-white">{data.filingsDue ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Overdue</div><div className="text-lg font-bold text-white">{data.overdueCount ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Compliance Rate</div><div className="text-lg font-bold text-white">{data.complianceRate ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 379 && (d as any).privacyCompliance && (() => {
+              const data = (d as any).privacyCompliance;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Privacy Compliance</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Privacy Score</div><div className="text-lg font-bold text-white">{data.privacyScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Data Categories</div><div className="text-lg font-bold text-white">{data.dataCategories ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Gaps Found</div><div className="text-lg font-bold text-white">{data.gapsFound ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Regulations</div><div className="text-lg font-bold text-white">{data.regulationsCovered ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 380 && (d as any).dataWarehouseStrategy && (() => {
+              const data = (d as any).dataWarehouseStrategy;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Data Warehouse Strategy</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Maturity Level</div><div className="text-lg font-bold text-white">{data.maturityLevel ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Data Sources</div><div className="text-lg font-bold text-white">{data.dataSources ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Storage Cost</div><div className="text-lg font-bold text-white">{data.storageCost ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Query Performance</div><div className="text-lg font-bold text-white">{data.queryPerformance ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 381 && (d as any).biDashboardDesign && (() => {
+              const data = (d as any).biDashboardDesign;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">BI Dashboard Design</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Dashboards</div><div className="text-lg font-bold text-white">{data.dashboardCount ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Active Users</div><div className="text-lg font-bold text-white">{data.activeUsers ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Adoption Rate</div><div className="text-lg font-bold text-white">{data.adoptionRate ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Data Freshness</div><div className="text-lg font-bold text-white">{data.dataFreshness ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 382 && (d as any).predictiveModelCatalog && (() => {
+              const data = (d as any).predictiveModelCatalog;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Predictive Model Catalog</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Total Models</div><div className="text-lg font-bold text-white">{data.totalModels ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">In Production</div><div className="text-lg font-bold text-white">{data.inProduction ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Avg Accuracy</div><div className="text-lg font-bold text-white">{data.avgAccuracy ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">ROI Generated</div><div className="text-lg font-bold text-white">{data.roiGenerated ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 383 && (d as any).dataLineageMap && (() => {
+              const data = (d as any).dataLineageMap;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Data Lineage Map</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Data Flows</div><div className="text-lg font-bold text-white">{data.dataFlows ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Source Systems</div><div className="text-lg font-bold text-white">{data.sourceSystems ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Transformations</div><div className="text-lg font-bold text-white">{data.transformations ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Coverage</div><div className="text-lg font-bold text-white">{data.coverage ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 384 && (d as any).metricsDictionary && (() => {
+              const data = (d as any).metricsDictionary;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Metrics Dictionary</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Total Metrics</div><div className="text-lg font-bold text-white">{data.totalMetrics ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Categories</div><div className="text-lg font-bold text-white">{data.categories ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Standardized</div><div className="text-lg font-bold text-white">{data.standardized ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Coverage</div><div className="text-lg font-bold text-white">{data.coverage ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 385 && (d as any).analyticsGovernance && (() => {
+              const data = (d as any).analyticsGovernance;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Analytics Governance</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Maturity Score</div><div className="text-lg font-bold text-white">{data.maturityScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Policies</div><div className="text-lg font-bold text-white">{data.policiesCount ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Compliance</div><div className="text-lg font-bold text-white">{data.complianceRate ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Data Stewards</div><div className="text-lg font-bold text-white">{data.dataStewards ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 386 && (d as any).employeeJourney && (() => {
+              const data = (d as any).employeeJourney;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Employee Journey</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Satisfaction Score</div><div className="text-lg font-bold text-white">{data.satisfactionScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Touchpoints</div><div className="text-lg font-bold text-white">{data.touchpoints ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Friction Points</div><div className="text-lg font-bold text-white">{data.frictionPoints ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Retention Rate</div><div className="text-lg font-bold text-white">{data.retentionRate ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 387 && (d as any).workplaceWellness && (() => {
+              const data = (d as any).workplaceWellness;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Workplace Wellness</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Wellness Score</div><div className="text-lg font-bold text-white">{data.wellnessScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Program Participation</div><div className="text-lg font-bold text-white">{data.participation ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Burnout Index</div><div className="text-lg font-bold text-white">{data.burnoutIndex ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Absenteeism Rate</div><div className="text-lg font-bold text-white">{data.absenteeismRate ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 388 && (d as any).learningPathways && (() => {
+              const data = (d as any).learningPathways;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Learning Pathways</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Active Pathways</div><div className="text-lg font-bold text-white">{data.activePathways ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Completion Rate</div><div className="text-lg font-bold text-white">{data.completionRate ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Skill Gaps Closed</div><div className="text-lg font-bold text-white">{data.skillGapsClosed ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Training Hours</div><div className="text-lg font-bold text-white">{data.trainingHours ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 389 && (d as any).performanceFramework && (() => {
+              const data = (d as any).performanceFramework;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Performance Framework</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Framework Score</div><div className="text-lg font-bold text-white">{data.frameworkScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">KPIs Tracked</div><div className="text-lg font-bold text-white">{data.kpisTracked ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Review Cadence</div><div className="text-lg font-bold text-white">{data.reviewCadence ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Alignment</div><div className="text-lg font-bold text-white">{data.alignmentScore ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 390 && (d as any).payEquityAnalysis && (() => {
+              const data = (d as any).payEquityAnalysis;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Pay Equity Analysis</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Equity Score</div><div className="text-lg font-bold text-white">{data.equityScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Pay Gap</div><div className="text-lg font-bold text-white">{data.payGap ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Roles Analyzed</div><div className="text-lg font-bold text-white">{data.rolesAnalyzed ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Remediation Cost</div><div className="text-lg font-bold text-white">{data.remediationCost ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 391 && (d as any).deiBenchmark && (() => {
+              const data = (d as any).deiBenchmark;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">DEI Benchmark</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">DEI Score</div><div className="text-lg font-bold text-white">{data.deiScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Inclusion Index</div><div className="text-lg font-bold text-white">{data.inclusionIndex ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Representation</div><div className="text-lg font-bold text-white">{data.representation ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Industry Rank</div><div className="text-lg font-bold text-white">{data.industryRank ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 392 && (d as any).businessModelCanvas && (() => {
+              const data = (d as any).businessModelCanvas;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Business Model Canvas</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Model Score</div><div className="text-lg font-bold text-white">{data.modelScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Revenue Streams</div><div className="text-lg font-bold text-white">{data.revenueStreams ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Value Props</div><div className="text-lg font-bold text-white">{data.valuePropositions ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Segments</div><div className="text-lg font-bold text-white">{data.customerSegments ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 393 && (d as any).revenueModelDesign && (() => {
+              const data = (d as any).revenueModelDesign;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Revenue Model Design</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Model Type</div><div className="text-lg font-bold text-white">{data.modelType ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Recurring %</div><div className="text-lg font-bold text-white">{data.recurringPercentage ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">ARPU</div><div className="text-lg font-bold text-white">{data.arpu ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Growth Potential</div><div className="text-lg font-bold text-white">{data.growthPotential ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 394 && (d as any).valueChainOptimization && (() => {
+              const data = (d as any).valueChainOptimization;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Value Chain Optimization</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Efficiency Score</div><div className="text-lg font-bold text-white">{data.efficiencyScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Value Added</div><div className="text-lg font-bold text-white">{data.valueAdded ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Bottlenecks</div><div className="text-lg font-bold text-white">{data.bottlenecks ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Cost Savings</div><div className="text-lg font-bold text-white">{data.costSavings ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 395 && (d as any).costStructureAnalysis && (() => {
+              const data = (d as any).costStructureAnalysis;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Cost Structure Analysis</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Total Costs</div><div className="text-lg font-bold text-white">{data.totalCosts ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Fixed %</div><div className="text-lg font-bold text-white">{data.fixedPercentage ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Variable %</div><div className="text-lg font-bold text-white">{data.variablePercentage ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Savings Potential</div><div className="text-lg font-bold text-white">{data.savingsPotential ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 396 && (d as any).partnershipModel && (() => {
+              const data = (d as any).partnershipModel;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Partnership Model</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Active Partners</div><div className="text-lg font-bold text-white">{data.activePartners ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Partner Revenue</div><div className="text-lg font-bold text-white">{data.partnerRevenue ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Model Type</div><div className="text-lg font-bold text-white">{data.modelType ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Growth Rate</div><div className="text-lg font-bold text-white">{data.growthRate ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 397 && (d as any).growthLeverAssessment && (() => {
+              const data = (d as any).growthLeverAssessment;
+              return (
+                <div className="bg-zinc-900 rounded-2xl p-8 space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Growth Lever Assessment</h2>
+                  <p className="text-zinc-300">{data.summary}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Top Lever</div><div className="text-lg font-bold text-white">{data.topLever ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Growth Score</div><div className="text-lg font-bold text-white">{data.growthScore ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Levers Identified</div><div className="text-lg font-bold text-white">{data.leversIdentified ?? "N/A"}</div></div>
+                    <div className="bg-white/5 rounded-lg p-3"><div className="text-xs text-zinc-400">Impact Potential</div><div className="text-lg font-bold text-white">{data.impactPotential ?? "N/A"}</div></div>
+                  </div>
+                  {data.items?.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead><tr className="border-b border-zinc-700">{Object.keys(data.items[0]).map((k: string) => (<th key={k} className="py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">{k}</th>))}</tr></thead>
+                        <tbody>{data.items.map((item: any, i: number) => (<tr key={i} className="border-b border-zinc-800">{Object.values(item).map((v: any, j: number) => (<td key={j} className="py-2 px-3 text-zinc-300">{typeof v === "object" ? JSON.stringify(v) : String(v)}</td>))}</tr>))}</tbody>
+                      </table>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <h4 className="font-semibold text-white mb-2">Recommendations</h4>
+                      <ul className="space-y-1">{data.recommendations.map((r: string, i: number) => (<li key={i} className="text-zinc-300 text-sm">• {r}</li>))}</ul>
                     </div>
                   )}
                 </div>

@@ -395,6 +395,34 @@ import {
   synthesizeMarketplaceStrategy,
   synthesizePlatformGovernance,
   synthesizePlatformNetworkDynamics,
+  // Wave 61
+  synthesizeContractLifecycle,
+  synthesizeComplianceAutomation,
+  synthesizeLegalRiskRegister,
+  synthesizeIntellectualPropertyAudit,
+  synthesizeRegulatoryCalendar,
+  synthesizePrivacyCompliance,
+  // Wave 62
+  synthesizeDataWarehouseStrategy,
+  synthesizeBiDashboardDesign,
+  synthesizePredictiveModelCatalog,
+  synthesizeDataLineageMap,
+  synthesizeMetricsDictionary,
+  synthesizeAnalyticsGovernance,
+  // Wave 63
+  synthesizeEmployeeJourney,
+  synthesizeWorkplaceWellness,
+  synthesizeLearningPathways,
+  synthesizePerformanceFramework,
+  synthesizePayEquityAnalysis,
+  synthesizeDeiBenchmark,
+  // Wave 64
+  synthesizeBusinessModelCanvas,
+  synthesizeRevenueModelDesign,
+  synthesizeValueChainOptimization,
+  synthesizeCostStructureAnalysis,
+  synthesizePartnershipModel,
+  synthesizeGrowthLeverAssessment,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -3204,6 +3232,162 @@ export async function runPipeline(runId: string): Promise<void> {
         if (b.status === "fulfilled" && b.value) deliverables.platformNetworkDynamics = b.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ft failed:", e); }
+    }
+
+    // ── Step 4fu: Contract Lifecycle + Compliance Automation ──
+    if (!deliverables.contractLifecycle || !deliverables.complianceAutomation) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeContractLifecycle(businessPacket, job.questionnaire),
+          synthesizeComplianceAutomation(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.contractLifecycle = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.complianceAutomation = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fu failed:", e); }
+    }
+
+    // ── Step 4fv: Legal Risk Register + IP Audit ──
+    if (!deliverables.legalRiskRegister || !deliverables.intellectualPropertyAudit) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeLegalRiskRegister(businessPacket, job.questionnaire),
+          synthesizeIntellectualPropertyAudit(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.legalRiskRegister = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.intellectualPropertyAudit = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fv failed:", e); }
+    }
+
+    // ── Step 4fw: Regulatory Calendar + Privacy Compliance ──
+    if (!deliverables.regulatoryCalendar || !deliverables.privacyCompliance) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeRegulatoryCalendar(businessPacket, job.questionnaire),
+          synthesizePrivacyCompliance(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.regulatoryCalendar = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.privacyCompliance = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fw failed:", e); }
+    }
+
+    // ── Step 4fx: Data Warehouse Strategy + BI Dashboard Design ──
+    if (!deliverables.dataWarehouseStrategy || !deliverables.biDashboardDesign) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeDataWarehouseStrategy(businessPacket, job.questionnaire),
+          synthesizeBiDashboardDesign(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.dataWarehouseStrategy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.biDashboardDesign = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fx failed:", e); }
+    }
+
+    // ── Step 4fy: Predictive Model Catalog + Data Lineage Map ──
+    if (!deliverables.predictiveModelCatalog || !deliverables.dataLineageMap) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePredictiveModelCatalog(businessPacket, job.questionnaire),
+          synthesizeDataLineageMap(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.predictiveModelCatalog = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.dataLineageMap = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fy failed:", e); }
+    }
+
+    // ── Step 4fz: Metrics Dictionary + Analytics Governance ──
+    if (!deliverables.metricsDictionary || !deliverables.analyticsGovernance) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeMetricsDictionary(businessPacket, job.questionnaire),
+          synthesizeAnalyticsGovernance(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.metricsDictionary = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.analyticsGovernance = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fz failed:", e); }
+    }
+
+    // ── Step 4ga: Employee Journey + Workplace Wellness ──
+    if (!deliverables.employeeJourney || !deliverables.workplaceWellness) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeEmployeeJourney(businessPacket, job.questionnaire),
+          synthesizeWorkplaceWellness(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.employeeJourney = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.workplaceWellness = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ga failed:", e); }
+    }
+
+    // ── Step 4gb: Learning Pathways + Performance Framework ──
+    if (!deliverables.learningPathways || !deliverables.performanceFramework) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeLearningPathways(businessPacket, job.questionnaire),
+          synthesizePerformanceFramework(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.learningPathways = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.performanceFramework = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4gb failed:", e); }
+    }
+
+    // ── Step 4gc: Pay Equity Analysis + DEI Benchmark ──
+    if (!deliverables.payEquityAnalysis || !deliverables.deiBenchmark) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePayEquityAnalysis(businessPacket, job.questionnaire),
+          synthesizeDeiBenchmark(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.payEquityAnalysis = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.deiBenchmark = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4gc failed:", e); }
+    }
+
+    // ── Step 4gd: Business Model Canvas + Revenue Model Design ──
+    if (!deliverables.businessModelCanvas || !deliverables.revenueModelDesign) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeBusinessModelCanvas(businessPacket, job.questionnaire),
+          synthesizeRevenueModelDesign(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.businessModelCanvas = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.revenueModelDesign = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4gd failed:", e); }
+    }
+
+    // ── Step 4ge: Value Chain Optimization + Cost Structure Analysis ──
+    if (!deliverables.valueChainOptimization || !deliverables.costStructureAnalysis) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeValueChainOptimization(businessPacket, job.questionnaire),
+          synthesizeCostStructureAnalysis(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.valueChainOptimization = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.costStructureAnalysis = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ge failed:", e); }
+    }
+
+    // ── Step 4gf: Partnership Model + Growth Lever Assessment ──
+    if (!deliverables.partnershipModel || !deliverables.growthLeverAssessment) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePartnershipModel(businessPacket, job.questionnaire),
+          synthesizeGrowthLeverAssessment(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.partnershipModel = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.growthLeverAssessment = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4gf failed:", e); }
     }
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────

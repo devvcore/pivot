@@ -402,7 +402,31 @@ KEY SECTIONS FOR COACHING:
 - apiMonetization: API monetization strategy with pricing models, usage tiers, and revenue forecasting
 - marketplaceStrategy: Marketplace design and strategy with supply-demand balance, curation, and trust mechanisms
 - platformGovernance: Platform governance framework with policy design, enforcement mechanisms, and stakeholder management
-- platformNetworkDynamics: Platform network dynamics analysis with growth loops, tipping points, and defensibility metrics`;
+- platformNetworkDynamics: Platform network dynamics analysis with growth loops, tipping points, and defensibility metrics
+- contractLifecycle: Contract lifecycle management with cycle times, phases, renewal rates, and risk assessment
+- complianceAutomation: Compliance automation assessment with automation rates, manual processes, cost savings, and compliance scoring
+- legalRiskRegister: Legal risk register with risk tracking, severity levels, exposure analysis, and mitigation status
+- intellectualPropertyAudit: IP audit with asset inventory, protection status, valuation, and filing recommendations
+- regulatoryCalendar: Regulatory calendar with upcoming deadlines, filing status, overdue tracking, and compliance rates
+- privacyCompliance: Privacy compliance assessment with privacy scoring, data categories, gap analysis, and regulation coverage
+- dataWarehouseStrategy: Data warehouse strategy with architecture assessment, source integration, cost analysis, and performance metrics
+- biDashboardDesign: BI dashboard design with dashboard inventory, adoption rates, user engagement, and data freshness
+- predictiveModelCatalog: Predictive model catalog with model inventory, production status, accuracy metrics, and ROI tracking
+- dataLineageMap: Data lineage mapping with flow tracking, source systems, transformation documentation, and coverage analysis
+- metricsDictionary: Metrics dictionary with standardization, categorization, coverage analysis, and governance alignment
+- analyticsGovernance: Analytics governance framework with maturity scoring, policy management, compliance rates, and stewardship
+- employeeJourney: Employee journey mapping with satisfaction scoring, touchpoint analysis, friction identification, and retention impact
+- workplaceWellness: Workplace wellness assessment with wellness scoring, program participation, burnout tracking, and absenteeism rates
+- learningPathways: Learning pathway analysis with pathway tracking, completion rates, skill gap closure, and training hours
+- performanceFramework: Performance management framework with KPI tracking, review cadence, alignment scoring, and goal achievement
+- payEquityAnalysis: Pay equity analysis with equity scoring, gap identification, role-level analysis, and remediation planning
+- deiBenchmark: DEI benchmarking with inclusion index, representation metrics, industry ranking, and improvement tracking
+- businessModelCanvas: Business model canvas analysis with model scoring, revenue streams, value propositions, and segment assessment
+- revenueModelDesign: Revenue model design with model type analysis, recurring revenue percentage, ARPU, and growth potential
+- valueChainOptimization: Value chain optimization with efficiency scoring, value-add analysis, bottleneck identification, and cost savings
+- costStructureAnalysis: Cost structure analysis with total cost breakdown, fixed vs variable split, and savings potential identification
+- partnershipModel: Partnership model design with partner tracking, revenue contribution, model type, and growth rate analysis
+- growthLeverAssessment: Growth lever assessment with lever identification, scoring, impact potential, and prioritization`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -542,6 +566,10 @@ const TOOLS = [
             "procurementEfficiency", "expenseManagement", "invoiceAutomation", "paymentOptimization", "financialControls", "treasuryManagement",
             "demandGenEngine", "contentMarketingRoi", "seoStrategy", "paidMediaOptimization", "eventRoi", "influencerStrategy",
             "platformEconomics", "developerExperience", "apiMonetization", "marketplaceStrategy", "platformGovernance", "platformNetworkDynamics",
+            "contractLifecycle", "complianceAutomation", "legalRiskRegister", "intellectualPropertyAudit", "regulatoryCalendar", "privacyCompliance",
+            "dataWarehouseStrategy", "biDashboardDesign", "predictiveModelCatalog", "dataLineageMap", "metricsDictionary", "analyticsGovernance",
+            "employeeJourney", "workplaceWellness", "learningPathways", "performanceFramework", "payEquityAnalysis", "deiBenchmark",
+            "businessModelCanvas", "revenueModelDesign", "valueChainOptimization", "costStructureAnalysis", "partnershipModel", "growthLeverAssessment",
           ],
           description: "Which report section to retrieve",
         },
@@ -1105,6 +1133,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).marketplaceStrategy) parts.push(`Marketplace Strategy: ${(d as any).marketplaceStrategy.summary}`);
     if ((d as any).platformGovernance) parts.push(`Platform Governance: ${(d as any).platformGovernance.summary}`);
     if ((d as any).platformNetworkDynamics) parts.push(`Platform Network Dynamics: ${(d as any).platformNetworkDynamics.summary}`);
+    if ((d as any).contractLifecycle) parts.push(`Contract Lifecycle: ${(d as any).contractLifecycle.summary}`);
+    if ((d as any).complianceAutomation) parts.push(`Compliance Automation: ${(d as any).complianceAutomation.summary}`);
+    if ((d as any).legalRiskRegister) parts.push(`Legal Risk Register: ${(d as any).legalRiskRegister.summary}`);
+    if ((d as any).intellectualPropertyAudit) parts.push(`IP Audit: ${(d as any).intellectualPropertyAudit.summary}`);
+    if ((d as any).regulatoryCalendar) parts.push(`Regulatory Calendar: ${(d as any).regulatoryCalendar.summary}`);
+    if ((d as any).privacyCompliance) parts.push(`Privacy Compliance: ${(d as any).privacyCompliance.summary}`);
+    if ((d as any).dataWarehouseStrategy) parts.push(`Data Warehouse Strategy: ${(d as any).dataWarehouseStrategy.summary}`);
+    if ((d as any).biDashboardDesign) parts.push(`BI Dashboard Design: ${(d as any).biDashboardDesign.summary}`);
+    if ((d as any).predictiveModelCatalog) parts.push(`Predictive Model Catalog: ${(d as any).predictiveModelCatalog.summary}`);
+    if ((d as any).dataLineageMap) parts.push(`Data Lineage Map: ${(d as any).dataLineageMap.summary}`);
+    if ((d as any).metricsDictionary) parts.push(`Metrics Dictionary: ${(d as any).metricsDictionary.summary}`);
+    if ((d as any).analyticsGovernance) parts.push(`Analytics Governance: ${(d as any).analyticsGovernance.summary}`);
+    if ((d as any).employeeJourney) parts.push(`Employee Journey: ${(d as any).employeeJourney.summary}`);
+    if ((d as any).workplaceWellness) parts.push(`Workplace Wellness: ${(d as any).workplaceWellness.summary}`);
+    if ((d as any).learningPathways) parts.push(`Learning Pathways: ${(d as any).learningPathways.summary}`);
+    if ((d as any).performanceFramework) parts.push(`Performance Framework: ${(d as any).performanceFramework.summary}`);
+    if ((d as any).payEquityAnalysis) parts.push(`Pay Equity Analysis: ${(d as any).payEquityAnalysis.summary}`);
+    if ((d as any).deiBenchmark) parts.push(`DEI Benchmark: ${(d as any).deiBenchmark.summary}`);
+    if ((d as any).businessModelCanvas) parts.push(`Business Model Canvas: ${(d as any).businessModelCanvas.summary}`);
+    if ((d as any).revenueModelDesign) parts.push(`Revenue Model Design: ${(d as any).revenueModelDesign.summary}`);
+    if ((d as any).valueChainOptimization) parts.push(`Value Chain Optimization: ${(d as any).valueChainOptimization.summary}`);
+    if ((d as any).costStructureAnalysis) parts.push(`Cost Structure Analysis: ${(d as any).costStructureAnalysis.summary}`);
+    if ((d as any).partnershipModel) parts.push(`Partnership Model: ${(d as any).partnershipModel.summary}`);
+    if ((d as any).growthLeverAssessment) parts.push(`Growth Lever Assessment: ${(d as any).growthLeverAssessment.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

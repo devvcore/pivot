@@ -1065,6 +1065,34 @@ export interface MVPDeliverables {
   marketplaceStrategy?: MarketplaceStrategy;
   platformGovernance?: PlatformGovernance;
   platformNetworkDynamics?: PlatformNetworkDynamics;
+  // Wave 61: Legal & Compliance Operations
+  contractLifecycle?: ContractLifecycle;
+  complianceAutomation?: ComplianceAutomation;
+  legalRiskRegister?: LegalRiskRegister;
+  intellectualPropertyAudit?: IntellectualPropertyAudit;
+  regulatoryCalendar?: RegulatoryCalendar;
+  privacyCompliance?: PrivacyCompliance;
+  // Wave 62: Data Analytics
+  dataWarehouseStrategy?: DataWarehouseStrategy;
+  biDashboardDesign?: BiDashboardDesign;
+  predictiveModelCatalog?: PredictiveModelCatalog;
+  dataLineageMap?: DataLineageMap;
+  metricsDictionary?: MetricsDictionary;
+  analyticsGovernance?: AnalyticsGovernance;
+  // Wave 63: Employee Experience
+  employeeJourney?: EmployeeJourney;
+  workplaceWellness?: WorkplaceWellness;
+  learningPathways?: LearningPathways;
+  performanceFramework?: PerformanceFramework;
+  payEquityAnalysis?: PayEquityAnalysis;
+  deiBenchmark?: DeiBenchmark;
+  // Wave 64: Business Model Innovation
+  businessModelCanvas?: BusinessModelCanvas;
+  revenueModelDesign?: RevenueModelDesign;
+  valueChainOptimization?: ValueChainOptimization;
+  costStructureAnalysis?: CostStructureAnalysis;
+  partnershipModel?: PartnershipModel;
+  growthLeverAssessment?: GrowthLeverAssessment;
 }
 
 export interface BenchmarkDimension {
@@ -3527,3 +3555,59 @@ export interface GovernancePolicy { policy: string; scope: string; compliance: s
 export interface PlatformGovernance { summary: string; policies: GovernancePolicy[]; overallCompliance: string; disputeRate: string; trustScore: number; topIssue: string; recommendations: string[]; }
 export interface NetworkDynamic { dynamic: string; strength: string; growth: string; moat: string; vulnerability: string; enhancement: string; }
 export interface PlatformNetworkDynamics { summary: string; dynamics: NetworkDynamic[]; overallStrength: string; crossSideEffects: string; sameAsideEffects: string; moatScore: number; recommendations: string[]; }
+
+// ── Wave 61: Legal & Compliance Operations ────────────────────────────────────
+export interface ContractPhase { phase: string; duration: string; bottleneck: string; automationLevel: string; riskLevel: string; improvement: string; }
+export interface ContractLifecycle { summary: string; phases: ContractPhase[]; avgCycleTime: string; renewalRate: string; bottleneck: string; automationScore: number; recommendations: string[]; }
+export interface ComplianceRule { regulation: string; status: string; automationLevel: string; effort: string; riskIfNonCompliant: string; action: string; }
+export interface ComplianceAutomation { summary: string; rules: ComplianceRule[]; automatedPct: string; manualPct: string; complianceScore: number; annualCost: string; recommendations: string[]; }
+export interface LegalRiskItem { risk: string; category: string; likelihood: string; impact: string; mitigation: string; owner: string; }
+export interface LegalRiskRegister { summary: string; risks: LegalRiskItem[]; totalRisks: number; highPriorityCount: number; mitigatedPct: string; topRisk: string; recommendations: string[]; }
+export interface IpHolding { asset: string; type: string; status: string; value: string; expiryDate: string; action: string; }
+export interface IntellectualPropertyAudit { summary: string; assets: IpHolding[]; totalAssets: number; protectedPct: string; estimatedValue: string; gaps: string[]; recommendations: string[]; }
+export interface RegulatoryEvent { event: string; regulation: string; deadline: string; impact: string; readiness: string; owner: string; }
+export interface RegulatoryCalendar { summary: string; events: RegulatoryEvent[]; upcomingCount: number; overdueCount: number; highImpactCount: number; nextDeadline: string; recommendations: string[]; }
+export interface PrivacyRequirement { requirement: string; regulation: string; status: string; gap: string; effort: string; priority: string; }
+export interface PrivacyCompliance { summary: string; requirements: PrivacyRequirement[]; overallScore: number; gdprReady: string; ccpaReady: string; dataBreachRisk: string; recommendations: string[]; }
+
+// ── Wave 62: Data Analytics ───────────────────────────────────────────────────
+export interface DataWarehouseRec { component: string; currentState: string; targetState: string; technology: string; effort: string; impact: string; }
+export interface DataWarehouseStrategy { summary: string; components: DataWarehouseRec[]; maturityLevel: string; dataVolume: string; queryPerformance: string; costOptimization: string; recommendations: string[]; }
+export interface BiDashboard { dashboard: string; audience: string; metrics: string; refreshRate: string; complexity: string; priority: string; }
+export interface BiDashboardDesign { summary: string; dashboards: BiDashboard[]; totalDashboards: number; selfServicePct: string; adoptionRate: string; topDashboard: string; recommendations: string[]; }
+export interface PredictiveModelSpec { model: string; useCase: string; accuracy: string; dataRequirements: string; businessImpact: string; deploymentStatus: string; }
+export interface PredictiveModelCatalog { summary: string; models: PredictiveModelSpec[]; totalModels: number; deployedPct: string; avgAccuracy: string; topModel: string; recommendations: string[]; }
+export interface DataLineageNode { dataset: string; source: string; transformations: string; consumers: string; quality: string; freshness: string; }
+export interface DataLineageMap { summary: string; nodes: DataLineageNode[]; totalDatasets: number; qualityScore: number; coveragePct: string; stalePct: string; recommendations: string[]; }
+export interface MetricEntry { metric: string; definition: string; formula: string; owner: string; frequency: string; target: string; }
+export interface MetricsDictionary { summary: string; metrics: MetricEntry[]; totalMetrics: number; standardizedPct: string; ownershipCoverage: string; topGap: string; recommendations: string[]; }
+export interface AnalyticsPolicy { policy: string; scope: string; enforcement: string; compliance: string; gap: string; action: string; }
+export interface AnalyticsGovernance { summary: string; policies: AnalyticsPolicy[]; maturityScore: number; dataAccessControl: string; auditFrequency: string; topIssue: string; recommendations: string[]; }
+
+// ── Wave 63: Employee Experience ──────────────────────────────────────────────
+export interface JourneyStage { stage: string; satisfaction: number; painPoints: string; touchpoints: string; improvement: string; priority: string; }
+export interface EmployeeJourney { summary: string; stages: JourneyStage[]; overallSatisfaction: number; enps: number; topPainPoint: string; retentionRisk: string; recommendations: string[]; }
+export interface WellnessInitiative { initiative: string; category: string; participation: string; impact: string; cost: string; roi: string; }
+export interface WorkplaceWellness { summary: string; initiatives: WellnessInitiative[]; overallScore: number; participationRate: string; absenteeismRate: string; topProgram: string; recommendations: string[]; }
+export interface LearningPath { path: string; audience: string; duration: string; completionRate: string; skillGap: string; impact: string; }
+export interface LearningPathways { summary: string; paths: LearningPath[]; totalPaths: number; avgCompletionRate: string; skillCoverage: string; topPath: string; recommendations: string[]; }
+export interface PerformanceKpi { kpi: string; target: string; actual: string; gap: string; trend: string; action: string; }
+export interface PerformanceFramework { summary: string; kpis: PerformanceKpi[]; overallScore: number; topPerformerPct: string; improvementAreaCount: number; reviewCadence: string; recommendations: string[]; }
+export interface PayEquityGap { demographic: string; role: string; gap: string; affected: string; rootCause: string; remediation: string; }
+export interface PayEquityAnalysis { summary: string; gaps: PayEquityGap[]; overallEquityScore: number; adjustmentNeeded: string; affectedEmployees: string; topGap: string; recommendations: string[]; }
+export interface DeiIndicator { dimension: string; representation: string; target: string; gap: string; trend: string; initiative: string; }
+export interface DeiBenchmark { summary: string; indicators: DeiIndicator[]; overallScore: number; diversityIndex: string; inclusionScore: number; topStrength: string; recommendations: string[]; }
+
+// ── Wave 64: Business Model Innovation ────────────────────────────────────────
+export interface BusinessModelBlock { block: string; current: string; innovation: string; impact: string; feasibility: string; priority: string; }
+export interface BusinessModelCanvas { summary: string; blocks: BusinessModelBlock[]; modelType: string; innovationScore: number; disruptionRisk: string; pivotReadiness: string; recommendations: string[]; }
+export interface RevenueChannel { channel: string; contribution: string; growth: string; margin: string; scalability: string; risk: string; }
+export interface RevenueModelDesign { summary: string; channels: RevenueChannel[]; primaryModel: string; recurringPct: string; diversificationScore: number; topChannel: string; recommendations: string[]; }
+export interface ValueChainLink { activity: string; cost: string; value: string; efficiency: string; outsourceCandidate: string; improvement: string; }
+export interface ValueChainOptimization { summary: string; links: ValueChainLink[]; totalCost: string; valueCreated: string; efficiencyScore: number; topBottleneck: string; recommendations: string[]; }
+export interface CostDriver { driver: string; amount: string; percentage: string; trend: string; benchmark: string; optimization: string; }
+export interface CostStructureAnalysis { summary: string; drivers: CostDriver[]; totalCost: string; fixedPct: string; variablePct: string; topDriver: string; recommendations: string[]; }
+export interface PartnershipArrangement { partner: string; type: string; value: string; synergy: string; risk: string; status: string; }
+export interface PartnershipModel { summary: string; arrangements: PartnershipArrangement[]; totalPartners: number; strategicPct: string; revenueFromPartners: string; topPartner: string; recommendations: string[]; }
+export interface GrowthLever { lever: string; impact: string; effort: string; timeframe: string; confidence: string; prerequisite: string; }
+export interface GrowthLeverAssessment { summary: string; levers: GrowthLever[]; topLever: string; quickWinCount: number; totalImpact: string; readinessScore: number; recommendations: string[]; }
