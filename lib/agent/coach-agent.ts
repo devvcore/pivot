@@ -282,7 +282,31 @@ KEY SECTIONS FOR COACHING:
 - ipStrategy: IP portfolio strategy with asset valuation, protection gaps, and filing recommendations
 - legalSpendAnalysis: Legal spend analysis with category breakdown, savings potential, and cost optimization
 - policyCompliance: Policy gap analysis with compliance scoring, audit findings, and remediation actions
-- auditReadiness: Audit preparedness assessment with readiness scoring, open findings, and action items`;
+- auditReadiness: Audit preparedness assessment with readiness scoring, open findings, and action items
+- salesMethodology: Sales process framework with stage definitions, activities, exit criteria, and conversion benchmarks
+- pipelineVelocity: Pipeline speed metrics with stage velocity, bottleneck identification, and cycle time analysis
+- dealQualification: Deal scoring criteria with qualification frameworks, weighting, and pass/fail thresholds
+- salesCoaching: Rep coaching plans with skill assessments, coaching cadence, and development areas
+- accountPlanning: Strategic account plans with tier assignments, growth potential, and relationship mapping
+- competitiveBattlecards: Competitor counter-strategies with strengths, weaknesses, and win-back tactics
+- cashBurnAnalysis: Burn rate analysis with category breakdown, runway calculation, and efficiency metrics
+- revenuePerEmployee: Revenue productivity metrics with department breakdown and industry benchmarking
+- financialBenchmarking: Industry financial comparison with ratio analysis, percentile ranking, and gap identification
+- investmentPortfolio: Investment allocation analysis with ROI tracking, risk assessment, and rebalancing recommendations
+- costAllocationModel: Cost distribution analysis with allocation methodology, efficiency scoring, and optimization opportunities
+- marginWaterfall: Margin flow analysis with stage-by-stage impact, gross-to-net waterfall, and optimization levers
+- customerOnboardingMetrics: Onboarding funnel metrics with completion rates, drop-off analysis, and time-to-value tracking
+- healthScoreModel: Customer health scoring model with dimension weighting, threshold calibration, and predictive signals
+- csExpansionPlaybook: Expansion revenue plays with trigger identification, playbook design, and revenue potential
+- renewalForecasting: Renewal prediction with likelihood scoring, at-risk identification, and revenue impact analysis
+- csOperations: CS process maturity assessment with automation levels, efficiency metrics, and scaling readiness
+- customerMilestones: Customer lifecycle milestones with completion tracking, timeline benchmarks, and success indicators
+- okrFramework: OKR design and tracking with objective hierarchy, key result scoring, and alignment measurement
+- strategicPillars: Strategic pillar definition with initiative mapping, progress tracking, and resource allocation
+- competitivePositioning: Market positioning analysis with dimension comparison, gap identification, and differentiation strategy
+- marketShareAnalysis: Share of market analysis with competitor breakdown, trend tracking, and growth opportunities
+- growthCorridors: Growth opportunity mapping with potential sizing, readiness assessment, and timeline estimation
+- valuePropCanvas: Value proposition design with customer need mapping, solution fit analysis, and messaging framework`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -402,6 +426,10 @@ const TOOLS = [
             "productRoadmapHealth", "techDebtPrioritization", "releaseVelocity", "bugTrendAnalysis", "apiPerformance", "userExperienceScore",
             "workforcePlanning", "skillsGapAnalysis", "remoteWorkEffectiveness", "teamVelocity", "burnoutRisk", "learningDevelopment",
             "regulatoryRisk", "contractManagement", "ipStrategy", "legalSpendAnalysis", "policyCompliance", "auditReadiness",
+            "salesMethodology", "pipelineVelocity", "dealQualification", "salesCoaching", "accountPlanning", "competitiveBattlecards",
+            "cashBurnAnalysis", "revenuePerEmployee", "financialBenchmarking", "investmentPortfolio", "costAllocationModel", "marginWaterfall",
+            "customerOnboardingMetrics", "healthScoreModel", "csExpansionPlaybook", "renewalForecasting", "csOperations", "customerMilestones",
+            "okrFramework", "strategicPillars", "competitivePositioning", "marketShareAnalysis", "growthCorridors", "valuePropCanvas",
           ],
           description: "Which report section to retrieve",
         },
@@ -845,6 +873,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).legalSpendAnalysis) parts.push(`Legal Spend Analysis: ${JSON.stringify((d as any).legalSpendAnalysis).slice(0, 300)}`);
     if ((d as any).policyCompliance) parts.push(`Policy Compliance: ${JSON.stringify((d as any).policyCompliance).slice(0, 300)}`);
     if ((d as any).auditReadiness) parts.push(`Audit Readiness: ${JSON.stringify((d as any).auditReadiness).slice(0, 300)}`);
+    if ((d as any).salesMethodology) parts.push(`Sales Methodology: ${JSON.stringify((d as any).salesMethodology).slice(0, 300)}`);
+    if ((d as any).pipelineVelocity) parts.push(`Pipeline Velocity: ${JSON.stringify((d as any).pipelineVelocity).slice(0, 300)}`);
+    if ((d as any).dealQualification) parts.push(`Deal Qualification: ${JSON.stringify((d as any).dealQualification).slice(0, 300)}`);
+    if ((d as any).salesCoaching) parts.push(`Sales Coaching: ${JSON.stringify((d as any).salesCoaching).slice(0, 300)}`);
+    if ((d as any).accountPlanning) parts.push(`Account Planning: ${JSON.stringify((d as any).accountPlanning).slice(0, 300)}`);
+    if ((d as any).competitiveBattlecards) parts.push(`Competitive Battlecards: ${JSON.stringify((d as any).competitiveBattlecards).slice(0, 300)}`);
+    if ((d as any).cashBurnAnalysis) parts.push(`Cash Burn Analysis: ${JSON.stringify((d as any).cashBurnAnalysis).slice(0, 300)}`);
+    if ((d as any).revenuePerEmployee) parts.push(`Revenue Per Employee: ${JSON.stringify((d as any).revenuePerEmployee).slice(0, 300)}`);
+    if ((d as any).financialBenchmarking) parts.push(`Financial Benchmarking: ${JSON.stringify((d as any).financialBenchmarking).slice(0, 300)}`);
+    if ((d as any).investmentPortfolio) parts.push(`Investment Portfolio: ${JSON.stringify((d as any).investmentPortfolio).slice(0, 300)}`);
+    if ((d as any).costAllocationModel) parts.push(`Cost Allocation Model: ${JSON.stringify((d as any).costAllocationModel).slice(0, 300)}`);
+    if ((d as any).marginWaterfall) parts.push(`Margin Waterfall: ${JSON.stringify((d as any).marginWaterfall).slice(0, 300)}`);
+    if ((d as any).customerOnboardingMetrics) parts.push(`Customer Onboarding Metrics: ${JSON.stringify((d as any).customerOnboardingMetrics).slice(0, 300)}`);
+    if ((d as any).healthScoreModel) parts.push(`Health Score Model: ${JSON.stringify((d as any).healthScoreModel).slice(0, 300)}`);
+    if ((d as any).csExpansionPlaybook) parts.push(`CS Expansion Playbook: ${JSON.stringify((d as any).csExpansionPlaybook).slice(0, 300)}`);
+    if ((d as any).renewalForecasting) parts.push(`Renewal Forecasting: ${JSON.stringify((d as any).renewalForecasting).slice(0, 300)}`);
+    if ((d as any).csOperations) parts.push(`CS Operations: ${JSON.stringify((d as any).csOperations).slice(0, 300)}`);
+    if ((d as any).customerMilestones) parts.push(`Customer Milestones: ${JSON.stringify((d as any).customerMilestones).slice(0, 300)}`);
+    if ((d as any).okrFramework) parts.push(`OKR Framework: ${JSON.stringify((d as any).okrFramework).slice(0, 300)}`);
+    if ((d as any).strategicPillars) parts.push(`Strategic Pillars: ${JSON.stringify((d as any).strategicPillars).slice(0, 300)}`);
+    if ((d as any).competitivePositioning) parts.push(`Competitive Positioning: ${JSON.stringify((d as any).competitivePositioning).slice(0, 300)}`);
+    if ((d as any).marketShareAnalysis) parts.push(`Market Share Analysis: ${JSON.stringify((d as any).marketShareAnalysis).slice(0, 300)}`);
+    if ((d as any).growthCorridors) parts.push(`Growth Corridors: ${JSON.stringify((d as any).growthCorridors).slice(0, 300)}`);
+    if ((d as any).valuePropCanvas) parts.push(`Value Prop Canvas: ${JSON.stringify((d as any).valuePropCanvas).slice(0, 300)}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

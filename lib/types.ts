@@ -925,6 +925,34 @@ export interface MVPDeliverables {
   legalSpendAnalysis?: LegalSpendAnalysis;
   policyCompliance?: PolicyCompliance;
   auditReadiness?: AuditReadiness;
+  // Wave 41: Sales Excellence
+  salesMethodology?: SalesMethodology;
+  pipelineVelocity?: PipelineVelocity;
+  dealQualification?: DealQualification;
+  salesCoaching?: SalesCoaching;
+  accountPlanning?: AccountPlanning;
+  competitiveBattlecards?: CompetitiveBattlecards;
+  // Wave 42: Financial Intelligence
+  cashBurnAnalysis?: CashBurnAnalysis;
+  revenuePerEmployee?: RevenuePerEmployee;
+  financialBenchmarking?: FinancialBenchmarking;
+  investmentPortfolio?: InvestmentPortfolio;
+  costAllocationModel?: CostAllocationModel;
+  marginWaterfall?: MarginWaterfall;
+  // Wave 43: Customer Success
+  customerOnboardingMetrics?: CustomerOnboardingMetrics;
+  healthScoreModel?: HealthScoreModel;
+  csExpansionPlaybook?: CsExpansionPlaybook;
+  renewalForecasting?: RenewalForecasting;
+  csOperations?: CsOperations;
+  customerMilestones?: CustomerMilestones;
+  // Wave 44: Strategic Planning
+  okrFramework?: OkrFramework;
+  strategicPillars?: StrategicPillars;
+  competitivePositioning?: CompetitivePositioning;
+  marketShareAnalysis?: MarketShareAnalysis;
+  growthCorridors?: GrowthCorridors;
+  valuePropCanvas?: ValuePropCanvas;
 }
 
 export interface BenchmarkDimension {
@@ -3107,3 +3135,59 @@ export interface PolicyArea { area: string; status: string; lastReview: string; 
 export interface PolicyCompliance { summary: string; areas: PolicyArea[]; overallCompliance: string; policiesReviewed: number; gaps: number; topPriority: string; recommendations: string[]; }
 export interface AuditArea { area: string; readiness: string; lastAudit: string; findings: number; resolvedFindings: number; risk: string; }
 export interface AuditReadiness { summary: string; areas: AuditArea[]; overallReadiness: number; openFindings: number; criticalGaps: number; nextAuditDate: string; recommendations: string[]; }
+
+// ── Wave 41: Sales Excellence ─────────────────────────────────────────────────
+export interface MethodologyStage { stage: string; activities: string; tools: string; exitCriteria: string; avgDuration: string; conversionRate: string; }
+export interface SalesMethodology { summary: string; stages: MethodologyStage[]; methodology: string; adoptionRate: string; avgDealCycle: string; winRate: string; recommendations: string[]; }
+export interface PipelineStage { stage: string; deals: number; value: string; avgAge: string; conversionRate: string; velocity: string; }
+export interface PipelineVelocity { summary: string; stages: PipelineStage[]; overallVelocity: string; avgDealSize: string; pipelineCoverage: string; forecastAccuracy: string; recommendations: string[]; }
+export interface QualificationCriteria { criterion: string; weight: number; scoring: string; threshold: string; passRate: string; impact: string; }
+export interface DealQualification { summary: string; criteria: QualificationCriteria[]; framework: string; qualificationRate: string; avgScore: number; topDisqualifier: string; recommendations: string[]; }
+export interface CoachingArea { area: string; currentSkill: string; targetSkill: string; gap: string; method: string; timeline: string; }
+export interface SalesCoaching { summary: string; areas: CoachingArea[]; teamAvgScore: number; topPerformerGap: string; coachingHours: string; impactOnQuota: string; recommendations: string[]; }
+export interface AccountPlan { account: string; tier: string; revenue: string; whitespace: string; strategy: string; nextAction: string; }
+export interface AccountPlanning { summary: string; plans: AccountPlan[]; totalWhitespace: string; topAccounts: number; penetrationRate: string; expansionPipeline: string; recommendations: string[]; }
+export interface Battlecard { competitor: string; strengths: string; weaknesses: string; counterStrategy: string; winRate: string; keyDifferentiator: string; }
+export interface CompetitiveBattlecards { summary: string; cards: Battlecard[]; totalCompetitors: number; overallWinRate: string; topThreat: string; bestCounter: string; recommendations: string[]; }
+
+// ── Wave 42: Financial Intelligence ───────────────────────────────────────────
+export interface BurnCategory { category: string; monthly: string; annual: string; trend: string; essential: boolean; optimizable: string; }
+export interface CashBurnAnalysis { summary: string; categories: BurnCategory[]; monthlyBurn: string; runway: string; burnEfficiency: string; topBurnArea: string; recommendations: string[]; }
+export interface RevenuePerDept { department: string; headcount: number; revenue: string; revenuePerHead: string; benchmark: string; gap: string; }
+export interface RevenuePerEmployee { summary: string; departments: RevenuePerDept[]; overallRPE: string; industryBenchmark: string; topPerformer: string; improvementPotential: string; recommendations: string[]; }
+export interface FinancialMetricBenchmark { metric: string; companyValue: string; industryMedian: string; topQuartile: string; percentile: string; action: string; }
+export interface FinancialBenchmarking { summary: string; metrics: FinancialMetricBenchmark[]; overallPercentile: string; strongestMetric: string; weakestMetric: string; peerGroup: string; recommendations: string[]; }
+export interface InvestmentItem { investment: string; amount: string; expectedReturn: string; timeline: string; risk: string; status: string; }
+export interface InvestmentPortfolio { summary: string; investments: InvestmentItem[]; totalInvested: string; weightedReturn: string; riskProfile: string; topPerformer: string; recommendations: string[]; }
+export interface CostCenter { center: string; allocated: string; actual: string; variance: string; driver: string; optimization: string; }
+export interface CostAllocationModel { summary: string; centers: CostCenter[]; totalAllocated: string; unallocated: string; accuracyScore: string; topVariance: string; recommendations: string[]; }
+export interface MarginLayer { layer: string; revenue: string; cost: string; margin: string; marginPercent: string; trend: string; }
+export interface MarginWaterfall { summary: string; layers: MarginLayer[]; grossMargin: string; operatingMargin: string; netMargin: string; biggestLeakage: string; recommendations: string[]; }
+
+// ── Wave 43: Customer Success ─────────────────────────────────────────────────
+export interface OnboardingStep { step: string; completionRate: string; avgTime: string; dropoffRate: string; bottleneck: string; improvement: string; }
+export interface CustomerOnboardingMetrics { summary: string; steps: OnboardingStep[]; overallCompletion: string; avgTimeToValue: string; activationRate: string; topDropoff: string; recommendations: string[]; }
+export interface HealthDimension { dimension: string; weight: number; score: number; threshold: number; signal: string; action: string; }
+export interface HealthScoreModel { summary: string; dimensions: HealthDimension[]; overallScore: number; healthyPercentage: string; atRiskPercentage: string; topPredictor: string; recommendations: string[]; }
+export interface ExpansionOpportunity { account: string; opportunity: string; value: string; probability: string; trigger: string; playbook: string; }
+export interface CsExpansionPlaybook { summary: string; opportunities: ExpansionOpportunity[]; totalPipeline: string; avgExpansionRate: string; topPlay: string; conversionRate: string; recommendations: string[]; }
+export interface RenewalCohort { cohort: string; accounts: number; arr: string; renewalRate: string; risk: string; action: string; }
+export interface RenewalForecasting { summary: string; cohorts: RenewalCohort[]; overallRenewalRate: string; atRiskArr: string; forecastAccuracy: string; topRisk: string; recommendations: string[]; }
+export interface CsMetric { metric: string; current: string; target: string; trend: string; owner: string; action: string; }
+export interface CsOperations { summary: string; metrics: CsMetric[]; teamEfficiency: string; caseloadPerCsm: string; responseTime: string; escalationRate: string; recommendations: string[]; }
+export interface MilestoneEntry { milestone: string; segment: string; avgTimeToReach: string; completionRate: string; impact: string; blocker: string; }
+export interface CustomerMilestones { summary: string; milestones: MilestoneEntry[]; avgMilestonesReached: number; topMilestone: string; biggestGap: string; correlationToRetention: string; recommendations: string[]; }
+
+// ── Wave 44: Strategic Planning ───────────────────────────────────────────────
+export interface OkrEntry { objective: string; keyResults: string; progress: string; owner: string; status: string; blockers: string; }
+export interface OkrFramework { summary: string; okrs: OkrEntry[]; overallProgress: string; onTrackPercentage: string; topObjective: string; alignmentScore: number; recommendations: string[]; }
+export interface StrategicPillar { pillar: string; description: string; initiatives: number; progress: string; investment: string; impact: string; }
+export interface StrategicPillars { summary: string; pillars: StrategicPillar[]; totalInitiatives: number; overallProgress: string; topPillar: string; resourceAllocation: string; recommendations: string[]; }
+export interface PositioningDimension { dimension: string; companyPosition: string; competitorAvg: string; gap: string; importance: string; action: string; }
+export interface CompetitivePositioning { summary: string; dimensions: PositioningDimension[]; overallPosition: string; strongestDimension: string; weakestDimension: string; perceptionGap: string; recommendations: string[]; }
+export interface MarketSegmentShare { segment: string; companyShare: string; leaderShare: string; gap: string; trend: string; opportunity: string; }
+export interface MarketShareAnalysis { summary: string; segments: MarketSegmentShare[]; overallShare: string; samGrowth: string; shareGrowthRate: string; topOpportunity: string; recommendations: string[]; }
+export interface GrowthCorridor { corridor: string; tam: string; currentPenetration: string; growthRate: string; competition: string; timeline: string; }
+export interface GrowthCorridors { summary: string; corridors: GrowthCorridor[]; totalTam: string; topCorridor: string; avgGrowthRate: string; investmentRequired: string; recommendations: string[]; }
+export interface CanvasElement { element: string; current: string; ideal: string; gap: string; evidence: string; action: string; }
+export interface ValuePropCanvas { summary: string; elements: CanvasElement[]; overallFit: number; strongestElement: string; biggestGap: string; customerValidation: string; recommendations: string[]; }

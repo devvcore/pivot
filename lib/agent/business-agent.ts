@@ -157,6 +157,10 @@ const TOOLS = [
             "productRoadmapHealth", "techDebtPrioritization", "releaseVelocity", "bugTrendAnalysis", "apiPerformance", "userExperienceScore",
             "workforcePlanning", "skillsGapAnalysis", "remoteWorkEffectiveness", "teamVelocity", "burnoutRisk", "learningDevelopment",
             "regulatoryRisk", "contractManagement", "ipStrategy", "legalSpendAnalysis", "policyCompliance", "auditReadiness",
+            "salesMethodology", "pipelineVelocity", "dealQualification", "salesCoaching", "accountPlanning", "competitiveBattlecards",
+            "cashBurnAnalysis", "revenuePerEmployee", "financialBenchmarking", "investmentPortfolio", "costAllocationModel", "marginWaterfall",
+            "customerOnboardingMetrics", "healthScoreModel", "csExpansionPlaybook", "renewalForecasting", "csOperations", "customerMilestones",
+            "okrFramework", "strategicPillars", "competitivePositioning", "marketShareAnalysis", "growthCorridors", "valuePropCanvas",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -431,6 +435,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 38 (Product Intelligence): productRoadmapHealth (roadmap health), techDebtPrioritization (tech debt ranking), releaseVelocity (DORA metrics), bugTrendAnalysis (bug trends), apiPerformance (API health), userExperienceScore (UX scoring)
 - Wave 39 (Workforce Planning): workforcePlanning (headcount planning), skillsGapAnalysis (skills assessment), remoteWorkEffectiveness (remote work metrics), teamVelocity (team productivity), burnoutRisk (burnout indicators), learningDevelopment (L&D programs)
 - Wave 40 (Compliance & Legal): regulatoryRisk (regulatory exposure), contractManagement (contract lifecycle), ipStrategy (IP portfolio), legalSpendAnalysis (legal spend), policyCompliance (policy gaps), auditReadiness (audit preparedness)
+- Wave 41 (Sales Excellence): salesMethodology (sales process framework), pipelineVelocity (pipeline speed metrics), dealQualification (deal scoring criteria), salesCoaching (rep coaching plans), accountPlanning (strategic account plans), competitiveBattlecards (competitor counter-strategies)
+- Wave 42 (Financial Intelligence): cashBurnAnalysis (burn rate analysis), revenuePerEmployee (productivity metrics), financialBenchmarking (industry financial comparison), investmentPortfolio (investment allocation), costAllocationModel (cost distribution analysis), marginWaterfall (margin flow analysis)
+- Wave 43 (Customer Success): customerOnboardingMetrics (onboarding funnel metrics), healthScoreModel (customer health scoring), csExpansionPlaybook (expansion revenue plays), renewalForecasting (renewal prediction), csOperations (CS process maturity), customerMilestones (customer lifecycle milestones)
+- Wave 44 (Strategic Planning): okrFramework (OKR design and tracking), strategicPillars (strategic pillar definition), competitivePositioning (market positioning analysis), marketShareAnalysis (share of market analysis), growthCorridors (growth opportunity mapping), valuePropCanvas (value proposition design)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

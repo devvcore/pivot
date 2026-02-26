@@ -300,6 +300,34 @@ const TABS = [
   { id: 251, label: "Legal Spend",    icon: DollarSign,     dataKey: "legalSpendAnalysis"    },
   { id: 252, label: "Policy Comp",    icon: ClipboardCheck, dataKey: "policyCompliance"      },
   { id: 253, label: "Audit Ready",    icon: Gauge,          dataKey: "auditReadiness"        },
+  // Wave 41 — Sales Excellence
+  { id: 254, label: "Sales Method",   icon: BookOpen,       dataKey: "salesMethodology"      },
+  { id: 255, label: "Pipe Velocity",  icon: Zap,            dataKey: "pipelineVelocity"      },
+  { id: 256, label: "Deal Qual",      icon: Target,         dataKey: "dealQualification"     },
+  { id: 257, label: "Sales Coach",    icon: Users,          dataKey: "salesCoaching"         },
+  { id: 258, label: "Acct Planning",  icon: Briefcase,      dataKey: "accountPlanning"       },
+  { id: 259, label: "Battlecards",    icon: Swords,         dataKey: "competitiveBattlecards"},
+  // Wave 42 — Financial Intelligence
+  { id: 260, label: "Cash Burn",      icon: DollarSign,     dataKey: "cashBurnAnalysis"      },
+  { id: 261, label: "Rev/Employee",   icon: Calculator,     dataKey: "revenuePerEmployee"    },
+  { id: 262, label: "Fin Benchmark",  icon: BarChart3,      dataKey: "financialBenchmarking" },
+  { id: 263, label: "Invest Port",    icon: Briefcase,      dataKey: "investmentPortfolio"   },
+  { id: 264, label: "Cost Alloc",     icon: PieChart,       dataKey: "costAllocationModel"   },
+  { id: 265, label: "Margin Fall",    icon: TrendingUp,     dataKey: "marginWaterfall"       },
+  // Wave 43 — Customer Success
+  { id: 266, label: "Onboard Metrics",icon: ArrowRight,     dataKey: "customerOnboardingMetrics"},
+  { id: 267, label: "Health Model",   icon: ShieldCheck,    dataKey: "healthScoreModel"      },
+  { id: 268, label: "CS Expansion",   icon: TrendingUp,     dataKey: "csExpansionPlaybook"   },
+  { id: 269, label: "Renewal Fcst",   icon: LineChart,      dataKey: "renewalForecasting"    },
+  { id: 270, label: "CS Ops",         icon: Gauge,          dataKey: "csOperations"          },
+  { id: 271, label: "Milestones",     icon: Flag,           dataKey: "customerMilestones"    },
+  // Wave 44 — Strategic Planning
+  { id: 272, label: "OKR Framework",  icon: Target,         dataKey: "okrFramework"          },
+  { id: 273, label: "Strat Pillars",  icon: Flag,           dataKey: "strategicPillars"      },
+  { id: 274, label: "Comp Position",  icon: Trophy,         dataKey: "competitivePositioning"},
+  { id: 275, label: "Market Share",   icon: PieChart,       dataKey: "marketShareAnalysis"   },
+  { id: 276, label: "Growth Corr",    icon: Sparkles,       dataKey: "growthCorridors"       },
+  { id: 277, label: "Value Prop",     icon: Crosshair,      dataKey: "valuePropCanvas"       },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -22204,6 +22232,1500 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 254 && (d as any).salesMethodology && (() => {
+              const data = (d as any).salesMethodology;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Sales Methodology</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Methodology Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.recommendedMethodology && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Recommended</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.recommendedMethodology}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><BookOpen className="w-3 h-3" /> Sales Stages</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Activities</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Exit Criteria</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Conversion</th>
+                          </tr></thead>
+                          <tbody>{data.stages.map((s: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{s.stage || s.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.activities}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.exitCriteria}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.conversion}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 255 && (d as any).pipelineVelocity && (() => {
+              const data = (d as any).pipelineVelocity;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Pipeline Velocity</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallVelocity != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Velocity Score</p>
+                          <p className="text-3xl font-light">{data.overallVelocity}</p>
+                        </div>
+                      )}
+                      {data.avgCycleTime && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Avg Cycle Time</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.avgCycleTime}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><Zap className="w-3 h-3" /> Stage Velocity</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Time</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Conversion</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Bottleneck</th>
+                          </tr></thead>
+                          <tbody>{data.stages.map((s: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{s.stage || s.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.time || s.duration}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.conversion}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.bottleneck || "None"}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 256 && (d as any).dealQualification && (() => {
+              const data = (d as any).dealQualification;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Deal Qualification</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Qualification Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.framework && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Framework</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.framework}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.criteria?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Qualification Criteria</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Criterion</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Weight</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                          </tr></thead>
+                          <tbody>{data.criteria.map((c: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{c.criterion || c.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.weight}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.status}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.action}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 257 && (d as any).salesCoaching && (() => {
+              const data = (d as any).salesCoaching;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Sales Coaching</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Coaching Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.coachingMaturity && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Maturity</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.coachingMaturity}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.areas?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Coaching Areas</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Area</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Current</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Target</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Priority</th>
+                          </tr></thead>
+                          <tbody>{data.areas.map((a: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{a.area || a.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.current}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.target}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.priority}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 258 && (d as any).accountPlanning && (() => {
+              const data = (d as any).accountPlanning;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Briefcase className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Account Planning</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Planning Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.totalAccounts != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Accounts</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.totalAccounts}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.accounts?.length > 0 && (
+                    <div>
+                      <SectionHeader><Briefcase className="w-3 h-3" /> Key Accounts</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Account</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Tier</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Potential</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Strategy</th>
+                          </tr></thead>
+                          <tbody>{data.accounts.map((a: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{a.account || a.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.tier}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.potential}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.strategy}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 259 && (d as any).competitiveBattlecards && (() => {
+              const data = (d as any).competitiveBattlecards;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Swords className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Competitive Battlecards</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.competitorsAnalyzed != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Competitors</p>
+                          <p className="text-3xl font-light">{data.competitorsAnalyzed}</p>
+                        </div>
+                      )}
+                      {data.winRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Win Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.winRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.battlecards?.length > 0 && (
+                    <div>
+                      <SectionHeader><Swords className="w-3 h-3" /> Battlecards</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Competitor</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Strengths</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Weaknesses</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Counter</th>
+                          </tr></thead>
+                          <tbody>{data.battlecards.map((b: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{b.competitor || b.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{b.strengths}</td>
+                              <td className="py-2 px-3 text-zinc-600">{b.weaknesses}</td>
+                              <td className="py-2 px-3 text-zinc-600">{b.counter || b.counterStrategy}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 260 && (d as any).cashBurnAnalysis && (() => {
+              const data = (d as any).cashBurnAnalysis;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <DollarSign className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Cash Burn Analysis</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.monthlyBurnRate != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Monthly Burn</p>
+                          <p className="text-3xl font-light">{data.monthlyBurnRate}</p>
+                        </div>
+                      )}
+                      {data.runway && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Runway</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.runway}</p>
+                        </div>
+                      )}
+                      {data.burnEfficiency && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Burn Efficiency</p>
+                          <p className="text-2xl font-light">{data.burnEfficiency}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.categories?.length > 0 && (
+                    <div>
+                      <SectionHeader><DollarSign className="w-3 h-3" /> Burn Categories</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Category</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Amount</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">% of Burn</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Trend</th>
+                          </tr></thead>
+                          <tbody>{data.categories.map((c: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{c.category || c.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.amount}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.percentage}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.trend}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 261 && (d as any).revenuePerEmployee && (() => {
+              const data = (d as any).revenuePerEmployee;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calculator className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Revenue Per Employee</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.revenuePerEmployee != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Rev/Employee</p>
+                          <p className="text-3xl font-light">{data.revenuePerEmployee}</p>
+                        </div>
+                      )}
+                      {data.industryBenchmark && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Industry Benchmark</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.industryBenchmark}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.departments?.length > 0 && (
+                    <div>
+                      <SectionHeader><Calculator className="w-3 h-3" /> By Department</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Department</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Headcount</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Rev/Head</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Efficiency</th>
+                          </tr></thead>
+                          <tbody>{data.departments.map((d: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{d.department || d.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{d.headcount}</td>
+                              <td className="py-2 px-3 text-zinc-600">{d.revenuePerHead}</td>
+                              <td className="py-2 px-3 text-zinc-600">{d.efficiency}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 262 && (d as any).financialBenchmarking && (() => {
+              const data = (d as any).financialBenchmarking;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Financial Benchmarking</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Benchmark Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.percentile && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Percentile</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.percentile}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.metrics?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Benchmark Metrics</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Metric</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Your Value</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Benchmark</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Gap</th>
+                          </tr></thead>
+                          <tbody>{data.metrics.map((m: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{m.metric || m.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{m.yourValue || m.current}</td>
+                              <td className="py-2 px-3 text-zinc-600">{m.benchmark}</td>
+                              <td className="py-2 px-3 text-zinc-600">{m.gap}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 263 && (d as any).investmentPortfolio && (() => {
+              const data = (d as any).investmentPortfolio;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Briefcase className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Investment Portfolio</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.totalInvestment != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Investment</p>
+                          <p className="text-3xl font-light">{data.totalInvestment}</p>
+                        </div>
+                      )}
+                      {data.expectedROI && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Expected ROI</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.expectedROI}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.investments?.length > 0 && (
+                    <div>
+                      <SectionHeader><Briefcase className="w-3 h-3" /> Investments</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Investment</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Amount</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">ROI</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                          </tr></thead>
+                          <tbody>{data.investments.map((inv: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{inv.investment || inv.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{inv.amount}</td>
+                              <td className="py-2 px-3 text-zinc-600">{inv.roi}</td>
+                              <td className="py-2 px-3 text-zinc-600">{inv.status}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 264 && (d as any).costAllocationModel && (() => {
+              const data = (d as any).costAllocationModel;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PieChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Cost Allocation Model</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.totalCosts != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Costs</p>
+                          <p className="text-3xl font-light">{data.totalCosts}</p>
+                        </div>
+                      )}
+                      {data.allocationEfficiency && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Efficiency</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.allocationEfficiency}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.allocations?.length > 0 && (
+                    <div>
+                      <SectionHeader><PieChart className="w-3 h-3" /> Cost Allocations</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Category</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Amount</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">% of Total</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Optimization</th>
+                          </tr></thead>
+                          <tbody>{data.allocations.map((a: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{a.category || a.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.amount}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.percentage}</td>
+                              <td className="py-2 px-3 text-zinc-600">{a.optimization}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 265 && (d as any).marginWaterfall && (() => {
+              const data = (d as any).marginWaterfall;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Margin Waterfall</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.grossMargin != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Gross Margin</p>
+                          <p className="text-3xl font-light">{data.grossMargin}</p>
+                        </div>
+                      )}
+                      {data.netMargin != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Net Margin</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.netMargin}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Waterfall Stages</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Margin After</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Optimization</th>
+                          </tr></thead>
+                          <tbody>{data.stages.map((s: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{s.stage || s.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.impact}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.marginAfter}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.optimization}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 266 && (d as any).customerOnboardingMetrics && (() => {
+              const data = (d as any).customerOnboardingMetrics;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ArrowRight className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Onboarding Metrics</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.completionRate != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Completion Rate</p>
+                          <p className="text-3xl font-light">{data.completionRate}</p>
+                        </div>
+                      )}
+                      {data.timeToValue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Time to Value</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.timeToValue}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.stages?.length > 0 && (
+                    <div>
+                      <SectionHeader><ArrowRight className="w-3 h-3" /> Onboarding Stages</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Stage</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Completion</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Drop-off</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Action</th>
+                          </tr></thead>
+                          <tbody>{data.stages.map((s: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{s.stage || s.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.completion}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.dropOff || s.dropoff}</td>
+                              <td className="py-2 px-3 text-zinc-600">{s.action}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 267 && (d as any).healthScoreModel && (() => {
+              const data = (d as any).healthScoreModel;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Health Score Model</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Model Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.healthyPercentage != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Healthy %</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.healthyPercentage}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldCheck className="w-3 h-3" /> Health Dimensions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Dimension</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Weight</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Score</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                          </tr></thead>
+                          <tbody>{data.dimensions.map((dim: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{dim.dimension || dim.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{dim.weight}</td>
+                              <td className="py-2 px-3 text-zinc-600">{dim.score}</td>
+                              <td className="py-2 px-3 text-zinc-600">{dim.impact}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 268 && (d as any).csExpansionPlaybook && (() => {
+              const data = (d as any).csExpansionPlaybook;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">CS Expansion Playbook</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.expansionPotential != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Expansion Potential</p>
+                          <p className="text-3xl font-light">{data.expansionPotential}</p>
+                        </div>
+                      )}
+                      {data.expansionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Expansion Rate</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.expansionRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.plays?.length > 0 && (
+                    <div>
+                      <SectionHeader><TrendingUp className="w-3 h-3" /> Expansion Plays</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Play</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Trigger</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Revenue</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Priority</th>
+                          </tr></thead>
+                          <tbody>{data.plays.map((p: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{p.play || p.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.trigger}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.revenue}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.priority}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 269 && (d as any).renewalForecasting && (() => {
+              const data = (d as any).renewalForecasting;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <LineChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Renewal Forecasting</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.renewalRate != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Renewal Rate</p>
+                          <p className="text-3xl font-light">{data.renewalRate}</p>
+                        </div>
+                      )}
+                      {data.atRiskRevenue && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">At-Risk Revenue</p>
+                          <p className="text-2xl font-light text-red-300">{data.atRiskRevenue}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.renewals?.length > 0 && (
+                    <div>
+                      <SectionHeader><LineChart className="w-3 h-3" /> Upcoming Renewals</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Account</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Value</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Likelihood</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Risk</th>
+                          </tr></thead>
+                          <tbody>{data.renewals.map((r: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{r.account || r.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{r.value}</td>
+                              <td className="py-2 px-3 text-zinc-600">{r.likelihood}</td>
+                              <td className="py-2 px-3 text-zinc-600">{r.risk}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 270 && (d as any).csOperations && (() => {
+              const data = (d as any).csOperations;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Gauge className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">CS Operations</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Ops Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.efficiency && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Efficiency</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.efficiency}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.processes?.length > 0 && (
+                    <div>
+                      <SectionHeader><Gauge className="w-3 h-3" /> CS Processes</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Process</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Maturity</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Automation</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                          </tr></thead>
+                          <tbody>{data.processes.map((p: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{p.process || p.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.maturity}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.automation}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.impact}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 271 && (d as any).customerMilestones && (() => {
+              const data = (d as any).customerMilestones;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Flag className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Customer Milestones</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.totalMilestones != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Milestones</p>
+                          <p className="text-3xl font-light">{data.totalMilestones}</p>
+                        </div>
+                      )}
+                      {data.completionRate && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Completion</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.completionRate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.milestones?.length > 0 && (
+                    <div>
+                      <SectionHeader><Flag className="w-3 h-3" /> Milestones</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Milestone</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Timeline</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Status</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                          </tr></thead>
+                          <tbody>{data.milestones.map((m: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{m.milestone || m.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{m.timeline}</td>
+                              <td className="py-2 px-3 text-zinc-600">{m.status}</td>
+                              <td className="py-2 px-3 text-zinc-600">{m.impact}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 272 && (d as any).okrFramework && (() => {
+              const data = (d as any).okrFramework;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">OKR Framework</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">OKR Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.alignmentScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Alignment</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.alignmentScore}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.objectives?.length > 0 && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Objectives</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Objective</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Key Results</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Progress</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Owner</th>
+                          </tr></thead>
+                          <tbody>{data.objectives.map((o: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{o.objective || o.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{typeof o.keyResults === "number" ? o.keyResults : Array.isArray(o.keyResults) ? o.keyResults.length : o.keyResults}</td>
+                              <td className="py-2 px-3 text-zinc-600">{o.progress}</td>
+                              <td className="py-2 px-3 text-zinc-600">{o.owner}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 273 && (d as any).strategicPillars && (() => {
+              const data = (d as any).strategicPillars;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Flag className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Strategic Pillars</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Strategy Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.pillarCount != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Pillars</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.pillarCount}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.pillars?.length > 0 && (
+                    <div>
+                      <SectionHeader><Flag className="w-3 h-3" /> Pillars</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Pillar</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Initiatives</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Progress</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Impact</th>
+                          </tr></thead>
+                          <tbody>{data.pillars.map((p: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{p.pillar || p.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{typeof p.initiatives === "number" ? p.initiatives : Array.isArray(p.initiatives) ? p.initiatives.length : p.initiatives}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.progress}</td>
+                              <td className="py-2 px-3 text-zinc-600">{p.impact}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 274 && (d as any).competitivePositioning && (() => {
+              const data = (d as any).competitivePositioning;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Competitive Positioning</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Position Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.marketPosition && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Market Position</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.marketPosition}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><Trophy className="w-3 h-3" /> Positioning Dimensions</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Dimension</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Your Position</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Leader</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Gap</th>
+                          </tr></thead>
+                          <tbody>{data.dimensions.map((dim: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{dim.dimension || dim.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{dim.yourPosition || dim.current}</td>
+                              <td className="py-2 px-3 text-zinc-600">{dim.leader}</td>
+                              <td className="py-2 px-3 text-zinc-600">{dim.gap}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 275 && (d as any).marketShareAnalysis && (() => {
+              const data = (d as any).marketShareAnalysis;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <PieChart className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Market Share Analysis</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.currentShare != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Current Share</p>
+                          <p className="text-3xl font-light">{data.currentShare}</p>
+                        </div>
+                      )}
+                      {data.totalMarketSize && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Market Size</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.totalMarketSize}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.competitors?.length > 0 && (
+                    <div>
+                      <SectionHeader><PieChart className="w-3 h-3" /> Market Share Breakdown</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Company</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Share</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Trend</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Strength</th>
+                          </tr></thead>
+                          <tbody>{data.competitors.map((c: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{c.company || c.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.share}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.trend}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.strength}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 276 && (d as any).growthCorridors && (() => {
+              const data = (d as any).growthCorridors;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Growth Corridors</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.totalOpportunity != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Opportunity</p>
+                          <p className="text-3xl font-light">{data.totalOpportunity}</p>
+                        </div>
+                      )}
+                      {data.topCorridor && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Top Corridor</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.topCorridor}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.corridors?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Growth Corridors</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Corridor</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Potential</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Readiness</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Timeline</th>
+                          </tr></thead>
+                          <tbody>{data.corridors.map((c: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{c.corridor || c.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.potential}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.readiness}</td>
+                              <td className="py-2 px-3 text-zinc-600">{c.timeline}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {activeTab === 277 && (d as any).valuePropCanvas && (() => {
+              const data = (d as any).valuePropCanvas;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Crosshair className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Value Prop Canvas</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{data.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {data.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Value Score</p>
+                          <p className="text-3xl font-light">{data.overallScore}</p>
+                        </div>
+                      )}
+                      {data.fitScore && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Fit Score</p>
+                          <p className="text-2xl font-light text-emerald-300">{data.fitScore}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {data.elements?.length > 0 && (
+                    <div>
+                      <SectionHeader><Crosshair className="w-3 h-3" /> Canvas Elements</SectionHeader>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-zinc-200">
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Element</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Customer Need</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Your Solution</th>
+                            <th className="text-left py-2 px-3 text-[10px] font-mono text-zinc-400 uppercase">Fit</th>
+                          </tr></thead>
+                          <tbody>{data.elements.map((e: any, i: number) => (
+                            <tr key={i} className="border-b border-zinc-100">
+                              <td className="py-2 px-3 font-medium text-zinc-900">{e.element || e.name}</td>
+                              <td className="py-2 px-3 text-zinc-600">{e.customerNeed}</td>
+                              <td className="py-2 px-3 text-zinc-600">{e.yourSolution || e.solution}</td>
+                              <td className="py-2 px-3 text-zinc-600">{e.fit}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-2">{data.recommendations.map((rec: any, i: number) => (
+                        <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
+                          <p className="text-sm text-zinc-900">{typeof rec === "string" ? rec : rec.recommendation || rec.action}</p>
+                        </div>
+                      ))}</div>
                     </div>
                   )}
                 </div>
