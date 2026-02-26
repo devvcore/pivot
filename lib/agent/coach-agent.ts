@@ -84,7 +84,13 @@ KEY SECTIONS FOR COACHING:
 - pricingElasticity: price sensitivity, tier analysis, bundling opportunities
 - strategicInitiatives: strategic bets, ROI projections, resource constraints
 - cashConversionCycle: DSO/DPO/DIO metrics, working capital efficiency
-- innovationPipeline: innovation score, project portfolio, stage pipeline`;
+- innovationPipeline: innovation score, project portfolio, stage pipeline
+- stakeholderMap: key stakeholders, influence levels, communication strategies
+- decisionLog: pending decisions, critical decisions, decision framework
+- cultureAssessment: culture score, dimensions, core values, alignment gaps
+- ipPortfolio: IP assets, protection status, filing recommendations
+- exitReadiness: exit score, valuation range, preparation steps
+- sustainabilityScore: ESG scores, material issues, regulatory requirements`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -156,6 +162,12 @@ const TOOLS = [
             "strategicInitiatives",
             "cashConversionCycle",
             "innovationPipeline",
+            "stakeholderMap",
+            "decisionLog",
+            "cultureAssessment",
+            "ipPortfolio",
+            "exitReadiness",
+            "sustainabilityScore",
           ],
           description: "Which report section to retrieve",
         },
@@ -404,6 +416,9 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).productMarketFit) parts.push(`Product-Market Fit: Overall score: ${(d as any).productMarketFit.overallScore ?? "N/A"}, Grade: ${(d as any).productMarketFit.grade || "N/A"}`);
     if ((d as any).brandHealth) parts.push(`Brand Health: Overall score: ${(d as any).brandHealth.overallScore ?? "N/A"}, Brand strength: ${(d as any).brandHealth.brandStrength || "N/A"}`);
     if ((d as any).innovationPipeline) parts.push(`Innovation Pipeline: Innovation score: ${(d as any).innovationPipeline.innovationScore ?? "N/A"}, Projects: ${(d as any).innovationPipeline.projects?.length || 0}`);
+    if ((d as any).exitReadiness) parts.push(`Exit Readiness: Score: ${(d as any).exitReadiness.overallScore ?? "N/A"}/100, Valuation range: ${(d as any).exitReadiness.valuationRange || "N/A"}`);
+    if ((d as any).cultureAssessment) parts.push(`Culture Assessment: Score: ${(d as any).cultureAssessment.overallScore ?? "N/A"}/100, Culture type: ${(d as any).cultureAssessment.cultureType || "N/A"}`);
+    if ((d as any).sustainabilityScore) parts.push(`Sustainability Score: Score: ${(d as any).sustainabilityScore.overallScore ?? "N/A"}/100, Grade: ${(d as any).sustainabilityScore.grade || "N/A"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

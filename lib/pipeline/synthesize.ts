@@ -58,6 +58,12 @@ import type {
   StrategicInitiatives,
   CashConversionCycle,
   InnovationPipeline,
+  StakeholderMap,
+  DecisionLog,
+  CultureAssessment,
+  IPPortfolio,
+  ExitReadiness,
+  SustainabilityScore,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -4271,6 +4277,509 @@ ${schema}`;
     return result as unknown as InnovationPipeline;
   } catch (e) {
     console.warn("[Pivot] Innovation Pipeline synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 8: Stakeholder Map ──────────────────────────────────────────────────
+
+export async function synthesizeStakeholderMap(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<StakeholderMap | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence stakeholder landscape overview",
+  "stakeholders": [{
+    "name": "stakeholder name or role title",
+    "role": "their role in the organization or ecosystem",
+    "influenceLevel": "high|medium|low",
+    "supportLevel": "champion|supporter|neutral|skeptic|blocker",
+    "interests": ["interest 1", "..."],
+    "communicationStyle": "preferred communication approach",
+    "engagementStrategy": "specific strategy to engage this stakeholder"
+  }],
+  "powerDynamics": "description of power dynamics between key stakeholders",
+  "communicationPlan": "recommended communication cadence and approach",
+  "keyRelationships": ["relationship 1", "..."],
+  "risks": ["stakeholder risk 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an organizational strategist mapping stakeholder relationships and influence patterns.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+Key Decision: ${questionnaire.oneDecisionKeepingOwnerUpAtNight}
+Key Customers: ${questionnaire.keyCustomers ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive stakeholder mapping analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the stakeholder landscape and key dynamics.
+
+2. STAKEHOLDERS (6-10): Identify the most important internal and external stakeholders. For each:
+   - Name or role title (use role titles if names are not in the data)
+   - Their role in the organization or ecosystem
+   - Influence level: high (can block or accelerate decisions), medium (provides input), low (affected but limited influence)
+   - Support level: champion (actively promotes), supporter (positive), neutral, skeptic (has concerns), blocker (actively opposes)
+   - Interests (2-3): What they care most about
+   - Communication style: How they prefer to receive information
+   - Engagement strategy: Specific approach to keep them aligned
+
+3. POWER DYNAMICS: Describe the relationships and tensions between key stakeholders — who influences whom, where alliances and conflicts exist.
+
+4. COMMUNICATION PLAN: Recommended communication cadence and channels for stakeholder management.
+
+5. KEY RELATIONSHIPS (4-6): The most important stakeholder relationships that must be managed.
+
+6. RISKS (3-5): Stakeholder-related risks — disengagement, misalignment, competing interests.
+
+7. RECOMMENDATIONS (4-6): Prioritized actions to improve stakeholder alignment and engagement.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent names or relationships.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Stakeholder Map...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as StakeholderMap;
+  } catch (e) {
+    console.warn("[Pivot] Stakeholder Map synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 8: Decision Log ─────────────────────────────────────────────────────
+
+export async function synthesizeDecisionLog(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<DecisionLog | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence decision landscape overview",
+  "decisions": [{
+    "title": "decision title",
+    "description": "what this decision involves",
+    "category": "Strategic|Financial|Operational|Product",
+    "status": "pending|made|deferred|reversed",
+    "urgency": "critical|high|medium|low",
+    "rationale": "why this decision matters now",
+    "alternatives": ["alternative 1", "..."],
+    "expectedOutcome": "what happens if this decision is made",
+    "risks": ["risk if wrong", "..."],
+    "owner": "who should own this decision",
+    "deadline": "recommended deadline"
+  }],
+  "decisionFramework": "recommended framework for making these decisions",
+  "pendingCount": 0,
+  "criticalDecisions": ["critical decision 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a decision intelligence analyst identifying and prioritizing business decisions.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+Key Decision: ${questionnaire.oneDecisionKeepingOwnerUpAtNight}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+
+Perform a comprehensive decision log analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the decision landscape and priorities.
+
+2. DECISIONS (6-10): Identify the most important pending and recent business decisions. For each:
+   - Title: Short name for the decision
+   - Description: What this decision involves
+   - Category: Strategic, Financial, Operational, or Product
+   - Status: pending (not yet decided), made (decided recently), deferred (postponed), reversed (changed course)
+   - Urgency: critical (decide this week), high (decide this month), medium (this quarter), low (can wait)
+   - Rationale: Why this decision matters now
+   - Alternatives (2-3): Other options considered
+   - Expected outcome: What happens if the recommended path is taken
+   - Risks (1-3): What could go wrong
+   - Owner: Who should own this decision
+   - Deadline: Recommended decision deadline
+
+   IMPORTANT: The first decision should be based on "${questionnaire.oneDecisionKeepingOwnerUpAtNight}"
+
+3. DECISION FRAMEWORK: Recommend a decision-making framework appropriate for this business (e.g., RAPID, DACI, or a simplified approach).
+
+4. PENDING COUNT: How many decisions are currently pending.
+
+5. CRITICAL DECISIONS (2-4): Which decisions need immediate attention and why.
+
+6. RECOMMENDATIONS (4-6): Actions to improve decision-making speed and quality.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent specifics.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Decision Log...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as DecisionLog;
+  } catch (e) {
+    console.warn("[Pivot] Decision Log synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 8: Culture Assessment ───────────────────────────────────────────────
+
+export async function synthesizeCultureAssessment(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CultureAssessment | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence culture assessment overview",
+  "overallScore": 0,
+  "cultureType": "Clan|Adhocracy|Market|Hierarchy",
+  "dimensions": [{
+    "dimension": "Innovation",
+    "score": 7,
+    "description": "description of this cultural dimension",
+    "strengths": ["strength 1", "..."],
+    "weaknesses": ["weakness 1", "..."],
+    "improvementAction": "specific action to improve this dimension"
+  }],
+  "coreValues": ["value 1", "..."],
+  "alignmentGaps": ["gap 1", "..."],
+  "retentionRisks": ["risk 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an organizational psychologist assessing company culture and team dynamics.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+
+Perform a comprehensive organizational culture assessment:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the organizational culture and key findings.
+
+2. OVERALL SCORE (0-100): Composite culture health score reflecting alignment, engagement, and effectiveness.
+
+3. CULTURE TYPE: Classify using the Competing Values Framework:
+   - Clan: Collaborative, family-like, mentorship-focused
+   - Adhocracy: Creative, entrepreneurial, risk-taking
+   - Market: Results-oriented, competitive, achievement-focused
+   - Hierarchy: Structured, process-driven, efficiency-focused
+
+4. DIMENSIONS (4 required): Evaluate these cultural dimensions, each scored 1-10:
+   a. Innovation — How well does the culture support experimentation and new ideas?
+   b. Collaboration — How effectively do teams work together across functions?
+   c. Accountability — Is there clear ownership and follow-through on commitments?
+   d. Agility — How quickly can the organization adapt to change?
+   For each, provide a score, description, strengths, weaknesses, and a specific improvement action.
+
+5. CORE VALUES (3-5): The implicit or explicit values that drive behavior in this organization.
+
+6. ALIGNMENT GAPS (3-5): Where the stated culture and actual behavior diverge — the "say-do gap."
+
+7. RETENTION RISKS (3-5): Cultural factors that may drive talent attrition.
+
+8. RECOMMENDATIONS (4-6): Prioritized actions to strengthen organizational culture.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent specifics.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Culture Assessment...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CultureAssessment;
+  } catch (e) {
+    console.warn("[Pivot] Culture Assessment synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 8: IP Portfolio ─────────────────────────────────────────────────────
+
+export async function synthesizeIPPortfolio(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<IPPortfolio | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence IP portfolio overview",
+  "assets": [{
+    "name": "asset name",
+    "type": "patent|trademark|copyright|trade_secret|domain|software",
+    "status": "registered|pending|unprotected|expired",
+    "value": "$X estimated value",
+    "protectionStrategy": "how to protect this asset",
+    "expirationDate": "YYYY-MM-DD or null"
+  }],
+  "totalEstimatedValue": "$X total portfolio value",
+  "protectionGaps": ["gap 1", "..."],
+  "competitiveAdvantage": "how IP contributes to competitive moat",
+  "filingRecommendations": ["filing recommendation 1", "..."],
+  "risks": ["IP risk 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an intellectual property strategist assessing a company's IP portfolio and protection strategy.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Website: ${questionnaire.website ?? "Not specified"}
+Tech Stack: ${questionnaire.techStack ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive intellectual property portfolio analysis:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the IP landscape and key findings.
+
+2. ASSETS (4-8): Identify known and potential IP assets. For each:
+   - Name: The specific asset (brand name, product name, process, technology, etc.)
+   - Type: patent, trademark, copyright, trade_secret, domain, or software
+   - Status: registered (formally protected), pending (application in progress), unprotected (not yet filed), expired
+   - Value: Estimated monetary value or strategic value
+   - Protection strategy: Recommended approach to secure/maintain protection
+   - Expiration date: If applicable (null otherwise)
+
+3. TOTAL ESTIMATED VALUE: Aggregate estimated value of the IP portfolio.
+
+4. PROTECTION GAPS (3-5): Areas where valuable IP is unprotected or under-protected.
+
+5. COMPETITIVE ADVANTAGE: How the IP portfolio contributes to the company's competitive moat.
+
+6. FILING RECOMMENDATIONS (3-5): Specific IP filings or registrations the company should pursue.
+
+7. RISKS (3-5): IP-related risks — infringement exposure, expiring protections, competitor actions.
+
+8. RECOMMENDATIONS (4-6): Prioritized actions to strengthen the IP portfolio.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent asset names or values.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating IP Portfolio...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as IPPortfolio;
+  } catch (e) {
+    console.warn("[Pivot] IP Portfolio synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 8: Exit Readiness ───────────────────────────────────────────────────
+
+export async function synthesizeExitReadiness(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ExitReadiness | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence exit readiness overview",
+  "overallScore": 0,
+  "exitTimeline": "X-Y months to be exit-ready",
+  "valuationRange": "$XM-$YM based on current metrics",
+  "dimensions": [{
+    "dimension": "Financial Performance",
+    "score": 7,
+    "status": "ready|needs_work|not_ready",
+    "gapToClose": "what needs to happen to be ready"
+  }],
+  "valuationDrivers": ["driver 1", "..."],
+  "valuationDetractors": ["detractor 1", "..."],
+  "buyerProfiles": ["buyer profile 1", "..."],
+  "preparationSteps": ["step 1", "..."],
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an M&A advisor assessing a company's readiness for exit (acquisition, merger, or IPO).
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Key Concern: ${questionnaire.keyConcerns}
+Primary Objective: ${questionnaire.primaryObjective ?? "Growth"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive exit readiness assessment:
+
+1. SUMMARY: Provide a 2-3 sentence overview of exit readiness and key findings.
+
+2. OVERALL SCORE (0-100): Composite exit readiness score.
+
+3. EXIT TIMELINE: Estimated time to be exit-ready (e.g., "12-18 months to be exit-ready").
+
+4. VALUATION RANGE: Estimated valuation range based on available data, revenue multiples, and industry benchmarks.
+
+5. DIMENSIONS (5 required): Evaluate these exit readiness dimensions, each scored 1-10:
+   a. Financial Performance — Revenue growth, profitability, clean financials
+   b. Growth Trajectory — Growth rate, market opportunity, scalability
+   c. Market Position — Competitive advantage, market share, brand strength
+   d. Operational Maturity — Processes, team, technology infrastructure
+   e. Legal & Compliance — IP protection, contracts, regulatory compliance
+   For each, provide a score, status (ready / needs_work / not_ready), and the gap to close.
+
+6. VALUATION DRIVERS (4-6): Factors that increase the company's value to potential buyers.
+
+7. VALUATION DETRACTORS (3-5): Factors that decrease value or create buyer concern.
+
+8. BUYER PROFILES (3-5): Types of buyers most likely to be interested and why.
+
+9. PREPARATION STEPS (5-8): Ordered steps to improve exit readiness.
+
+10. RECOMMENDATIONS (4-6): Prioritized actions to maximize exit value.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent valuation figures.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Exit Readiness...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ExitReadiness;
+  } catch (e) {
+    console.warn("[Pivot] Exit Readiness synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 8: Sustainability Score ─────────────────────────────────────────────
+
+export async function synthesizeSustainabilityScore(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SustainabilityScore | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence sustainability overview",
+  "overallScore": 0,
+  "grade": "A|B|C|D|F",
+  "dimensions": [{
+    "area": "Environmental",
+    "score": 7,
+    "initiatives": ["initiative 1", "..."],
+    "gaps": ["gap 1", "..."],
+    "quickWins": ["quick win 1", "..."]
+  }],
+  "materialIssues": ["material issue 1", "..."],
+  "stakeholderExpectations": ["expectation 1", "..."],
+  "regulatoryRequirements": ["requirement 1", "..."],
+  "competitiveAdvantage": "how sustainability contributes to competitive positioning",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an ESG (Environmental, Social, Governance) analyst assessing a company's sustainability posture.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Competitors: ${questionnaire.keyCompetitors ?? "Not specified"}
+
+Perform a comprehensive sustainability and ESG assessment:
+
+1. SUMMARY: Provide a 2-3 sentence overview of the company's sustainability posture.
+
+2. OVERALL SCORE (0-100): Composite ESG score reflecting environmental, social, and governance performance.
+
+3. GRADE: Letter grade (A = exemplary, B = strong, C = average, D = below average, F = failing).
+
+4. DIMENSIONS (3 required): Evaluate these ESG pillars, each scored 1-10:
+   a. Environmental — Carbon footprint, resource usage, waste management, environmental initiatives.
+   b. Social — Employee welfare, community impact, diversity and inclusion, labor practices.
+   c. Governance — Board structure, transparency, ethics, compliance, stakeholder engagement.
+   For each, provide a score, current initiatives, gaps, and quick wins.
+
+5. MATERIAL ISSUES (3-5): The ESG issues most material to this specific business and industry — the issues that could most significantly impact financial performance or stakeholder trust.
+
+6. STAKEHOLDER EXPECTATIONS (3-5): What customers, employees, investors, and regulators expect from this company on sustainability.
+
+7. REGULATORY REQUIREMENTS (3-5): Current and upcoming ESG regulations relevant to this business's industry and location.
+
+8. COMPETITIVE ADVANTAGE: How sustainability initiatives can strengthen competitive positioning and create value.
+
+9. RECOMMENDATIONS (4-6): Prioritized actions to improve the sustainability posture.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent metrics or initiatives.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Sustainability Score...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SustainabilityScore;
+  } catch (e) {
+    console.warn("[Pivot] Sustainability Score synthesis failed:", e);
     return null;
   }
 }

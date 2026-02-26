@@ -726,6 +726,13 @@ export interface MVPDeliverables {
   strategicInitiatives?: StrategicInitiatives;
   cashConversionCycle?: CashConversionCycle;
   innovationPipeline?: InnovationPipeline;
+  // Wave 8 features
+  stakeholderMap?: StakeholderMap;
+  decisionLog?: DecisionLog;
+  cultureAssessment?: CultureAssessment;
+  ipPortfolio?: IPPortfolio;
+  exitReadiness?: ExitReadiness;
+  sustainabilityScore?: SustainabilityScore;
 }
 
 export interface BenchmarkDimension {
@@ -1500,4 +1507,132 @@ export interface InnovationPipeline {
   gapAreas: string[];
   recommendations: string[];
   innovationCulture: string;      // assessment of org's innovation readiness
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave 8: Stakeholder Map, Decision Log, Culture Assessment,
+//          IP Portfolio, Exit Readiness, Sustainability Score
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface Stakeholder {
+  name: string;
+  role: string;
+  influenceLevel: "high" | "medium" | "low";
+  supportLevel: "champion" | "supporter" | "neutral" | "skeptic" | "blocker";
+  interests: string[];
+  communicationStyle: string;
+  engagementStrategy: string;
+}
+
+export interface StakeholderMap {
+  summary: string;
+  stakeholders: Stakeholder[];
+  powerDynamics: string;
+  communicationPlan: string;
+  keyRelationships: string[];
+  risks: string[];
+  recommendations: string[];
+}
+
+export interface Decision {
+  title: string;
+  description: string;
+  category: string;                // "Strategic", "Financial", "Operational", "Product"
+  status: "pending" | "made" | "deferred" | "reversed";
+  urgency: "critical" | "high" | "medium" | "low";
+  rationale: string;
+  alternatives: string[];
+  expectedOutcome: string;
+  risks: string[];
+  owner: string;
+  deadline?: string;
+}
+
+export interface DecisionLog {
+  summary: string;
+  decisions: Decision[];
+  decisionFramework: string;
+  pendingCount: number;
+  criticalDecisions: string[];
+  recommendations: string[];
+}
+
+export interface CultureDimension {
+  dimension: string;              // "Innovation", "Collaboration", "Accountability", "Agility"
+  score: number;                  // 1-10
+  description: string;
+  strengths: string[];
+  weaknesses: string[];
+  improvementAction: string;
+}
+
+export interface CultureAssessment {
+  summary: string;
+  overallScore: number;           // 0-100
+  cultureType: string;            // "Clan", "Adhocracy", "Market", "Hierarchy"
+  dimensions: CultureDimension[];
+  coreValues: string[];
+  alignmentGaps: string[];
+  retentionRisks: string[];
+  recommendations: string[];
+}
+
+export interface IPAsset {
+  name: string;
+  type: "patent" | "trademark" | "copyright" | "trade_secret" | "domain" | "software";
+  status: "registered" | "pending" | "unprotected" | "expired";
+  value: string;
+  protectionStrategy: string;
+  expirationDate?: string;
+}
+
+export interface IPPortfolio {
+  summary: string;
+  assets: IPAsset[];
+  totalEstimatedValue: string;
+  protectionGaps: string[];
+  competitiveAdvantage: string;
+  filingRecommendations: string[];
+  risks: string[];
+  recommendations: string[];
+}
+
+export interface ExitDimension {
+  dimension: string;              // "Financial Performance", "Growth Trajectory", "Market Position"
+  score: number;                  // 1-10
+  status: "ready" | "needs_work" | "not_ready";
+  gapToClose: string;
+}
+
+export interface ExitReadiness {
+  summary: string;
+  overallScore: number;           // 0-100
+  exitTimeline: string;           // "12-18 months to be exit-ready"
+  valuationRange: string;         // "$5M-$8M based on current metrics"
+  dimensions: ExitDimension[];
+  valuationDrivers: string[];
+  valuationDetractors: string[];
+  buyerProfiles: string[];
+  preparationSteps: string[];
+  recommendations: string[];
+}
+
+export interface ESGDimension {
+  area: string;                   // "Environmental", "Social", "Governance"
+  score: number;                  // 1-10
+  initiatives: string[];
+  gaps: string[];
+  quickWins: string[];
+}
+
+export interface SustainabilityScore {
+  summary: string;
+  overallScore: number;           // 0-100
+  grade: "A" | "B" | "C" | "D" | "F";
+  dimensions: ESGDimension[];
+  materialIssues: string[];
+  stakeholderExpectations: string[];
+  regulatoryRequirements: string[];
+  competitiveAdvantage: string;
+  recommendations: string[];
 }

@@ -90,6 +90,12 @@ const TABS = [
   { id: 53, label: "Initiatives",     icon: Flag,         dataKey: "strategicInitiatives"  },
   { id: 54, label: "Cash Cycle",      icon: Calculator,   dataKey: "cashConversionCycle"   },
   { id: 55, label: "Innovation",      icon: Sparkles,     dataKey: "innovationPipeline"    },
+  { id: 56, label: "Stakeholders",   icon: Users,        dataKey: "stakeholderMap"        },
+  { id: 57, label: "Decision Log",   icon: ClipboardCheck, dataKey: "decisionLog"         },
+  { id: 58, label: "Culture",        icon: Users,        dataKey: "cultureAssessment"     },
+  { id: 59, label: "IP Portfolio",   icon: ShieldCheck,  dataKey: "ipPortfolio"           },
+  { id: 60, label: "Exit Ready",     icon: Target,       dataKey: "exitReadiness"         },
+  { id: 61, label: "Sustainability", icon: Globe,        dataKey: "sustainabilityScore"   },
 ];
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -6223,6 +6229,707 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
                         <p className="text-sm text-zinc-700">{typeof ip.cultureAssessment === "string" ? ip.cultureAssessment : ip.cultureAssessment.description || ip.cultureAssessment.summary}</p>
                       </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 56: Stakeholder Map ────────────────────────────────────── */}
+            {activeTab === 56 && (d as any).stakeholderMap && (() => {
+              const sm = (d as any).stakeholderMap;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Stakeholder Map</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{sm.summary}</p>
+                  </div>
+
+                  {/* Stakeholder cards */}
+                  {sm.stakeholders?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Key Stakeholders</SectionHeader>
+                      <div className="space-y-4">
+                        {sm.stakeholders.map((s: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="text-sm font-semibold text-zinc-900">{s.name}</p>
+                                {s.role && <p className="text-xs text-zinc-500 mt-0.5">{s.role}</p>}
+                              </div>
+                              <div className="flex gap-2">
+                                {s.influenceLevel && (
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                    s.influenceLevel === "high" || s.influenceLevel === "High" ? "bg-red-50 text-red-700 border-red-200" :
+                                    s.influenceLevel === "medium" || s.influenceLevel === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    "bg-green-50 text-green-700 border-green-200"
+                                  }`}>{s.influenceLevel} influence</span>
+                                )}
+                                {s.supportLevel && (
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                    s.supportLevel === "champion" || s.supportLevel === "Champion" ? "bg-green-50 text-green-700 border-green-200" :
+                                    s.supportLevel === "supporter" || s.supportLevel === "Supporter" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                    s.supportLevel === "neutral" || s.supportLevel === "Neutral" ? "bg-zinc-50 text-zinc-600 border-zinc-200" :
+                                    s.supportLevel === "skeptic" || s.supportLevel === "Skeptic" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    "bg-red-50 text-red-700 border-red-200"
+                                  }`}>{s.supportLevel}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                              {s.interests && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Interests</p>
+                                  <p className="text-zinc-700">{typeof s.interests === "string" ? s.interests : Array.isArray(s.interests) ? s.interests.join(", ") : ""}</p>
+                                </div>
+                              )}
+                              {s.communicationStyle && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Communication Style</p>
+                                  <p className="text-zinc-700">{s.communicationStyle}</p>
+                                </div>
+                              )}
+                              {s.engagementStrategy && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Engagement Strategy</p>
+                                  <p className="text-zinc-700">{s.engagementStrategy}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Power dynamics */}
+                  {sm.powerDynamics && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Power Dynamics</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                        <p className="text-sm text-zinc-700">{typeof sm.powerDynamics === "string" ? sm.powerDynamics : sm.powerDynamics.description || sm.powerDynamics.summary}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Communication plan */}
+                  {sm.communicationPlan && (
+                    <div>
+                      <SectionHeader><ClipboardCheck className="w-3 h-3" /> Communication Plan</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                        <p className="text-sm text-zinc-700">{typeof sm.communicationPlan === "string" ? sm.communicationPlan : sm.communicationPlan.description || sm.communicationPlan.summary}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Key relationships */}
+                  {sm.keyRelationships?.length > 0 && (
+                    <div>
+                      <SectionHeader><GitBranch className="w-3 h-3" /> Key Relationships</SectionHeader>
+                      <div className="space-y-2">
+                        {sm.keyRelationships.map((rel: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                            <GitBranch className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                            <p className="text-sm text-zinc-700">{typeof rel === "string" ? rel : rel.description || rel.relationship || rel.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 57: Decision Log ────────────────────────────────────────── */}
+            {activeTab === 57 && (d as any).decisionLog && (() => {
+              const dl = (d as any).decisionLog;
+              const pendingCount = dl.decisions?.filter((dec: any) => dec.status === "pending" || dec.status === "Pending").length ?? 0;
+              const criticalCount = dl.decisions?.filter((dec: any) => dec.urgency === "critical" || dec.urgency === "Critical" || dec.urgency === "high" || dec.urgency === "High").length ?? 0;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ClipboardCheck className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Decision Log</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{dl.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      <div>
+                        <p className="text-[9px] font-mono text-zinc-500 uppercase">Pending</p>
+                        <p className="text-3xl font-light">{pendingCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-mono text-zinc-500 uppercase">Critical</p>
+                        <p className="text-3xl font-light text-red-400">{criticalCount}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Decision cards */}
+                  {dl.decisions?.length > 0 && (
+                    <div>
+                      <SectionHeader><ClipboardCheck className="w-3 h-3" /> Decisions</SectionHeader>
+                      <div className="space-y-4">
+                        {dl.decisions.map((dec: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start justify-between mb-3">
+                              <p className="text-sm font-semibold text-zinc-900">{dec.title || dec.decision || dec.name}</p>
+                              <div className="flex gap-2">
+                                {dec.status && (
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                    dec.status === "pending" || dec.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    dec.status === "made" || dec.status === "Made" || dec.status === "approved" || dec.status === "Approved" ? "bg-green-50 text-green-700 border-green-200" :
+                                    dec.status === "deferred" || dec.status === "Deferred" ? "bg-zinc-50 text-zinc-600 border-zinc-200" :
+                                    dec.status === "reversed" || dec.status === "Reversed" ? "bg-red-50 text-red-700 border-red-200" :
+                                    "bg-zinc-50 text-zinc-600 border-zinc-200"
+                                  }`}>{dec.status}</span>
+                                )}
+                                {dec.urgency && (
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                    dec.urgency === "critical" || dec.urgency === "Critical" || dec.urgency === "high" || dec.urgency === "High" ? "bg-red-50 text-red-700 border-red-200" :
+                                    dec.urgency === "medium" || dec.urgency === "Medium" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    "bg-green-50 text-green-700 border-green-200"
+                                  }`}>{dec.urgency}</span>
+                                )}
+                              </div>
+                            </div>
+                            {dec.category && (
+                              <span className="inline-block text-[9px] font-mono px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 mb-3">{dec.category}</span>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                              {dec.rationale && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Rationale</p>
+                                  <p className="text-zinc-700">{dec.rationale}</p>
+                                </div>
+                              )}
+                              {dec.alternatives && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Alternatives</p>
+                                  <p className="text-zinc-700">{typeof dec.alternatives === "string" ? dec.alternatives : Array.isArray(dec.alternatives) ? dec.alternatives.join(", ") : ""}</p>
+                                </div>
+                              )}
+                              {dec.expectedOutcome && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Expected Outcome</p>
+                                  <p className="text-zinc-700">{dec.expectedOutcome}</p>
+                                </div>
+                              )}
+                              {dec.risks && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Risks</p>
+                                  <p className="text-zinc-700">{typeof dec.risks === "string" ? dec.risks : Array.isArray(dec.risks) ? dec.risks.join(", ") : ""}</p>
+                                </div>
+                              )}
+                              {dec.owner && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Owner</p>
+                                  <p className="text-zinc-700 font-medium">{dec.owner}</p>
+                                </div>
+                              )}
+                              {dec.deadline && (
+                                <div>
+                                  <p className="text-[9px] font-mono text-zinc-400 uppercase">Deadline</p>
+                                  <p className="text-zinc-700 font-medium">{dec.deadline}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Decision framework */}
+                  {dl.decisionFramework && (
+                    <div>
+                      <SectionHeader><Target className="w-3 h-3" /> Decision Framework</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                        <p className="text-sm text-zinc-700">{typeof dl.decisionFramework === "string" ? dl.decisionFramework : dl.decisionFramework.description || dl.decisionFramework.summary}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 58: Culture Assessment ──────────────────────────────────── */}
+            {activeTab === 58 && (d as any).cultureAssessment && (() => {
+              const ca = (d as any).cultureAssessment;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Culture Assessment</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ca.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ca.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Score</p>
+                          <p className="text-3xl font-light">{ca.overallScore}<span className="text-base text-zinc-500">/10</span></p>
+                        </div>
+                      )}
+                      {ca.cultureType && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Culture Type</p>
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-zinc-700">{ca.cultureType}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Culture dimensions */}
+                  {ca.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Culture Dimensions</SectionHeader>
+                      <div className="space-y-4">
+                        {ca.dimensions.map((dim: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-zinc-900">{dim.name || dim.dimension}</p>
+                              <span className="text-xs font-mono text-zinc-500">{dim.score}/10</span>
+                            </div>
+                            <div className="w-full bg-zinc-100 rounded-full h-2 mb-2">
+                              <div className="bg-zinc-900 h-2 rounded-full transition-all" style={{ width: `${(dim.score / 10) * 100}%` }} />
+                            </div>
+                            {dim.description && <p className="text-xs text-zinc-600">{dim.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Core values */}
+                  {ca.coreValues?.length > 0 && (
+                    <div>
+                      <SectionHeader><Flag className="w-3 h-3" /> Core Values</SectionHeader>
+                      <div className="flex flex-wrap gap-2">
+                        {ca.coreValues.map((v: any, i: number) => (
+                          <span key={i} className="text-xs font-mono px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">{typeof v === "string" ? v : v.name || v.value}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alignment gaps */}
+                  {ca.alignmentGaps?.length > 0 && (
+                    <div>
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-amber-500" /> Alignment Gaps</SectionHeader>
+                      <div className="space-y-2">
+                        {ca.alignmentGaps.map((gap: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-amber-50 border border-amber-100 rounded-xl p-4">
+                            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-900">{typeof gap === "string" ? gap : gap.gap || gap.description || gap.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Retention risks */}
+                  {ca.retentionRisks?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldAlert className="w-3 h-3 text-red-500" /> Retention Risks</SectionHeader>
+                      <div className="space-y-2">
+                        {ca.retentionRisks.map((risk: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-red-50 border border-red-100 rounded-xl p-4">
+                            <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-900">{typeof risk === "string" ? risk : risk.risk || risk.description || risk.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {ca.recommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Sparkles className="w-3 h-3" /> Recommendations</SectionHeader>
+                      <div className="space-y-3">
+                        {ca.recommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <p className="text-sm text-zinc-700">{typeof rec === "string" ? rec : rec.recommendation || rec.description || rec.name}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 59: IP Portfolio ────────────────────────────────────────── */}
+            {activeTab === 59 && (d as any).ipPortfolio && (() => {
+              const ipp = (d as any).ipPortfolio;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">IP Portfolio</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ipp.summary}</p>
+                    {ipp.totalEstimatedValue && (
+                      <div className="mt-4">
+                        <p className="text-[9px] font-mono text-zinc-500 uppercase">Total Estimated Value</p>
+                        <p className="text-3xl font-light">{ipp.totalEstimatedValue}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* IP assets table */}
+                  {ipp.assets?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldCheck className="w-3 h-3" /> IP Assets</SectionHeader>
+                      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-100 bg-zinc-50">
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Name</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Type</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Status</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Value</th>
+                              <th className="text-left px-4 py-3 text-[9px] font-mono text-zinc-400 uppercase">Protection Strategy</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ipp.assets.map((a: any, i: number) => (
+                              <tr key={i} className="border-b border-zinc-50">
+                                <td className="px-4 py-3 font-medium text-zinc-900">{a.name || a.asset}</td>
+                                <td className="px-4 py-3">
+                                  {a.type && (
+                                    <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">{a.type}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {a.status && (
+                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                      a.status === "registered" || a.status === "Registered" || a.status === "granted" || a.status === "Granted" ? "bg-green-50 text-green-700 border-green-200" :
+                                      a.status === "pending" || a.status === "Pending" || a.status === "filed" || a.status === "Filed" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                      a.status === "unprotected" || a.status === "Unprotected" ? "bg-red-50 text-red-700 border-red-200" :
+                                      "bg-zinc-50 text-zinc-600 border-zinc-200"
+                                    }`}>{a.status}</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-zinc-700">{a.value || a.estimatedValue}</td>
+                                <td className="px-4 py-3 text-zinc-600 text-xs">{a.protectionStrategy || a.strategy}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Protection gaps */}
+                  {ipp.protectionGaps?.length > 0 && (
+                    <div>
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-amber-500" /> Protection Gaps</SectionHeader>
+                      <div className="space-y-2">
+                        {ipp.protectionGaps.map((gap: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-amber-50 border border-amber-100 rounded-xl p-4">
+                            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-900">{typeof gap === "string" ? gap : gap.gap || gap.description || gap.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Filing recommendations */}
+                  {ipp.filingRecommendations?.length > 0 && (
+                    <div>
+                      <SectionHeader><FileText className="w-3 h-3" /> Filing Recommendations</SectionHeader>
+                      <div className="space-y-3">
+                        {ipp.filingRecommendations.map((rec: any, i: number) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <p className="text-sm text-zinc-700">{typeof rec === "string" ? rec : rec.recommendation || rec.description || rec.name}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Competitive advantage */}
+                  {ipp.competitiveAdvantage && (
+                    <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6 shadow-sm text-center">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Competitive Advantage</p>
+                      <p className="text-xl font-light text-zinc-900">{typeof ipp.competitiveAdvantage === "string" ? ipp.competitiveAdvantage : ipp.competitiveAdvantage.description || ipp.competitiveAdvantage.summary}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 60: Exit Readiness ──────────────────────────────────────── */}
+            {activeTab === 60 && (d as any).exitReadiness && (() => {
+              const er = (d as any).exitReadiness;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Exit Readiness</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{er.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {er.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Score</p>
+                          <p className="text-3xl font-light">{er.overallScore}<span className="text-base text-zinc-500">/100</span></p>
+                        </div>
+                      )}
+                      {er.timeline && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Timeline</p>
+                          <p className="text-xl font-light">{er.timeline}</p>
+                        </div>
+                      )}
+                      {er.valuationRange && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Valuation Range</p>
+                          <p className="text-xl font-light">{er.valuationRange}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Exit dimensions */}
+                  {er.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> Exit Dimensions</SectionHeader>
+                      <div className="space-y-4">
+                        {er.dimensions.map((dim: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-semibold text-zinc-900">{dim.name || dim.dimension}</p>
+                                {dim.status && (
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
+                                    dim.status === "ready" || dim.status === "Ready" || dim.status === "strong" || dim.status === "Strong" ? "bg-green-50 text-green-700 border-green-200" :
+                                    dim.status === "needs_work" || dim.status === "Needs Work" || dim.status === "moderate" || dim.status === "Moderate" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    "bg-red-50 text-red-700 border-red-200"
+                                  }`}>{dim.status}</span>
+                                )}
+                              </div>
+                              <span className="text-xs font-mono text-zinc-500">{dim.score}/100</span>
+                            </div>
+                            <div className="w-full bg-zinc-100 rounded-full h-2 mb-2">
+                              <div className="bg-zinc-900 h-2 rounded-full transition-all" style={{ width: `${dim.score}%` }} />
+                            </div>
+                            {dim.description && <p className="text-xs text-zinc-600">{dim.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Valuation drivers vs detractors */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {er.valuationDrivers?.length > 0 && (
+                      <div>
+                        <SectionHeader><TrendingUp className="w-3 h-3 text-green-600" /> Valuation Drivers</SectionHeader>
+                        <div className="space-y-2">
+                          {er.valuationDrivers.map((d: any, i: number) => (
+                            <div key={i} className="flex gap-3 items-start bg-green-50 border border-green-100 rounded-xl p-4">
+                              <TrendingUp className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                              <p className="text-sm text-green-900">{typeof d === "string" ? d : d.driver || d.description || d.name}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {er.valuationDetractors?.length > 0 && (
+                      <div>
+                        <SectionHeader><AlertCircle className="w-3 h-3 text-red-500" /> Valuation Detractors</SectionHeader>
+                        <div className="space-y-2">
+                          {er.valuationDetractors.map((d: any, i: number) => (
+                            <div key={i} className="flex gap-3 items-start bg-red-50 border border-red-100 rounded-xl p-4">
+                              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                              <p className="text-sm text-red-900">{typeof d === "string" ? d : d.detractor || d.description || d.name}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Buyer profiles */}
+                  {er.buyerProfiles?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Potential Buyer Profiles</SectionHeader>
+                      <div className="space-y-4">
+                        {er.buyerProfiles.map((bp: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-zinc-900 mb-1">{bp.name || bp.type || bp.profile}</p>
+                            {bp.rationale && <p className="text-xs text-zinc-600 mb-1">{bp.rationale}</p>}
+                            {bp.likelihood && <p className="text-xs text-zinc-400">Likelihood: {bp.likelihood}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preparation steps */}
+                  {er.preparationSteps?.length > 0 && (
+                    <div>
+                      <SectionHeader><Flag className="w-3 h-3" /> Preparation Steps</SectionHeader>
+                      <div className="space-y-3">
+                        {er.preparationSteps.map((step: any, i: number) => (
+                          <div key={i} className="bg-white border border-l-4 border-zinc-200 border-l-zinc-900 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <span className="w-7 h-7 bg-zinc-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                              <div className="flex-1">
+                                <p className="font-semibold text-zinc-900">{typeof step === "string" ? step : step.step || step.description || step.name}</p>
+                                {typeof step !== "string" && step.timeline && <p className="text-xs text-zinc-400 mt-0.5">Timeline: {step.timeline}</p>}
+                                {typeof step !== "string" && step.impact && <p className="text-xs text-green-700 mt-0.5">Impact: {step.impact}</p>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Tab 61: Sustainability Score ────────────────────────────────── */}
+            {activeTab === 61 && (d as any).sustainabilityScore && (() => {
+              const ss = (d as any).sustainabilityScore;
+              return (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 text-white rounded-2xl p-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Globe className="w-4 h-4 text-zinc-400" />
+                      <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Sustainability Score</p>
+                    </div>
+                    <p className="text-lg leading-relaxed">{ss.summary}</p>
+                    <div className="flex items-center gap-6 mt-4">
+                      {ss.overallScore != null && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Overall Score</p>
+                          <p className="text-3xl font-light">{ss.overallScore}<span className="text-base text-zinc-500">/100</span></p>
+                        </div>
+                      )}
+                      {ss.grade && (
+                        <div>
+                          <p className="text-[9px] font-mono text-zinc-500 uppercase">Grade</p>
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-zinc-700">{ss.grade}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ESG dimensions */}
+                  {ss.dimensions?.length > 0 && (
+                    <div>
+                      <SectionHeader><BarChart3 className="w-3 h-3" /> ESG Dimensions</SectionHeader>
+                      <div className="space-y-4">
+                        {ss.dimensions.map((dim: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-zinc-900">{dim.name || dim.dimension}</p>
+                              <span className="text-xs font-mono text-zinc-500">{dim.score}/100</span>
+                            </div>
+                            <div className="w-full bg-zinc-100 rounded-full h-2 mb-3">
+                              <div className="bg-zinc-900 h-2 rounded-full transition-all" style={{ width: `${dim.score}%` }} />
+                            </div>
+                            {dim.initiatives?.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Initiatives</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {dim.initiatives.map((init: any, j: number) => (
+                                    <span key={j} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">{typeof init === "string" ? init : init.name || init.initiative}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {dim.gaps?.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Gaps</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {dim.gaps.map((gap: any, j: number) => (
+                                    <span key={j} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{typeof gap === "string" ? gap : gap.name || gap.gap}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {dim.quickWins?.length > 0 && (
+                              <div>
+                                <p className="text-[9px] font-mono text-zinc-400 uppercase mb-1">Quick Wins</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {dim.quickWins.map((qw: any, j: number) => (
+                                    <span key={j} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">{typeof qw === "string" ? qw : qw.name || qw.quickWin}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Material issues */}
+                  {ss.materialIssues?.length > 0 && (
+                    <div>
+                      <SectionHeader><AlertCircle className="w-3 h-3 text-amber-500" /> Material Issues</SectionHeader>
+                      <div className="space-y-2">
+                        {ss.materialIssues.map((issue: any, i: number) => (
+                          <div key={i} className="flex gap-3 items-start bg-amber-50 border border-amber-100 rounded-xl p-4">
+                            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-900">{typeof issue === "string" ? issue : issue.issue || issue.description || issue.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stakeholder expectations */}
+                  {ss.stakeholderExpectations?.length > 0 && (
+                    <div>
+                      <SectionHeader><Users className="w-3 h-3" /> Stakeholder Expectations</SectionHeader>
+                      <div className="space-y-2">
+                        {ss.stakeholderExpectations.map((exp: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-700">{typeof exp === "string" ? exp : exp.expectation || exp.description || exp.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Regulatory requirements */}
+                  {ss.regulatoryRequirements?.length > 0 && (
+                    <div>
+                      <SectionHeader><ShieldCheck className="w-3 h-3" /> Regulatory Requirements</SectionHeader>
+                      <div className="space-y-2">
+                        {ss.regulatoryRequirements.map((req: any, i: number) => (
+                          <div key={i} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                            <p className="text-sm text-zinc-700">{typeof req === "string" ? req : req.requirement || req.description || req.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Competitive advantage */}
+                  {ss.competitiveAdvantage && (
+                    <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6 shadow-sm text-center">
+                      <p className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Competitive Advantage</p>
+                      <p className="text-xl font-light text-zinc-900">{typeof ss.competitiveAdvantage === "string" ? ss.competitiveAdvantage : ss.competitiveAdvantage.description || ss.competitiveAdvantage.summary}</p>
                     </div>
                   )}
                 </div>

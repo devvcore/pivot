@@ -109,6 +109,12 @@ const TOOLS = [
             "strategicInitiatives",
             "cashConversionCycle",
             "innovationPipeline",
+            "stakeholderMap",
+            "decisionLog",
+            "cultureAssessment",
+            "ipPortfolio",
+            "exitReadiness",
+            "sustainabilityScore",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -350,6 +356,7 @@ Operations: hiringPlan, revenueForecast, churnPlaybook, salesPlaybook, goalTrack
 Growth: retentionPlaybook, boardDeck, gtmScorecard, cashOptimization
 Wave 6: talentGapAnalysis, revenueDiversification, customerJourneyMap, complianceChecklist, expansionPlaybook, vendorScorecard
 Wave 7: productMarketFit, brandHealth, pricingElasticity, strategicInitiatives, cashConversionCycle, innovationPipeline
+Wave 8: stakeholderMap, decisionLog, cultureAssessment, ipPortfolio, exitReadiness, sustainabilityScore
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

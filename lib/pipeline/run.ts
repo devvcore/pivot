@@ -53,6 +53,12 @@ import {
   synthesizeStrategicInitiatives,
   synthesizeCashConversionCycle,
   synthesizeInnovationPipeline,
+  synthesizeStakeholderMap,
+  synthesizeDecisionLog,
+  synthesizeCultureAssessment,
+  synthesizeIPPortfolio,
+  synthesizeExitReadiness,
+  synthesizeSustainabilityScore,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -597,6 +603,54 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CashConversionCycle/InnovationPipeline failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4r: Wave 8 intelligence (stakeholder map, decision log) ────────
+    if (!deliverables.stakeholderMap || !deliverables.decisionLog) {
+      try {
+        console.log("[Pivot] Synthesizing stakeholder map + decision log...");
+        const [sm, dl] = await Promise.allSettled([
+          deliverables.stakeholderMap ? Promise.resolve(null) : synthesizeStakeholderMap(businessPacket, job.questionnaire),
+          deliverables.decisionLog ? Promise.resolve(null) : synthesizeDecisionLog(businessPacket, job.questionnaire),
+        ]);
+        if (sm.status === "fulfilled" && sm.value) deliverables = { ...deliverables, stakeholderMap: sm.value };
+        if (dl.status === "fulfilled" && dl.value) deliverables = { ...deliverables, decisionLog: dl.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] StakeholderMap/DecisionLog failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4s: Wave 8 intelligence (culture assessment, IP portfolio) ─────
+    if (!deliverables.cultureAssessment || !deliverables.ipPortfolio) {
+      try {
+        console.log("[Pivot] Synthesizing culture assessment + IP portfolio...");
+        const [ca, ipp] = await Promise.allSettled([
+          deliverables.cultureAssessment ? Promise.resolve(null) : synthesizeCultureAssessment(businessPacket, job.questionnaire),
+          deliverables.ipPortfolio ? Promise.resolve(null) : synthesizeIPPortfolio(businessPacket, job.questionnaire),
+        ]);
+        if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, cultureAssessment: ca.value };
+        if (ipp.status === "fulfilled" && ipp.value) deliverables = { ...deliverables, ipPortfolio: ipp.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CultureAssessment/IPPortfolio failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4t: Wave 8 intelligence (exit readiness, sustainability score) ──
+    if (!deliverables.exitReadiness || !deliverables.sustainabilityScore) {
+      try {
+        console.log("[Pivot] Synthesizing exit readiness + sustainability score...");
+        const [er, ss] = await Promise.allSettled([
+          deliverables.exitReadiness ? Promise.resolve(null) : synthesizeExitReadiness(businessPacket, job.questionnaire),
+          deliverables.sustainabilityScore ? Promise.resolve(null) : synthesizeSustainabilityScore(businessPacket, job.questionnaire),
+        ]);
+        if (er.status === "fulfilled" && er.value) deliverables = { ...deliverables, exitReadiness: er.value };
+        if (ss.status === "fulfilled" && ss.value) deliverables = { ...deliverables, sustainabilityScore: ss.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] ExitReadiness/SustainabilityScore failed (non-fatal):", e);
       }
     }
 
