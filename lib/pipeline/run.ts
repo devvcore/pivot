@@ -227,6 +227,34 @@ import {
   synthesizeDataPrivacy,
   synthesizeMlOpsReadiness,
   synthesizeDigitalTransformation,
+  // Wave 37
+  synthesizeRevenueOps,
+  synthesizeBillingOptimization,
+  synthesizeContractIntelligence,
+  synthesizeCommissionTracking,
+  synthesizeRevenueRecognition,
+  synthesizeSubscriptionHealth,
+  // Wave 38
+  synthesizeProductRoadmapHealth,
+  synthesizeTechDebtPrioritization,
+  synthesizeReleaseVelocity,
+  synthesizeBugTrendAnalysis,
+  synthesizeApiPerformance,
+  synthesizeUserExperienceScore,
+  // Wave 39
+  synthesizeWorkforcePlanning,
+  synthesizeSkillsGapAnalysis,
+  synthesizeRemoteWorkEffectiveness,
+  synthesizeTeamVelocity,
+  synthesizeBurnoutRisk,
+  synthesizeLearningDevelopment,
+  // Wave 40
+  synthesizeRegulatoryRisk,
+  synthesizeContractManagement,
+  synthesizeIpStrategy,
+  synthesizeLegalSpendAnalysis,
+  synthesizePolicyCompliance,
+  synthesizeAuditReadiness,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -2092,6 +2120,162 @@ export async function runPipeline(runId: string): Promise<void> {
         if (b.status === "fulfilled" && b.value) deliverables.digitalTransformation = b.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cz failed:", e); }
+    }
+
+    // ── Step 4da: Revenue Ops + Billing Optimization ──
+    if (!deliverables.revenueOps || !deliverables.billingOptimization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeRevenueOps(businessPacket, job.questionnaire),
+          synthesizeBillingOptimization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.revenueOps = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.billingOptimization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4da failed:", e); }
+    }
+
+    // ── Step 4db: Contract Intelligence + Commission Tracking ──
+    if (!deliverables.contractIntelligence || !deliverables.commissionTracking) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeContractIntelligence(businessPacket, job.questionnaire),
+          synthesizeCommissionTracking(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.contractIntelligence = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.commissionTracking = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4db failed:", e); }
+    }
+
+    // ── Step 4dc: Revenue Recognition + Subscription Health ──
+    if (!deliverables.revenueRecognition || !deliverables.subscriptionHealth) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeRevenueRecognition(businessPacket, job.questionnaire),
+          synthesizeSubscriptionHealth(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.revenueRecognition = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.subscriptionHealth = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dc failed:", e); }
+    }
+
+    // ── Step 4dd: Product Roadmap Health + Tech Debt Prioritization ──
+    if (!deliverables.productRoadmapHealth || !deliverables.techDebtPrioritization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeProductRoadmapHealth(businessPacket, job.questionnaire),
+          synthesizeTechDebtPrioritization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.productRoadmapHealth = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.techDebtPrioritization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dd failed:", e); }
+    }
+
+    // ── Step 4de: Release Velocity + Bug Trend Analysis ──
+    if (!deliverables.releaseVelocity || !deliverables.bugTrendAnalysis) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeReleaseVelocity(businessPacket, job.questionnaire),
+          synthesizeBugTrendAnalysis(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.releaseVelocity = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.bugTrendAnalysis = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4de failed:", e); }
+    }
+
+    // ── Step 4df: API Performance + User Experience Score ──
+    if (!deliverables.apiPerformance || !deliverables.userExperienceScore) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeApiPerformance(businessPacket, job.questionnaire),
+          synthesizeUserExperienceScore(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.apiPerformance = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.userExperienceScore = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4df failed:", e); }
+    }
+
+    // ── Step 4dg: Workforce Planning + Skills Gap Analysis ──
+    if (!deliverables.workforcePlanning || !deliverables.skillsGapAnalysis) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeWorkforcePlanning(businessPacket, job.questionnaire),
+          synthesizeSkillsGapAnalysis(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.workforcePlanning = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.skillsGapAnalysis = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dg failed:", e); }
+    }
+
+    // ── Step 4dh: Remote Work Effectiveness + Team Velocity ──
+    if (!deliverables.remoteWorkEffectiveness || !deliverables.teamVelocity) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeRemoteWorkEffectiveness(businessPacket, job.questionnaire),
+          synthesizeTeamVelocity(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.remoteWorkEffectiveness = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.teamVelocity = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dh failed:", e); }
+    }
+
+    // ── Step 4di: Burnout Risk + Learning & Development ──
+    if (!deliverables.burnoutRisk || !deliverables.learningDevelopment) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeBurnoutRisk(businessPacket, job.questionnaire),
+          synthesizeLearningDevelopment(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.burnoutRisk = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.learningDevelopment = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4di failed:", e); }
+    }
+
+    // ── Step 4dj: Regulatory Risk + Contract Management ──
+    if (!deliverables.regulatoryRisk || !deliverables.contractManagement) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeRegulatoryRisk(businessPacket, job.questionnaire),
+          synthesizeContractManagement(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.regulatoryRisk = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.contractManagement = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dj failed:", e); }
+    }
+
+    // ── Step 4dk: IP Strategy + Legal Spend Analysis ──
+    if (!deliverables.ipStrategy || !deliverables.legalSpendAnalysis) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeIpStrategy(businessPacket, job.questionnaire),
+          synthesizeLegalSpendAnalysis(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.ipStrategy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.legalSpendAnalysis = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dk failed:", e); }
+    }
+
+    // ── Step 4dl: Policy Compliance + Audit Readiness ──
+    if (!deliverables.policyCompliance || !deliverables.auditReadiness) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePolicyCompliance(businessPacket, job.questionnaire),
+          synthesizeAuditReadiness(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.policyCompliance = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.auditReadiness = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4dl failed:", e); }
     }
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────

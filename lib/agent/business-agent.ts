@@ -153,6 +153,10 @@ const TOOLS = [
             "customerAcquisitionCost", "lifetimeValueOptimization", "churnPrediction", "netRevenueRetention", "customerAdvocacy", "feedbackLoop",
             "processAutomation", "costBenchmark", "vendorNegotiation", "scalabilityAssessment", "incidentReadiness", "operationalRisk",
             "dataStrategy", "aiUseCases", "analyticsRoadmap", "dataPrivacy", "mlOpsReadiness", "digitalTransformation",
+            "revenueOps", "billingOptimization", "contractIntelligence", "commissionTracking", "revenueRecognition", "subscriptionHealth",
+            "productRoadmapHealth", "techDebtPrioritization", "releaseVelocity", "bugTrendAnalysis", "apiPerformance", "userExperienceScore",
+            "workforcePlanning", "skillsGapAnalysis", "remoteWorkEffectiveness", "teamVelocity", "burnoutRisk", "learningDevelopment",
+            "regulatoryRisk", "contractManagement", "ipStrategy", "legalSpendAnalysis", "policyCompliance", "auditReadiness",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -423,6 +427,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 34 (Customer Economics): customerAcquisitionCost (CAC analysis by channel), lifetimeValueOptimization (LTV optimization strategies), churnPrediction (predictive churn modeling), netRevenueRetention (NRR/GRR analysis), customerAdvocacy (advocacy program design), feedbackLoop (customer feedback systems)
 - Wave 35 (Operational Excellence): processAutomation (automation opportunity assessment), costBenchmark (cost benchmarking analysis), vendorNegotiation (vendor negotiation strategies), scalabilityAssessment (scalability readiness), incidentReadiness (incident response preparedness), operationalRisk (operational risk assessment)
 - Wave 36 (Data & AI): dataStrategy (enterprise data strategy), aiUseCases (AI use case prioritization), analyticsRoadmap (analytics capability roadmap), dataPrivacy (data privacy compliance), mlOpsReadiness (MLOps maturity assessment), digitalTransformation (digital transformation roadmap)
+- Wave 37 (Revenue Operations): revenueOps (RevOps alignment), billingOptimization (billing leak analysis), contractIntelligence (contract analytics), commissionTracking (commission plans), revenueRecognition (rev rec compliance), subscriptionHealth (subscription metrics)
+- Wave 38 (Product Intelligence): productRoadmapHealth (roadmap health), techDebtPrioritization (tech debt ranking), releaseVelocity (DORA metrics), bugTrendAnalysis (bug trends), apiPerformance (API health), userExperienceScore (UX scoring)
+- Wave 39 (Workforce Planning): workforcePlanning (headcount planning), skillsGapAnalysis (skills assessment), remoteWorkEffectiveness (remote work metrics), teamVelocity (team productivity), burnoutRisk (burnout indicators), learningDevelopment (L&D programs)
+- Wave 40 (Compliance & Legal): regulatoryRisk (regulatory exposure), contractManagement (contract lifecycle), ipStrategy (IP portfolio), legalSpendAnalysis (legal spend), policyCompliance (policy gaps), auditReadiness (audit preparedness)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

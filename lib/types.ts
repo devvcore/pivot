@@ -897,6 +897,34 @@ export interface MVPDeliverables {
   dataPrivacy?: DataPrivacy;
   mlOpsReadiness?: MlOpsReadiness;
   digitalTransformation?: DigitalTransformation;
+  // Wave 37: Revenue Operations
+  revenueOps?: RevenueOps;
+  billingOptimization?: BillingOptimization;
+  contractIntelligence?: ContractIntelligence;
+  commissionTracking?: CommissionTracking;
+  revenueRecognition?: RevenueRecognition;
+  subscriptionHealth?: SubscriptionHealth;
+  // Wave 38: Product Intelligence
+  productRoadmapHealth?: ProductRoadmapHealth;
+  techDebtPrioritization?: TechDebtPrioritization;
+  releaseVelocity?: ReleaseVelocity;
+  bugTrendAnalysis?: BugTrendAnalysis;
+  apiPerformance?: ApiPerformance;
+  userExperienceScore?: UserExperienceScore;
+  // Wave 39: Workforce Planning
+  workforcePlanning?: WorkforcePlanning;
+  skillsGapAnalysis?: SkillsGapAnalysis;
+  remoteWorkEffectiveness?: RemoteWorkEffectiveness;
+  teamVelocity?: TeamVelocity;
+  burnoutRisk?: BurnoutRisk;
+  learningDevelopment?: LearningDevelopment;
+  // Wave 40: Compliance & Legal
+  regulatoryRisk?: RegulatoryRisk;
+  contractManagement?: ContractManagement;
+  ipStrategy?: IpStrategy;
+  legalSpendAnalysis?: LegalSpendAnalysis;
+  policyCompliance?: PolicyCompliance;
+  auditReadiness?: AuditReadiness;
 }
 
 export interface BenchmarkDimension {
@@ -3023,3 +3051,59 @@ export interface MlOpsReadiness { summary: string; capabilities: MlOpsCapability
 
 export interface TransformationPillar { pillar: string; currentState: string; targetState: string; progress: string; investment: string; timeline: string; }
 export interface DigitalTransformation { summary: string; pillars: TransformationPillar[]; overallProgress: number; totalInvestment: string; biggestGap: string; changeReadiness: string; recommendations: string[]; }
+
+// ── Wave 37: Revenue Operations ───────────────────────────────────────────────
+export interface RevOpsMetric { metric: string; current: string; target: string; gap: string; owner: string; trend: string; }
+export interface RevenueOps { summary: string; metrics: RevOpsMetric[]; overallAlignment: number; pipelineAccuracy: string; forecastBias: string; topGap: string; recommendations: string[]; }
+export interface BillingItem { issue: string; revenue: string; frequency: string; rootCause: string; fix: string; priority: string; }
+export interface BillingOptimization { summary: string; issues: BillingItem[]; totalLeakage: string; automationRate: string; errorRate: string; topFix: string; recommendations: string[]; }
+export interface ContractInsight { contract: string; value: string; renewalDate: string; risk: string; opportunity: string; action: string; }
+export interface ContractIntelligence { summary: string; contracts: ContractInsight[]; totalValue: string; renewalPipeline: string; atRiskRevenue: string; autoRenewalRate: string; recommendations: string[]; }
+export interface CommissionPlan { role: string; structure: string; quota: string; attainment: string; effectiveness: string; cost: string; }
+export interface CommissionTracking { summary: string; plans: CommissionPlan[]; totalCommissions: string; avgAttainment: string; costOfSales: string; topPerformer: string; recommendations: string[]; }
+export interface RevenueRule { stream: string; recognitionMethod: string; deferredRevenue: string; compliance: string; risk: string; action: string; }
+export interface RevenueRecognition { summary: string; rules: RevenueRule[]; deferredTotal: string; recognizedTotal: string; complianceScore: string; topRisk: string; recommendations: string[]; }
+export interface SubHealthMetric { metric: string; value: string; benchmark: string; trend: string; segment: string; action: string; }
+export interface SubscriptionHealth { summary: string; metrics: SubHealthMetric[]; overallScore: number; mrrGrowth: string; churnRate: string; expansionRate: string; recommendations: string[]; }
+
+// ── Wave 38: Product Intelligence ─────────────────────────────────────────────
+export interface ProductRoadmapEntry { feature: string; quarter: string; status: string; alignment: string; impact: string; risk: string; }
+export interface ProductRoadmapHealth { summary: string; items: ProductRoadmapEntry[]; overallHealth: number; onTrackPercentage: string; topRisk: string; stakeholderAlignment: string; recommendations: string[]; }
+export interface TechDebtEntry { area: string; severity: string; impact: string; effort: string; roi: string; priority: string; }
+export interface TechDebtPrioritization { summary: string; items: TechDebtEntry[]; totalDebt: string; criticalItems: number; avgAge: string; velocityImpact: string; recommendations: string[]; }
+export interface ReleaseMetric { metric: string; current: string; previous: string; trend: string; benchmark: string; action: string; }
+export interface ReleaseVelocity { summary: string; metrics: ReleaseMetric[]; avgCycleTime: string; deployFrequency: string; changeFailRate: string; mttr: string; recommendations: string[]; }
+export interface BugTrend { category: string; openCount: number; closedCount: number; trend: string; severity: string; avgResolutionTime: string; }
+export interface BugTrendAnalysis { summary: string; trends: BugTrend[]; totalOpen: number; criticalBugs: number; resolutionRate: string; qualityTrend: string; recommendations: string[]; }
+export interface ApiMetric { endpoint: string; latency: string; errorRate: string; throughput: string; availability: string; trend: string; }
+export interface ApiPerformance { summary: string; endpoints: ApiMetric[]; overallAvailability: string; avgLatency: string; errorBudget: string; topBottleneck: string; recommendations: string[]; }
+export interface UxDimension { dimension: string; score: number; benchmark: number; topIssue: string; improvement: string; impact: string; }
+export interface UserExperienceScore { summary: string; dimensions: UxDimension[]; overallScore: number; nps: string; taskCompletionRate: string; topFriction: string; recommendations: string[]; }
+
+// ── Wave 39: Workforce Planning ───────────────────────────────────────────────
+export interface WorkforceSegment { segment: string; currentHeadcount: number; plannedHeadcount: number; gap: number; timeline: string; cost: string; }
+export interface WorkforcePlanning { summary: string; segments: WorkforceSegment[]; totalGap: number; hiringBudget: string; attritionRate: string; timeToFill: string; recommendations: string[]; }
+export interface SkillGapEntry { skill: string; currentLevel: string; requiredLevel: string; gap: string; affectedRoles: number; trainingOption: string; }
+export interface SkillsGapAnalysis { summary: string; gaps: SkillGapEntry[]; criticalGaps: number; trainingBudget: string; topPriority: string; readinessScore: number; recommendations: string[]; }
+export interface RemoteMetric { metric: string; remoteScore: string; officeScore: string; difference: string; trend: string; action: string; }
+export interface RemoteWorkEffectiveness { summary: string; metrics: RemoteMetric[]; overallEffectiveness: number; collaborationScore: string; productivityIndex: string; employeeSatisfaction: string; recommendations: string[]; }
+export interface VelocityMetric { team: string; velocity: string; capacity: string; utilization: string; trend: string; bottleneck: string; }
+export interface TeamVelocity { summary: string; teams: VelocityMetric[]; avgVelocity: string; sprintCompletion: string; topBlocker: string; improvementRate: string; recommendations: string[]; }
+export interface BurnoutIndicator { indicator: string; score: number; threshold: number; affectedTeams: string; trend: string; intervention: string; }
+export interface BurnoutRisk { summary: string; indicators: BurnoutIndicator[]; overallRisk: number; highRiskTeams: number; avgWorkload: string; topCause: string; recommendations: string[]; }
+export interface LearningProgram { program: string; participants: number; completionRate: string; impact: string; cost: string; roi: string; }
+export interface LearningDevelopment { summary: string; programs: LearningProgram[]; totalInvestment: string; avgHoursPerEmployee: string; skillsImproved: number; topProgram: string; recommendations: string[]; }
+
+// ── Wave 40: Compliance & Legal ───────────────────────────────────────────────
+export interface RegulatoryItem { regulation: string; jurisdiction: string; complianceStatus: string; deadline: string; risk: string; action: string; }
+export interface RegulatoryRisk { summary: string; items: RegulatoryItem[]; overallExposure: string; criticalDeadlines: number; fineRisk: string; preparednessScore: number; recommendations: string[]; }
+export interface ContractRecord { contract: string; counterparty: string; value: string; status: string; renewalDate: string; risk: string; }
+export interface ContractManagement { summary: string; contracts: ContractRecord[]; totalValue: string; expiringNext90: number; autoRenewalPercentage: string; topRisk: string; recommendations: string[]; }
+export interface IpAssetEntry { asset: string; type: string; status: string; jurisdiction: string; expirationDate: string; value: string; }
+export interface IpStrategy { summary: string; assets: IpAssetEntry[]; portfolioValue: string; pendingApplications: number; expiringProtections: number; competitiveAdvantage: string; recommendations: string[]; }
+export interface LegalSpendItem { category: string; spend: string; budget: string; variance: string; trend: string; optimization: string; }
+export interface LegalSpendAnalysis { summary: string; items: LegalSpendItem[]; totalSpend: string; budgetVariance: string; costPerMatter: string; topCategory: string; recommendations: string[]; }
+export interface PolicyArea { area: string; status: string; lastReview: string; gapCount: number; risk: string; nextAction: string; }
+export interface PolicyCompliance { summary: string; areas: PolicyArea[]; overallCompliance: string; policiesReviewed: number; gaps: number; topPriority: string; recommendations: string[]; }
+export interface AuditArea { area: string; readiness: string; lastAudit: string; findings: number; resolvedFindings: number; risk: string; }
+export interface AuditReadiness { summary: string; areas: AuditArea[]; overallReadiness: number; openFindings: number; criticalGaps: number; nextAuditDate: string; recommendations: string[]; }

@@ -258,7 +258,31 @@ KEY SECTIONS FOR COACHING:
 - analyticsRoadmap: Analytics capability roadmap with phase planning, investment requirements, and milestone tracking
 - dataPrivacy: Data privacy compliance with privacy scoring, gap identification, and risk exposure assessment
 - mlOpsReadiness: MLOps maturity assessment with capability gaps, production model tracking, and readiness scoring
-- digitalTransformation: Digital transformation roadmap with initiative tracking, maturity levels, and investment planning`;
+- digitalTransformation: Digital transformation roadmap with initiative tracking, maturity levels, and investment planning
+- revenueOps: RevOps alignment with metrics tracking, pipeline accuracy, and forecast bias
+- billingOptimization: Billing leak analysis with leakage detection, recovery potential, and process fixes
+- contractIntelligence: Contract analytics with renewal tracking, risk assessment, and value optimization
+- commissionTracking: Commission plan analysis with structure evaluation, overpayment risk, and motivation alignment
+- revenueRecognition: Revenue recognition compliance with ASC 606 adherence, deferred revenue, and gap analysis
+- subscriptionHealth: Subscription metrics including MRR, churn rate, expansion revenue, and cohort health
+- productRoadmapHealth: Roadmap health scoring with on-track percentage, blocked items, and priority alignment
+- techDebtPrioritization: Tech debt ranking with severity scoring, business impact, and remediation effort estimates
+- releaseVelocity: DORA metrics tracking with deploy frequency, lead time, MTTR, and change failure rate
+- bugTrendAnalysis: Bug trend analysis with severity distribution, resolution rates, and quality trends
+- apiPerformance: API health monitoring with latency, uptime, error rates, and endpoint performance
+- userExperienceScore: UX scoring across dimensions with satisfaction rates, task completion, and usability metrics
+- workforcePlanning: Headcount planning with role gap analysis, utilization rates, and hiring timelines
+- skillsGapAnalysis: Skills assessment with current vs required levels, critical gaps, and development actions
+- remoteWorkEffectiveness: Remote work metrics with productivity index, collaboration scoring, and engagement levels
+- teamVelocity: Team productivity metrics with sprint velocity, throughput, and capacity utilization
+- burnoutRisk: Burnout indicators with risk levels, wellbeing index, and intervention recommendations
+- learningDevelopment: L&D program analysis with completion rates, training hours, and skill impact measurement
+- regulatoryRisk: Regulatory exposure assessment with compliance gaps, fine exposure, and mitigation strategies
+- contractManagement: Contract lifecycle management with active contracts, expiring items, and renewal optimization
+- ipStrategy: IP portfolio strategy with asset valuation, protection gaps, and filing recommendations
+- legalSpendAnalysis: Legal spend analysis with category breakdown, savings potential, and cost optimization
+- policyCompliance: Policy gap analysis with compliance scoring, audit findings, and remediation actions
+- auditReadiness: Audit preparedness assessment with readiness scoring, open findings, and action items`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -374,6 +398,10 @@ const TOOLS = [
             "customerAcquisitionCost", "lifetimeValueOptimization", "churnPrediction", "netRevenueRetention", "customerAdvocacy", "feedbackLoop",
             "processAutomation", "costBenchmark", "vendorNegotiation", "scalabilityAssessment", "incidentReadiness", "operationalRisk",
             "dataStrategy", "aiUseCases", "analyticsRoadmap", "dataPrivacy", "mlOpsReadiness", "digitalTransformation",
+            "revenueOps", "billingOptimization", "contractIntelligence", "commissionTracking", "revenueRecognition", "subscriptionHealth",
+            "productRoadmapHealth", "techDebtPrioritization", "releaseVelocity", "bugTrendAnalysis", "apiPerformance", "userExperienceScore",
+            "workforcePlanning", "skillsGapAnalysis", "remoteWorkEffectiveness", "teamVelocity", "burnoutRisk", "learningDevelopment",
+            "regulatoryRisk", "contractManagement", "ipStrategy", "legalSpendAnalysis", "policyCompliance", "auditReadiness",
           ],
           description: "Which report section to retrieve",
         },
@@ -793,6 +821,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).dataPrivacy) parts.push(`Data Privacy: ${JSON.stringify((d as any).dataPrivacy).slice(0, 300)}`);
     if ((d as any).mlOpsReadiness) parts.push(`MLOps Readiness: ${JSON.stringify((d as any).mlOpsReadiness).slice(0, 300)}`);
     if ((d as any).digitalTransformation) parts.push(`Digital Transformation: ${JSON.stringify((d as any).digitalTransformation).slice(0, 300)}`);
+    if ((d as any).revenueOps) parts.push(`Revenue Ops: ${JSON.stringify((d as any).revenueOps).slice(0, 300)}`);
+    if ((d as any).billingOptimization) parts.push(`Billing Optimization: ${JSON.stringify((d as any).billingOptimization).slice(0, 300)}`);
+    if ((d as any).contractIntelligence) parts.push(`Contract Intelligence: ${JSON.stringify((d as any).contractIntelligence).slice(0, 300)}`);
+    if ((d as any).commissionTracking) parts.push(`Commission Tracking: ${JSON.stringify((d as any).commissionTracking).slice(0, 300)}`);
+    if ((d as any).revenueRecognition) parts.push(`Revenue Recognition: ${JSON.stringify((d as any).revenueRecognition).slice(0, 300)}`);
+    if ((d as any).subscriptionHealth) parts.push(`Subscription Health: ${JSON.stringify((d as any).subscriptionHealth).slice(0, 300)}`);
+    if ((d as any).productRoadmapHealth) parts.push(`Product Roadmap Health: ${JSON.stringify((d as any).productRoadmapHealth).slice(0, 300)}`);
+    if ((d as any).techDebtPrioritization) parts.push(`Tech Debt Prioritization: ${JSON.stringify((d as any).techDebtPrioritization).slice(0, 300)}`);
+    if ((d as any).releaseVelocity) parts.push(`Release Velocity: ${JSON.stringify((d as any).releaseVelocity).slice(0, 300)}`);
+    if ((d as any).bugTrendAnalysis) parts.push(`Bug Trend Analysis: ${JSON.stringify((d as any).bugTrendAnalysis).slice(0, 300)}`);
+    if ((d as any).apiPerformance) parts.push(`API Performance: ${JSON.stringify((d as any).apiPerformance).slice(0, 300)}`);
+    if ((d as any).userExperienceScore) parts.push(`User Experience Score: ${JSON.stringify((d as any).userExperienceScore).slice(0, 300)}`);
+    if ((d as any).workforcePlanning) parts.push(`Workforce Planning: ${JSON.stringify((d as any).workforcePlanning).slice(0, 300)}`);
+    if ((d as any).skillsGapAnalysis) parts.push(`Skills Gap Analysis: ${JSON.stringify((d as any).skillsGapAnalysis).slice(0, 300)}`);
+    if ((d as any).remoteWorkEffectiveness) parts.push(`Remote Work Effectiveness: ${JSON.stringify((d as any).remoteWorkEffectiveness).slice(0, 300)}`);
+    if ((d as any).teamVelocity) parts.push(`Team Velocity: ${JSON.stringify((d as any).teamVelocity).slice(0, 300)}`);
+    if ((d as any).burnoutRisk) parts.push(`Burnout Risk: ${JSON.stringify((d as any).burnoutRisk).slice(0, 300)}`);
+    if ((d as any).learningDevelopment) parts.push(`Learning Development: ${JSON.stringify((d as any).learningDevelopment).slice(0, 300)}`);
+    if ((d as any).regulatoryRisk) parts.push(`Regulatory Risk: ${JSON.stringify((d as any).regulatoryRisk).slice(0, 300)}`);
+    if ((d as any).contractManagement) parts.push(`Contract Management: ${JSON.stringify((d as any).contractManagement).slice(0, 300)}`);
+    if ((d as any).ipStrategy) parts.push(`IP Strategy: ${JSON.stringify((d as any).ipStrategy).slice(0, 300)}`);
+    if ((d as any).legalSpendAnalysis) parts.push(`Legal Spend Analysis: ${JSON.stringify((d as any).legalSpendAnalysis).slice(0, 300)}`);
+    if ((d as any).policyCompliance) parts.push(`Policy Compliance: ${JSON.stringify((d as any).policyCompliance).slice(0, 300)}`);
+    if ((d as any).auditReadiness) parts.push(`Audit Readiness: ${JSON.stringify((d as any).auditReadiness).slice(0, 300)}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 
