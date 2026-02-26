@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (alreadyRunning) {
       return NextResponse.json({ runId, status: job.status, message: "Pipeline is running" });
     }
-    runPipeline(runId).catch((err) => {
+    runPipeline(runId).catch((err: unknown) => {
       console.error("Pipeline error for", runId, err);
     });
     return NextResponse.json({ runId, status: "started" });

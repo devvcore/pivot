@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     // Also include the default org linked to the user's account
     const user = db.prepare("SELECT organization_id FROM users WHERE id = ?").get(userId) as any;
     if (user?.organization_id) {
-      const hasDefaultOrg = orgs.some((o) => o.id === user.organization_id);
+      const hasDefaultOrg = orgs.some((o: any) => o.id === user.organization_id);
       if (!hasDefaultOrg) {
         const defaultOrg = db.prepare("SELECT id, name, website, industry, created_at FROM organizations WHERE id = ?").get(user.organization_id) as any;
         if (defaultOrg) orgs.push({ ...defaultOrg, role: "OWNER", report_count: 0 });

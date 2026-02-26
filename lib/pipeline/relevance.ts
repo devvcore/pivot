@@ -476,6 +476,70 @@ const SECTION_CATEGORIES: Record<string, SectionCategory[]> = {
   leadershipReadiness: ["enterprise", "hr"],
   marketDominanceIndex: ["enterprise", "b2b"],
   futureReadiness: ["core"],
+
+  // Wave 101: AI & Machine Learning Readiness
+  aiAdoptionPotential: ["tech", "enterprise"],
+  mlUseCaseIdentification: ["tech", "enterprise"],
+  dataInfrastructureGapAnalysis: ["tech", "enterprise"],
+  automationROIModeling: ["operations", "enterprise"],
+  aiTalentNeedsAssessment: ["hr", "tech"],
+  ethicalAIFramework: ["compliance", "tech"],
+
+  // Wave 102: Geographic Expansion Intelligence
+  marketEntryScoring: ["enterprise", "b2b"],
+  regulatoryLandscapeMapping: ["compliance", "enterprise"],
+  culturalAdaptationStrategy: ["enterprise", "brand"],
+  logisticsExpansionAnalysis: ["enterprise", "operations"],
+  localPartnershipStrategy: ["enterprise", "b2b"],
+  internationalPricingOptimization: ["enterprise", "b2b"],
+
+  // Wave 103: Customer Lifecycle Optimization
+  acquisitionFunnelIntelligence: ["marketing", "b2b"],
+  onboardingEffectivenessScore: ["saas", "b2b"],
+  engagementScoringModel: ["saas", "b2b"],
+  expansionRevenueOpportunities: ["saas", "b2b"],
+  advocacyProgramDesign: ["marketing", "brand"],
+  lifetimeValueModeling: ["financial", "saas"],
+
+  // Wave 104: Platform & API Economy
+  apiMonetizationStrategy: ["tech", "saas"],
+  platformEcosystemHealth: ["tech", "saas"],
+  developerExperienceOptimization: ["tech", "saas"],
+  integrationMarketplaceAnalytics: ["tech", "saas"],
+  partnerEnablementProgram: ["b2b", "tech"],
+  platformGovernanceFramework: ["tech", "compliance"],
+
+  // Wave 105: Predictive Analytics Suite
+  demandForecastingEngine: ["core"],
+  predictiveMaintenanceModeling: ["operations", "enterprise"],
+  churnPredictionModel: ["saas", "b2b"],
+  leadScoringAI: ["sales", "b2b"],
+  inventoryOptimizationAI: ["operations", "enterprise"],
+  revenuePredictionModeling: ["financial", "core"],
+
+  // Wave 106: Organizational Design
+  orgStructureAnalysis: ["hr", "enterprise"],
+  spanOfControlOptimization: ["hr", "enterprise"],
+  decisionRightsMapping: ["enterprise", "operations"],
+  collaborationNetworkMapping: ["hr", "enterprise"],
+  roleOptimizationAnalysis: ["hr", "operations"],
+  successionPlanningFramework: ["hr", "enterprise"],
+
+  // Wave 107: Social Impact & ESG
+  impactMeasurementDashboard: ["esg", "enterprise"],
+  esgReportingCompliance: ["esg", "compliance"],
+  stakeholderEngagementAnalytics: ["esg", "enterprise"],
+  communityInvestmentStrategy: ["esg", "brand"],
+  diversityMetricsAnalytics: ["esg", "hr"],
+  greenOperationsOptimization: ["esg", "operations"],
+
+  // Wave 108: Knowledge Management
+  knowledgeAuditAssessment: ["enterprise", "operations"],
+  expertiseMappingSystem: ["hr", "enterprise"],
+  documentationStrategyFramework: ["operations", "tech"],
+  learningPathwaysDesign: ["hr", "enterprise"],
+  institutionalMemoryProtection: ["enterprise", "hr"],
+  knowledgeTransferOptimization: ["hr", "operations"],
 };
 
 // ── Business Profile Classification ─────────────────────────────────────────
@@ -645,6 +709,75 @@ export function isSectionRelevant(q: Questionnaire, sectionKey: string): boolean
 
   const profile = classifyBusiness(q);
   return sectionCategories.some(cat => profile.categories.has(cat));
+}
+
+// ── Relevance Scoring (graduated depth) ─────────────────────────────────────
+
+export type RelevanceDepth = "full" | "summary" | "skip";
+
+/**
+ * Score how relevant a section is for this specific business (0-100).
+ * Uses multiple signals: category match, core bonus, keyword match, business model match.
+ */
+export function scoreSectionRelevance(q: Questionnaire, key: string): number {
+  const sectionCategories = SECTION_CATEGORIES[key];
+  if (!sectionCategories) return 50; // Unknown sections get middle score
+
+  const profile = classifyBusiness(q);
+  let score = 0;
+
+  // Category match: 50 points if any category matches
+  const categoryMatch = sectionCategories.some(cat => profile.categories.has(cat));
+  if (categoryMatch) score += 50;
+
+  // Core bonus: 20 extra points for "core" sections
+  if (sectionCategories.includes("core")) score += 20;
+
+  // Keyword match from keyConcerns: up to 15 points
+  if (q.keyConcerns) {
+    const concerns = q.keyConcerns.toLowerCase();
+    const sectionTokens = key
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .toLowerCase()
+      .split(/\s+/);
+    const matchCount = sectionTokens.filter(t => t.length > 3 && concerns.includes(t)).length;
+    score += Math.min(matchCount * 5, 15);
+  }
+
+  // Business model alignment: up to 15 points
+  if (q.businessModel) {
+    const model = q.businessModel.toLowerCase();
+    const modelKeywords: Record<string, string[]> = {
+      saas: ["subscription", "churn", "mrr", "arr", "platform", "api", "onboarding"],
+      b2b: ["enterprise", "account", "pipeline", "territory", "partner"],
+      b2c: ["consumer", "acquisition", "retention", "brand", "marketing"],
+      ecommerce: ["inventory", "fulfillment", "cart", "conversion", "shipping"],
+      marketplace: ["platform", "network", "ecosystem", "marketplace"],
+      agency: ["service", "utilization", "capacity", "project", "client"],
+      consulting: ["expertise", "knowledge", "advisory", "engagement"],
+    };
+
+    const keyLower = key.toLowerCase();
+    for (const [modelType, keywords] of Object.entries(modelKeywords)) {
+      if (model.includes(modelType)) {
+        if (keywords.some(kw => keyLower.includes(kw))) {
+          score += 15;
+          break;
+        }
+      }
+    }
+  }
+
+  return Math.min(Math.max(score, 0), 100);
+}
+
+/**
+ * Convert a relevance score into a synthesis depth.
+ */
+export function getRelevanceDepth(score: number): RelevanceDepth {
+  if (score >= 60) return "full";
+  if (score >= 30) return "summary";
+  return "skip";
 }
 
 /**

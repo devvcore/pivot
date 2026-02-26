@@ -70,7 +70,7 @@ export default function Home() {
   }, [runId, view]);
 
   if (!user) {
-    return <AuthView onLogin={(u) => setUser(u)} />;
+    return <AuthView onLogin={(u: any) => setUser(u)} />;
   }
 
   return (
@@ -89,7 +89,7 @@ export default function Home() {
               setRunId(null);
               setView("upload");
             }}
-            onViewRun={(id) => {
+            onViewRun={(id: string) => {
               setRunId(id);
               setView("results");
             }}
@@ -99,7 +99,7 @@ export default function Home() {
         {view === "upload" && (
           <UploadView
             onBack={() => setView("dashboard")}
-            onUploadComplete={(id) => {
+            onUploadComplete={(id: string) => {
               setRunId(id);
               setView("processing");
             }}

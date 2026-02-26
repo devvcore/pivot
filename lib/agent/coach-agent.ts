@@ -642,7 +642,15 @@ KEY SECTIONS FOR COACHING:
 - operationalMaturity: Operational maturity assessment (level 1-5)
 - leadershipReadiness: Leadership readiness for next growth stage
 - marketDominanceIndex: Market dominance and competitive position
-- futureReadiness: Future readiness covering adaptability and resilience`;
+- futureReadiness: Future readiness covering adaptability and resilience
+- Wave 101 (AI & ML Readiness): aiAdoptionPotential (AI adoption potential and readiness), mlUseCaseIdentification (ML use case identification), dataInfrastructureGapAnalysis (data infrastructure gaps), automationROIModeling (automation ROI projections), aiTalentNeedsAssessment (AI talent needs), ethicalAIFramework (ethical AI governance)
+- Wave 102 (Geographic Expansion): marketEntryScoring (market entry scoring), regulatoryLandscapeMapping (regulatory landscape mapping), culturalAdaptationStrategy (cultural adaptation), logisticsExpansionAnalysis (logistics expansion), localPartnershipStrategy (local partnerships), internationalPricingOptimization (international pricing)
+- Wave 103 (Customer Lifecycle): acquisitionFunnelIntelligence (acquisition funnel intelligence), onboardingEffectivenessScore (onboarding effectiveness), engagementScoringModel (engagement scoring), expansionRevenueOpportunities (expansion revenue), advocacyProgramDesign (advocacy program), lifetimeValueModeling (lifetime value modeling)
+- Wave 104 (Platform & API Economy): apiMonetizationStrategy (API monetization), platformEcosystemHealth (platform ecosystem health), developerExperienceOptimization (developer experience), integrationMarketplaceAnalytics (integration marketplace), partnerEnablementProgram (partner enablement), platformGovernanceFramework (platform governance)
+- Wave 105 (Predictive Analytics): demandForecastingEngine (demand forecasting), predictiveMaintenanceModeling (predictive maintenance), churnPredictionModel (churn prediction), leadScoringAI (lead scoring AI), inventoryOptimizationAI (inventory optimization), revenuePredictionModeling (revenue prediction)
+- Wave 106 (Organizational Design): orgStructureAnalysis (org structure analysis), spanOfControlOptimization (span of control), decisionRightsMapping (decision rights), collaborationNetworkMapping (collaboration networks), roleOptimizationAnalysis (role optimization), successionPlanningFramework (succession planning)
+- Wave 107 (Social Impact & ESG): impactMeasurementDashboard (impact measurement), esgReportingCompliance (ESG compliance), stakeholderEngagementAnalytics (stakeholder engagement), communityInvestmentStrategy (community investment), diversityMetricsAnalytics (diversity metrics), greenOperationsOptimization (green operations)
+- Wave 108 (Knowledge Management): knowledgeAuditAssessment (knowledge audit), expertiseMappingSystem (expertise mapping), documentationStrategyFramework (documentation strategy), learningPathwaysDesign (learning pathways), institutionalMemoryProtection (institutional memory), knowledgeTransferOptimization (knowledge transfer)`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -822,6 +830,14 @@ const TOOLS = [
             "automationAudit", "processDigitization", "botDeploymentPlan", "workflowBenchmark", "handoffEfficiency", "toolConsolidation",
             "crisisCommunication", "internalComms", "investorNarrative", "pressStrategy", "thoughtLeadershipPlan", "brandStoryArc",
             "masteryDashboard", "growthVelocityScore", "operationalMaturity", "leadershipReadiness", "marketDominanceIndex", "futureReadiness",
+            "aiAdoptionPotential", "mlUseCaseIdentification", "dataInfrastructureGapAnalysis", "automationROIModeling", "aiTalentNeedsAssessment", "ethicalAIFramework",
+            "marketEntryScoring", "regulatoryLandscapeMapping", "culturalAdaptationStrategy", "logisticsExpansionAnalysis", "localPartnershipStrategy", "internationalPricingOptimization",
+            "acquisitionFunnelIntelligence", "onboardingEffectivenessScore", "engagementScoringModel", "expansionRevenueOpportunities", "advocacyProgramDesign", "lifetimeValueModeling",
+            "apiMonetizationStrategy", "platformEcosystemHealth", "developerExperienceOptimization", "integrationMarketplaceAnalytics", "partnerEnablementProgram", "platformGovernanceFramework",
+            "demandForecastingEngine", "predictiveMaintenanceModeling", "churnPredictionModel", "leadScoringAI", "inventoryOptimizationAI", "revenuePredictionModeling",
+            "orgStructureAnalysis", "spanOfControlOptimization", "decisionRightsMapping", "collaborationNetworkMapping", "roleOptimizationAnalysis", "successionPlanningFramework",
+            "impactMeasurementDashboard", "esgReportingCompliance", "stakeholderEngagementAnalytics", "communityInvestmentStrategy", "diversityMetricsAnalytics", "greenOperationsOptimization",
+            "knowledgeAuditAssessment", "expertiseMappingSystem", "documentationStrategyFramework", "learningPathwaysDesign", "institutionalMemoryProtection", "knowledgeTransferOptimization",
           ],
           description: "Which report section to retrieve",
         },
@@ -1505,6 +1521,62 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).reputationAnalysis) parts.push(`Reputation Analysis: ${(d as any).reputationAnalysis.summary}`);
     if ((d as any).messagingFramework) parts.push(`Messaging Framework: ${(d as any).messagingFramework.summary}`);
     if ((d as any).visualBranding) parts.push(`Visual Branding: ${(d as any).visualBranding.summary}`);
+    // Wave 101: AI & ML Readiness
+    if ((d as any).aiAdoptionPotential) parts.push(`AI Adoption Potential: ${(d as any).aiAdoptionPotential.summary}`);
+    if ((d as any).mlUseCaseIdentification) parts.push(`ML Use Cases: ${(d as any).mlUseCaseIdentification.summary}`);
+    if ((d as any).dataInfrastructureGapAnalysis) parts.push(`Data Infrastructure Gaps: ${(d as any).dataInfrastructureGapAnalysis.summary}`);
+    if ((d as any).automationROIModeling) parts.push(`Automation ROI: ${(d as any).automationROIModeling.summary}`);
+    if ((d as any).aiTalentNeedsAssessment) parts.push(`AI Talent Needs: ${(d as any).aiTalentNeedsAssessment.summary}`);
+    if ((d as any).ethicalAIFramework) parts.push(`Ethical AI Framework: ${(d as any).ethicalAIFramework.summary}`);
+    // Wave 102: Geographic Expansion
+    if ((d as any).marketEntryScoring) parts.push(`Market Entry Scoring: ${(d as any).marketEntryScoring.summary}`);
+    if ((d as any).regulatoryLandscapeMapping) parts.push(`Regulatory Landscape: ${(d as any).regulatoryLandscapeMapping.summary}`);
+    if ((d as any).culturalAdaptationStrategy) parts.push(`Cultural Adaptation: ${(d as any).culturalAdaptationStrategy.summary}`);
+    if ((d as any).logisticsExpansionAnalysis) parts.push(`Logistics Expansion: ${(d as any).logisticsExpansionAnalysis.summary}`);
+    if ((d as any).localPartnershipStrategy) parts.push(`Local Partnerships: ${(d as any).localPartnershipStrategy.summary}`);
+    if ((d as any).internationalPricingOptimization) parts.push(`Intl Pricing: ${(d as any).internationalPricingOptimization.summary}`);
+    // Wave 103: Customer Lifecycle
+    if ((d as any).acquisitionFunnelIntelligence) parts.push(`Acquisition Funnel: ${(d as any).acquisitionFunnelIntelligence.summary}`);
+    if ((d as any).onboardingEffectivenessScore) parts.push(`Onboarding Score: ${(d as any).onboardingEffectivenessScore.summary}`);
+    if ((d as any).engagementScoringModel) parts.push(`Engagement Scoring: ${(d as any).engagementScoringModel.summary}`);
+    if ((d as any).expansionRevenueOpportunities) parts.push(`Expansion Revenue: ${(d as any).expansionRevenueOpportunities.summary}`);
+    if ((d as any).advocacyProgramDesign) parts.push(`Advocacy Program: ${(d as any).advocacyProgramDesign.summary}`);
+    if ((d as any).lifetimeValueModeling) parts.push(`Lifetime Value: ${(d as any).lifetimeValueModeling.summary}`);
+    // Wave 104: Platform & API Economy
+    if ((d as any).apiMonetizationStrategy) parts.push(`API Monetization: ${(d as any).apiMonetizationStrategy.summary}`);
+    if ((d as any).platformEcosystemHealth) parts.push(`Platform Ecosystem: ${(d as any).platformEcosystemHealth.summary}`);
+    if ((d as any).developerExperienceOptimization) parts.push(`Developer Experience: ${(d as any).developerExperienceOptimization.summary}`);
+    if ((d as any).integrationMarketplaceAnalytics) parts.push(`Integration Marketplace: ${(d as any).integrationMarketplaceAnalytics.summary}`);
+    if ((d as any).partnerEnablementProgram) parts.push(`Partner Enablement: ${(d as any).partnerEnablementProgram.summary}`);
+    if ((d as any).platformGovernanceFramework) parts.push(`Platform Governance: ${(d as any).platformGovernanceFramework.summary}`);
+    // Wave 105: Predictive Analytics
+    if ((d as any).demandForecastingEngine) parts.push(`Demand Forecasting: ${(d as any).demandForecastingEngine.summary}`);
+    if ((d as any).predictiveMaintenanceModeling) parts.push(`Predictive Maintenance: ${(d as any).predictiveMaintenanceModeling.summary}`);
+    if ((d as any).churnPredictionModel) parts.push(`Churn Prediction: ${(d as any).churnPredictionModel.summary}`);
+    if ((d as any).leadScoringAI) parts.push(`Lead Scoring AI: ${(d as any).leadScoringAI.summary}`);
+    if ((d as any).inventoryOptimizationAI) parts.push(`Inventory Optimization: ${(d as any).inventoryOptimizationAI.summary}`);
+    if ((d as any).revenuePredictionModeling) parts.push(`Revenue Prediction: ${(d as any).revenuePredictionModeling.summary}`);
+    // Wave 106: Organizational Design
+    if ((d as any).orgStructureAnalysis) parts.push(`Org Structure: ${(d as any).orgStructureAnalysis.summary}`);
+    if ((d as any).spanOfControlOptimization) parts.push(`Span of Control: ${(d as any).spanOfControlOptimization.summary}`);
+    if ((d as any).decisionRightsMapping) parts.push(`Decision Rights: ${(d as any).decisionRightsMapping.summary}`);
+    if ((d as any).collaborationNetworkMapping) parts.push(`Collaboration Network: ${(d as any).collaborationNetworkMapping.summary}`);
+    if ((d as any).roleOptimizationAnalysis) parts.push(`Role Optimization: ${(d as any).roleOptimizationAnalysis.summary}`);
+    if ((d as any).successionPlanningFramework) parts.push(`Succession Planning: ${(d as any).successionPlanningFramework.summary}`);
+    // Wave 107: Social Impact & ESG
+    if ((d as any).impactMeasurementDashboard) parts.push(`Impact Measurement: ${(d as any).impactMeasurementDashboard.summary}`);
+    if ((d as any).esgReportingCompliance) parts.push(`ESG Compliance: ${(d as any).esgReportingCompliance.summary}`);
+    if ((d as any).stakeholderEngagementAnalytics) parts.push(`Stakeholder Engagement: ${(d as any).stakeholderEngagementAnalytics.summary}`);
+    if ((d as any).communityInvestmentStrategy) parts.push(`Community Investment: ${(d as any).communityInvestmentStrategy.summary}`);
+    if ((d as any).diversityMetricsAnalytics) parts.push(`Diversity Metrics: ${(d as any).diversityMetricsAnalytics.summary}`);
+    if ((d as any).greenOperationsOptimization) parts.push(`Green Operations: ${(d as any).greenOperationsOptimization.summary}`);
+    // Wave 108: Knowledge Management
+    if ((d as any).knowledgeAuditAssessment) parts.push(`Knowledge Audit: ${(d as any).knowledgeAuditAssessment.summary}`);
+    if ((d as any).expertiseMappingSystem) parts.push(`Expertise Mapping: ${(d as any).expertiseMappingSystem.summary}`);
+    if ((d as any).documentationStrategyFramework) parts.push(`Documentation Strategy: ${(d as any).documentationStrategyFramework.summary}`);
+    if ((d as any).learningPathwaysDesign) parts.push(`Learning Pathways: ${(d as any).learningPathwaysDesign.summary}`);
+    if ((d as any).institutionalMemoryProtection) parts.push(`Institutional Memory: ${(d as any).institutionalMemoryProtection.summary}`);
+    if ((d as any).knowledgeTransferOptimization) parts.push(`Knowledge Transfer: ${(d as any).knowledgeTransferOptimization.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import { ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";

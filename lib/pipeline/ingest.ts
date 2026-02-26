@@ -482,7 +482,7 @@ export async function ingestDocuments(
   }
 
   // ── Build company identity anchor ──
-  const identity = buildCompanyIdentity(questionnaire, extracts);
+  const identity = await buildCompanyIdentity(questionnaire, extracts);
 
   let consolidated;
   if (genai) {
@@ -519,10 +519,10 @@ export async function ingestDocuments(
 
 // ── Company Identity Anchoring ────────────────────────────────────────────────
 
-function buildCompanyIdentity(
+async function buildCompanyIdentity(
   questionnaire: Questionnaire,
   extracts: { filename: string; extract: DocExtract }[]
-): CompanyIdentity {
+): Promise<CompanyIdentity> {
   let domain: string | null = null;
   if (questionnaire.website) {
     try {
@@ -532,6 +532,14 @@ function buildCompanyIdentity(
           : `https://${questionnaire.website}`
       ).hostname.replace(/^www\./, "");
     } catch { /* invalid URL */ }
+  }
+
+  let verifiedDomain = false;
+  if (domain) {
+    try {
+      const resp = await fetch(`https://${domain}`, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+      verifiedDomain = resp.ok;
+    } catch { /* domain not reachable */ }
   }
 
   // Collect company name variations from documents
@@ -552,7 +560,7 @@ function buildCompanyIdentity(
   return {
     name: questionnaire.organizationName,
     domain,
-    verifiedDomain: false,
+    verifiedDomain,
     aliases: Array.from(aliases).slice(0, 5),
   };
 }
