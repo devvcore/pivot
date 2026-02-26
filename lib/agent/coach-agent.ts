@@ -450,7 +450,31 @@ KEY SECTIONS FOR COACHING:
 - meetingCulture: Meeting efficiency with weekly hours, effectiveness scoring, and decision output rates
 - documentManagement: Document organization with scoring, stale doc tracking, and search effectiveness
 - workflowAutomation: Workflow automation with automation rates, hours saved, and error rate tracking
-- qualityAssurance: QA process maturity with defect rates, test coverage, and automation levels`;
+- qualityAssurance: QA process maturity with defect rates, test coverage, and automation levels
+- incidentResponse: Incident response readiness with response times, recovery rates, and scenario planning
+- accessControl: Access control policy assessment with MFA coverage, access reviews, and violation tracking
+- auditTrail: Audit trail coverage with event logging, retention periods, and compliance rates
+- penetrationTesting: Penetration testing results with vulnerability counts, critical findings, and remediation rates
+- securityAwareness: Security awareness training with completion rates, phishing test pass rates, and incidents prevented
+- dataClassification: Data classification with asset inventory, classification coverage, and sensitive data tracking
+- apiDesign: API design quality with endpoint counts, versioning practices, and documentation coverage
+- microservicesArchitecture: Microservices architecture maturity with service counts, coupling scores, and reliability metrics
+- cloudOptimization: Cloud optimization with spend analysis, savings potential, and utilization rates
+- devopsMaturity: DevOps maturity with deploy frequency, lead time, and change failure rate (DORA metrics)
+- systemMonitoring: System monitoring coverage with uptime tracking, alert counts, and mean time to recovery
+- codeQuality: Code quality scoring with test coverage, tech debt assessment, and code smell detection
+- customerLifetimeValue: Customer lifetime value analysis with CLV:CAC ratios, segment breakdown, and growth rates
+- sentimentAnalysis: Customer sentiment analysis with scoring, positive/negative rates, and trend direction
+- supportTicketAnalysis: Support ticket analysis with resolution times, CSAT scores, and deflection rates
+- segmentProfitability: Segment profitability analysis with margin breakdown, segment ranking, and optimization opportunities
+- referralAnalytics: Referral analytics with referral rates, conversion tracking, and revenue attribution
+- customerHealthDashboard: Customer health dashboard with health scoring, at-risk identification, and NPS tracking
+- innovationPortfolio: Innovation portfolio management with project tracking, ROI analysis, and pipeline value
+- contingencyPlanning: Contingency planning readiness with scenario coverage, recovery times, and critical gap identification
+- operatingRhythm: Operating rhythm assessment with cadence health, review cycles, and alignment rates
+- crossFunctionalSync: Cross-functional sync with team alignment, blocker tracking, and collaboration index
+- wardRoomStrategy: War room strategy with initiative tracking, decision velocity, and execution rates
+- revenueIntelligence: Revenue intelligence with signal detection, forecast accuracy, and growth potential analysis`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -598,6 +622,10 @@ const TOOLS = [
             "crisisManagement", "operationalResilience", "stakeholderMapping", "digitalPresence", "channelStrategy", "accountManagement",
             "fundraisingStrategy", "captableManagement", "exitPlanning", "boardGovernance", "recruitmentFunnel", "employerBranding",
             "teamTopology", "onboardingOptimization", "meetingCulture", "documentManagement", "workflowAutomation", "qualityAssurance",
+            "incidentResponse", "accessControl", "auditTrail", "penetrationTesting", "securityAwareness", "dataClassification",
+            "apiDesign", "microservicesArchitecture", "cloudOptimization", "devopsMaturity", "systemMonitoring", "codeQuality",
+            "customerLifetimeValue", "sentimentAnalysis", "supportTicketAnalysis", "segmentProfitability", "referralAnalytics", "customerHealthDashboard",
+            "innovationPortfolio", "contingencyPlanning", "operatingRhythm", "crossFunctionalSync", "wardRoomStrategy", "revenueIntelligence",
           ],
           description: "Which report section to retrieve",
         },
@@ -1209,6 +1237,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).documentManagement) parts.push(`Document Management: ${(d as any).documentManagement.summary}`);
     if ((d as any).workflowAutomation) parts.push(`Workflow Automation: ${(d as any).workflowAutomation.summary}`);
     if ((d as any).qualityAssurance) parts.push(`Quality Assurance: ${(d as any).qualityAssurance.summary}`);
+    if ((d as any).incidentResponse) parts.push(`Incident Response: ${(d as any).incidentResponse.summary}`);
+    if ((d as any).accessControl) parts.push(`Access Control: ${(d as any).accessControl.summary}`);
+    if ((d as any).auditTrail) parts.push(`Audit Trail: ${(d as any).auditTrail.summary}`);
+    if ((d as any).penetrationTesting) parts.push(`Penetration Testing: ${(d as any).penetrationTesting.summary}`);
+    if ((d as any).securityAwareness) parts.push(`Security Awareness: ${(d as any).securityAwareness.summary}`);
+    if ((d as any).dataClassification) parts.push(`Data Classification: ${(d as any).dataClassification.summary}`);
+    if ((d as any).apiDesign) parts.push(`API Design: ${(d as any).apiDesign.summary}`);
+    if ((d as any).microservicesArchitecture) parts.push(`Microservices Architecture: ${(d as any).microservicesArchitecture.summary}`);
+    if ((d as any).cloudOptimization) parts.push(`Cloud Optimization: ${(d as any).cloudOptimization.summary}`);
+    if ((d as any).devopsMaturity) parts.push(`DevOps Maturity: ${(d as any).devopsMaturity.summary}`);
+    if ((d as any).systemMonitoring) parts.push(`System Monitoring: ${(d as any).systemMonitoring.summary}`);
+    if ((d as any).codeQuality) parts.push(`Code Quality: ${(d as any).codeQuality.summary}`);
+    if ((d as any).customerLifetimeValue) parts.push(`Customer Lifetime Value: ${(d as any).customerLifetimeValue.summary}`);
+    if ((d as any).sentimentAnalysis) parts.push(`Sentiment Analysis: ${(d as any).sentimentAnalysis.summary}`);
+    if ((d as any).supportTicketAnalysis) parts.push(`Support Ticket Analysis: ${(d as any).supportTicketAnalysis.summary}`);
+    if ((d as any).segmentProfitability) parts.push(`Segment Profitability: ${(d as any).segmentProfitability.summary}`);
+    if ((d as any).referralAnalytics) parts.push(`Referral Analytics: ${(d as any).referralAnalytics.summary}`);
+    if ((d as any).customerHealthDashboard) parts.push(`Customer Health Dashboard: ${(d as any).customerHealthDashboard.summary}`);
+    if ((d as any).innovationPortfolio) parts.push(`Innovation Portfolio: ${(d as any).innovationPortfolio.summary}`);
+    if ((d as any).contingencyPlanning) parts.push(`Contingency Planning: ${(d as any).contingencyPlanning.summary}`);
+    if ((d as any).operatingRhythm) parts.push(`Operating Rhythm: ${(d as any).operatingRhythm.summary}`);
+    if ((d as any).crossFunctionalSync) parts.push(`Cross-Functional Sync: ${(d as any).crossFunctionalSync.summary}`);
+    if ((d as any).wardRoomStrategy) parts.push(`War Room Strategy: ${(d as any).wardRoomStrategy.summary}`);
+    if ((d as any).revenueIntelligence) parts.push(`Revenue Intelligence: ${(d as any).revenueIntelligence.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

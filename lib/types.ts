@@ -1121,6 +1121,34 @@ export interface MVPDeliverables {
   documentManagement?: DocumentManagement;
   workflowAutomation?: WorkflowAutomation;
   qualityAssurance?: QualityAssurance;
+  // Wave 69: Cybersecurity & Compliance
+  incidentResponse?: IncidentResponse;
+  accessControl?: AccessControl;
+  auditTrail?: AuditTrail;
+  penetrationTesting?: PenetrationTesting;
+  securityAwareness?: SecurityAwareness;
+  dataClassification?: DataClassification;
+  // Wave 70: Technical Infrastructure
+  apiDesign?: ApiDesign;
+  microservicesArchitecture?: MicroservicesArchitecture;
+  cloudOptimization?: CloudOptimization;
+  devopsMaturity?: DevopsMaturity;
+  systemMonitoring?: SystemMonitoring;
+  codeQuality?: CodeQuality;
+  // Wave 71: Customer Intelligence
+  customerLifetimeValue?: CustomerLifetimeValue;
+  sentimentAnalysis?: SentimentAnalysis;
+  supportTicketAnalysis?: SupportTicketAnalysis;
+  segmentProfitability?: SegmentProfitability;
+  referralAnalytics?: ReferralAnalytics;
+  customerHealthDashboard?: CustomerHealthDashboard;
+  // Wave 72: Strategic Planning
+  innovationPortfolio?: InnovationPortfolio;
+  contingencyPlanning?: ContingencyPlanning;
+  operatingRhythm?: OperatingRhythm;
+  crossFunctionalSync?: CrossFunctionalSync;
+  wardRoomStrategy?: WardRoomStrategy;
+  revenueIntelligence?: RevenueIntelligence;
 }
 
 export interface BenchmarkDimension {
@@ -3695,3 +3723,59 @@ export interface WorkflowStep { workflow: string; currentState: string; automati
 export interface WorkflowAutomation { summary: string; workflows: WorkflowStep[]; totalWorkflows: number; automatedPct: string; totalSavings: string; topOpportunity: string; recommendations: string[]; }
 export interface QaCheck { area: string; coverage: string; defectRate: string; automationLevel: string; trend: string; action: string; }
 export interface QualityAssurance { summary: string; checks: QaCheck[]; overallScore: number; defectRate: string; automationPct: string; topIssue: string; recommendations: string[]; }
+
+// ── Wave 69: Cybersecurity & Compliance ───────────────────────────────────────
+export interface IncidentRecord { incident: string; severity: string; responseTime: string; resolution: string; impact: string; lessonsLearned: string; }
+export interface IncidentResponse { summary: string; incidents: IncidentRecord[]; avgResponseTime: string; mttr: string; incidentCount: number; topThreat: string; recommendations: string[]; }
+export interface AccessPolicy { resource: string; currentAccess: string; requiredAccess: string; gap: string; risk: string; remediation: string; }
+export interface AccessControl { summary: string; policies: AccessPolicy[]; overallScore: number; mfaAdoption: string; privilegedAccounts: number; topRisk: string; recommendations: string[]; }
+export interface AuditEntry { system: string; coverage: string; lastAudit: string; findings: string; compliance: string; action: string; }
+export interface AuditTrail { summary: string; entries: AuditEntry[]; totalSystems: number; auditedPct: string; openFindings: number; complianceScore: number; recommendations: string[]; }
+export interface PenTestFinding { finding: string; severity: string; system: string; exploitability: string; remediation: string; status: string; }
+export interface PenetrationTesting { summary: string; findings: PenTestFinding[]; totalFindings: number; criticalCount: number; remediatedPct: string; lastTestDate: string; recommendations: string[]; }
+export interface SecurityModule { topic: string; audience: string; completionRate: string; effectiveness: string; frequency: string; improvement: string; }
+export interface SecurityAwareness { summary: string; modules: SecurityModule[]; overallScore: number; trainingCompletion: string; phishingClickRate: string; topRisk: string; recommendations: string[]; }
+export interface DataCategory { category: string; sensitivity: string; volume: string; protection: string; retention: string; action: string; }
+export interface DataClassification { summary: string; categories: DataCategory[]; totalDatasets: number; classifiedPct: string; highSensitivityPct: string; topGap: string; recommendations: string[]; }
+
+// ── Wave 70: Technical Infrastructure ─────────────────────────────────────────
+export interface ApiEndpoint { endpoint: string; version: string; usage: string; latency: string; errorRate: string; documentation: string; }
+export interface ApiDesign { summary: string; endpoints: ApiEndpoint[]; totalApis: number; documentedPct: string; avgLatency: string; versioningStrategy: string; recommendations: string[]; }
+export interface ServiceComponent { service: string; type: string; dependencies: string; healthScore: string; scalability: string; improvement: string; }
+export interface MicroservicesArchitecture { summary: string; services: ServiceComponent[]; totalServices: number; avgHealthScore: number; couplingLevel: string; topBottleneck: string; recommendations: string[]; }
+export interface CloudResource { resource: string; provider: string; utilization: string; cost: string; optimization: string; savings: string; }
+export interface CloudOptimization { summary: string; resources: CloudResource[]; totalSpend: string; wastedSpend: string; savingsOpportunity: string; rightSizingCount: number; recommendations: string[]; }
+export interface DevopsPractice { practice: string; maturityLevel: string; adoption: string; impact: string; gap: string; action: string; }
+export interface DevopsMaturity { summary: string; practices: DevopsPractice[]; overallScore: number; deployFrequency: string; leadTime: string; changeFailRate: string; recommendations: string[]; }
+export interface MonitoringCheck { system: string; coverage: string; alerting: string; responseTime: string; uptime: string; improvement: string; }
+export interface SystemMonitoring { summary: string; checks: MonitoringCheck[]; overallUptime: string; avgResponseTime: string; alertFatigue: string; blindSpots: number; recommendations: string[]; }
+export interface CodeMetric { metric: string; value: string; benchmark: string; trend: string; impact: string; action: string; }
+export interface CodeQuality { summary: string; metrics: CodeMetric[]; overallScore: number; technicalDebt: string; testCoverage: string; topIssue: string; recommendations: string[]; }
+
+// ── Wave 71: Customer Intelligence ────────────────────────────────────────────
+export interface ClvSegment { segment: string; avgClv: string; retentionRate: string; acquisitionCost: string; paybackPeriod: string; trend: string; }
+export interface CustomerLifetimeValue { summary: string; segments: ClvSegment[]; overallClv: string; topSegment: string; clvCacRatio: string; growthTrend: string; recommendations: string[]; }
+export interface SentimentSignal { source: string; sentiment: string; volume: string; trend: string; keyTheme: string; action: string; }
+export interface SentimentAnalysis { summary: string; signals: SentimentSignal[]; overallSentiment: string; positiveRatio: string; topTheme: string; trendDirection: string; recommendations: string[]; }
+export interface SupportTicketGroup { category: string; volume: string; avgResolution: string; satisfaction: string; trend: string; improvement: string; }
+export interface SupportTicketAnalysis { summary: string; categories: SupportTicketGroup[]; totalTickets: string; avgResolutionTime: string; satisfactionScore: number; topCategory: string; recommendations: string[]; }
+export interface SegmentProfit { segment: string; revenue: string; cost: string; margin: string; growth: string; action: string; }
+export interface SegmentProfitability { summary: string; segments: SegmentProfit[]; topSegment: string; lowestMargin: string; overallMargin: string; rebalanceOpportunity: string; recommendations: string[]; }
+export interface ReferralSource { source: string; referrals: string; conversionRate: string; revenue: string; cost: string; roi: string; }
+export interface ReferralAnalytics { summary: string; sources: ReferralSource[]; totalReferrals: string; overallConversion: string; topSource: string; viralCoefficient: string; recommendations: string[]; }
+export interface HealthDimension { dimension: string; score: number; trend: string; benchmark: string; alert: string; action: string; }
+export interface CustomerHealthDashboard { summary: string; dimensions: HealthDimension[]; overallHealth: number; greenPct: string; redPct: string; topAlert: string; recommendations: string[]; }
+
+// ── Wave 72: Strategic Planning ───────────────────────────────────────────────
+export interface InnovationProject { project: string; stage: string; investment: string; expectedReturn: string; risk: string; timeline: string; }
+export interface InnovationPortfolio { summary: string; projects: InnovationProject[]; totalInvestment: string; pipelineValue: string; successRate: string; topProject: string; recommendations: string[]; }
+export interface ContingencyPlan { scenario: string; probability: string; impact: string; trigger: string; response: string; owner: string; }
+export interface ContingencyPlanning { summary: string; plans: ContingencyPlan[]; totalScenarios: number; coveredPct: string; lastReview: string; topGap: string; recommendations: string[]; }
+export interface RhythmCadence { cadence: string; frequency: string; participants: string; purpose: string; effectiveness: string; improvement: string; }
+export interface OperatingRhythm { summary: string; cadences: RhythmCadence[]; totalCadences: number; alignmentScore: number; executionVelocity: string; topImprovement: string; recommendations: string[]; }
+export interface CrossFuncTeam { team: string; members: string; objective: string; progress: string; blockers: string; action: string; }
+export interface CrossFunctionalSync { summary: string; teams: CrossFuncTeam[]; totalTeams: number; alignmentScore: number; blockerCount: number; topBlocker: string; recommendations: string[]; }
+export interface WarRoomTopic { topic: string; priority: string; owner: string; status: string; deadline: string; impact: string; }
+export interface WardRoomStrategy { summary: string; topics: WarRoomTopic[]; activePriorities: number; resolvedPct: string; avgResolutionTime: string; topPriority: string; recommendations: string[]; }
+export interface RevenueInsight { insight: string; impact: string; confidence: string; source: string; timeframe: string; action: string; }
+export interface RevenueIntelligence { summary: string; insights: RevenueInsight[]; totalOpportunity: string; topInsight: string; confidenceLevel: string; actionableCount: number; recommendations: string[]; }

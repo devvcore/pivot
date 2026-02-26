@@ -185,6 +185,10 @@ const TOOLS = [
             "crisisManagement", "operationalResilience", "stakeholderMapping", "digitalPresence", "channelStrategy", "accountManagement",
             "fundraisingStrategy", "captableManagement", "exitPlanning", "boardGovernance", "recruitmentFunnel", "employerBranding",
             "teamTopology", "onboardingOptimization", "meetingCulture", "documentManagement", "workflowAutomation", "qualityAssurance",
+            "incidentResponse", "accessControl", "auditTrail", "penetrationTesting", "securityAwareness", "dataClassification",
+            "apiDesign", "microservicesArchitecture", "cloudOptimization", "devopsMaturity", "systemMonitoring", "codeQuality",
+            "customerLifetimeValue", "sentimentAnalysis", "supportTicketAnalysis", "segmentProfitability", "referralAnalytics", "customerHealthDashboard",
+            "innovationPortfolio", "contingencyPlanning", "operatingRhythm", "crossFunctionalSync", "wardRoomStrategy", "revenueIntelligence",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -487,6 +491,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 66 (Crisis & Resilience): crisisManagement (crisis preparedness and response planning), operationalResilience (business resilience and recovery assessment), stakeholderMapping (stakeholder identification and engagement strategy), digitalPresence (digital channel presence and engagement analysis), channelStrategy (channel mix and performance optimization), accountManagement (strategic account health and expansion planning)
 - Wave 67 (Fundraising & Governance): fundraisingStrategy (fundraising readiness and round planning), captableManagement (cap table structure and dilution modeling), exitPlanning (exit readiness and valuation analysis), boardGovernance (board structure and governance assessment), recruitmentFunnel (hiring pipeline and conversion metrics), employerBranding (employer brand strength and talent attraction)
 - Wave 68 (Team & Operations): teamTopology (team structure and collaboration analysis), onboardingOptimization (employee onboarding effectiveness), meetingCulture (meeting efficiency and decision output), documentManagement (document organization and knowledge access), workflowAutomation (workflow automation coverage and efficiency), qualityAssurance (QA process maturity and defect analysis)
+- Wave 69 (Cybersecurity & Compliance): incidentResponse (incident response readiness and recovery planning), accessControl (access control policy and MFA coverage assessment), auditTrail (audit trail coverage and compliance tracking), penetrationTesting (penetration testing results and vulnerability assessment), securityAwareness (security awareness training effectiveness), dataClassification (data classification and sensitive data management)
+- Wave 70 (Technical Infrastructure): apiDesign (API design quality and documentation coverage), microservicesArchitecture (microservices maturity and coupling analysis), cloudOptimization (cloud spend optimization and utilization), devopsMaturity (DevOps maturity with DORA metrics), systemMonitoring (system monitoring coverage and uptime tracking), codeQuality (code quality scoring with tech debt and test coverage)
+- Wave 71 (Customer Intelligence): customerLifetimeValue (CLV analysis with segment breakdown and CAC ratios), sentimentAnalysis (customer sentiment scoring and trend tracking), supportTicketAnalysis (support ticket categorization and resolution metrics), segmentProfitability (segment profitability with margin analysis), referralAnalytics (referral program performance and conversion tracking), customerHealthDashboard (customer health dashboard with at-risk identification)
+- Wave 72 (Strategic Planning): innovationPortfolio (innovation portfolio scoring and project pipeline), contingencyPlanning (contingency readiness with scenario planning and recovery), operatingRhythm (operating rhythm cadence and alignment scoring), crossFunctionalSync (cross-functional sync with collaboration and blocker tracking), wardRoomStrategy (war room strategy with initiative tracking and execution rates), revenueIntelligence (revenue intelligence with signal detection and forecast accuracy)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
