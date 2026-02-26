@@ -71,6 +71,18 @@ import {
   synthesizeSubscriptionMetrics,
   synthesizeMarketTiming,
   synthesizeScenarioStressTest,
+  synthesizePricingStrategyMatrix,
+  synthesizeCustomerHealthScore,
+  synthesizeRevenueWaterfall,
+  synthesizeTechDebtAssessment,
+  synthesizeTeamPerformance,
+  synthesizeMarketEntryStrategy,
+  synthesizeCompetitiveIntelFeed,
+  synthesizeCashFlowSensitivity,
+  synthesizeDigitalMaturity,
+  synthesizeAcquisitionFunnel,
+  synthesizeStrategicAlignment,
+  synthesizeBudgetOptimizer,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -759,6 +771,102 @@ export async function runPipeline(runId: string): Promise<void> {
         updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] MarketTiming/ScenarioStressTest failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4aa: Wave 11 intelligence (pricing strategy matrix, customer health score) ──
+    if (!deliverables.pricingStrategyMatrix || !deliverables.customerHealthScore) {
+      try {
+        console.log("[Pivot] Synthesizing pricing strategy matrix + customer health score...");
+        const [psm, chs] = await Promise.allSettled([
+          deliverables.pricingStrategyMatrix ? Promise.resolve(null) : synthesizePricingStrategyMatrix(businessPacket, job.questionnaire),
+          deliverables.customerHealthScore ? Promise.resolve(null) : synthesizeCustomerHealthScore(businessPacket, job.questionnaire),
+        ]);
+        if (psm.status === "fulfilled" && psm.value) deliverables = { ...deliverables, pricingStrategyMatrix: psm.value };
+        if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] PricingStrategyMatrix/CustomerHealthScore failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ab: Wave 11 intelligence (revenue waterfall, tech debt assessment) ──
+    if (!deliverables.revenueWaterfall || !deliverables.techDebtAssessment) {
+      try {
+        console.log("[Pivot] Synthesizing revenue waterfall + tech debt assessment...");
+        const [rw, td] = await Promise.allSettled([
+          deliverables.revenueWaterfall ? Promise.resolve(null) : synthesizeRevenueWaterfall(businessPacket, job.questionnaire),
+          deliverables.techDebtAssessment ? Promise.resolve(null) : synthesizeTechDebtAssessment(businessPacket, job.questionnaire),
+        ]);
+        if (rw.status === "fulfilled" && rw.value) deliverables = { ...deliverables, revenueWaterfall: rw.value };
+        if (td.status === "fulfilled" && td.value) deliverables = { ...deliverables, techDebtAssessment: td.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] RevenueWaterfall/TechDebtAssessment failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ac: Wave 11 intelligence (team performance, market entry strategy) ──
+    if (!deliverables.teamPerformance || !deliverables.marketEntryStrategy) {
+      try {
+        console.log("[Pivot] Synthesizing team performance + market entry strategy...");
+        const [tp, me] = await Promise.allSettled([
+          deliverables.teamPerformance ? Promise.resolve(null) : synthesizeTeamPerformance(businessPacket, job.questionnaire),
+          deliverables.marketEntryStrategy ? Promise.resolve(null) : synthesizeMarketEntryStrategy(businessPacket, job.questionnaire),
+        ]);
+        if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, teamPerformance: tp.value };
+        if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, marketEntryStrategy: me.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] TeamPerformance/MarketEntryStrategy failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ad: Wave 12 intelligence (competitive intel feed, cash flow sensitivity) ──
+    if (!deliverables.competitiveIntelFeed || !deliverables.cashFlowSensitivity) {
+      try {
+        console.log("[Pivot] Synthesizing competitive intel feed + cash flow sensitivity...");
+        const [cif, cfs] = await Promise.allSettled([
+          deliverables.competitiveIntelFeed ? Promise.resolve(null) : synthesizeCompetitiveIntelFeed(businessPacket, job.questionnaire),
+          deliverables.cashFlowSensitivity ? Promise.resolve(null) : synthesizeCashFlowSensitivity(businessPacket, job.questionnaire),
+        ]);
+        if (cif.status === "fulfilled" && cif.value) deliverables = { ...deliverables, competitiveIntelFeed: cif.value };
+        if (cfs.status === "fulfilled" && cfs.value) deliverables = { ...deliverables, cashFlowSensitivity: cfs.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] CompetitiveIntelFeed/CashFlowSensitivity failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4ae: Wave 12 intelligence (digital maturity, acquisition funnel) ──
+    if (!deliverables.digitalMaturity || !deliverables.acquisitionFunnel) {
+      try {
+        console.log("[Pivot] Synthesizing digital maturity + acquisition funnel...");
+        const [dm, af] = await Promise.allSettled([
+          deliverables.digitalMaturity ? Promise.resolve(null) : synthesizeDigitalMaturity(businessPacket, job.questionnaire),
+          deliverables.acquisitionFunnel ? Promise.resolve(null) : synthesizeAcquisitionFunnel(businessPacket, job.questionnaire),
+        ]);
+        if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, digitalMaturity: dm.value };
+        if (af.status === "fulfilled" && af.value) deliverables = { ...deliverables, acquisitionFunnel: af.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] DigitalMaturity/AcquisitionFunnel failed (non-fatal):", e);
+      }
+    }
+
+    // ── Step 4af: Wave 12 intelligence (strategic alignment, budget optimizer) ──
+    if (!deliverables.strategicAlignment || !deliverables.budgetOptimizer) {
+      try {
+        console.log("[Pivot] Synthesizing strategic alignment + budget optimizer...");
+        const [sa, bo] = await Promise.allSettled([
+          deliverables.strategicAlignment ? Promise.resolve(null) : synthesizeStrategicAlignment(businessPacket, job.questionnaire),
+          deliverables.budgetOptimizer ? Promise.resolve(null) : synthesizeBudgetOptimizer(businessPacket, job.questionnaire),
+        ]);
+        if (sa.status === "fulfilled" && sa.value) deliverables = { ...deliverables, strategicAlignment: sa.value };
+        if (bo.status === "fulfilled" && bo.value) deliverables = { ...deliverables, budgetOptimizer: bo.value };
+        updateJob(runId, { deliverables });
+      } catch (e) {
+        console.warn("[Pivot] StrategicAlignment/BudgetOptimizer failed (non-fatal):", e);
       }
     }
 

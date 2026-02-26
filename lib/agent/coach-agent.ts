@@ -102,7 +102,19 @@ KEY SECTIONS FOR COACHING:
 - dataMonetization: data assets, monetization methods, opportunity value
 - subscriptionMetrics: SaaS metrics (MRR, ARR, CAC, LTV, churn, NRR)
 - marketTiming: timing factors, window of opportunity, market cycle
-- scenarioStressTest: stress scenarios, survival probability, capital buffer`;
+- scenarioStressTest: stress scenarios, survival probability, capital buffer
+- pricingStrategyMatrix: pricing tiers, anchor pricing, bundling, psychological pricing
+- customerHealthScore: customer portfolio health, engagement levels, churn predictors
+- revenueWaterfall: MRR waterfall, NRR, GRR, expansion/contraction rates
+- techDebtAssessment: technical debt items, severity, business impact, remediation
+- teamPerformance: team metrics, strengths, gaps, training needs
+- marketEntryStrategy: new market options, readiness, barriers, entry modes
+- competitiveIntelFeed: competitor signals, market shifts, opportunity windows
+- cashFlowSensitivity: cash flow sensitivity variables, safety margin, scenarios
+- digitalMaturity: digital transformation dimensions, maturity levels, priorities
+- acquisitionFunnel: funnel stages, conversion rates, bottlenecks, CPA
+- strategicAlignment: vision/goals/resources/execution alignment scores
+- budgetOptimizer: budget categories, ROI, efficiency, reallocation suggestions`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -192,6 +204,8 @@ const TOOLS = [
             "subscriptionMetrics",
             "marketTiming",
             "scenarioStressTest",
+            "pricingStrategyMatrix", "customerHealthScore", "revenueWaterfall", "techDebtAssessment", "teamPerformance", "marketEntryStrategy",
+            "competitiveIntelFeed", "cashFlowSensitivity", "digitalMaturity", "acquisitionFunnel", "strategicAlignment", "budgetOptimizer",
           ],
           description: "Which report section to retrieve",
         },
@@ -455,6 +469,18 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).subscriptionMetrics) parts.push(`SaaS Health: ${(d as any).subscriptionMetrics.overallHealth || "N/A"}`);
     if ((d as any).marketTiming) parts.push(`Market Timing: ${(d as any).marketTiming.overallTiming || "N/A"}`);
     if ((d as any).scenarioStressTest) parts.push(`Stress Resilience: ${(d as any).scenarioStressTest.resilience || "N/A"}, Baseline Runway: ${(d as any).scenarioStressTest.baselineCashRunway || "N/A"}`);
+    if ((d as any).pricingStrategyMatrix) parts.push(`Pricing Strategy: ${(d as any).pricingStrategyMatrix.recommendedStrategy || "N/A"}`);
+    if ((d as any).customerHealthScore) parts.push(`Customer Portfolio Health: ${(d as any).customerHealthScore.overallPortfolioHealth ?? "N/A"}/100, At-risk: ${(d as any).customerHealthScore.atRiskCount ?? 0}`);
+    if ((d as any).revenueWaterfall) parts.push(`Net Revenue Retention: ${(d as any).revenueWaterfall.netRevenueRetention || "N/A"}`);
+    if ((d as any).techDebtAssessment) parts.push(`Tech Debt Score: ${(d as any).techDebtAssessment.overallScore ?? "N/A"}/100, Cost: ${(d as any).techDebtAssessment.totalEstimatedCost || "N/A"}`);
+    if ((d as any).teamPerformance) parts.push(`Team Performance: ${(d as any).teamPerformance.overallScore ?? "N/A"}/100`);
+    if ((d as any).marketEntryStrategy) parts.push(`Market Entry Readiness: ${(d as any).marketEntryStrategy.readinessScore ?? "N/A"}/100, Priority: ${(d as any).marketEntryStrategy.priorityMarket || "N/A"}`);
+    if ((d as any).competitiveIntelFeed) parts.push(`Competitive Threat Level: ${(d as any).competitiveIntelFeed.threatLevel || "N/A"}, Signals: ${(d as any).competitiveIntelFeed.signals?.length ?? 0}`);
+    if ((d as any).cashFlowSensitivity) parts.push(`Cash Sensitivity: Most sensitive to ${(d as any).cashFlowSensitivity.mostSensitiveVariable || "N/A"}`);
+    if ((d as any).digitalMaturity) parts.push(`Digital Maturity: ${(d as any).digitalMaturity.overallScore ?? "N/A"}/100`);
+    if ((d as any).acquisitionFunnel) parts.push(`Acquisition Funnel: ${(d as any).acquisitionFunnel.overallConversionRate || "N/A"} conversion, CPA: ${(d as any).acquisitionFunnel.costPerAcquisition || "N/A"}`);
+    if ((d as any).strategicAlignment) parts.push(`Strategic Alignment: ${(d as any).strategicAlignment.overallScore ?? "N/A"}/100`);
+    if ((d as any).budgetOptimizer) parts.push(`Budget: ${(d as any).budgetOptimizer.totalBudget || "N/A"}, Savings: ${(d as any).budgetOptimizer.savingsOpportunity || "N/A"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

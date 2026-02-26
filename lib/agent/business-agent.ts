@@ -127,6 +127,8 @@ const TOOLS = [
             "subscriptionMetrics",
             "marketTiming",
             "scenarioStressTest",
+            "pricingStrategyMatrix", "customerHealthScore", "revenueWaterfall", "techDebtAssessment", "teamPerformance", "marketEntryStrategy",
+            "competitiveIntelFeed", "cashFlowSensitivity", "digitalMaturity", "acquisitionFunnel", "strategicAlignment", "budgetOptimizer",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -371,6 +373,8 @@ Wave 7: productMarketFit, brandHealth, pricingElasticity, strategicInitiatives, 
 Wave 8: stakeholderMap, decisionLog, cultureAssessment, ipPortfolio, exitReadiness, sustainabilityScore
 Wave 9: acquisitionTargets, financialRatios, channelMixModel, supplyChainRisk, regulatoryLandscape, crisisPlaybook
 Wave 10: aiReadiness, networkEffects, dataMonetization, subscriptionMetrics, marketTiming, scenarioStressTest
+Wave 11: pricingStrategyMatrix, customerHealthScore, revenueWaterfall, techDebtAssessment, teamPerformance, marketEntryStrategy
+Wave 12: competitiveIntelFeed, cashFlowSensitivity, digitalMaturity, acquisitionFunnel, strategicAlignment, budgetOptimizer
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

@@ -747,6 +747,20 @@ export interface MVPDeliverables {
   subscriptionMetrics?: SubscriptionMetrics;
   marketTiming?: MarketTiming;
   scenarioStressTest?: ScenarioStressTest;
+  // Wave 11 features
+  pricingStrategyMatrix?: PricingStrategyMatrix;
+  customerHealthScore?: CustomerHealthScore;
+  revenueWaterfall?: RevenueWaterfall;
+  techDebtAssessment?: TechDebtAssessment;
+  teamPerformance?: TeamPerformance;
+  marketEntryStrategy?: MarketEntryStrategy;
+  // Wave 12 features
+  competitiveIntelFeed?: CompetitiveIntelFeed;
+  cashFlowSensitivity?: CashFlowSensitivity;
+  digitalMaturity?: DigitalMaturity;
+  acquisitionFunnel?: AcquisitionFunnel;
+  strategicAlignment?: StrategicAlignment;
+  budgetOptimizer?: BudgetOptimizer;
 }
 
 export interface BenchmarkDimension {
@@ -1891,5 +1905,240 @@ export interface ScenarioStressTest {
   resilience: "high" | "moderate" | "low";
   capitalBuffer: string;
   triggerPoints: string[];
+  recommendations: string[];
+}
+
+// ── Wave 11 Types ─────────────────────────────────────────────────────────────
+
+export interface PricingTierStrategy {
+  tierName: string;
+  priceRange: string;
+  targetSegment: string;
+  valueProposition: string;
+  marginEstimate: string;
+  competitorComparison: string;
+}
+
+export interface PricingStrategyMatrix {
+  summary: string;
+  currentStrategy: string;
+  recommendedStrategy: string;
+  tiers: PricingTierStrategy[];
+  priceAnchor: string;
+  psychologicalPricingTips: string[];
+  bundlingOpportunities: string[];
+  discountPolicy: string;
+  recommendations: string[];
+}
+
+export interface CustomerHealthIndicator {
+  customer: string;
+  healthScore: number;           // 0-100
+  engagementLevel: "high" | "medium" | "low";
+  revenueContribution: string;
+  riskFactors: string[];
+  growthPotential: string;
+  lastInteraction: string;
+}
+
+export interface CustomerHealthScore {
+  summary: string;
+  overallPortfolioHealth: number; // 0-100
+  customers: CustomerHealthIndicator[];
+  atRiskCount: number;
+  healthyCount: number;
+  championCount: number;
+  churnPredictors: string[];
+  recommendations: string[];
+}
+
+export interface RevenueWaterfallItem {
+  category: string;              // "Beginning MRR", "New", "Expansion", "Contraction", "Churn", "Ending MRR"
+  amount: string;
+  percentage: string;
+  trend: "positive" | "neutral" | "negative";
+}
+
+export interface RevenueWaterfall {
+  summary: string;
+  period: string;
+  items: RevenueWaterfallItem[];
+  netRevenueRetention: string;
+  grossRevenueRetention: string;
+  expansionRate: string;
+  contractionRate: string;
+  recommendations: string[];
+}
+
+export interface TechDebtItem {
+  area: string;                  // "Architecture", "Dependencies", "Testing", "Security"
+  severity: "critical" | "high" | "medium" | "low";
+  description: string;
+  businessImpact: string;
+  estimatedEffort: string;
+  priority: number;              // 1-10
+}
+
+export interface TechDebtAssessment {
+  summary: string;
+  overallScore: number;          // 0-100 (higher = less debt)
+  totalEstimatedCost: string;
+  items: TechDebtItem[];
+  quickWins: string[];
+  longTermInvestments: string[];
+  riskIfIgnored: string;
+  recommendations: string[];
+}
+
+export interface TeamMetric {
+  metric: string;                // "Productivity", "Collaboration", "Skill Coverage"
+  score: number;                 // 0-100
+  benchmark: string;
+  insight: string;
+}
+
+export interface TeamPerformance {
+  summary: string;
+  overallScore: number;          // 0-100
+  metrics: TeamMetric[];
+  strengths: string[];
+  gaps: string[];
+  trainingNeeds: string[];
+  cultureInsights: string[];
+  recommendations: string[];
+}
+
+export interface MarketEntryOption {
+  market: string;
+  entryMode: string;             // "Direct", "Partnership", "Acquisition", "Franchise"
+  marketSize: string;
+  competitionLevel: "high" | "medium" | "low";
+  investmentRequired: string;
+  timeToRevenue: string;
+  riskLevel: "high" | "medium" | "low";
+  fitScore: number;              // 1-10
+}
+
+export interface MarketEntryStrategy {
+  summary: string;
+  readinessScore: number;        // 0-100
+  markets: MarketEntryOption[];
+  priorityMarket: string;
+  goToMarketApproach: string;
+  resourceRequirements: string[];
+  barriers: string[];
+  recommendations: string[];
+}
+
+// ── Wave 12 Types ────────────────────────────────────────────────────────────
+
+export interface CompetitorSignal {
+  competitor: string;
+  signalType: string;            // "Product Launch", "Pricing Change", "Hiring", "Funding"
+  description: string;
+  impact: "high" | "medium" | "low";
+  responseNeeded: string;
+  urgency: "immediate" | "soon" | "monitor";
+}
+
+export interface CompetitiveIntelFeed {
+  summary: string;
+  signals: CompetitorSignal[];
+  marketShiftIndicators: string[];
+  opportunityWindows: string[];
+  threatLevel: "high" | "moderate" | "low";
+  recommendations: string[];
+}
+
+export interface SensitivityVariable {
+  variable: string;              // "Revenue Growth", "COGS", "OpEx", "Headcount"
+  currentValue: string;
+  bestCase: string;
+  worstCase: string;
+  cashImpact: string;
+  sensitivity: "high" | "medium" | "low";
+}
+
+export interface CashFlowSensitivity {
+  summary: string;
+  variables: SensitivityVariable[];
+  mostSensitiveVariable: string;
+  breakEvenSensitivity: string;
+  safetyMargin: string;
+  scenarioComparison: string;
+  recommendations: string[];
+}
+
+export interface DigitalDimension {
+  dimension: string;             // "Customer Experience", "Operations", "Technology", "Data & Analytics"
+  maturity: "leading" | "advanced" | "intermediate" | "developing" | "nascent";
+  score: number;                 // 0-100
+  gaps: string[];
+  nextSteps: string[];
+}
+
+export interface DigitalMaturity {
+  summary: string;
+  overallScore: number;          // 0-100
+  dimensions: DigitalDimension[];
+  industryComparison: string;
+  transformationPriorities: string[];
+  investmentAreas: string[];
+  recommendations: string[];
+}
+
+export interface FunnelStage {
+  stage: string;                 // "Awareness", "Interest", "Consideration", "Intent", "Purchase"
+  volume: string;
+  conversionRate: string;
+  dropOffRate: string;
+  avgTimeInStage: string;
+  bottleneck: string;
+}
+
+export interface AcquisitionFunnel {
+  summary: string;
+  stages: FunnelStage[];
+  overallConversionRate: string;
+  biggestBottleneck: string;
+  costPerAcquisition: string;
+  channelBreakdown: { channel: string; contribution: string; cpa: string }[];
+  recommendations: string[];
+}
+
+export interface AlignmentArea {
+  area: string;                  // "Vision", "Goals", "Resources", "Execution"
+  alignmentScore: number;        // 0-100
+  gaps: string[];
+  actions: string[];
+}
+
+export interface StrategicAlignment {
+  summary: string;
+  overallScore: number;          // 0-100
+  areas: AlignmentArea[];
+  missionVisionClarity: string;
+  resourceAllocationFit: string;
+  executionGaps: string[];
+  recommendations: string[];
+}
+
+export interface BudgetCategory {
+  category: string;              // "Marketing", "Engineering", "Sales", "Operations", "R&D"
+  currentAllocation: string;
+  recommendedAllocation: string;
+  roi: string;
+  efficiency: "optimal" | "over_allocated" | "under_allocated";
+  reallocationSuggestion: string;
+}
+
+export interface BudgetOptimizer {
+  summary: string;
+  totalBudget: string;
+  categories: BudgetCategory[];
+  savingsOpportunity: string;
+  roiImprovementPotential: string;
+  topReallocation: string;
+  wastageAreas: string[];
   recommendations: string[];
 }
