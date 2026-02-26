@@ -1093,6 +1093,34 @@ export interface MVPDeliverables {
   costStructureAnalysis?: CostStructureAnalysis;
   partnershipModel?: PartnershipModel;
   growthLeverAssessment?: GrowthLeverAssessment;
+  // Wave 65: Vendor & Procurement
+  vendorManagement?: VendorManagement;
+  supplyChainVisibility?: SupplyChainVisibility;
+  sustainableSourcing?: SustainableSourcing;
+  facilityOptimization?: FacilityOptimization;
+  fleetManagement?: FleetManagement;
+  customerSuccess?: CustomerSuccess;
+  // Wave 66: Crisis & Resilience
+  crisisManagement?: CrisisManagement;
+  operationalResilience?: OperationalResilience;
+  stakeholderMapping?: StakeholderMapping;
+  digitalPresence?: DigitalPresence;
+  channelStrategy?: ChannelStrategy;
+  accountManagement?: AccountManagement;
+  // Wave 67: Fundraising & Governance
+  fundraisingStrategy?: FundraisingStrategy;
+  captableManagement?: CaptableManagement;
+  exitPlanning?: ExitPlanning;
+  boardGovernance?: BoardGovernance;
+  recruitmentFunnel?: RecruitmentFunnel;
+  employerBranding?: EmployerBranding;
+  // Wave 68: Team & Operations
+  teamTopology?: TeamTopology;
+  onboardingOptimization?: OnboardingOptimization;
+  meetingCulture?: MeetingCulture;
+  documentManagement?: DocumentManagement;
+  workflowAutomation?: WorkflowAutomation;
+  qualityAssurance?: QualityAssurance;
 }
 
 export interface BenchmarkDimension {
@@ -3611,3 +3639,59 @@ export interface PartnershipArrangement { partner: string; type: string; value: 
 export interface PartnershipModel { summary: string; arrangements: PartnershipArrangement[]; totalPartners: number; strategicPct: string; revenueFromPartners: string; topPartner: string; recommendations: string[]; }
 export interface GrowthLever { lever: string; impact: string; effort: string; timeframe: string; confidence: string; prerequisite: string; }
 export interface GrowthLeverAssessment { summary: string; levers: GrowthLever[]; topLever: string; quickWinCount: number; totalImpact: string; readinessScore: number; recommendations: string[]; }
+
+// ── Wave 65: Vendor & Procurement ─────────────────────────────────────────────
+export interface VendorEntity { vendor: string; category: string; spend: string; performance: string; risk: string; contractEnd: string; }
+export interface VendorManagement { summary: string; vendors: VendorEntity[]; totalVendors: number; totalSpend: string; topVendor: string; riskLevel: string; recommendations: string[]; }
+export interface SupplyNode { node: string; tier: string; location: string; leadTime: string; risk: string; alternative: string; }
+export interface SupplyChainVisibility { summary: string; nodes: SupplyNode[]; totalNodes: number; visibilityScore: number; criticalNodes: number; avgLeadTime: string; recommendations: string[]; }
+export interface SourcingCategory { category: string; currentSource: string; sustainability: string; cost: string; risk: string; alternative: string; }
+export interface SustainableSourcing { summary: string; categories: SourcingCategory[]; sustainabilityScore: number; certifiedPct: string; costPremium: string; topOpportunity: string; recommendations: string[]; }
+export interface FacilityMetric { facility: string; utilization: string; cost: string; efficiency: string; condition: string; improvement: string; }
+export interface FacilityOptimization { summary: string; facilities: FacilityMetric[]; totalFacilities: number; avgUtilization: string; totalCost: string; savingsOpportunity: string; recommendations: string[]; }
+export interface FleetAsset { asset: string; type: string; utilization: string; cost: string; age: string; replacement: string; }
+export interface FleetManagement { summary: string; assets: FleetAsset[]; totalAssets: number; avgUtilization: string; totalCost: string; replacementNeeded: number; recommendations: string[]; }
+export interface SuccessMetric { metric: string; current: string; target: string; trend: string; impact: string; action: string; }
+export interface CustomerSuccess { summary: string; metrics: SuccessMetric[]; overallScore: number; nps: string; churnRate: string; expansionRevenue: string; recommendations: string[]; }
+
+// ── Wave 66: Crisis & Resilience ──────────────────────────────────────────────
+export interface CrisisProtocol { scenario: string; severity: string; responseTime: string; team: string; communication: string; recovery: string; }
+export interface CrisisManagement { summary: string; protocols: CrisisProtocol[]; readinessScore: number; plansCovered: number; lastDrill: string; topVulnerability: string; recommendations: string[]; }
+export interface ResilienceDimension { dimension: string; score: number; maturity: string; gap: string; investment: string; priority: string; }
+export interface OperationalResilience { summary: string; dimensions: ResilienceDimension[]; overallScore: number; recoveryTime: string; redundancyLevel: string; topRisk: string; recommendations: string[]; }
+export interface StakeholderGroup { stakeholder: string; influence: string; interest: string; relationship: string; engagement: string; strategy: string; }
+export interface StakeholderMapping { summary: string; stakeholders: StakeholderGroup[]; totalStakeholders: number; highInfluenceCount: number; engagementScore: number; topPriority: string; recommendations: string[]; }
+export interface DigitalFootprint { channel: string; reach: string; engagement: string; growth: string; sentiment: string; action: string; }
+export interface DigitalPresence { summary: string; channels: DigitalFootprint[]; overallScore: number; totalReach: string; avgEngagement: string; strongestChannel: string; recommendations: string[]; }
+export interface ChannelEfficiency { channel: string; revenue: string; cost: string; roi: string; growth: string; optimization: string; }
+export interface ChannelStrategy { summary: string; channels: ChannelEfficiency[]; totalChannels: number; topChannel: string; underperformer: string; diversificationScore: number; recommendations: string[]; }
+export interface AccountProfile { account: string; revenue: string; growth: string; health: string; risk: string; opportunity: string; }
+export interface AccountManagement { summary: string; accounts: AccountProfile[]; totalAccounts: number; topAccount: string; atRiskCount: number; expansionPotential: string; recommendations: string[]; }
+
+// ── Wave 67: Fundraising & Governance ─────────────────────────────────────────
+export interface FundingRound { round: string; amount: string; valuation: string; investors: string; date: string; terms: string; }
+export interface FundraisingStrategy { summary: string; rounds: FundingRound[]; totalRaised: string; currentValuation: string; nextRound: string; readinessScore: number; recommendations: string[]; }
+export interface CapTableEntry { holder: string; shares: string; percentage: string; type: string; vestingStatus: string; value: string; }
+export interface CaptableManagement { summary: string; entries: CapTableEntry[]; totalShares: string; founderOwnership: string; investorOwnership: string; optionPool: string; recommendations: string[]; }
+export interface ExitScenario { scenario: string; valuation: string; timeline: string; likelihood: string; returns: string; requirements: string; }
+export interface ExitPlanning { summary: string; scenarios: ExitScenario[]; preferredExit: string; estimatedTimeline: string; currentValuation: string; readinessScore: number; recommendations: string[]; }
+export interface GovernanceElement { element: string; status: string; maturity: string; gap: string; risk: string; action: string; }
+export interface BoardGovernance { summary: string; elements: GovernanceElement[]; overallScore: number; boardSize: number; independentPct: string; meetingFrequency: string; recommendations: string[]; }
+export interface RecruitStage { stage: string; candidates: string; conversionRate: string; avgDays: string; bottleneck: string; improvement: string; }
+export interface RecruitmentFunnel { summary: string; stages: RecruitStage[]; totalOpenings: number; avgTimeToHire: string; costPerHire: string; topSource: string; recommendations: string[]; }
+export interface BrandAttribute { attribute: string; score: number; benchmark: string; perception: string; gap: string; action: string; }
+export interface EmployerBranding { summary: string; attributes: BrandAttribute[]; overallScore: number; glassdoorRating: string; applicationRate: string; topStrength: string; recommendations: string[]; }
+
+// ── Wave 68: Team & Operations ────────────────────────────────────────────────
+export interface TeamUnit { team: string; size: number; velocity: string; collaboration: string; autonomy: string; improvement: string; }
+export interface TeamTopology { summary: string; teams: TeamUnit[]; totalTeams: number; avgSize: number; collaborationScore: number; topTeam: string; recommendations: string[]; }
+export interface OnboardingPhase { phase: string; duration: string; completion: string; satisfaction: string; dropoff: string; improvement: string; }
+export interface OnboardingOptimization { summary: string; phases: OnboardingPhase[]; overallCompletion: string; avgTimeToProductivity: string; satisfactionScore: number; topIssue: string; recommendations: string[]; }
+export interface MeetingAssessment { category: string; hoursPerWeek: string; attendees: string; effectiveness: string; actionItems: string; recommendation: string; }
+export interface MeetingCulture { summary: string; assessments: MeetingAssessment[]; totalHoursPerWeek: string; effectiveRate: string; reclaimableHours: string; topIssue: string; recommendations: string[]; }
+export interface DocAsset { document: string; type: string; status: string; accessibility: string; lastUpdated: string; action: string; }
+export interface DocumentManagement { summary: string; documents: DocAsset[]; totalDocuments: number; organizedPct: string; accessibilityScore: number; topGap: string; recommendations: string[]; }
+export interface WorkflowStep { workflow: string; currentState: string; automationPotential: string; effort: string; savings: string; priority: string; }
+export interface WorkflowAutomation { summary: string; workflows: WorkflowStep[]; totalWorkflows: number; automatedPct: string; totalSavings: string; topOpportunity: string; recommendations: string[]; }
+export interface QaCheck { area: string; coverage: string; defectRate: string; automationLevel: string; trend: string; action: string; }
+export interface QualityAssurance { summary: string; checks: QaCheck[]; overallScore: number; defectRate: string; automationPct: string; topIssue: string; recommendations: string[]; }

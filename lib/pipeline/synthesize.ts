@@ -379,6 +379,30 @@ import type {
   CostStructureAnalysis,
   PartnershipModel,
   GrowthLeverAssessment,
+  VendorManagement,
+  SupplyChainVisibility,
+  SustainableSourcing,
+  FacilityOptimization,
+  FleetManagement,
+  CustomerSuccess,
+  CrisisManagement,
+  OperationalResilience,
+  StakeholderMapping,
+  DigitalPresence,
+  ChannelStrategy,
+  AccountManagement,
+  FundraisingStrategy,
+  CaptableManagement,
+  ExitPlanning,
+  BoardGovernance,
+  RecruitmentFunnel,
+  EmployerBranding,
+  TeamTopology,
+  OnboardingOptimization,
+  MeetingCulture,
+  DocumentManagement,
+  WorkflowAutomation,
+  QualityAssurance,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -27806,6 +27830,1550 @@ ${schema}`;
     return result as unknown as GrowthLeverAssessment;
   } catch (e) {
     console.warn("[Pivot] Growth Lever Assessment (Wave 64) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 65: Vendor & Procurement ─────────────────────────────────────────────
+
+export async function synthesizeVendorManagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<VendorManagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of vendor management landscape",
+  "vendors": [{
+    "vendor": "Vendor name",
+    "category": "Vendor category (e.g., Technology, Services, Materials)",
+    "spend": "Annual spend with this vendor",
+    "performance": "Performance rating (Excellent, Good, Fair, Poor)",
+    "risk": "Risk level (Low, Medium, High, Critical)",
+    "contractEnd": "Contract end date or renewal timeline"
+  }],
+  "totalVendors": 0,
+  "totalSpend": "Total annual vendor spend",
+  "topVendor": "Highest-spend or most critical vendor",
+  "riskLevel": "Overall vendor risk level",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a procurement and vendor management strategist specializing in supplier relationship optimization, vendor risk assessment, spend analytics, and contract lifecycle management.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Vendor Management analysis:
+
+1. SUMMARY: 2-3 sentence overview of vendor management landscape and health.
+2. VENDORS (4-6): For each vendor — name, category, spend, performance, risk, and contract end.
+3. TOTAL VENDORS (numeric): Total number of active vendors.
+4. TOTAL SPEND: Total annual vendor spend.
+5. TOP VENDOR: Highest-spend or most critical vendor.
+6. RISK LEVEL: Overall vendor risk level assessment.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize vendor management.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Vendor Management (Wave 65)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as VendorManagement;
+  } catch (e) {
+    console.warn("[Pivot] Vendor Management (Wave 65) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeSupplyChainVisibility(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SupplyChainVisibility | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of supply chain visibility",
+  "nodes": [{
+    "node": "Supply chain node name",
+    "tier": "Tier level (Tier 1, Tier 2, Tier 3)",
+    "location": "Geographic location of the node",
+    "leadTime": "Average lead time for this node",
+    "risk": "Risk level (Low, Medium, High, Critical)",
+    "alternative": "Available alternative or backup"
+  }],
+  "totalNodes": 0,
+  "visibilityScore": 0,
+  "criticalNodes": 0,
+  "avgLeadTime": "Average lead time across all nodes",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a supply chain transparency analyst specializing in end-to-end supply chain mapping, supplier tier visibility, logistics optimization, and risk monitoring across multi-tier networks.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Supply Chain Visibility analysis:
+
+1. SUMMARY: 2-3 sentence overview of supply chain visibility and health.
+2. NODES (4-6): For each supply chain node — name, tier, location, lead time, risk, and alternative.
+3. TOTAL NODES (numeric): Total number of supply chain nodes tracked.
+4. VISIBILITY SCORE (numeric 0-100): Overall supply chain visibility score.
+5. CRITICAL NODES (numeric): Number of critical or high-risk nodes.
+6. AVG LEAD TIME: Average lead time across all supply chain nodes.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve supply chain visibility.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Supply Chain Visibility (Wave 65)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SupplyChainVisibility;
+  } catch (e) {
+    console.warn("[Pivot] Supply Chain Visibility (Wave 65) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeSustainableSourcing(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<SustainableSourcing | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of sustainable sourcing posture",
+  "categories": [{
+    "category": "Sourcing category",
+    "currentSource": "Current sourcing approach",
+    "sustainability": "Sustainability rating (Excellent, Good, Fair, Poor)",
+    "cost": "Cost impact of sustainable sourcing",
+    "risk": "Risk level (Low, Medium, High)",
+    "alternative": "Sustainable alternative available"
+  }],
+  "sustainabilityScore": 0,
+  "certifiedPct": "Percentage of sourcing that is certified sustainable",
+  "costPremium": "Average cost premium for sustainable sourcing",
+  "topOpportunity": "Top opportunity for improving sustainable sourcing",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a sustainable procurement advisor specializing in ethical sourcing, ESG-aligned supply chains, certification frameworks, and circular economy integration within procurement strategy.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Sustainable Sourcing analysis:
+
+1. SUMMARY: 2-3 sentence overview of sustainable sourcing posture and opportunities.
+2. CATEGORIES (4-6): For each sourcing category — name, current source, sustainability rating, cost, risk, and alternative.
+3. SUSTAINABILITY SCORE (numeric 0-100): Overall sustainable sourcing score.
+4. CERTIFIED PCT: Percentage of sourcing that is certified sustainable.
+5. COST PREMIUM: Average cost premium for sustainable sourcing.
+6. TOP OPPORTUNITY: Single best opportunity to improve sustainable sourcing.
+7. RECOMMENDATIONS (4-6): Actionable steps to advance sustainable sourcing.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Sustainable Sourcing (Wave 65)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as SustainableSourcing;
+  } catch (e) {
+    console.warn("[Pivot] Sustainable Sourcing (Wave 65) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeFacilityOptimization(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<FacilityOptimization | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of facility optimization opportunities",
+  "facilities": [{
+    "facility": "Facility name or identifier",
+    "utilization": "Current utilization rate",
+    "cost": "Annual operating cost",
+    "efficiency": "Efficiency rating (Excellent, Good, Fair, Poor)",
+    "condition": "Physical condition assessment",
+    "improvement": "Top improvement opportunity"
+  }],
+  "totalFacilities": 0,
+  "avgUtilization": "Average utilization across all facilities",
+  "totalCost": "Total annual facility operating cost",
+  "savingsOpportunity": "Estimated savings opportunity",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a facilities management engineer specializing in space utilization, operational cost reduction, energy efficiency, predictive maintenance, and facility lifecycle planning.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Facility Optimization analysis:
+
+1. SUMMARY: 2-3 sentence overview of facility optimization landscape.
+2. FACILITIES (4-6): For each facility — name, utilization, cost, efficiency, condition, and top improvement.
+3. TOTAL FACILITIES (numeric): Total number of facilities.
+4. AVG UTILIZATION: Average utilization rate across all facilities.
+5. TOTAL COST: Total annual facility operating cost.
+6. SAVINGS OPPORTUNITY: Estimated savings opportunity from optimization.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize facility operations.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Facility Optimization (Wave 65)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as FacilityOptimization;
+  } catch (e) {
+    console.warn("[Pivot] Facility Optimization (Wave 65) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeFleetManagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<FleetManagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of fleet management status",
+  "assets": [{
+    "asset": "Asset name or identifier",
+    "type": "Asset type (e.g., Vehicle, Equipment, Machinery)",
+    "utilization": "Current utilization rate",
+    "cost": "Annual operating cost",
+    "age": "Asset age or years in service",
+    "replacement": "Replacement status or timeline"
+  }],
+  "totalAssets": 0,
+  "avgUtilization": "Average fleet utilization rate",
+  "totalCost": "Total annual fleet cost",
+  "replacementNeeded": 0,
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a fleet and asset management specialist focused on fleet lifecycle planning, utilization analytics, total cost of ownership modeling, replacement scheduling, and telematics-driven optimization.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Fleet Management analysis:
+
+1. SUMMARY: 2-3 sentence overview of fleet management status and efficiency.
+2. ASSETS (4-6): For each fleet asset — name, type, utilization, cost, age, and replacement status.
+3. TOTAL ASSETS (numeric): Total number of fleet assets.
+4. AVG UTILIZATION: Average fleet utilization rate.
+5. TOTAL COST: Total annual fleet operating cost.
+6. REPLACEMENT NEEDED (numeric): Number of assets due for replacement.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize fleet management.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Fleet Management (Wave 65)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as FleetManagement;
+  } catch (e) {
+    console.warn("[Pivot] Fleet Management (Wave 65) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCustomerSuccess(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CustomerSuccess | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of customer success health",
+  "metrics": [{
+    "metric": "Customer success metric name",
+    "current": "Current value",
+    "target": "Target value",
+    "trend": "Trend direction (Improving, Stable, Declining)",
+    "impact": "Business impact of this metric",
+    "action": "Recommended action to improve"
+  }],
+  "overallScore": 0,
+  "nps": "Current Net Promoter Score",
+  "churnRate": "Current churn rate",
+  "expansionRevenue": "Revenue from existing customer expansion",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a customer success operations leader specializing in health score modeling, NPS optimization, churn prevention, expansion revenue strategies, and customer lifecycle management.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Customer Success analysis:
+
+1. SUMMARY: 2-3 sentence overview of customer success health and trajectory.
+2. METRICS (4-6): For each metric — name, current value, target, trend, impact, and action.
+3. OVERALL SCORE (numeric 0-100): Overall customer success score.
+4. NPS: Current Net Promoter Score.
+5. CHURN RATE: Current churn rate.
+6. EXPANSION REVENUE: Revenue from existing customer expansion.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen customer success.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Customer Success (Wave 65)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CustomerSuccess;
+  } catch (e) {
+    console.warn("[Pivot] Customer Success (Wave 65) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 66: Crisis & Resilience ──────────────────────────────────────────────
+
+export async function synthesizeCrisisManagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CrisisManagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of crisis management readiness",
+  "protocols": [{
+    "scenario": "Crisis scenario (e.g., Data Breach, PR Crisis, Natural Disaster)",
+    "severity": "Potential severity (Low, Medium, High, Critical)",
+    "responseTime": "Expected response time",
+    "team": "Responsible team or lead",
+    "communication": "Communication plan status",
+    "recovery": "Recovery timeline estimate"
+  }],
+  "readinessScore": 0,
+  "plansCovered": 0,
+  "lastDrill": "Date or timeframe of last crisis drill",
+  "topVulnerability": "Most critical unaddressed vulnerability",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a crisis management and business continuity planner specializing in incident response design, crisis communication frameworks, disaster recovery orchestration, and organizational resilience testing.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Crisis Management analysis:
+
+1. SUMMARY: 2-3 sentence overview of crisis management readiness.
+2. PROTOCOLS (4-6): For each crisis protocol — scenario, severity, response time, team, communication plan, and recovery timeline.
+3. READINESS SCORE (numeric 0-100): Overall crisis readiness score.
+4. PLANS COVERED (numeric): Number of crisis scenarios with documented plans.
+5. LAST DRILL: Date or timeframe of last crisis drill.
+6. TOP VULNERABILITY: Most critical unaddressed vulnerability.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve crisis management.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Crisis Management (Wave 66)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CrisisManagement;
+  } catch (e) {
+    console.warn("[Pivot] Crisis Management (Wave 66) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeOperationalResilience(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<OperationalResilience | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of operational resilience posture",
+  "dimensions": [{
+    "dimension": "Resilience dimension (e.g., Technology, People, Process, Supply Chain, Financial)",
+    "score": 0,
+    "maturity": "Maturity level (Initial, Developing, Defined, Managed, Optimized)",
+    "gap": "Key gap in this dimension",
+    "investment": "Investment needed to close the gap",
+    "priority": "Priority level (Low, Medium, High, Critical)"
+  }],
+  "overallScore": 0,
+  "recoveryTime": "Estimated recovery time for major disruption",
+  "redundancyLevel": "Overall redundancy level (Minimal, Partial, Substantial, Full)",
+  "topRisk": "Top operational resilience risk",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an operational resilience architect specializing in business continuity design, redundancy planning, recovery time optimization, stress testing, and organizational adaptability frameworks.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Operational Resilience analysis:
+
+1. SUMMARY: 2-3 sentence overview of operational resilience posture.
+2. DIMENSIONS (4-6): For each dimension — name, score (0-100), maturity, gap, investment needed, and priority.
+3. OVERALL SCORE (numeric 0-100): Overall operational resilience score.
+4. RECOVERY TIME: Estimated recovery time for a major disruption.
+5. REDUNDANCY LEVEL: Overall redundancy level assessment.
+6. TOP RISK: Top operational resilience risk.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen operational resilience.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Operational Resilience (Wave 66)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as OperationalResilience;
+  } catch (e) {
+    console.warn("[Pivot] Operational Resilience (Wave 66) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeStakeholderMapping(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<StakeholderMapping | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of stakeholder landscape",
+  "stakeholders": [{
+    "stakeholder": "Stakeholder group name",
+    "influence": "Influence level (Low, Medium, High, Critical)",
+    "interest": "Interest level (Low, Medium, High)",
+    "relationship": "Current relationship quality (Strong, Good, Neutral, Weak)",
+    "engagement": "Current engagement approach",
+    "strategy": "Recommended engagement strategy"
+  }],
+  "totalStakeholders": 0,
+  "highInfluenceCount": 0,
+  "engagementScore": 0,
+  "topPriority": "Highest priority stakeholder group",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a stakeholder relations strategist specializing in influence mapping, engagement frameworks, power-interest analysis, coalition building, and multi-stakeholder communication design.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Stakeholder Mapping analysis:
+
+1. SUMMARY: 2-3 sentence overview of stakeholder landscape and engagement health.
+2. STAKEHOLDERS (4-6): For each stakeholder group — name, influence, interest, relationship, engagement, and strategy.
+3. TOTAL STAKEHOLDERS (numeric): Total number of identified stakeholder groups.
+4. HIGH INFLUENCE COUNT (numeric): Number of high-influence stakeholder groups.
+5. ENGAGEMENT SCORE (numeric 0-100): Overall stakeholder engagement score.
+6. TOP PRIORITY: Highest priority stakeholder group requiring immediate attention.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve stakeholder engagement.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Stakeholder Mapping (Wave 66)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as StakeholderMapping;
+  } catch (e) {
+    console.warn("[Pivot] Stakeholder Mapping (Wave 66) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeDigitalPresence(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<DigitalPresence | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of digital presence and footprint",
+  "channels": [{
+    "channel": "Digital channel name (e.g., Website, LinkedIn, Twitter, YouTube)",
+    "reach": "Audience reach or follower count",
+    "engagement": "Engagement rate or level",
+    "growth": "Growth trend (Rapid, Steady, Flat, Declining)",
+    "sentiment": "Audience sentiment (Positive, Neutral, Mixed, Negative)",
+    "action": "Recommended action for this channel"
+  }],
+  "overallScore": 0,
+  "totalReach": "Combined audience reach across all channels",
+  "avgEngagement": "Average engagement rate across channels",
+  "strongestChannel": "Best-performing digital channel",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a digital presence strategist specializing in multi-channel brand footprint analysis, social media analytics, search visibility, content performance optimization, and online reputation management.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Digital Presence analysis:
+
+1. SUMMARY: 2-3 sentence overview of digital presence and overall footprint.
+2. CHANNELS (4-6): For each digital channel — name, reach, engagement, growth, sentiment, and action.
+3. OVERALL SCORE (numeric 0-100): Overall digital presence score.
+4. TOTAL REACH: Combined audience reach across all digital channels.
+5. AVG ENGAGEMENT: Average engagement rate across all channels.
+6. STRONGEST CHANNEL: Best-performing digital channel.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen digital presence.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Digital Presence (Wave 66)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as DigitalPresence;
+  } catch (e) {
+    console.warn("[Pivot] Digital Presence (Wave 66) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeChannelStrategy(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ChannelStrategy | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of channel strategy effectiveness",
+  "channels": [{
+    "channel": "Channel name (e.g., Direct Sales, Partner, Online, Retail)",
+    "revenue": "Revenue attributed to this channel",
+    "cost": "Cost to operate this channel",
+    "roi": "Return on investment for this channel",
+    "growth": "Growth trend (Rapid, Steady, Flat, Declining)",
+    "optimization": "Top optimization opportunity"
+  }],
+  "totalChannels": 0,
+  "topChannel": "Best-performing channel",
+  "underperformer": "Worst-performing or most inefficient channel",
+  "diversificationScore": 0,
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a channel strategy consultant specializing in go-to-market channel design, multi-channel revenue optimization, channel conflict resolution, partner channel economics, and omnichannel performance measurement.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Channel Strategy analysis:
+
+1. SUMMARY: 2-3 sentence overview of channel strategy effectiveness and balance.
+2. CHANNELS (4-6): For each channel — name, revenue, cost, ROI, growth, and optimization opportunity.
+3. TOTAL CHANNELS (numeric): Total number of active channels.
+4. TOP CHANNEL: Best-performing channel by revenue or ROI.
+5. UNDERPERFORMER: Worst-performing or most inefficient channel.
+6. DIVERSIFICATION SCORE (numeric 0-100): Channel diversification health score.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize channel strategy.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Channel Strategy (Wave 66)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ChannelStrategy;
+  } catch (e) {
+    console.warn("[Pivot] Channel Strategy (Wave 66) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeAccountManagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<AccountManagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of account management landscape",
+  "accounts": [{
+    "account": "Account name or segment",
+    "revenue": "Annual revenue from this account",
+    "growth": "Revenue growth trend (Rapid, Steady, Flat, Declining)",
+    "health": "Account health status (Healthy, Stable, At Risk, Critical)",
+    "risk": "Key risk for this account",
+    "opportunity": "Top expansion or upsell opportunity"
+  }],
+  "totalAccounts": 0,
+  "topAccount": "Highest-revenue or most strategic account",
+  "atRiskCount": 0,
+  "expansionPotential": "Total estimated expansion revenue potential",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a strategic account management director specializing in key account planning, account health diagnostics, expansion revenue identification, customer retention strategies, and portfolio-level account optimization.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Account Management analysis:
+
+1. SUMMARY: 2-3 sentence overview of account management landscape.
+2. ACCOUNTS (4-6): For each account — name/segment, revenue, growth, health, risk, and opportunity.
+3. TOTAL ACCOUNTS (numeric): Total number of managed accounts.
+4. TOP ACCOUNT: Highest-revenue or most strategic account.
+5. AT RISK COUNT (numeric): Number of accounts at risk.
+6. EXPANSION POTENTIAL: Total estimated expansion revenue potential.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize account management.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Account Management (Wave 66)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as AccountManagement;
+  } catch (e) {
+    console.warn("[Pivot] Account Management (Wave 66) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 67: Fundraising & Governance ─────────────────────────────────────────
+
+export async function synthesizeFundraisingStrategy(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<FundraisingStrategy | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of fundraising strategy and position",
+  "rounds": [{
+    "round": "Funding round (e.g., Pre-Seed, Seed, Series A)",
+    "amount": "Amount raised in this round",
+    "valuation": "Valuation at this round",
+    "investors": "Key investors in this round",
+    "date": "Date or timeframe of this round",
+    "terms": "Key terms or conditions"
+  }],
+  "totalRaised": "Total capital raised to date",
+  "currentValuation": "Current company valuation estimate",
+  "nextRound": "Planned next funding round",
+  "readinessScore": 0,
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a fundraising strategy advisor specializing in venture capital readiness, pitch optimization, investor targeting, term sheet negotiation, and capital raise planning across growth stages.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Fundraising Strategy analysis:
+
+1. SUMMARY: 2-3 sentence overview of fundraising position and readiness.
+2. ROUNDS (3-5): For each funding round — round name, amount, valuation, investors, date, and terms.
+3. TOTAL RAISED: Total capital raised to date.
+4. CURRENT VALUATION: Current company valuation estimate.
+5. NEXT ROUND: Planned next funding round and expected timeline.
+6. READINESS SCORE (numeric 0-100): Overall fundraising readiness score.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen fundraising strategy.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Fundraising Strategy (Wave 67)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as FundraisingStrategy;
+  } catch (e) {
+    console.warn("[Pivot] Fundraising Strategy (Wave 67) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeCaptableManagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<CaptableManagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of cap table structure and health",
+  "entries": [{
+    "holder": "Shareholder name or category",
+    "shares": "Number of shares held",
+    "percentage": "Ownership percentage",
+    "type": "Share type (Common, Preferred, Options, Warrants)",
+    "vestingStatus": "Vesting status (Fully Vested, Partially Vested, Unvested)",
+    "value": "Estimated current value"
+  }],
+  "totalShares": "Total shares outstanding",
+  "founderOwnership": "Founder ownership percentage",
+  "investorOwnership": "Investor ownership percentage",
+  "optionPool": "Employee option pool size",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a cap table and equity management specialist focused on ownership structure optimization, dilution modeling, option pool planning, ESOP design, and shareholder rights balancing for growth-stage companies.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Cap Table Management analysis:
+
+1. SUMMARY: 2-3 sentence overview of cap table structure and health.
+2. ENTRIES (4-6): For each holder — name/category, shares, percentage, type, vesting status, and value.
+3. TOTAL SHARES: Total shares outstanding.
+4. FOUNDER OWNERSHIP: Founder ownership percentage.
+5. INVESTOR OWNERSHIP: Investor ownership percentage.
+6. OPTION POOL: Employee option pool size as percentage.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize cap table management.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Cap Table Management (Wave 67)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as CaptableManagement;
+  } catch (e) {
+    console.warn("[Pivot] Cap Table Management (Wave 67) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeExitPlanning(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ExitPlanning | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of exit planning landscape",
+  "scenarios": [{
+    "scenario": "Exit scenario (e.g., IPO, Strategic Acquisition, PE Buyout, Management Buyout, SPAC Merger)",
+    "valuation": "Expected valuation under this scenario",
+    "timeline": "Expected timeline to execute",
+    "likelihood": "Likelihood of this scenario (Low, Medium, High)",
+    "returns": "Expected returns for shareholders",
+    "requirements": "Key requirements to pursue this exit"
+  }],
+  "preferredExit": "Most likely or preferred exit path",
+  "estimatedTimeline": "Estimated timeline for preferred exit",
+  "currentValuation": "Current company valuation estimate",
+  "readinessScore": 0,
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an exit planning and M&A advisor specializing in exit strategy design, valuation maximization, buyer/acquirer identification, transaction readiness, and shareholder liquidity event planning.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Exit Planning analysis:
+
+1. SUMMARY: 2-3 sentence overview of exit planning landscape and readiness.
+2. SCENARIOS (3-5): For each exit scenario — name, valuation, timeline, likelihood, returns, and requirements.
+3. PREFERRED EXIT: Most likely or preferred exit path.
+4. ESTIMATED TIMELINE: Estimated timeline for the preferred exit.
+5. CURRENT VALUATION: Current company valuation estimate.
+6. READINESS SCORE (numeric 0-100): Overall exit readiness score.
+7. RECOMMENDATIONS (4-6): Actionable steps to advance exit planning.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Exit Planning (Wave 67)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ExitPlanning;
+  } catch (e) {
+    console.warn("[Pivot] Exit Planning (Wave 67) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeBoardGovernance(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<BoardGovernance | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of board governance maturity",
+  "elements": [{
+    "element": "Governance element (e.g., Board Composition, Committee Structure, Risk Oversight, ESG Governance)",
+    "status": "Current status (Established, In Progress, Planned, Missing)",
+    "maturity": "Maturity level (Initial, Developing, Defined, Managed, Optimized)",
+    "gap": "Key gap in this governance element",
+    "risk": "Risk from this gap",
+    "action": "Recommended action to improve"
+  }],
+  "overallScore": 0,
+  "boardSize": 0,
+  "independentPct": "Percentage of independent board members",
+  "meetingFrequency": "Board meeting frequency",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a corporate governance expert specializing in board composition design, governance framework implementation, fiduciary duty compliance, board effectiveness evaluation, and ESG governance integration.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Board Governance analysis:
+
+1. SUMMARY: 2-3 sentence overview of board governance maturity and effectiveness.
+2. ELEMENTS (4-6): For each governance element — name, status, maturity, gap, risk, and action.
+3. OVERALL SCORE (numeric 0-100): Overall board governance score.
+4. BOARD SIZE (numeric): Total number of board members.
+5. INDEPENDENT PCT: Percentage of independent board members.
+6. MEETING FREQUENCY: Board meeting frequency.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen board governance.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Board Governance (Wave 67)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as BoardGovernance;
+  } catch (e) {
+    console.warn("[Pivot] Board Governance (Wave 67) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeRecruitmentFunnel(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<RecruitmentFunnel | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of recruitment funnel health",
+  "stages": [{
+    "stage": "Funnel stage (e.g., Sourcing, Screening, Interview, Offer, Onboarding)",
+    "candidates": "Number of candidates at this stage",
+    "conversionRate": "Conversion rate to next stage",
+    "avgDays": "Average days spent at this stage",
+    "bottleneck": "Key bottleneck at this stage",
+    "improvement": "Recommended improvement"
+  }],
+  "totalOpenings": 0,
+  "avgTimeToHire": "Average time to hire across all roles",
+  "costPerHire": "Average cost per hire",
+  "topSource": "Top performing candidate source",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a talent acquisition analytics leader specializing in recruitment funnel optimization, sourcing channel effectiveness, candidate experience design, hiring velocity improvement, and recruitment marketing ROI analysis.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Recruitment Funnel analysis:
+
+1. SUMMARY: 2-3 sentence overview of recruitment funnel health and efficiency.
+2. STAGES (4-6): For each funnel stage — name, candidates, conversion rate, avg days, bottleneck, and improvement.
+3. TOTAL OPENINGS (numeric): Total number of open positions.
+4. AVG TIME TO HIRE: Average time to hire across all roles.
+5. COST PER HIRE: Average cost per hire.
+6. TOP SOURCE: Best performing candidate source.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize the recruitment funnel.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Recruitment Funnel (Wave 67)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as RecruitmentFunnel;
+  } catch (e) {
+    console.warn("[Pivot] Recruitment Funnel (Wave 67) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeEmployerBranding(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<EmployerBranding | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of employer branding strength",
+  "attributes": [{
+    "attribute": "Brand attribute (e.g., Culture, Compensation, Growth, Purpose, Work-Life Balance)",
+    "score": 0,
+    "benchmark": "Industry benchmark for this attribute",
+    "perception": "External perception of this attribute",
+    "gap": "Gap between perception and reality",
+    "action": "Recommended action to improve"
+  }],
+  "overallScore": 0,
+  "glassdoorRating": "Current or estimated Glassdoor rating",
+  "applicationRate": "Application conversion rate",
+  "topStrength": "Top employer brand strength",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an employer branding strategist specializing in employee value proposition design, talent marketing, employer reputation management, Glassdoor and review platform optimization, and candidate experience storytelling.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Employer Branding analysis:
+
+1. SUMMARY: 2-3 sentence overview of employer branding strength and perception.
+2. ATTRIBUTES (4-6): For each brand attribute — name, score (0-100), benchmark, perception, gap, and action.
+3. OVERALL SCORE (numeric 0-100): Overall employer branding score.
+4. GLASSDOOR RATING: Current or estimated Glassdoor rating.
+5. APPLICATION RATE: Application conversion rate.
+6. TOP STRENGTH: Top employer brand strength.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen employer branding.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Employer Branding (Wave 67)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as EmployerBranding;
+  } catch (e) {
+    console.warn("[Pivot] Employer Branding (Wave 67) synthesis failed:", e);
+    return null;
+  }
+}
+
+// ── Wave 68: Team & Operations ────────────────────────────────────────────────
+
+export async function synthesizeTeamTopology(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<TeamTopology | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of team topology and collaboration patterns",
+  "teams": [{
+    "team": "Team name or function",
+    "size": 0,
+    "velocity": "Team velocity or output measure",
+    "collaboration": "Collaboration effectiveness (Excellent, Good, Fair, Poor)",
+    "autonomy": "Team autonomy level (High, Medium, Low)",
+    "improvement": "Top improvement opportunity"
+  }],
+  "totalTeams": 0,
+  "avgSize": 0,
+  "collaborationScore": 0,
+  "topTeam": "Highest-performing team",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an organizational design consultant specializing in team topology mapping, cross-functional collaboration optimization, cognitive load management, team interaction mode design, and platform team strategy.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Team Topology analysis:
+
+1. SUMMARY: 2-3 sentence overview of team topology and collaboration patterns.
+2. TEAMS (4-6): For each team — name, size (numeric), velocity, collaboration, autonomy, and improvement.
+3. TOTAL TEAMS (numeric): Total number of teams.
+4. AVG SIZE (numeric): Average team size.
+5. COLLABORATION SCORE (numeric 0-100): Overall cross-team collaboration score.
+6. TOP TEAM: Highest-performing team.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize team topology.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Team Topology (Wave 68)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as TeamTopology;
+  } catch (e) {
+    console.warn("[Pivot] Team Topology (Wave 68) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeOnboardingOptimization(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<OnboardingOptimization | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of onboarding process effectiveness",
+  "phases": [{
+    "phase": "Onboarding phase (e.g., Pre-boarding, Day One, Week One, First Month, First Quarter)",
+    "duration": "Duration of this phase",
+    "completion": "Completion rate for this phase",
+    "satisfaction": "Satisfaction score for this phase",
+    "dropoff": "Drop-off or issue rate at this phase",
+    "improvement": "Top improvement opportunity"
+  }],
+  "overallCompletion": "Overall onboarding completion rate",
+  "avgTimeToProductivity": "Average time to full productivity for new hires",
+  "satisfactionScore": 0,
+  "topIssue": "Top onboarding issue or bottleneck",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are an employee onboarding optimization specialist focused on new hire experience design, time-to-productivity reduction, onboarding journey mapping, knowledge transfer acceleration, and first-year retention improvement.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Onboarding Optimization analysis:
+
+1. SUMMARY: 2-3 sentence overview of onboarding process effectiveness.
+2. PHASES (4-6): For each onboarding phase — name, duration, completion, satisfaction, drop-off, and improvement.
+3. OVERALL COMPLETION: Overall onboarding completion rate.
+4. AVG TIME TO PRODUCTIVITY: Average time to full productivity for new hires.
+5. SATISFACTION SCORE (numeric 0-100): Overall onboarding satisfaction score.
+6. TOP ISSUE: Top onboarding issue or bottleneck.
+7. RECOMMENDATIONS (4-6): Actionable steps to optimize onboarding.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Onboarding Optimization (Wave 68)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as OnboardingOptimization;
+  } catch (e) {
+    console.warn("[Pivot] Onboarding Optimization (Wave 68) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeMeetingCulture(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<MeetingCulture | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of meeting culture and effectiveness",
+  "assessments": [{
+    "category": "Meeting category (e.g., All-Hands, Standup, 1:1, Strategy, Client)",
+    "hoursPerWeek": "Hours per week spent in this meeting type",
+    "attendees": "Average number of attendees",
+    "effectiveness": "Effectiveness rating (Excellent, Good, Fair, Poor)",
+    "actionItems": "Average action items generated per meeting",
+    "recommendation": "Recommended improvement for this meeting type"
+  }],
+  "totalHoursPerWeek": "Total meeting hours per week across the org",
+  "effectiveRate": "Percentage of meetings considered effective",
+  "reclaimableHours": "Hours per week that could be reclaimed",
+  "topIssue": "Top meeting culture issue",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a workplace productivity consultant specializing in meeting culture transformation, calendar optimization, asynchronous communication design, decision-making efficiency, and organizational time management.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Meeting Culture analysis:
+
+1. SUMMARY: 2-3 sentence overview of meeting culture and effectiveness.
+2. ASSESSMENTS (4-6): For each meeting category — name, hours/week, attendees, effectiveness, action items, and recommendation.
+3. TOTAL HOURS PER WEEK: Total meeting hours per week across the organization.
+4. EFFECTIVE RATE: Percentage of meetings considered effective.
+5. RECLAIMABLE HOURS: Hours per week that could be reclaimed through optimization.
+6. TOP ISSUE: Top meeting culture issue.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve meeting culture.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Meeting Culture (Wave 68)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as MeetingCulture;
+  } catch (e) {
+    console.warn("[Pivot] Meeting Culture (Wave 68) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeDocumentManagement(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<DocumentManagement | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of document management maturity",
+  "documents": [{
+    "document": "Document type or category",
+    "type": "Document classification (e.g., Policy, Procedure, Template, Report, Contract)",
+    "status": "Status (Current, Outdated, Missing, Draft)",
+    "accessibility": "Accessibility level (Easy, Moderate, Difficult, Restricted)",
+    "lastUpdated": "Last update date or timeframe",
+    "action": "Recommended action"
+  }],
+  "totalDocuments": 0,
+  "organizedPct": "Percentage of documents that are properly organized",
+  "accessibilityScore": 0,
+  "topGap": "Top document management gap",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a knowledge and document management architect specializing in document lifecycle governance, taxonomy design, search and retrieval optimization, version control strategy, and knowledge base architecture.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Document Management analysis:
+
+1. SUMMARY: 2-3 sentence overview of document management maturity.
+2. DOCUMENTS (4-6): For each document type — name, classification, status, accessibility, last updated, and action.
+3. TOTAL DOCUMENTS (numeric): Total number of key documents tracked.
+4. ORGANIZED PCT: Percentage of documents that are properly organized.
+5. ACCESSIBILITY SCORE (numeric 0-100): Overall document accessibility score.
+6. TOP GAP: Top document management gap.
+7. RECOMMENDATIONS (4-6): Actionable steps to improve document management.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Document Management (Wave 68)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as DocumentManagement;
+  } catch (e) {
+    console.warn("[Pivot] Document Management (Wave 68) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeWorkflowAutomation(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<WorkflowAutomation | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of workflow automation maturity",
+  "workflows": [{
+    "workflow": "Workflow name or process",
+    "currentState": "Current state (Manual, Partially Automated, Mostly Automated, Fully Automated)",
+    "automationPotential": "Automation potential (Low, Medium, High, Critical)",
+    "effort": "Implementation effort (Low, Medium, High)",
+    "savings": "Estimated annual savings from automation",
+    "priority": "Priority level (Low, Medium, High, Critical)"
+  }],
+  "totalWorkflows": 0,
+  "automatedPct": "Percentage of workflows currently automated",
+  "totalSavings": "Total estimated annual savings from automation",
+  "topOpportunity": "Top automation opportunity",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a business process automation architect specializing in workflow mapping, RPA implementation planning, integration platform strategy, process mining, and automation ROI modeling for operational efficiency.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Workflow Automation analysis:
+
+1. SUMMARY: 2-3 sentence overview of workflow automation maturity and opportunity.
+2. WORKFLOWS (4-6): For each workflow — name, current state, automation potential, effort, savings, and priority.
+3. TOTAL WORKFLOWS (numeric): Total number of key workflows assessed.
+4. AUTOMATED PCT: Percentage of workflows currently automated.
+5. TOTAL SAVINGS: Total estimated annual savings from full automation.
+6. TOP OPPORTUNITY: Single best automation opportunity.
+7. RECOMMENDATIONS (4-6): Actionable steps to advance workflow automation.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Workflow Automation (Wave 68)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as WorkflowAutomation;
+  } catch (e) {
+    console.warn("[Pivot] Workflow Automation (Wave 68) synthesis failed:", e);
+    return null;
+  }
+}
+
+export async function synthesizeQualityAssurance(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<QualityAssurance | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const schema = `{
+  "summary": "2-3 sentence overview of quality assurance posture",
+  "checks": [{
+    "area": "QA area or domain (e.g., Product, Service, Process, Data, Compliance)",
+    "coverage": "Test or check coverage level",
+    "defectRate": "Defect or error rate in this area",
+    "automationLevel": "Automation level (None, Low, Medium, High, Full)",
+    "trend": "Quality trend (Improving, Stable, Declining)",
+    "action": "Recommended action to improve quality"
+  }],
+  "overallScore": 0,
+  "defectRate": "Overall defect or error rate",
+  "automationPct": "Percentage of QA checks that are automated",
+  "topIssue": "Top quality assurance issue",
+  "recommendations": ["recommendation 1", "..."]
+}`;
+
+  const prompt = `You are a quality assurance and continuous improvement director specializing in QA framework design, defect trend analysis, test automation strategy, quality metrics dashboards, and process quality certification programs.
+
+BUSINESS DATA:
+${ctx}
+
+Business: ${questionnaire.organizationName}
+Industry: ${questionnaire.industry}
+Revenue Range: ${questionnaire.revenueRange}
+Model: ${questionnaire.businessModel}
+Location: ${questionnaire.location ?? "Not specified"}
+Key Concerns: ${questionnaire.keyConcerns}
+
+Produce a comprehensive Quality Assurance analysis:
+
+1. SUMMARY: 2-3 sentence overview of quality assurance posture and maturity.
+2. CHECKS (4-6): For each QA area — domain, coverage, defect rate, automation level, trend, and action.
+3. OVERALL SCORE (numeric 0-100): Overall quality assurance score.
+4. DEFECT RATE: Overall defect or error rate.
+5. AUTOMATION PCT: Percentage of QA checks that are automated.
+6. TOP ISSUE: Top quality assurance issue.
+7. RECOMMENDATIONS (4-6): Actionable steps to strengthen quality assurance.
+
+Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Quality Assurance (Wave 68)...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as QualityAssurance;
+  } catch (e) {
+    console.warn("[Pivot] Quality Assurance (Wave 68) synthesis failed:", e);
     return null;
   }
 }

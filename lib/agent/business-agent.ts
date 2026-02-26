@@ -181,6 +181,10 @@ const TOOLS = [
             "dataWarehouseStrategy", "biDashboardDesign", "predictiveModelCatalog", "dataLineageMap", "metricsDictionary", "analyticsGovernance",
             "employeeJourney", "workplaceWellness", "learningPathways", "performanceFramework", "payEquityAnalysis", "deiBenchmark",
             "businessModelCanvas", "revenueModelDesign", "valueChainOptimization", "costStructureAnalysis", "partnershipModel", "growthLeverAssessment",
+            "vendorManagement", "supplyChainVisibility", "sustainableSourcing", "facilityOptimization", "fleetManagement", "customerSuccess",
+            "crisisManagement", "operationalResilience", "stakeholderMapping", "digitalPresence", "channelStrategy", "accountManagement",
+            "fundraisingStrategy", "captableManagement", "exitPlanning", "boardGovernance", "recruitmentFunnel", "employerBranding",
+            "teamTopology", "onboardingOptimization", "meetingCulture", "documentManagement", "workflowAutomation", "qualityAssurance",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -479,6 +483,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 62 (Data Analytics): dataWarehouseStrategy (data warehouse architecture strategy), biDashboardDesign (BI dashboard design and adoption), predictiveModelCatalog (predictive model inventory and performance), dataLineageMap (data lineage and flow mapping), metricsDictionary (metrics standardization and dictionary), analyticsGovernance (analytics governance framework)
 - Wave 63 (Employee Experience): employeeJourney (employee journey mapping and optimization), workplaceWellness (workplace wellness program assessment), learningPathways (learning pathway design and tracking), performanceFramework (performance management framework), payEquityAnalysis (pay equity and compensation fairness analysis), deiBenchmark (DEI benchmarking and inclusion scoring)
 - Wave 64 (Business Model Innovation): businessModelCanvas (business model canvas analysis), revenueModelDesign (revenue model design and optimization), valueChainOptimization (value chain efficiency analysis), costStructureAnalysis (cost structure breakdown and optimization), partnershipModel (partnership model design and evaluation), growthLeverAssessment (growth lever identification and prioritization)
+- Wave 65 (Vendor & Procurement): vendorManagement (vendor performance and spend analysis), supplyChainVisibility (supply chain transparency and tracking), sustainableSourcing (sustainable procurement and supplier certification), facilityOptimization (facility utilization and cost optimization), fleetManagement (fleet operations and maintenance analysis), customerSuccess (customer health scoring and retention metrics)
+- Wave 66 (Crisis & Resilience): crisisManagement (crisis preparedness and response planning), operationalResilience (business resilience and recovery assessment), stakeholderMapping (stakeholder identification and engagement strategy), digitalPresence (digital channel presence and engagement analysis), channelStrategy (channel mix and performance optimization), accountManagement (strategic account health and expansion planning)
+- Wave 67 (Fundraising & Governance): fundraisingStrategy (fundraising readiness and round planning), captableManagement (cap table structure and dilution modeling), exitPlanning (exit readiness and valuation analysis), boardGovernance (board structure and governance assessment), recruitmentFunnel (hiring pipeline and conversion metrics), employerBranding (employer brand strength and talent attraction)
+- Wave 68 (Team & Operations): teamTopology (team structure and collaboration analysis), onboardingOptimization (employee onboarding effectiveness), meetingCulture (meeting efficiency and decision output), documentManagement (document organization and knowledge access), workflowAutomation (workflow automation coverage and efficiency), qualityAssurance (QA process maturity and defect analysis)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

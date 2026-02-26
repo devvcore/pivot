@@ -426,7 +426,31 @@ KEY SECTIONS FOR COACHING:
 - valueChainOptimization: Value chain optimization with efficiency scoring, value-add analysis, bottleneck identification, and cost savings
 - costStructureAnalysis: Cost structure analysis with total cost breakdown, fixed vs variable split, and savings potential identification
 - partnershipModel: Partnership model design with partner tracking, revenue contribution, model type, and growth rate analysis
-- growthLeverAssessment: Growth lever assessment with lever identification, scoring, impact potential, and prioritization`;
+- growthLeverAssessment: Growth lever assessment with lever identification, scoring, impact potential, and prioritization
+- vendorManagement: Vendor performance tracking with spend analysis, risk scoring, and savings identification
+- supplyChainVisibility: Supply chain transparency with tier coverage, blind spots, and lead time tracking
+- sustainableSourcing: Sustainable procurement with supplier certification, carbon reduction, and compliance rates
+- facilityOptimization: Facility utilization with cost per square foot, space efficiency, and savings potential
+- fleetManagement: Fleet operations with utilization rates, cost per mile, and maintenance scoring
+- customerSuccess: Customer success metrics with health scoring, NRR, churn rate, and CSAT tracking
+- crisisManagement: Crisis preparedness with readiness scoring, scenario planning, and response time metrics
+- operationalResilience: Business resilience with recovery time, redundancy levels, and vulnerability assessment
+- stakeholderMapping: Stakeholder identification with influence mapping, engagement scoring, and risk tracking
+- digitalPresence: Digital channel analysis with presence scoring, engagement rates, and share of voice
+- channelStrategy: Channel mix optimization with ROI analysis, coverage gaps, and performance tracking
+- accountManagement: Strategic account management with expansion rates, at-risk identification, and health tracking
+- fundraisingStrategy: Fundraising readiness with round planning, target raise, and timeline estimation
+- captableManagement: Cap table structure with ownership tracking, option pool analysis, and dilution modeling
+- exitPlanning: Exit readiness with valuation range, exit type analysis, and preparation timeline
+- boardGovernance: Board governance with structure assessment, independence metrics, and meeting cadence
+- recruitmentFunnel: Hiring pipeline with conversion rates, time to hire, and offer acceptance tracking
+- employerBranding: Employer brand analysis with brand scoring, ratings tracking, and EVP assessment
+- teamTopology: Team structure analysis with alignment scoring, collaboration index, and bottleneck identification
+- onboardingOptimization: Employee onboarding with completion rates, time to productivity, and satisfaction tracking
+- meetingCulture: Meeting efficiency with weekly hours, effectiveness scoring, and decision output rates
+- documentManagement: Document organization with scoring, stale doc tracking, and search effectiveness
+- workflowAutomation: Workflow automation with automation rates, hours saved, and error rate tracking
+- qualityAssurance: QA process maturity with defect rates, test coverage, and automation levels`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -570,6 +594,10 @@ const TOOLS = [
             "dataWarehouseStrategy", "biDashboardDesign", "predictiveModelCatalog", "dataLineageMap", "metricsDictionary", "analyticsGovernance",
             "employeeJourney", "workplaceWellness", "learningPathways", "performanceFramework", "payEquityAnalysis", "deiBenchmark",
             "businessModelCanvas", "revenueModelDesign", "valueChainOptimization", "costStructureAnalysis", "partnershipModel", "growthLeverAssessment",
+            "vendorManagement", "supplyChainVisibility", "sustainableSourcing", "facilityOptimization", "fleetManagement", "customerSuccess",
+            "crisisManagement", "operationalResilience", "stakeholderMapping", "digitalPresence", "channelStrategy", "accountManagement",
+            "fundraisingStrategy", "captableManagement", "exitPlanning", "boardGovernance", "recruitmentFunnel", "employerBranding",
+            "teamTopology", "onboardingOptimization", "meetingCulture", "documentManagement", "workflowAutomation", "qualityAssurance",
           ],
           description: "Which report section to retrieve",
         },
@@ -1157,6 +1185,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).costStructureAnalysis) parts.push(`Cost Structure Analysis: ${(d as any).costStructureAnalysis.summary}`);
     if ((d as any).partnershipModel) parts.push(`Partnership Model: ${(d as any).partnershipModel.summary}`);
     if ((d as any).growthLeverAssessment) parts.push(`Growth Lever Assessment: ${(d as any).growthLeverAssessment.summary}`);
+    if ((d as any).vendorManagement) parts.push(`Vendor Management: ${(d as any).vendorManagement.summary}`);
+    if ((d as any).supplyChainVisibility) parts.push(`Supply Chain Visibility: ${(d as any).supplyChainVisibility.summary}`);
+    if ((d as any).sustainableSourcing) parts.push(`Sustainable Sourcing: ${(d as any).sustainableSourcing.summary}`);
+    if ((d as any).facilityOptimization) parts.push(`Facility Optimization: ${(d as any).facilityOptimization.summary}`);
+    if ((d as any).fleetManagement) parts.push(`Fleet Management: ${(d as any).fleetManagement.summary}`);
+    if ((d as any).customerSuccess) parts.push(`Customer Success: ${(d as any).customerSuccess.summary}`);
+    if ((d as any).crisisManagement) parts.push(`Crisis Management: ${(d as any).crisisManagement.summary}`);
+    if ((d as any).operationalResilience) parts.push(`Operational Resilience: ${(d as any).operationalResilience.summary}`);
+    if ((d as any).stakeholderMapping) parts.push(`Stakeholder Mapping: ${(d as any).stakeholderMapping.summary}`);
+    if ((d as any).digitalPresence) parts.push(`Digital Presence: ${(d as any).digitalPresence.summary}`);
+    if ((d as any).channelStrategy) parts.push(`Channel Strategy: ${(d as any).channelStrategy.summary}`);
+    if ((d as any).accountManagement) parts.push(`Account Management: ${(d as any).accountManagement.summary}`);
+    if ((d as any).fundraisingStrategy) parts.push(`Fundraising Strategy: ${(d as any).fundraisingStrategy.summary}`);
+    if ((d as any).captableManagement) parts.push(`Cap Table Management: ${(d as any).captableManagement.summary}`);
+    if ((d as any).exitPlanning) parts.push(`Exit Planning: ${(d as any).exitPlanning.summary}`);
+    if ((d as any).boardGovernance) parts.push(`Board Governance: ${(d as any).boardGovernance.summary}`);
+    if ((d as any).recruitmentFunnel) parts.push(`Recruitment Funnel: ${(d as any).recruitmentFunnel.summary}`);
+    if ((d as any).employerBranding) parts.push(`Employer Branding: ${(d as any).employerBranding.summary}`);
+    if ((d as any).teamTopology) parts.push(`Team Topology: ${(d as any).teamTopology.summary}`);
+    if ((d as any).onboardingOptimization) parts.push(`Onboarding Optimization: ${(d as any).onboardingOptimization.summary}`);
+    if ((d as any).meetingCulture) parts.push(`Meeting Culture: ${(d as any).meetingCulture.summary}`);
+    if ((d as any).documentManagement) parts.push(`Document Management: ${(d as any).documentManagement.summary}`);
+    if ((d as any).workflowAutomation) parts.push(`Workflow Automation: ${(d as any).workflowAutomation.summary}`);
+    if ((d as any).qualityAssurance) parts.push(`Quality Assurance: ${(d as any).qualityAssurance.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 
