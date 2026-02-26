@@ -378,7 +378,31 @@ KEY SECTIONS FOR COACHING:
 - dataInfrastructure: Data infrastructure assessment with architecture review, scalability analysis, and modernization recommendations
 - aiTalentGap: AI talent gap analysis with skills inventory, hiring needs, and upskilling program design
 - ethicalAiFramework: Ethical AI framework design with bias detection, fairness metrics, and governance policies
-- aiRoiProjection: AI ROI projection modeling with cost-benefit analysis, implementation timeline, and value realization forecasting`;
+- aiRoiProjection: AI ROI projection modeling with cost-benefit analysis, implementation timeline, and value realization forecasting
+- advocacyProgram: Advocacy program design with advocate identification, program structure, and impact measurement
+- referralMechanism: Referral mechanism optimization with incentive design, viral loops, and conversion tracking
+- testimonialPipeline: Testimonial collection pipeline with outreach cadence, approval workflows, and placement strategy
+- caseStudyFactory: Case study creation framework with story mining, production templates, and distribution channels
+- customerAdvisoryBoard: Customer advisory board strategy with member selection, meeting cadence, and feedback integration
+- npsActionPlan: NPS-driven action planning with detractor recovery, promoter activation, and score improvement roadmap
+- procurementEfficiency: Procurement process optimization with cycle time reduction, supplier management, and cost savings
+- expenseManagement: Expense tracking and policy analysis with compliance rates, category breakdown, and reduction opportunities
+- invoiceAutomation: Invoice processing automation with touchless rates, exception handling, and cycle time metrics
+- paymentOptimization: Payment terms and flow optimization with early payment discounts, cash flow timing, and vendor terms
+- financialControls: Internal financial controls assessment with control effectiveness, gap identification, and remediation plans
+- treasuryManagement: Treasury and cash management strategy with liquidity planning, investment allocation, and risk hedging
+- demandGenEngine: Demand generation engine analysis with pipeline contribution, channel mix, and conversion metrics
+- contentMarketingRoi: Content marketing ROI measurement with content performance, attribution, and production efficiency
+- seoStrategy: SEO strategy and performance with keyword rankings, organic traffic, and technical health scoring
+- paidMediaOptimization: Paid media spend optimization with ROAS by channel, bid strategy, and budget allocation
+- eventRoi: Event ROI analysis with cost per attendee, pipeline generated, and brand impact measurement
+- influencerStrategy: Influencer partnership strategy with partner selection, engagement rates, and attribution modeling
+- platformEconomics: Platform economics modeling with take rates, network value, and multi-sided market dynamics
+- developerExperience: Developer experience assessment with onboarding friction, documentation quality, and SDK satisfaction
+- apiMonetization: API monetization strategy with pricing models, usage tiers, and revenue forecasting
+- marketplaceStrategy: Marketplace design and strategy with supply-demand balance, curation, and trust mechanisms
+- platformGovernance: Platform governance framework with policy design, enforcement mechanisms, and stakeholder management
+- platformNetworkDynamics: Platform network dynamics analysis with growth loops, tipping points, and defensibility metrics`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -514,6 +538,10 @@ const TOOLS = [
             "geoExpansionStrategy", "localMarketEntry", "marketRegulations", "partnerLocalization", "culturalAdaptation", "expansionRoi",
             "productLedMetrics", "activationFunnel", "featureAdoption", "virality", "productQualifiedLeads", "timeToValue",
             "aiReadinessScore", "mlUseCasePriority", "dataInfrastructure", "aiTalentGap", "ethicalAiFramework", "aiRoiProjection",
+            "advocacyProgram", "referralMechanism", "testimonialPipeline", "caseStudyFactory", "customerAdvisoryBoard", "npsActionPlan",
+            "procurementEfficiency", "expenseManagement", "invoiceAutomation", "paymentOptimization", "financialControls", "treasuryManagement",
+            "demandGenEngine", "contentMarketingRoi", "seoStrategy", "paidMediaOptimization", "eventRoi", "influencerStrategy",
+            "platformEconomics", "developerExperience", "apiMonetization", "marketplaceStrategy", "platformGovernance", "platformNetworkDynamics",
           ],
           description: "Which report section to retrieve",
         },
@@ -1053,6 +1081,30 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).aiTalentGap) parts.push(`AI Talent Gap: ${(d as any).aiTalentGap.summary}`);
     if ((d as any).ethicalAiFramework) parts.push(`Ethical AI Framework: ${(d as any).ethicalAiFramework.summary}`);
     if ((d as any).aiRoiProjection) parts.push(`AI ROI Projection: ${(d as any).aiRoiProjection.summary}`);
+    if ((d as any).advocacyProgram) parts.push(`Advocacy Program: ${(d as any).advocacyProgram.summary}`);
+    if ((d as any).referralMechanism) parts.push(`Referral Mechanism: ${(d as any).referralMechanism.summary}`);
+    if ((d as any).testimonialPipeline) parts.push(`Testimonial Pipeline: ${(d as any).testimonialPipeline.summary}`);
+    if ((d as any).caseStudyFactory) parts.push(`Case Study Factory: ${(d as any).caseStudyFactory.summary}`);
+    if ((d as any).customerAdvisoryBoard) parts.push(`Customer Advisory Board: ${(d as any).customerAdvisoryBoard.summary}`);
+    if ((d as any).npsActionPlan) parts.push(`NPS Action Plan: ${(d as any).npsActionPlan.summary}`);
+    if ((d as any).procurementEfficiency) parts.push(`Procurement Efficiency: ${(d as any).procurementEfficiency.summary}`);
+    if ((d as any).expenseManagement) parts.push(`Expense Management: ${(d as any).expenseManagement.summary}`);
+    if ((d as any).invoiceAutomation) parts.push(`Invoice Automation: ${(d as any).invoiceAutomation.summary}`);
+    if ((d as any).paymentOptimization) parts.push(`Payment Optimization: ${(d as any).paymentOptimization.summary}`);
+    if ((d as any).financialControls) parts.push(`Financial Controls: ${(d as any).financialControls.summary}`);
+    if ((d as any).treasuryManagement) parts.push(`Treasury Management: ${(d as any).treasuryManagement.summary}`);
+    if ((d as any).demandGenEngine) parts.push(`Demand Gen Engine: ${(d as any).demandGenEngine.summary}`);
+    if ((d as any).contentMarketingRoi) parts.push(`Content Marketing ROI: ${(d as any).contentMarketingRoi.summary}`);
+    if ((d as any).seoStrategy) parts.push(`SEO Strategy: ${(d as any).seoStrategy.summary}`);
+    if ((d as any).paidMediaOptimization) parts.push(`Paid Media Optimization: ${(d as any).paidMediaOptimization.summary}`);
+    if ((d as any).eventRoi) parts.push(`Event ROI: ${(d as any).eventRoi.summary}`);
+    if ((d as any).influencerStrategy) parts.push(`Influencer Strategy: ${(d as any).influencerStrategy.summary}`);
+    if ((d as any).platformEconomics) parts.push(`Platform Economics: ${(d as any).platformEconomics.summary}`);
+    if ((d as any).developerExperience) parts.push(`Developer Experience: ${(d as any).developerExperience.summary}`);
+    if ((d as any).apiMonetization) parts.push(`API Monetization: ${(d as any).apiMonetization.summary}`);
+    if ((d as any).marketplaceStrategy) parts.push(`Marketplace Strategy: ${(d as any).marketplaceStrategy.summary}`);
+    if ((d as any).platformGovernance) parts.push(`Platform Governance: ${(d as any).platformGovernance.summary}`);
+    if ((d as any).platformNetworkDynamics) parts.push(`Platform Network Dynamics: ${(d as any).platformNetworkDynamics.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

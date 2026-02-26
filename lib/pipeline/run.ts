@@ -367,6 +367,34 @@ import {
   synthesizeAiTalentGap,
   synthesizeEthicalAiFramework,
   synthesizeAiRoiProjection,
+  // Wave 57
+  synthesizeAdvocacyProgram,
+  synthesizeReferralMechanism,
+  synthesizeTestimonialPipeline,
+  synthesizeCaseStudyFactory,
+  synthesizeCustomerAdvisoryBoard,
+  synthesizeNpsActionPlan,
+  // Wave 58
+  synthesizeProcurementEfficiency,
+  synthesizeExpenseManagement,
+  synthesizeInvoiceAutomation,
+  synthesizePaymentOptimization,
+  synthesizeFinancialControls,
+  synthesizeTreasuryManagement,
+  // Wave 59
+  synthesizeDemandGenEngine,
+  synthesizeContentMarketingRoi,
+  synthesizeSeoStrategy,
+  synthesizePaidMediaOptimization,
+  synthesizeEventRoi,
+  synthesizeInfluencerStrategy,
+  // Wave 60
+  synthesizePlatformEconomics,
+  synthesizeDeveloperExperience,
+  synthesizeApiMonetization,
+  synthesizeMarketplaceStrategy,
+  synthesizePlatformGovernance,
+  synthesizePlatformNetworkDynamics,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -3012,6 +3040,170 @@ export async function runPipeline(runId: string): Promise<void> {
         if (b.status === "fulfilled" && b.value) deliverables.aiRoiProjection = b.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fh failed:", e); }
+    }
+
+    // ── Wave 57 — Customer Advocacy ──
+
+    // ── Step 4fi: Advocacy Program + Referral Mechanism ──
+    if (!deliverables.advocacyProgram || !deliverables.referralMechanism) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeAdvocacyProgram(businessPacket, job.questionnaire),
+          synthesizeReferralMechanism(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.advocacyProgram = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.referralMechanism = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fi failed:", e); }
+    }
+
+    // ── Step 4fj: Testimonial Pipeline + Case Study Factory ──
+    if (!deliverables.testimonialPipeline || !deliverables.caseStudyFactory) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeTestimonialPipeline(businessPacket, job.questionnaire),
+          synthesizeCaseStudyFactory(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.testimonialPipeline = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.caseStudyFactory = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fj failed:", e); }
+    }
+
+    // ── Step 4fk: Customer Advisory Board + NPS Action Plan ──
+    if (!deliverables.customerAdvisoryBoard || !deliverables.npsActionPlan) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeCustomerAdvisoryBoard(businessPacket, job.questionnaire),
+          synthesizeNpsActionPlan(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.customerAdvisoryBoard = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.npsActionPlan = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fk failed:", e); }
+    }
+
+    // ── Wave 58 — Operational Finance ──
+
+    // ── Step 4fl: Procurement Efficiency + Expense Management ──
+    if (!deliverables.procurementEfficiency || !deliverables.expenseManagement) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeProcurementEfficiency(businessPacket, job.questionnaire),
+          synthesizeExpenseManagement(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.procurementEfficiency = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.expenseManagement = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fl failed:", e); }
+    }
+
+    // ── Step 4fm: Invoice Automation + Payment Optimization ──
+    if (!deliverables.invoiceAutomation || !deliverables.paymentOptimization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeInvoiceAutomation(businessPacket, job.questionnaire),
+          synthesizePaymentOptimization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.invoiceAutomation = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.paymentOptimization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fm failed:", e); }
+    }
+
+    // ── Step 4fn: Financial Controls + Treasury Management ──
+    if (!deliverables.financialControls || !deliverables.treasuryManagement) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeFinancialControls(businessPacket, job.questionnaire),
+          synthesizeTreasuryManagement(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.financialControls = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.treasuryManagement = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fn failed:", e); }
+    }
+
+    // ── Wave 59 — Growth Marketing ──
+
+    // ── Step 4fo: Demand Gen Engine + Content Marketing ROI ──
+    if (!deliverables.demandGenEngine || !deliverables.contentMarketingRoi) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeDemandGenEngine(businessPacket, job.questionnaire),
+          synthesizeContentMarketingRoi(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.demandGenEngine = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.contentMarketingRoi = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fo failed:", e); }
+    }
+
+    // ── Step 4fp: SEO Strategy + Paid Media Optimization ──
+    if (!deliverables.seoStrategy || !deliverables.paidMediaOptimization) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeSeoStrategy(businessPacket, job.questionnaire),
+          synthesizePaidMediaOptimization(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.seoStrategy = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.paidMediaOptimization = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fp failed:", e); }
+    }
+
+    // ── Step 4fq: Event ROI + Influencer Strategy ──
+    if (!deliverables.eventRoi || !deliverables.influencerStrategy) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeEventRoi(businessPacket, job.questionnaire),
+          synthesizeInfluencerStrategy(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.eventRoi = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.influencerStrategy = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fq failed:", e); }
+    }
+
+    // ── Wave 60 — Platform Strategy ──
+
+    // ── Step 4fr: Platform Economics + Developer Experience ──
+    if (!deliverables.platformEconomics || !deliverables.developerExperience) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePlatformEconomics(businessPacket, job.questionnaire),
+          synthesizeDeveloperExperience(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.platformEconomics = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.developerExperience = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fr failed:", e); }
+    }
+
+    // ── Step 4fs: API Monetization + Marketplace Strategy ──
+    if (!deliverables.apiMonetization || !deliverables.marketplaceStrategy) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizeApiMonetization(businessPacket, job.questionnaire),
+          synthesizeMarketplaceStrategy(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.apiMonetization = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.marketplaceStrategy = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4fs failed:", e); }
+    }
+
+    // ── Step 4ft: Platform Governance + Platform Network Dynamics ──
+    if (!deliverables.platformGovernance || !deliverables.platformNetworkDynamics) {
+      try {
+        const [a, b] = await Promise.allSettled([
+          synthesizePlatformGovernance(businessPacket, job.questionnaire),
+          synthesizePlatformNetworkDynamics(businessPacket, job.questionnaire),
+        ]);
+        if (a.status === "fulfilled" && a.value) deliverables.platformGovernance = a.value;
+        if (b.status === "fulfilled" && b.value) deliverables.platformNetworkDynamics = b.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ft failed:", e); }
     }
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────

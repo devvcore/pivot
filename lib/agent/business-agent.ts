@@ -173,6 +173,10 @@ const TOOLS = [
             "geoExpansionStrategy", "localMarketEntry", "marketRegulations", "partnerLocalization", "culturalAdaptation", "expansionRoi",
             "productLedMetrics", "activationFunnel", "featureAdoption", "virality", "productQualifiedLeads", "timeToValue",
             "aiReadinessScore", "mlUseCasePriority", "dataInfrastructure", "aiTalentGap", "ethicalAiFramework", "aiRoiProjection",
+            "advocacyProgram", "referralMechanism", "testimonialPipeline", "caseStudyFactory", "customerAdvisoryBoard", "npsActionPlan",
+            "procurementEfficiency", "expenseManagement", "invoiceAutomation", "paymentOptimization", "financialControls", "treasuryManagement",
+            "demandGenEngine", "contentMarketingRoi", "seoStrategy", "paidMediaOptimization", "eventRoi", "influencerStrategy",
+            "platformEconomics", "developerExperience", "apiMonetization", "marketplaceStrategy", "platformGovernance", "platformNetworkDynamics",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -463,6 +467,10 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 54 (Market Expansion): geoExpansionStrategy (geographic expansion strategy), localMarketEntry (local market entry planning), marketRegulations (market regulations analysis), partnerLocalization (partner localization strategy), culturalAdaptation (cultural adaptation assessment), expansionRoi (expansion ROI analysis)
 - Wave 55 (Product-Led Growth): productLedMetrics (PLG metrics dashboard), activationFunnel (activation funnel analysis), featureAdoption (feature adoption tracking), virality (virality coefficient analysis), productQualifiedLeads (PQL identification and scoring), timeToValue (time-to-value optimization)
 - Wave 56 (AI & Automation Readiness): aiReadinessScore (AI readiness scoring), mlUseCasePriority (ML use case prioritization), dataInfrastructure (data infrastructure assessment), aiTalentGap (AI talent gap analysis), ethicalAiFramework (ethical AI framework design), aiRoiProjection (AI ROI projection modeling)
+- Wave 57 (Customer Advocacy): advocacyProgram (advocacy program design and management), referralMechanism (referral mechanism optimization), testimonialPipeline (testimonial collection and pipeline), caseStudyFactory (case study creation and publishing), customerAdvisoryBoard (customer advisory board strategy), npsActionPlan (NPS-driven action planning)
+- Wave 58 (Operational Finance): procurementEfficiency (procurement process optimization), expenseManagement (expense tracking and policy analysis), invoiceAutomation (invoice processing automation), paymentOptimization (payment terms and flow optimization), financialControls (internal financial controls assessment), treasuryManagement (treasury and cash management strategy)
+- Wave 59 (Growth Marketing): demandGenEngine (demand generation engine analysis), contentMarketingRoi (content marketing ROI measurement), seoStrategy (SEO strategy and performance), paidMediaOptimization (paid media spend optimization), eventRoi (event ROI analysis and planning), influencerStrategy (influencer partnership strategy)
+- Wave 60 (Platform Strategy): platformEconomics (platform economics modeling), developerExperience (developer experience assessment), apiMonetization (API monetization strategy), marketplaceStrategy (marketplace design and strategy), platformGovernance (platform governance framework), platformNetworkDynamics (platform network dynamics analysis)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}
