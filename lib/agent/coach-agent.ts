@@ -474,7 +474,55 @@ KEY SECTIONS FOR COACHING:
 - operatingRhythm: Operating rhythm assessment with cadence health, review cycles, and alignment rates
 - crossFunctionalSync: Cross-functional sync with team alignment, blocker tracking, and collaboration index
 - wardRoomStrategy: War room strategy with initiative tracking, decision velocity, and execution rates
-- revenueIntelligence: Revenue intelligence with signal detection, forecast accuracy, and growth potential analysis`;
+- revenueIntelligence: Revenue intelligence with signal detection, forecast accuracy, and growth potential analysis
+- marketResearch: Market research with sizing, growth rates, and key insights
+- competitorTracking: Competitor tracking with threat levels and market positioning
+- industryTrends: Industry trend analysis with disruption risk and opportunity windows
+- socialListening: Social listening with sentiment analysis and share of voice
+- uxResearch: UX research with usability ratings and pain point identification
+- webAnalytics: Web analytics with traffic, bounce rate, and conversion tracking
+- emailMarketing: Email marketing with open rates, click rates, and list management
+- conversionOptimization: Conversion rate optimization with revenue impact and quick wins
+- abTestingFramework: A/B testing framework with test velocity and win rates
+- marketingAttribution: Marketing attribution with channel ROAS and model analysis
+- contentCalendar: Content calendar with publishing cadence and content type planning
+- socialMediaCalendar: Social media calendar with platform strategy and engagement rates
+- budgetPlanning: Budget planning with variance analysis and efficiency scoring
+- revenueForecasting: Revenue forecasting with projections and accuracy tracking
+- cashManagement: Cash management with liquidity ratios and days cash on hand
+- creditManagement: Credit management with utilization and collection rates
+- debtStructure: Debt structure analysis with debt-to-equity and interest coverage
+- financialReporting: Financial reporting with accuracy and compliance scoring
+- carbonReduction: Carbon reduction with footprint tracking and reduction targets
+- circularEconomy: Circular economy with material recovery and waste diversion
+- communityImpact: Community impact with reach, programs, and social ROI
+- waterManagement: Water management with usage tracking and efficiency metrics
+- wasteReduction: Waste reduction with diversion rates and cost savings
+- sustainableInnovation: Sustainable innovation with green projects and sustainability ROI
+- talentPipeline: Talent pipeline with open roles, time to fill, and quality of hire metrics
+- leadershipDevelopment: Leadership development with pipeline strength, program coverage, and readiness levels
+- successionReadiness: Succession readiness with critical roles, bench strength, and risk assessment
+- compensationStrategy: Compensation strategy with market positioning, total comp budget, and equity mix
+- workforceAnalytics: Workforce analytics with headcount, attrition rates, and productivity index
+- orgEffectiveness: Organizational effectiveness with alignment, span of control, and decision speed
+- salesMotionDesign: Sales motion design with model type, cycle length, and conversion rates
+- dealAnalytics: Deal analytics with average deal size, win rate, and pipeline value
+- territoryOptimization: Territory optimization with coverage rate, balance index, and untapped potential
+- salesCompensation: Sales compensation with OTE averages, variable mix, and quota attainment
+- revenuePrediction: Revenue prediction with forecast accuracy, confidence levels, and growth rates
+- accountPenetration: Account penetration with expansion rates, whitespace value, and account mapping
+- productVision: Product vision with clarity index, alignment scoring, and time horizon planning
+- featureRoadmap: Feature roadmap with planned features, on-track status, and delivery velocity
+- pmfAssessment: PMF assessment with retention signals, segment fit, and growth indicators
+- userActivation: User activation with activation rates, time to activate, and drop-off analysis
+- productInsights: Product insights with usage patterns, feature gaps, and user satisfaction
+- releaseStrategy: Release strategy with cadence planning, quality gates, and rollback rates
+- brandPositionMap: Brand position mapping with market position, differentiation, and perception gaps
+- brandValuation: Brand valuation with brand value, strength, revenue premium, and growth trajectory
+- brandHierarchy: Brand hierarchy with architecture type, sub-brands, and brand level management
+- reputationAnalysis: Reputation analysis with sentiment scoring, trust index, and risk factors
+- messagingFramework: Messaging framework with consistency, clarity index, and tone alignment
+- visualBranding: Visual branding with design system maturity, brand consistency, and asset coverage`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -626,6 +674,14 @@ const TOOLS = [
             "apiDesign", "microservicesArchitecture", "cloudOptimization", "devopsMaturity", "systemMonitoring", "codeQuality",
             "customerLifetimeValue", "sentimentAnalysis", "supportTicketAnalysis", "segmentProfitability", "referralAnalytics", "customerHealthDashboard",
             "innovationPortfolio", "contingencyPlanning", "operatingRhythm", "crossFunctionalSync", "wardRoomStrategy", "revenueIntelligence",
+            "marketResearch", "competitorTracking", "industryTrends", "socialListening", "uxResearch", "webAnalytics",
+            "emailMarketing", "conversionOptimization", "abTestingFramework", "marketingAttribution", "contentCalendar", "socialMediaCalendar",
+            "budgetPlanning", "revenueForecasting", "cashManagement", "creditManagement", "debtStructure", "financialReporting",
+            "carbonReduction", "circularEconomy", "communityImpact", "waterManagement", "wasteReduction", "sustainableInnovation",
+            "talentPipeline", "leadershipDevelopment", "successionReadiness", "compensationStrategy", "workforceAnalytics", "orgEffectiveness",
+            "salesMotionDesign", "dealAnalytics", "territoryOptimization", "salesCompensation", "revenuePrediction", "accountPenetration",
+            "productVision", "featureRoadmap", "pmfAssessment", "userActivation", "productInsights", "releaseStrategy",
+            "brandPositionMap", "brandValuation", "brandHierarchy", "reputationAnalysis", "messagingFramework", "visualBranding",
           ],
           description: "Which report section to retrieve",
         },
@@ -1261,6 +1317,54 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).crossFunctionalSync) parts.push(`Cross-Functional Sync: ${(d as any).crossFunctionalSync.summary}`);
     if ((d as any).wardRoomStrategy) parts.push(`War Room Strategy: ${(d as any).wardRoomStrategy.summary}`);
     if ((d as any).revenueIntelligence) parts.push(`Revenue Intelligence: ${(d as any).revenueIntelligence.summary}`);
+    if ((d as any).marketResearch) parts.push(`Market Research: ${(d as any).marketResearch.summary}`);
+    if ((d as any).competitorTracking) parts.push(`Competitor Tracking: ${(d as any).competitorTracking.summary}`);
+    if ((d as any).industryTrends) parts.push(`Industry Trends: ${(d as any).industryTrends.summary}`);
+    if ((d as any).socialListening) parts.push(`Social Listening: ${(d as any).socialListening.summary}`);
+    if ((d as any).uxResearch) parts.push(`UX Research: ${(d as any).uxResearch.summary}`);
+    if ((d as any).webAnalytics) parts.push(`Web Analytics: ${(d as any).webAnalytics.summary}`);
+    if ((d as any).emailMarketing) parts.push(`Email Marketing: ${(d as any).emailMarketing.summary}`);
+    if ((d as any).conversionOptimization) parts.push(`Conversion Optimization: ${(d as any).conversionOptimization.summary}`);
+    if ((d as any).abTestingFramework) parts.push(`A/B Testing Framework: ${(d as any).abTestingFramework.summary}`);
+    if ((d as any).marketingAttribution) parts.push(`Marketing Attribution: ${(d as any).marketingAttribution.summary}`);
+    if ((d as any).contentCalendar) parts.push(`Content Calendar: ${(d as any).contentCalendar.summary}`);
+    if ((d as any).socialMediaCalendar) parts.push(`Social Media Calendar: ${(d as any).socialMediaCalendar.summary}`);
+    if ((d as any).budgetPlanning) parts.push(`Budget Planning: ${(d as any).budgetPlanning.summary}`);
+    if ((d as any).revenueForecasting) parts.push(`Revenue Forecasting: ${(d as any).revenueForecasting.summary}`);
+    if ((d as any).cashManagement) parts.push(`Cash Management: ${(d as any).cashManagement.summary}`);
+    if ((d as any).creditManagement) parts.push(`Credit Management: ${(d as any).creditManagement.summary}`);
+    if ((d as any).debtStructure) parts.push(`Debt Structure: ${(d as any).debtStructure.summary}`);
+    if ((d as any).financialReporting) parts.push(`Financial Reporting: ${(d as any).financialReporting.summary}`);
+    if ((d as any).carbonReduction) parts.push(`Carbon Reduction: ${(d as any).carbonReduction.summary}`);
+    if ((d as any).circularEconomy) parts.push(`Circular Economy: ${(d as any).circularEconomy.summary}`);
+    if ((d as any).communityImpact) parts.push(`Community Impact: ${(d as any).communityImpact.summary}`);
+    if ((d as any).waterManagement) parts.push(`Water Management: ${(d as any).waterManagement.summary}`);
+    if ((d as any).wasteReduction) parts.push(`Waste Reduction: ${(d as any).wasteReduction.summary}`);
+    if ((d as any).sustainableInnovation) parts.push(`Sustainable Innovation: ${(d as any).sustainableInnovation.summary}`);
+    if ((d as any).talentPipeline) parts.push(`Talent Pipeline: ${(d as any).talentPipeline.summary}`);
+    if ((d as any).leadershipDevelopment) parts.push(`Leadership Development: ${(d as any).leadershipDevelopment.summary}`);
+    if ((d as any).successionReadiness) parts.push(`Succession Readiness: ${(d as any).successionReadiness.summary}`);
+    if ((d as any).compensationStrategy) parts.push(`Compensation Strategy: ${(d as any).compensationStrategy.summary}`);
+    if ((d as any).workforceAnalytics) parts.push(`Workforce Analytics: ${(d as any).workforceAnalytics.summary}`);
+    if ((d as any).orgEffectiveness) parts.push(`Org Effectiveness: ${(d as any).orgEffectiveness.summary}`);
+    if ((d as any).salesMotionDesign) parts.push(`Sales Motion Design: ${(d as any).salesMotionDesign.summary}`);
+    if ((d as any).dealAnalytics) parts.push(`Deal Analytics: ${(d as any).dealAnalytics.summary}`);
+    if ((d as any).territoryOptimization) parts.push(`Territory Optimization: ${(d as any).territoryOptimization.summary}`);
+    if ((d as any).salesCompensation) parts.push(`Sales Compensation: ${(d as any).salesCompensation.summary}`);
+    if ((d as any).revenuePrediction) parts.push(`Revenue Prediction: ${(d as any).revenuePrediction.summary}`);
+    if ((d as any).accountPenetration) parts.push(`Account Penetration: ${(d as any).accountPenetration.summary}`);
+    if ((d as any).productVision) parts.push(`Product Vision: ${(d as any).productVision.summary}`);
+    if ((d as any).featureRoadmap) parts.push(`Feature Roadmap: ${(d as any).featureRoadmap.summary}`);
+    if ((d as any).pmfAssessment) parts.push(`PMF Assessment: ${(d as any).pmfAssessment.summary}`);
+    if ((d as any).userActivation) parts.push(`User Activation: ${(d as any).userActivation.summary}`);
+    if ((d as any).productInsights) parts.push(`Product Insights: ${(d as any).productInsights.summary}`);
+    if ((d as any).releaseStrategy) parts.push(`Release Strategy: ${(d as any).releaseStrategy.summary}`);
+    if ((d as any).brandPositionMap) parts.push(`Brand Position Map: ${(d as any).brandPositionMap.summary}`);
+    if ((d as any).brandValuation) parts.push(`Brand Valuation: ${(d as any).brandValuation.summary}`);
+    if ((d as any).brandHierarchy) parts.push(`Brand Hierarchy: ${(d as any).brandHierarchy.summary}`);
+    if ((d as any).reputationAnalysis) parts.push(`Reputation Analysis: ${(d as any).reputationAnalysis.summary}`);
+    if ((d as any).messagingFramework) parts.push(`Messaging Framework: ${(d as any).messagingFramework.summary}`);
+    if ((d as any).visualBranding) parts.push(`Visual Branding: ${(d as any).visualBranding.summary}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

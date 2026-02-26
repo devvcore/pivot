@@ -8,6 +8,7 @@ import { getJob, updateJob } from "@/lib/job-store";
 import { parseFiles } from "./parse";
 import { ingestDocuments } from "./ingest";
 import { categorizeAndBuildGraph } from "./categorize";
+import { getRelevantSections } from "./relevance";
 import {
   synthesizeDeliverables,
   synthesizeTechOptimization,
@@ -479,6 +480,62 @@ import {
   synthesizeCrossFunctionalSync,
   synthesizeWardRoomStrategy,
   synthesizeRevenueIntelligence,
+  // Wave 73
+  synthesizeMarketResearch,
+  synthesizeCompetitorTracking,
+  synthesizeIndustryTrends,
+  synthesizeSocialListening,
+  synthesizeUxResearch,
+  synthesizeWebAnalytics,
+  // Wave 74
+  synthesizeEmailMarketing,
+  synthesizeConversionOptimization,
+  synthesizeAbTestingFramework,
+  synthesizeMarketingAttribution,
+  synthesizeContentCalendar,
+  synthesizeSocialMediaCalendar,
+  // Wave 75
+  synthesizeBudgetPlanning,
+  synthesizeRevenueForecasting,
+  synthesizeCashManagement,
+  synthesizeCreditManagement,
+  synthesizeDebtStructure,
+  synthesizeFinancialReporting,
+  // Wave 76
+  synthesizeCarbonReduction,
+  synthesizeCircularEconomy,
+  synthesizeCommunityImpact,
+  synthesizeWaterManagement,
+  synthesizeWasteReduction,
+  synthesizeSustainableInnovation,
+  // Wave 77
+  synthesizeTalentPipeline,
+  synthesizeLeadershipDevelopment,
+  synthesizeSuccessionReadiness,
+  synthesizeCompensationStrategy,
+  synthesizeWorkforceAnalytics,
+  synthesizeOrgEffectiveness,
+  // Wave 78
+  synthesizeSalesMotionDesign,
+  synthesizeDealAnalytics,
+  synthesizeTerritoryOptimization,
+  synthesizeSalesCompensation,
+  synthesizeRevenuePrediction,
+  synthesizeAccountPenetration,
+  // Wave 79
+  synthesizeProductVision,
+  synthesizeFeatureRoadmap,
+  synthesizePmfAssessment,
+  synthesizeUserActivation,
+  synthesizeProductInsights,
+  synthesizeReleaseStrategy,
+  // Wave 80
+  synthesizeBrandPositionMap,
+  synthesizeBrandValuation,
+  synthesizeBrandHierarchy,
+  synthesizeReputationAnalysis,
+  synthesizeMessagingFramework,
+  synthesizeVisualBranding,
 } from "./synthesize";
 import { detectTerminology } from "./terminology";
 import { formatAndSave } from "./format";
@@ -503,13 +560,22 @@ async function runExtendedWaves(
   deliverables: MVPDeliverables,
   businessPacket: BusinessPacket,
   job: any,
+  relevantSections?: Set<string>,
 ): Promise<MVPDeliverables> {
+    // Helper: skip sections not relevant to this business
+    const isRelevant = (key: string) => !relevantSections || relevantSections.has(key);
+    // Wrapper: only call synthesis if section is relevant AND not already done
+    const synthIf = <T>(key: string, fn: () => Promise<T | null>): Promise<T | null> => {
+      if (!isRelevant(key)) return Promise.resolve(null);
+      if ((deliverables as unknown as Record<string, unknown>)[key]) return Promise.resolve(null);
+      return fn();
+    };
     if (!deliverables.pricingStrategyMatrix || !deliverables.customerHealthScore) {
       try {
         console.log("[Pivot] Synthesizing pricing strategy matrix + customer health score...");
         const [psm, chs] = await Promise.allSettled([
-          deliverables.pricingStrategyMatrix ? Promise.resolve(null) : synthesizePricingStrategyMatrix(businessPacket, job.questionnaire),
-          deliverables.customerHealthScore ? Promise.resolve(null) : synthesizeCustomerHealthScore(businessPacket, job.questionnaire),
+          synthIf('pricingStrategyMatrix', () => synthesizePricingStrategyMatrix(businessPacket, job.questionnaire)),
+          synthIf('customerHealthScore', () => synthesizeCustomerHealthScore(businessPacket, job.questionnaire)),
         ]);
         if (psm.status === "fulfilled" && psm.value) deliverables = { ...deliverables, pricingStrategyMatrix: psm.value };
         if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
@@ -524,8 +590,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing revenue waterfall + tech debt assessment...");
         const [rw, td] = await Promise.allSettled([
-          deliverables.revenueWaterfall ? Promise.resolve(null) : synthesizeRevenueWaterfall(businessPacket, job.questionnaire),
-          deliverables.techDebtAssessment ? Promise.resolve(null) : synthesizeTechDebtAssessment(businessPacket, job.questionnaire),
+          synthIf('revenueWaterfall', () => synthesizeRevenueWaterfall(businessPacket, job.questionnaire)),
+          synthIf('techDebtAssessment', () => synthesizeTechDebtAssessment(businessPacket, job.questionnaire)),
         ]);
         if (rw.status === "fulfilled" && rw.value) deliverables = { ...deliverables, revenueWaterfall: rw.value };
         if (td.status === "fulfilled" && td.value) deliverables = { ...deliverables, techDebtAssessment: td.value };
@@ -540,8 +606,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing team performance + market entry strategy...");
         const [tp, me] = await Promise.allSettled([
-          deliverables.teamPerformance ? Promise.resolve(null) : synthesizeTeamPerformance(businessPacket, job.questionnaire),
-          deliverables.marketEntryStrategy ? Promise.resolve(null) : synthesizeMarketEntryStrategy(businessPacket, job.questionnaire),
+          synthIf('teamPerformance', () => synthesizeTeamPerformance(businessPacket, job.questionnaire)),
+          synthIf('marketEntryStrategy', () => synthesizeMarketEntryStrategy(businessPacket, job.questionnaire)),
         ]);
         if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, teamPerformance: tp.value };
         if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, marketEntryStrategy: me.value };
@@ -556,8 +622,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing competitive intel feed + cash flow sensitivity...");
         const [cif, cfs] = await Promise.allSettled([
-          deliverables.competitiveIntelFeed ? Promise.resolve(null) : synthesizeCompetitiveIntelFeed(businessPacket, job.questionnaire),
-          deliverables.cashFlowSensitivity ? Promise.resolve(null) : synthesizeCashFlowSensitivity(businessPacket, job.questionnaire),
+          synthIf('competitiveIntelFeed', () => synthesizeCompetitiveIntelFeed(businessPacket, job.questionnaire)),
+          synthIf('cashFlowSensitivity', () => synthesizeCashFlowSensitivity(businessPacket, job.questionnaire)),
         ]);
         if (cif.status === "fulfilled" && cif.value) deliverables = { ...deliverables, competitiveIntelFeed: cif.value };
         if (cfs.status === "fulfilled" && cfs.value) deliverables = { ...deliverables, cashFlowSensitivity: cfs.value };
@@ -572,8 +638,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing digital maturity + acquisition funnel...");
         const [dm, af] = await Promise.allSettled([
-          deliverables.digitalMaturity ? Promise.resolve(null) : synthesizeDigitalMaturity(businessPacket, job.questionnaire),
-          deliverables.acquisitionFunnel ? Promise.resolve(null) : synthesizeAcquisitionFunnel(businessPacket, job.questionnaire),
+          synthIf('digitalMaturity', () => synthesizeDigitalMaturity(businessPacket, job.questionnaire)),
+          synthIf('acquisitionFunnel', () => synthesizeAcquisitionFunnel(businessPacket, job.questionnaire)),
         ]);
         if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, digitalMaturity: dm.value };
         if (af.status === "fulfilled" && af.value) deliverables = { ...deliverables, acquisitionFunnel: af.value };
@@ -588,8 +654,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing strategic alignment + budget optimizer...");
         const [sa, bo] = await Promise.allSettled([
-          deliverables.strategicAlignment ? Promise.resolve(null) : synthesizeStrategicAlignment(businessPacket, job.questionnaire),
-          deliverables.budgetOptimizer ? Promise.resolve(null) : synthesizeBudgetOptimizer(businessPacket, job.questionnaire),
+          synthIf('strategicAlignment', () => synthesizeStrategicAlignment(businessPacket, job.questionnaire)),
+          synthIf('budgetOptimizer', () => synthesizeBudgetOptimizer(businessPacket, job.questionnaire)),
         ]);
         if (sa.status === "fulfilled" && sa.value) deliverables = { ...deliverables, strategicAlignment: sa.value };
         if (bo.status === "fulfilled" && bo.value) deliverables = { ...deliverables, budgetOptimizer: bo.value };
@@ -604,8 +670,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing revenue drivers + margin optimization...");
         const [rd, mo] = await Promise.allSettled([
-          deliverables.revenueDrivers ? Promise.resolve(null) : synthesizeRevenueDrivers(businessPacket, job.questionnaire),
-          deliverables.marginOptimization ? Promise.resolve(null) : synthesizeMarginOptimization(businessPacket, job.questionnaire),
+          synthIf('revenueDrivers', () => synthesizeRevenueDrivers(businessPacket, job.questionnaire)),
+          synthIf('marginOptimization', () => synthesizeMarginOptimization(businessPacket, job.questionnaire)),
         ]);
         if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, revenueDrivers: rd.value };
         if (mo.status === "fulfilled" && mo.value) deliverables = { ...deliverables, marginOptimization: mo.value };
@@ -620,8 +686,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing demand forecasting + cohort analysis...");
         const [df, ca] = await Promise.allSettled([
-          deliverables.demandForecasting ? Promise.resolve(null) : synthesizeDemandForecasting(businessPacket, job.questionnaire),
-          deliverables.cohortAnalysis ? Promise.resolve(null) : synthesizeCohortAnalysis(businessPacket, job.questionnaire),
+          synthIf('demandForecasting', () => synthesizeDemandForecasting(businessPacket, job.questionnaire)),
+          synthIf('cohortAnalysis', () => synthesizeCohortAnalysis(businessPacket, job.questionnaire)),
         ]);
         if (df.status === "fulfilled" && df.value) deliverables = { ...deliverables, demandForecasting: df.value };
         if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, cohortAnalysis: ca.value };
@@ -636,8 +702,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing win/loss analysis + sales forecast...");
         const [wl, sf] = await Promise.allSettled([
-          deliverables.winLossAnalysis ? Promise.resolve(null) : synthesizeWinLossAnalysis(businessPacket, job.questionnaire),
-          deliverables.salesForecast ? Promise.resolve(null) : synthesizeSalesForecast(businessPacket, job.questionnaire),
+          synthIf('winLossAnalysis', () => synthesizeWinLossAnalysis(businessPacket, job.questionnaire)),
+          synthIf('salesForecast', () => synthesizeSalesForecast(businessPacket, job.questionnaire)),
         ]);
         if (wl.status === "fulfilled" && wl.value) deliverables = { ...deliverables, winLossAnalysis: wl.value };
         if (sf.status === "fulfilled" && sf.value) deliverables = { ...deliverables, salesForecast: sf.value };
@@ -652,8 +718,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing process efficiency + vendor risk...");
         const [pe, vr] = await Promise.allSettled([
-          deliverables.processEfficiency ? Promise.resolve(null) : synthesizeProcessEfficiency(businessPacket, job.questionnaire),
-          deliverables.vendorRisk ? Promise.resolve(null) : synthesizeVendorRisk(businessPacket, job.questionnaire),
+          synthIf('processEfficiency', () => synthesizeProcessEfficiency(businessPacket, job.questionnaire)),
+          synthIf('vendorRisk', () => synthesizeVendorRisk(businessPacket, job.questionnaire)),
         ]);
         if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, processEfficiency: pe.value };
         if (vr.status === "fulfilled" && vr.value) deliverables = { ...deliverables, vendorRisk: vr.value };
@@ -668,8 +734,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing quality metrics + capacity planning...");
         const [qm, cp] = await Promise.allSettled([
-          deliverables.qualityMetrics ? Promise.resolve(null) : synthesizeQualityMetrics(businessPacket, job.questionnaire),
-          deliverables.capacityPlanning ? Promise.resolve(null) : synthesizeCapacityPlanning(businessPacket, job.questionnaire),
+          synthIf('qualityMetrics', () => synthesizeQualityMetrics(businessPacket, job.questionnaire)),
+          synthIf('capacityPlanning', () => synthesizeCapacityPlanning(businessPacket, job.questionnaire)),
         ]);
         if (qm.status === "fulfilled" && qm.value) deliverables = { ...deliverables, qualityMetrics: qm.value };
         if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, capacityPlanning: cp.value };
@@ -684,8 +750,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing knowledge management + compliance scorecard...");
         const [km, cs] = await Promise.allSettled([
-          deliverables.knowledgeManagement ? Promise.resolve(null) : synthesizeKnowledgeManagement(businessPacket, job.questionnaire),
-          deliverables.complianceScorecard ? Promise.resolve(null) : synthesizeComplianceScorecard(businessPacket, job.questionnaire),
+          synthIf('knowledgeManagement', () => synthesizeKnowledgeManagement(businessPacket, job.questionnaire)),
+          synthIf('complianceScorecard', () => synthesizeComplianceScorecard(businessPacket, job.questionnaire)),
         ]);
         if (km.status === "fulfilled" && km.value) deliverables = { ...deliverables, knowledgeManagement: km.value };
         if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, complianceScorecard: cs.value };
@@ -700,8 +766,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing market penetration + flywheel analysis...");
         const [mp, fa] = await Promise.allSettled([
-          deliverables.marketPenetration ? Promise.resolve(null) : synthesizeMarketPenetration(businessPacket, job.questionnaire),
-          deliverables.flywheelAnalysis ? Promise.resolve(null) : synthesizeFlywheelAnalysis(businessPacket, job.questionnaire),
+          synthIf('marketPenetration', () => synthesizeMarketPenetration(businessPacket, job.questionnaire)),
+          synthIf('flywheelAnalysis', () => synthesizeFlywheelAnalysis(businessPacket, job.questionnaire)),
         ]);
         if (mp.status === "fulfilled" && mp.value) deliverables = { ...deliverables, marketPenetration: mp.value };
         if (fa.status === "fulfilled" && fa.value) deliverables = { ...deliverables, flywheelAnalysis: fa.value };
@@ -716,8 +782,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing partnerships strategy + international expansion...");
         const [ps, ie] = await Promise.allSettled([
-          deliverables.partnershipsStrategy ? Promise.resolve(null) : synthesizePartnershipsStrategy(businessPacket, job.questionnaire),
-          deliverables.internationalExpansion ? Promise.resolve(null) : synthesizeInternationalExpansion(businessPacket, job.questionnaire),
+          synthIf('partnershipsStrategy', () => synthesizePartnershipsStrategy(businessPacket, job.questionnaire)),
+          synthIf('internationalExpansion', () => synthesizeInternationalExpansion(businessPacket, job.questionnaire)),
         ]);
         if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, partnershipsStrategy: ps.value };
         if (ie.status === "fulfilled" && ie.value) deliverables = { ...deliverables, internationalExpansion: ie.value };
@@ -732,8 +798,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing R&D effectiveness + brand equity...");
         const [rd, be] = await Promise.allSettled([
-          deliverables.rdEffectiveness ? Promise.resolve(null) : synthesizeRDEffectiveness(businessPacket, job.questionnaire),
-          deliverables.brandEquity ? Promise.resolve(null) : synthesizeBrandEquity(businessPacket, job.questionnaire),
+          synthIf('rdEffectiveness', () => synthesizeRDEffectiveness(businessPacket, job.questionnaire)),
+          synthIf('brandEquity', () => synthesizeBrandEquity(businessPacket, job.questionnaire)),
         ]);
         if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, rdEffectiveness: rd.value };
         if (be.status === "fulfilled" && be.value) deliverables = { ...deliverables, brandEquity: be.value };
@@ -748,8 +814,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing working capital + debt strategy...");
         const [wc, ds] = await Promise.allSettled([
-          deliverables.workingCapital ? Promise.resolve(null) : synthesizeWorkingCapital(businessPacket, job.questionnaire),
-          deliverables.debtStrategy ? Promise.resolve(null) : synthesizeDebtStrategy(businessPacket, job.questionnaire),
+          synthIf('workingCapital', () => synthesizeWorkingCapital(businessPacket, job.questionnaire)),
+          synthIf('debtStrategy', () => synthesizeDebtStrategy(businessPacket, job.questionnaire)),
         ]);
         if (wc.status === "fulfilled" && wc.value) deliverables = { ...deliverables, workingCapital: wc.value };
         if (ds.status === "fulfilled" && ds.value) deliverables = { ...deliverables, debtStrategy: ds.value };
@@ -764,8 +830,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing tax strategy + investor readiness...");
         const [ts, ir] = await Promise.allSettled([
-          deliverables.taxStrategy ? Promise.resolve(null) : synthesizeTaxStrategy(businessPacket, job.questionnaire),
-          deliverables.investorReadiness ? Promise.resolve(null) : synthesizeInvestorReadiness(businessPacket, job.questionnaire),
+          synthIf('taxStrategy', () => synthesizeTaxStrategy(businessPacket, job.questionnaire)),
+          synthIf('investorReadiness', () => synthesizeInvestorReadiness(businessPacket, job.questionnaire)),
         ]);
         if (ts.status === "fulfilled" && ts.value) deliverables = { ...deliverables, taxStrategy: ts.value };
         if (ir.status === "fulfilled" && ir.value) deliverables = { ...deliverables, investorReadiness: ir.value };
@@ -780,8 +846,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing M&A readiness + strategic roadmap...");
         const [ma, sr] = await Promise.allSettled([
-          deliverables.maReadiness ? Promise.resolve(null) : synthesizeMAReadiness(businessPacket, job.questionnaire),
-          deliverables.strategicRoadmap ? Promise.resolve(null) : synthesizeStrategicRoadmap(businessPacket, job.questionnaire),
+          synthIf('maReadiness', () => synthesizeMAReadiness(businessPacket, job.questionnaire)),
+          synthIf('strategicRoadmap', () => synthesizeStrategicRoadmap(businessPacket, job.questionnaire)),
         ]);
         if (ma.status === "fulfilled" && ma.value) deliverables = { ...deliverables, maReadiness: ma.value };
         if (sr.status === "fulfilled" && sr.value) deliverables = { ...deliverables, strategicRoadmap: sr.value };
@@ -796,8 +862,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing customer voice + referral engine...");
         const [cv, re] = await Promise.allSettled([
-          deliverables.customerVoice ? Promise.resolve(null) : synthesizeCustomerVoice(businessPacket, job.questionnaire),
-          deliverables.referralEngine ? Promise.resolve(null) : synthesizeReferralEngine(businessPacket, job.questionnaire),
+          synthIf('customerVoice', () => synthesizeCustomerVoice(businessPacket, job.questionnaire)),
+          synthIf('referralEngine', () => synthesizeReferralEngine(businessPacket, job.questionnaire)),
         ]);
         if (cv.status === "fulfilled" && cv.value) deliverables = { ...deliverables, customerVoice: cv.value };
         if (re.status === "fulfilled" && re.value) deliverables = { ...deliverables, referralEngine: re.value };
@@ -812,8 +878,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing price sensitivity index + customer effort score...");
         const [psi, ces] = await Promise.allSettled([
-          deliverables.priceSensitivityIndex ? Promise.resolve(null) : synthesizePriceSensitivityIndex(businessPacket, job.questionnaire),
-          deliverables.customerEffortScore ? Promise.resolve(null) : synthesizeCustomerEffortScore(businessPacket, job.questionnaire),
+          synthIf('priceSensitivityIndex', () => synthesizePriceSensitivityIndex(businessPacket, job.questionnaire)),
+          synthIf('customerEffortScore', () => synthesizeCustomerEffortScore(businessPacket, job.questionnaire)),
         ]);
         if (psi.status === "fulfilled" && psi.value) deliverables = { ...deliverables, priceSensitivityIndex: psi.value };
         if (ces.status === "fulfilled" && ces.value) deliverables = { ...deliverables, customerEffortScore: ces.value };
@@ -828,8 +894,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing account expansion map + loyalty program design...");
         const [aem, lpd] = await Promise.allSettled([
-          deliverables.accountExpansionMap ? Promise.resolve(null) : synthesizeAccountExpansionMap(businessPacket, job.questionnaire),
-          deliverables.loyaltyProgramDesign ? Promise.resolve(null) : synthesizeLoyaltyProgramDesign(businessPacket, job.questionnaire),
+          synthIf('accountExpansionMap', () => synthesizeAccountExpansionMap(businessPacket, job.questionnaire)),
+          synthIf('loyaltyProgramDesign', () => synthesizeLoyaltyProgramDesign(businessPacket, job.questionnaire)),
         ]);
         if (aem.status === "fulfilled" && aem.value) deliverables = { ...deliverables, accountExpansionMap: aem.value };
         if (lpd.status === "fulfilled" && lpd.value) deliverables = { ...deliverables, loyaltyProgramDesign: lpd.value };
@@ -844,8 +910,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing competitive pricing matrix + market sentiment index...");
         const [cpm, msi] = await Promise.allSettled([
-          deliverables.competitivePricingMatrix ? Promise.resolve(null) : synthesizeCompetitivePricingMatrix(businessPacket, job.questionnaire),
-          deliverables.marketSentimentIndex ? Promise.resolve(null) : synthesizeMarketSentimentIndex(businessPacket, job.questionnaire),
+          synthIf('competitivePricingMatrix', () => synthesizeCompetitivePricingMatrix(businessPacket, job.questionnaire)),
+          synthIf('marketSentimentIndex', () => synthesizeMarketSentimentIndex(businessPacket, job.questionnaire)),
         ]);
         if (cpm.status === "fulfilled" && cpm.value) deliverables = { ...deliverables, competitivePricingMatrix: cpm.value };
         if (msi.status === "fulfilled" && msi.value) deliverables = { ...deliverables, marketSentimentIndex: msi.value };
@@ -860,8 +926,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing disruption radar + ecosystem map...");
         const [dr, em] = await Promise.allSettled([
-          deliverables.disruptionRadar ? Promise.resolve(null) : synthesizeDisruptionRadar(businessPacket, job.questionnaire),
-          deliverables.ecosystemMap ? Promise.resolve(null) : synthesizeEcosystemMap(businessPacket, job.questionnaire),
+          synthIf('disruptionRadar', () => synthesizeDisruptionRadar(businessPacket, job.questionnaire)),
+          synthIf('ecosystemMap', () => synthesizeEcosystemMap(businessPacket, job.questionnaire)),
         ]);
         if (dr.status === "fulfilled" && dr.value) deliverables = { ...deliverables, disruptionRadar: dr.value };
         if (em.status === "fulfilled" && em.value) deliverables = { ...deliverables, ecosystemMap: em.value };
@@ -876,8 +942,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing category creation + market velocity...");
         const [cc, mv] = await Promise.allSettled([
-          deliverables.categoryCreation ? Promise.resolve(null) : synthesizeCategoryCreation(businessPacket, job.questionnaire),
-          deliverables.marketVelocity ? Promise.resolve(null) : synthesizeMarketVelocity(businessPacket, job.questionnaire),
+          synthIf('categoryCreation', () => synthesizeCategoryCreation(businessPacket, job.questionnaire)),
+          synthIf('marketVelocity', () => synthesizeMarketVelocity(businessPacket, job.questionnaire)),
         ]);
         if (cc.status === "fulfilled" && cc.value) deliverables = { ...deliverables, categoryCreation: cc.value };
         if (mv.status === "fulfilled" && mv.value) deliverables = { ...deliverables, marketVelocity: mv.value };
@@ -892,8 +958,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing OKR cascade + meeting effectiveness...");
         const [okr, me] = await Promise.allSettled([
-          deliverables.okrCascade ? Promise.resolve(null) : synthesizeOKRCascade(businessPacket, job.questionnaire),
-          deliverables.meetingEffectiveness ? Promise.resolve(null) : synthesizeMeetingEffectiveness(businessPacket, job.questionnaire),
+          synthIf('okrCascade', () => synthesizeOKRCascade(businessPacket, job.questionnaire)),
+          synthIf('meetingEffectiveness', () => synthesizeMeetingEffectiveness(businessPacket, job.questionnaire)),
         ]);
         if (okr.status === "fulfilled" && okr.value) deliverables = { ...deliverables, okrCascade: okr.value };
         if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, meetingEffectiveness: me.value };
@@ -908,8 +974,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing communication audit + decision velocity...");
         const [ca, dv] = await Promise.allSettled([
-          deliverables.communicationAudit ? Promise.resolve(null) : synthesizeCommunicationAudit(businessPacket, job.questionnaire),
-          deliverables.decisionVelocity ? Promise.resolve(null) : synthesizeDecisionVelocity(businessPacket, job.questionnaire),
+          synthIf('communicationAudit', () => synthesizeCommunicationAudit(businessPacket, job.questionnaire)),
+          synthIf('decisionVelocity', () => synthesizeDecisionVelocity(businessPacket, job.questionnaire)),
         ]);
         if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, communicationAudit: ca.value };
         if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, decisionVelocity: dv.value };
@@ -924,8 +990,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing resource optimizer + change management...");
         const [ro, cm] = await Promise.allSettled([
-          deliverables.resourceOptimizer ? Promise.resolve(null) : synthesizeResourceOptimizer(businessPacket, job.questionnaire),
-          deliverables.changeManagement ? Promise.resolve(null) : synthesizeChangeManagement(businessPacket, job.questionnaire),
+          synthIf('resourceOptimizer', () => synthesizeResourceOptimizer(businessPacket, job.questionnaire)),
+          synthIf('changeManagement', () => synthesizeChangeManagement(businessPacket, job.questionnaire)),
         ]);
         if (ro.status === "fulfilled" && ro.value) deliverables = { ...deliverables, resourceOptimizer: ro.value };
         if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, changeManagement: cm.value };
@@ -940,8 +1006,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing cash reserve strategy + revenue quality score...");
         const [crs, rqs] = await Promise.allSettled([
-          deliverables.cashReserveStrategy ? Promise.resolve(null) : synthesizeCashReserveStrategy(businessPacket, job.questionnaire),
-          deliverables.revenueQualityScore ? Promise.resolve(null) : synthesizeRevenueQualityScore(businessPacket, job.questionnaire),
+          synthIf('cashReserveStrategy', () => synthesizeCashReserveStrategy(businessPacket, job.questionnaire)),
+          synthIf('revenueQualityScore', () => synthesizeRevenueQualityScore(businessPacket, job.questionnaire)),
         ]);
         if (crs.status === "fulfilled" && crs.value) deliverables = { ...deliverables, cashReserveStrategy: crs.value };
         if (rqs.status === "fulfilled" && rqs.value) deliverables = { ...deliverables, revenueQualityScore: rqs.value };
@@ -956,8 +1022,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing cost intelligence + financial modeling...");
         const [ci, fm] = await Promise.allSettled([
-          deliverables.costIntelligence ? Promise.resolve(null) : synthesizeCostIntelligence(businessPacket, job.questionnaire),
-          deliverables.financialModeling ? Promise.resolve(null) : synthesizeFinancialModeling(businessPacket, job.questionnaire),
+          synthIf('costIntelligence', () => synthesizeCostIntelligence(businessPacket, job.questionnaire)),
+          synthIf('financialModeling', () => synthesizeFinancialModeling(businessPacket, job.questionnaire)),
         ]);
         if (ci.status === "fulfilled" && ci.value) deliverables = { ...deliverables, costIntelligence: ci.value };
         if (fm.status === "fulfilled" && fm.value) deliverables = { ...deliverables, financialModeling: fm.value };
@@ -972,8 +1038,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing profitability map + capital allocation...");
         const [pm, cal] = await Promise.allSettled([
-          deliverables.profitabilityMap ? Promise.resolve(null) : synthesizeProfitabilityMap(businessPacket, job.questionnaire),
-          deliverables.capitalAllocation ? Promise.resolve(null) : synthesizeCapitalAllocation(businessPacket, job.questionnaire),
+          synthIf('profitabilityMap', () => synthesizeProfitabilityMap(businessPacket, job.questionnaire)),
+          synthIf('capitalAllocation', () => synthesizeCapitalAllocation(businessPacket, job.questionnaire)),
         ]);
         if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, profitabilityMap: pm.value };
         if (cal.status === "fulfilled" && cal.value) deliverables = { ...deliverables, capitalAllocation: cal.value };
@@ -988,8 +1054,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing sales pipeline health + deal velocity...");
         const [sph, dv] = await Promise.allSettled([
-          deliverables.salesPipelineHealth ? Promise.resolve(null) : synthesizeSalesPipelineHealth(businessPacket, job.questionnaire),
-          deliverables.dealVelocity ? Promise.resolve(null) : synthesizeDealVelocity(businessPacket, job.questionnaire),
+          synthIf('salesPipelineHealth', () => synthesizeSalesPipelineHealth(businessPacket, job.questionnaire)),
+          synthIf('dealVelocity', () => synthesizeDealVelocity(businessPacket, job.questionnaire)),
         ]);
         if (sph.status === "fulfilled" && sph.value) deliverables = { ...deliverables, salesPipelineHealth: sph.value };
         if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, dealVelocity: dv.value };
@@ -1004,8 +1070,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing win rate optimizer + sales enablement...");
         const [wro, se] = await Promise.allSettled([
-          deliverables.winRateOptimizer ? Promise.resolve(null) : synthesizeWinRateOptimizer(businessPacket, job.questionnaire),
-          deliverables.salesEnablement ? Promise.resolve(null) : synthesizeSalesEnablement(businessPacket, job.questionnaire),
+          synthIf('winRateOptimizer', () => synthesizeWinRateOptimizer(businessPacket, job.questionnaire)),
+          synthIf('salesEnablement', () => synthesizeSalesEnablement(businessPacket, job.questionnaire)),
         ]);
         if (wro.status === "fulfilled" && wro.value) deliverables = { ...deliverables, winRateOptimizer: wro.value };
         if (se.status === "fulfilled" && se.value) deliverables = { ...deliverables, salesEnablement: se.value };
@@ -1020,8 +1086,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing territory planning + quota intelligence...");
         const [tp, qi] = await Promise.allSettled([
-          deliverables.territoryPlanning ? Promise.resolve(null) : synthesizeTerritoryPlanning(businessPacket, job.questionnaire),
-          deliverables.quotaIntelligence ? Promise.resolve(null) : synthesizeQuotaIntelligence(businessPacket, job.questionnaire),
+          synthIf('territoryPlanning', () => synthesizeTerritoryPlanning(businessPacket, job.questionnaire)),
+          synthIf('quotaIntelligence', () => synthesizeQuotaIntelligence(businessPacket, job.questionnaire)),
         ]);
         if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, territoryPlanning: tp.value };
         if (qi.status === "fulfilled" && qi.value) deliverables = { ...deliverables, quotaIntelligence: qi.value };
@@ -1036,8 +1102,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing feature prioritization + product usage analytics...");
         const [fp, pua] = await Promise.allSettled([
-          deliverables.featurePrioritization ? Promise.resolve(null) : synthesizeFeaturePrioritization(businessPacket, job.questionnaire),
-          deliverables.productUsageAnalytics ? Promise.resolve(null) : synthesizeProductUsageAnalytics(businessPacket, job.questionnaire),
+          synthIf('featurePrioritization', () => synthesizeFeaturePrioritization(businessPacket, job.questionnaire)),
+          synthIf('productUsageAnalytics', () => synthesizeProductUsageAnalytics(businessPacket, job.questionnaire)),
         ]);
         if (fp.status === "fulfilled" && fp.value) deliverables = { ...deliverables, featurePrioritization: fp.value };
         if (pua.status === "fulfilled" && pua.value) deliverables = { ...deliverables, productUsageAnalytics: pua.value };
@@ -1052,8 +1118,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing tech stack audit + API strategy...");
         const [tsa, as_] = await Promise.allSettled([
-          deliverables.techStackAudit ? Promise.resolve(null) : synthesizeTechStackAudit(businessPacket, job.questionnaire),
-          deliverables.apiStrategy ? Promise.resolve(null) : synthesizeApiStrategy(businessPacket, job.questionnaire),
+          synthIf('techStackAudit', () => synthesizeTechStackAudit(businessPacket, job.questionnaire)),
+          synthIf('apiStrategy', () => synthesizeApiStrategy(businessPacket, job.questionnaire)),
         ]);
         if (tsa.status === "fulfilled" && tsa.value) deliverables = { ...deliverables, techStackAudit: tsa.value };
         if (as_.status === "fulfilled" && as_.value) deliverables = { ...deliverables, apiStrategy: as_.value };
@@ -1068,8 +1134,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing platform scalability + user onboarding...");
         const [ps, uo] = await Promise.allSettled([
-          deliverables.platformScalability ? Promise.resolve(null) : synthesizePlatformScalability(businessPacket, job.questionnaire),
-          deliverables.userOnboarding ? Promise.resolve(null) : synthesizeUserOnboarding(businessPacket, job.questionnaire),
+          synthIf('platformScalability', () => synthesizePlatformScalability(businessPacket, job.questionnaire)),
+          synthIf('userOnboarding', () => synthesizeUserOnboarding(businessPacket, job.questionnaire)),
         ]);
         if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, platformScalability: ps.value };
         if (uo.status === "fulfilled" && uo.value) deliverables = { ...deliverables, userOnboarding: uo.value };
@@ -1084,8 +1150,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing employee engagement + talent acquisition funnel...");
         const [ee, taf] = await Promise.allSettled([
-          deliverables.employeeEngagement ? Promise.resolve(null) : synthesizeEmployeeEngagement(businessPacket, job.questionnaire),
-          deliverables.talentAcquisitionFunnel ? Promise.resolve(null) : synthesizeTalentAcquisitionFunnel(businessPacket, job.questionnaire),
+          synthIf('employeeEngagement', () => synthesizeEmployeeEngagement(businessPacket, job.questionnaire)),
+          synthIf('talentAcquisitionFunnel', () => synthesizeTalentAcquisitionFunnel(businessPacket, job.questionnaire)),
         ]);
         if (ee.status === "fulfilled" && ee.value) deliverables = { ...deliverables, employeeEngagement: ee.value };
         if (taf.status === "fulfilled" && taf.value) deliverables = { ...deliverables, talentAcquisitionFunnel: taf.value };
@@ -1100,8 +1166,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing compensation benchmark + succession planning...");
         const [cb, sp] = await Promise.allSettled([
-          deliverables.compensationBenchmark ? Promise.resolve(null) : synthesizeCompensationBenchmark(businessPacket, job.questionnaire),
-          deliverables.successionPlanning ? Promise.resolve(null) : synthesizeSuccessionPlanning(businessPacket, job.questionnaire),
+          synthIf('compensationBenchmark', () => synthesizeCompensationBenchmark(businessPacket, job.questionnaire)),
+          synthIf('successionPlanning', () => synthesizeSuccessionPlanning(businessPacket, job.questionnaire)),
         ]);
         if (cb.status === "fulfilled" && cb.value) deliverables = { ...deliverables, compensationBenchmark: cb.value };
         if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, successionPlanning: sp.value };
@@ -1116,8 +1182,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing diversity metrics + employer brand...");
         const [dm, eb] = await Promise.allSettled([
-          deliverables.diversityMetrics ? Promise.resolve(null) : synthesizeDiversityMetrics(businessPacket, job.questionnaire),
-          deliverables.employerBrand ? Promise.resolve(null) : synthesizeEmployerBrand(businessPacket, job.questionnaire),
+          synthIf('diversityMetrics', () => synthesizeDiversityMetrics(businessPacket, job.questionnaire)),
+          synthIf('employerBrand', () => synthesizeEmployerBrand(businessPacket, job.questionnaire)),
         ]);
         if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, diversityMetrics: dm.value };
         if (eb.status === "fulfilled" && eb.value) deliverables = { ...deliverables, employerBrand: eb.value };
@@ -1132,8 +1198,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing data governance + analytics maturity...");
         const [dg, am] = await Promise.allSettled([
-          deliverables.dataGovernance ? Promise.resolve(null) : synthesizeDataGovernance(businessPacket, job.questionnaire),
-          deliverables.analyticsMaturity ? Promise.resolve(null) : synthesizeAnalyticsMaturity(businessPacket, job.questionnaire),
+          synthIf('dataGovernance', () => synthesizeDataGovernance(businessPacket, job.questionnaire)),
+          synthIf('analyticsMaturity', () => synthesizeAnalyticsMaturity(businessPacket, job.questionnaire)),
         ]);
         if (dg.status === "fulfilled" && dg.value) deliverables = { ...deliverables, dataGovernance: dg.value };
         if (am.status === "fulfilled" && am.value) deliverables = { ...deliverables, analyticsMaturity: am.value };
@@ -1148,8 +1214,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing customer data platform + predictive modeling...");
         const [cdp, pm] = await Promise.allSettled([
-          deliverables.customerDataPlatform ? Promise.resolve(null) : synthesizeCustomerDataPlatform(businessPacket, job.questionnaire),
-          deliverables.predictiveModeling ? Promise.resolve(null) : synthesizePredictiveModeling(businessPacket, job.questionnaire),
+          synthIf('customerDataPlatform', () => synthesizeCustomerDataPlatform(businessPacket, job.questionnaire)),
+          synthIf('predictiveModeling', () => synthesizePredictiveModeling(businessPacket, job.questionnaire)),
         ]);
         if (cdp.status === "fulfilled" && cdp.value) deliverables = { ...deliverables, customerDataPlatform: cdp.value };
         if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, predictiveModeling: pm.value };
@@ -1164,8 +1230,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing reporting framework + data quality score...");
         const [rf, dqs] = await Promise.allSettled([
-          deliverables.reportingFramework ? Promise.resolve(null) : synthesizeReportingFramework(businessPacket, job.questionnaire),
-          deliverables.dataQualityScore ? Promise.resolve(null) : synthesizeDataQualityScore(businessPacket, job.questionnaire),
+          synthIf('reportingFramework', () => synthesizeReportingFramework(businessPacket, job.questionnaire)),
+          synthIf('dataQualityScore', () => synthesizeDataQualityScore(businessPacket, job.questionnaire)),
         ]);
         if (rf.status === "fulfilled" && rf.value) deliverables = { ...deliverables, reportingFramework: rf.value };
         if (dqs.status === "fulfilled" && dqs.value) deliverables = { ...deliverables, dataQualityScore: dqs.value };
@@ -1180,8 +1246,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing supply chain risk + inventory optimization...");
         const [scr, io] = await Promise.allSettled([
-          deliverables.supplyChainRisk ? Promise.resolve(null) : synthesizeSupplyChainRisk(businessPacket, job.questionnaire),
-          deliverables.inventoryOptimization ? Promise.resolve(null) : synthesizeInventoryOptimization(businessPacket, job.questionnaire),
+          synthIf('supplyChainRisk', () => synthesizeSupplyChainRisk(businessPacket, job.questionnaire)),
+          synthIf('inventoryOptimization', () => synthesizeInventoryOptimization(businessPacket, job.questionnaire)),
         ]);
         if (scr.status === "fulfilled" && scr.value) deliverables = { ...deliverables, supplyChainRisk: scr.value };
         if (io.status === "fulfilled" && io.value) deliverables = { ...deliverables, inventoryOptimization: io.value };
@@ -1196,8 +1262,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing vendor scorecard + operational efficiency...");
         const [vs, oe] = await Promise.allSettled([
-          deliverables.vendorScorecard ? Promise.resolve(null) : synthesizeVendorScorecard(businessPacket, job.questionnaire),
-          deliverables.operationalEfficiency ? Promise.resolve(null) : synthesizeOperationalEfficiency(businessPacket, job.questionnaire),
+          synthIf('vendorScorecard', () => synthesizeVendorScorecard(businessPacket, job.questionnaire)),
+          synthIf('operationalEfficiency', () => synthesizeOperationalEfficiency(businessPacket, job.questionnaire)),
         ]);
         if (vs.status === "fulfilled" && vs.value) deliverables = { ...deliverables, vendorScorecard: vs.value };
         if (oe.status === "fulfilled" && oe.value) deliverables = { ...deliverables, operationalEfficiency: oe.value };
@@ -1212,8 +1278,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing quality management + capacity planning...");
         const [qm, cp] = await Promise.allSettled([
-          deliverables.qualityManagement ? Promise.resolve(null) : synthesizeQualityManagement(businessPacket, job.questionnaire),
-          deliverables.capacityPlanning ? Promise.resolve(null) : synthesizeCapacityPlanning(businessPacket, job.questionnaire),
+          synthIf('qualityManagement', () => synthesizeQualityManagement(businessPacket, job.questionnaire)),
+          synthIf('capacityPlanning', () => synthesizeCapacityPlanning(businessPacket, job.questionnaire)),
         ]);
         if (qm.status === "fulfilled" && qm.value) deliverables = { ...deliverables, qualityManagement: qm.value };
         if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, capacityPlanning: cp.value };
@@ -1228,8 +1294,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing customer journey map + nps analysis...");
         const [cjm, nps] = await Promise.allSettled([
-          deliverables.customerJourneyMap ? Promise.resolve(null) : synthesizeCustomerJourneyMap(businessPacket, job.questionnaire),
-          deliverables.npsAnalysis ? Promise.resolve(null) : synthesizeNpsAnalysis(businessPacket, job.questionnaire),
+          synthIf('customerJourneyMap', () => synthesizeCustomerJourneyMap(businessPacket, job.questionnaire)),
+          synthIf('npsAnalysis', () => synthesizeNpsAnalysis(businessPacket, job.questionnaire)),
         ]);
         if (cjm.status === "fulfilled" && cjm.value) deliverables = { ...deliverables, customerJourneyMap: cjm.value };
         if (nps.status === "fulfilled" && nps.value) deliverables = { ...deliverables, npsAnalysis: nps.value };
@@ -1244,8 +1310,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing support ticket intelligence + customer health score...");
         const [sti, chs] = await Promise.allSettled([
-          deliverables.supportTicketIntelligence ? Promise.resolve(null) : synthesizeSupportTicketIntelligence(businessPacket, job.questionnaire),
-          deliverables.customerHealthScore ? Promise.resolve(null) : synthesizeCustomerHealthScore(businessPacket, job.questionnaire),
+          synthIf('supportTicketIntelligence', () => synthesizeSupportTicketIntelligence(businessPacket, job.questionnaire)),
+          synthIf('customerHealthScore', () => synthesizeCustomerHealthScore(businessPacket, job.questionnaire)),
         ]);
         if (sti.status === "fulfilled" && sti.value) deliverables = { ...deliverables, supportTicketIntelligence: sti.value };
         if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
@@ -1260,8 +1326,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing voice of customer + customer segmentation...");
         const [voc, cs] = await Promise.allSettled([
-          deliverables.voiceOfCustomer ? Promise.resolve(null) : synthesizeVoiceOfCustomer(businessPacket, job.questionnaire),
-          deliverables.customerSegmentation ? Promise.resolve(null) : synthesizeCustomerSegmentation(businessPacket, job.questionnaire),
+          synthIf('voiceOfCustomer', () => synthesizeVoiceOfCustomer(businessPacket, job.questionnaire)),
+          synthIf('customerSegmentation', () => synthesizeCustomerSegmentation(businessPacket, job.questionnaire)),
         ]);
         if (voc.status === "fulfilled" && voc.value) deliverables = { ...deliverables, voiceOfCustomer: voc.value };
         if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, customerSegmentation: cs.value };
@@ -1276,8 +1342,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing innovation pipeline + ip portfolio...");
         const [ip, ipp] = await Promise.allSettled([
-          deliverables.innovationPipeline ? Promise.resolve(null) : synthesizeInnovationPipeline(businessPacket, job.questionnaire),
-          deliverables.ipPortfolio ? Promise.resolve(null) : synthesizeIpPortfolio(businessPacket, job.questionnaire),
+          synthIf('innovationPipeline', () => synthesizeInnovationPipeline(businessPacket, job.questionnaire)),
+          synthIf('ipPortfolio', () => synthesizeIpPortfolio(businessPacket, job.questionnaire)),
         ]);
         if (ip.status === "fulfilled" && ip.value) deliverables = { ...deliverables, innovationPipeline: ip.value };
         if (ipp.status === "fulfilled" && ipp.value) deliverables = { ...deliverables, ipPortfolio: ipp.value };
@@ -1292,8 +1358,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing rd efficiency + technology readiness...");
         const [rde, tr] = await Promise.allSettled([
-          deliverables.rdEfficiency ? Promise.resolve(null) : synthesizeRdEfficiency(businessPacket, job.questionnaire),
-          deliverables.technologyReadiness ? Promise.resolve(null) : synthesizeTechnologyReadiness(businessPacket, job.questionnaire),
+          synthIf('rdEfficiency', () => synthesizeRdEfficiency(businessPacket, job.questionnaire)),
+          synthIf('technologyReadiness', () => synthesizeTechnologyReadiness(businessPacket, job.questionnaire)),
         ]);
         if (rde.status === "fulfilled" && rde.value) deliverables = { ...deliverables, rdEfficiency: rde.value };
         if (tr.status === "fulfilled" && tr.value) deliverables = { ...deliverables, technologyReadiness: tr.value };
@@ -1308,8 +1374,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing partnership ecosystem + mergers acquisitions...");
         const [pe, ma] = await Promise.allSettled([
-          deliverables.partnershipEcosystem ? Promise.resolve(null) : synthesizePartnershipEcosystem(businessPacket, job.questionnaire),
-          deliverables.mergersAcquisitions ? Promise.resolve(null) : synthesizeMergersAcquisitions(businessPacket, job.questionnaire),
+          synthIf('partnershipEcosystem', () => synthesizePartnershipEcosystem(businessPacket, job.questionnaire)),
+          synthIf('mergersAcquisitions', () => synthesizeMergersAcquisitions(businessPacket, job.questionnaire)),
         ]);
         if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, partnershipEcosystem: pe.value };
         if (ma.status === "fulfilled" && ma.value) deliverables = { ...deliverables, mergersAcquisitions: ma.value };
@@ -1324,8 +1390,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing esg scorecard + carbon footprint...");
         const [esg, cf] = await Promise.allSettled([
-          deliverables.esgScorecard ? Promise.resolve(null) : synthesizeEsgScorecard(businessPacket, job.questionnaire),
-          deliverables.carbonFootprint ? Promise.resolve(null) : synthesizeCarbonFootprint(businessPacket, job.questionnaire),
+          synthIf('esgScorecard', () => synthesizeEsgScorecard(businessPacket, job.questionnaire)),
+          synthIf('carbonFootprint', () => synthesizeCarbonFootprint(businessPacket, job.questionnaire)),
         ]);
         if (esg.status === "fulfilled" && esg.value) deliverables = { ...deliverables, esgScorecard: esg.value };
         if (cf.status === "fulfilled" && cf.value) deliverables = { ...deliverables, carbonFootprint: cf.value };
@@ -1340,8 +1406,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing regulatory compliance + business continuity...");
         const [rc, bc] = await Promise.allSettled([
-          deliverables.regulatoryCompliance ? Promise.resolve(null) : synthesizeRegulatoryCompliance(businessPacket, job.questionnaire),
-          deliverables.businessContinuity ? Promise.resolve(null) : synthesizeBusinessContinuity(businessPacket, job.questionnaire),
+          synthIf('regulatoryCompliance', () => synthesizeRegulatoryCompliance(businessPacket, job.questionnaire)),
+          synthIf('businessContinuity', () => synthesizeBusinessContinuity(businessPacket, job.questionnaire)),
         ]);
         if (rc.status === "fulfilled" && rc.value) deliverables = { ...deliverables, regulatoryCompliance: rc.value };
         if (bc.status === "fulfilled" && bc.value) deliverables = { ...deliverables, businessContinuity: bc.value };
@@ -1356,8 +1422,8 @@ async function runExtendedWaves(
       try {
         console.log("[Pivot] Synthesizing ethics framework + social impact...");
         const [ef, si] = await Promise.allSettled([
-          deliverables.ethicsFramework ? Promise.resolve(null) : synthesizeEthicsFramework(businessPacket, job.questionnaire),
-          deliverables.socialImpact ? Promise.resolve(null) : synthesizeSocialImpact(businessPacket, job.questionnaire),
+          synthIf('ethicsFramework', () => synthesizeEthicsFramework(businessPacket, job.questionnaire)),
+          synthIf('socialImpact', () => synthesizeSocialImpact(businessPacket, job.questionnaire)),
         ]);
         if (ef.status === "fulfilled" && ef.value) deliverables = { ...deliverables, ethicsFramework: ef.value };
         if (si.status === "fulfilled" && si.value) deliverables = { ...deliverables, socialImpact: si.value };
@@ -3019,6 +3085,318 @@ async function runExtendedWaves(
       } catch (e) { console.warn("Step 4hd failed:", e); }
     }
 
+    // ── Step 4he+4hf: Market Research + Competitor Tracking (Wave 73) ──
+    if (!deliverables.marketResearch || !deliverables.competitorTracking) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('marketResearch', () => synthesizeMarketResearch(businessPacket, job.questionnaire)),
+          synthIf('competitorTracking', () => synthesizeCompetitorTracking(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.marketResearch = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.competitorTracking = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4he+4hf failed:", e); }
+    }
+
+    // ── Step 4hg+4hh: Industry Trends + Social Listening (Wave 73) ──
+    if (!deliverables.industryTrends || !deliverables.socialListening) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('industryTrends', () => synthesizeIndustryTrends(businessPacket, job.questionnaire)),
+          synthIf('socialListening', () => synthesizeSocialListening(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.industryTrends = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.socialListening = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hg+4hh failed:", e); }
+    }
+
+    // ── Step 4hi+4hj: UX Research + Web Analytics (Wave 73) ──
+    if (!deliverables.uxResearch || !deliverables.webAnalytics) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('uxResearch', () => synthesizeUxResearch(businessPacket, job.questionnaire)),
+          synthIf('webAnalytics', () => synthesizeWebAnalytics(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.uxResearch = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.webAnalytics = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hi+4hj failed:", e); }
+    }
+
+    // ── Step 4hk+4hl: Email Marketing + Conversion Optimization (Wave 74) ──
+    if (!deliverables.emailMarketing || !deliverables.conversionOptimization) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('emailMarketing', () => synthesizeEmailMarketing(businessPacket, job.questionnaire)),
+          synthIf('conversionOptimization', () => synthesizeConversionOptimization(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.emailMarketing = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.conversionOptimization = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hk+4hl failed:", e); }
+    }
+
+    // ── Step 4hm+4hn: A/B Testing Framework + Marketing Attribution (Wave 74) ──
+    if (!deliverables.abTestingFramework || !deliverables.marketingAttribution) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('abTestingFramework', () => synthesizeAbTestingFramework(businessPacket, job.questionnaire)),
+          synthIf('marketingAttribution', () => synthesizeMarketingAttribution(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.abTestingFramework = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.marketingAttribution = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hm+4hn failed:", e); }
+    }
+
+    // ── Step 4ho+4hp: Content Calendar + Social Media Calendar (Wave 74) ──
+    if (!deliverables.contentCalendar || !deliverables.socialMediaCalendar) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('contentCalendar', () => synthesizeContentCalendar(businessPacket, job.questionnaire)),
+          synthIf('socialMediaCalendar', () => synthesizeSocialMediaCalendar(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.contentCalendar = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.socialMediaCalendar = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ho+4hp failed:", e); }
+    }
+
+    // ── Step 4hq+4hr: Budget Planning + Revenue Forecasting (Wave 75) ──
+    if (!deliverables.budgetPlanning || !deliverables.revenueForecasting) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('budgetPlanning', () => synthesizeBudgetPlanning(businessPacket, job.questionnaire)),
+          synthIf('revenueForecasting', () => synthesizeRevenueForecasting(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.budgetPlanning = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.revenueForecasting = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hq+4hr failed:", e); }
+    }
+
+    // ── Step 4hs+4ht: Cash Management + Credit Management (Wave 75) ──
+    if (!deliverables.cashManagement || !deliverables.creditManagement) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('cashManagement', () => synthesizeCashManagement(businessPacket, job.questionnaire)),
+          synthIf('creditManagement', () => synthesizeCreditManagement(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.cashManagement = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.creditManagement = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hs+4ht failed:", e); }
+    }
+
+    // ── Step 4hu+4hv: Debt Structure + Financial Reporting (Wave 75) ──
+    if (!deliverables.debtStructure || !deliverables.financialReporting) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('debtStructure', () => synthesizeDebtStructure(businessPacket, job.questionnaire)),
+          synthIf('financialReporting', () => synthesizeFinancialReporting(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.debtStructure = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.financialReporting = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hu+4hv failed:", e); }
+    }
+
+    // ── Step 4hw+4hx: Carbon Reduction + Circular Economy (Wave 76) ──
+    if (!deliverables.carbonReduction || !deliverables.circularEconomy) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('carbonReduction', () => synthesizeCarbonReduction(businessPacket, job.questionnaire)),
+          synthIf('circularEconomy', () => synthesizeCircularEconomy(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.carbonReduction = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.circularEconomy = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hw+4hx failed:", e); }
+    }
+
+    // ── Step 4hy+4hz: Community Impact + Water Management (Wave 76) ──
+    if (!deliverables.communityImpact || !deliverables.waterManagement) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('communityImpact', () => synthesizeCommunityImpact(businessPacket, job.questionnaire)),
+          synthIf('waterManagement', () => synthesizeWaterManagement(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.communityImpact = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.waterManagement = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4hy+4hz failed:", e); }
+    }
+
+    // ── Step 4ia+4ib: Waste Reduction + Sustainable Innovation (Wave 76) ──
+    if (!deliverables.wasteReduction || !deliverables.sustainableInnovation) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('wasteReduction', () => synthesizeWasteReduction(businessPacket, job.questionnaire)),
+          synthIf('sustainableInnovation', () => synthesizeSustainableInnovation(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.wasteReduction = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.sustainableInnovation = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ia+4ib failed:", e); }
+    }
+
+    // ── Step 4ic+4id: Talent Pipeline + Leadership Development (Wave 77) ──
+    if (!deliverables.talentPipeline || !deliverables.leadershipDevelopment) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('talentPipeline', () => synthesizeTalentPipeline(businessPacket, job.questionnaire)),
+          synthIf('leadershipDevelopment', () => synthesizeLeadershipDevelopment(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.talentPipeline = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.leadershipDevelopment = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ic+4id failed:", e); }
+    }
+
+    // ── Step 4ie+4if: Succession Readiness + Compensation Strategy (Wave 77) ──
+    if (!deliverables.successionReadiness || !deliverables.compensationStrategy) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('successionReadiness', () => synthesizeSuccessionReadiness(businessPacket, job.questionnaire)),
+          synthIf('compensationStrategy', () => synthesizeCompensationStrategy(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.successionReadiness = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.compensationStrategy = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ie+4if failed:", e); }
+    }
+
+    // ── Step 4ig+4ih: Workforce Analytics + Org Effectiveness (Wave 77) ──
+    if (!deliverables.workforceAnalytics || !deliverables.orgEffectiveness) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('workforceAnalytics', () => synthesizeWorkforceAnalytics(businessPacket, job.questionnaire)),
+          synthIf('orgEffectiveness', () => synthesizeOrgEffectiveness(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.workforceAnalytics = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.orgEffectiveness = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ig+4ih failed:", e); }
+    }
+
+    // ── Step 4ii+4ij: Sales Motion Design + Deal Analytics (Wave 78) ──
+    if (!deliverables.salesMotionDesign || !deliverables.dealAnalytics) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('salesMotionDesign', () => synthesizeSalesMotionDesign(businessPacket, job.questionnaire)),
+          synthIf('dealAnalytics', () => synthesizeDealAnalytics(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.salesMotionDesign = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.dealAnalytics = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ii+4ij failed:", e); }
+    }
+
+    // ── Step 4ik+4il: Territory Optimization + Sales Compensation (Wave 78) ──
+    if (!deliverables.territoryOptimization || !deliverables.salesCompensation) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('territoryOptimization', () => synthesizeTerritoryOptimization(businessPacket, job.questionnaire)),
+          synthIf('salesCompensation', () => synthesizeSalesCompensation(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.territoryOptimization = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.salesCompensation = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4ik+4il failed:", e); }
+    }
+
+    // ── Step 4im+4in: Revenue Prediction + Account Penetration (Wave 78) ──
+    if (!deliverables.revenuePrediction || !deliverables.accountPenetration) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('revenuePrediction', () => synthesizeRevenuePrediction(businessPacket, job.questionnaire)),
+          synthIf('accountPenetration', () => synthesizeAccountPenetration(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.revenuePrediction = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.accountPenetration = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4im+4in failed:", e); }
+    }
+
+    // ── Step 4io+4ip: Product Vision + Feature Roadmap (Wave 79) ──
+    if (!deliverables.productVision || !deliverables.featureRoadmap) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('productVision', () => synthesizeProductVision(businessPacket, job.questionnaire)),
+          synthIf('featureRoadmap', () => synthesizeFeatureRoadmap(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.productVision = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.featureRoadmap = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4io+4ip failed:", e); }
+    }
+
+    // ── Step 4iq+4ir: PMF Assessment + User Activation (Wave 79) ──
+    if (!deliverables.pmfAssessment || !deliverables.userActivation) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('pmfAssessment', () => synthesizePmfAssessment(businessPacket, job.questionnaire)),
+          synthIf('userActivation', () => synthesizeUserActivation(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.pmfAssessment = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.userActivation = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4iq+4ir failed:", e); }
+    }
+
+    // ── Step 4is+4it: Product Insights + Release Strategy (Wave 79) ──
+    if (!deliverables.productInsights || !deliverables.releaseStrategy) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('productInsights', () => synthesizeProductInsights(businessPacket, job.questionnaire)),
+          synthIf('releaseStrategy', () => synthesizeReleaseStrategy(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.productInsights = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.releaseStrategy = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4is+4it failed:", e); }
+    }
+
+    // ── Step 4iu+4iv: Brand Position Map + Brand Valuation (Wave 80) ──
+    if (!deliverables.brandPositionMap || !deliverables.brandValuation) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('brandPositionMap', () => synthesizeBrandPositionMap(businessPacket, job.questionnaire)),
+          synthIf('brandValuation', () => synthesizeBrandValuation(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.brandPositionMap = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.brandValuation = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4iu+4iv failed:", e); }
+    }
+
+    // ── Step 4iw+4ix: Brand Hierarchy + Reputation Analysis (Wave 80) ──
+    if (!deliverables.brandHierarchy || !deliverables.reputationAnalysis) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('brandHierarchy', () => synthesizeBrandHierarchy(businessPacket, job.questionnaire)),
+          synthIf('reputationAnalysis', () => synthesizeReputationAnalysis(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.brandHierarchy = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.reputationAnalysis = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4iw+4ix failed:", e); }
+    }
+
+    // ── Step 4iy+4iz: Messaging Framework + Visual Branding (Wave 80) ──
+    if (!deliverables.messagingFramework || !deliverables.visualBranding) {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          synthIf('messagingFramework', () => synthesizeMessagingFramework(businessPacket, job.questionnaire)),
+          synthIf('visualBranding', () => synthesizeVisualBranding(businessPacket, job.questionnaire)),
+        ]);
+        if (r1.status === "fulfilled" && r1.value) deliverables.messagingFramework = r1.value;
+        if (r2.status === "fulfilled" && r2.value) deliverables.visualBranding = r2.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Step 4iy+4iz failed:", e); }
+    }
+
   return deliverables;
 }
 
@@ -3694,8 +4072,17 @@ export async function runPipeline(runId: string): Promise<void> {
       }
     }
 
+    // ── Relevance Engine: Determine which sections apply to this business ──
+    let relevantSections: Set<string> | undefined;
+    try {
+      relevantSections = getRelevantSections(job.questionnaire);
+      console.log(`[Pivot] Relevance engine: ${relevantSections.size} sections relevant for this business`);
+    } catch (e) {
+      console.warn("[Pivot] Relevance engine failed, running all sections:", e);
+    }
+
     // ── Extended wave synthesis (extracted to avoid TS2563 control flow limit) ──
-    deliverables = await runExtendedWaves(runId, deliverables, businessPacket, job);
+    deliverables = await runExtendedWaves(runId, deliverables, businessPacket, job, relevantSections);
 
     // ── Step 5: Agent memory (best-effort) ─────────────────────────────────
     try {
