@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw } from "lucide-react";
+import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface JobSummary {
@@ -18,6 +18,7 @@ interface JobSummary {
 interface DashboardViewProps {
   onStartNew: () => void;
   onViewRun: (runId: string) => void;
+  onTeam?: () => void;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -58,7 +59,7 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, onTeam }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,6 +103,14 @@ export function DashboardView({ onStartNew, onViewRun }: DashboardViewProps) {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+          {onTeam && (
+            <button
+              onClick={onTeam}
+              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
+            >
+              <Users className="w-4 h-4" /> Team
+            </button>
+          )}
           <button
             onClick={onStartNew}
             className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group font-bold rounded-xl"
@@ -254,7 +263,7 @@ export function DashboardView({ onStartNew, onViewRun }: DashboardViewProps) {
 
                             {/* Headline for completed jobs */}
                             {isComplete && job.healthHeadline && (
-                              <p className="text-sm text-zinc-500 leading-snug mb-2 line-clamp-2 max-w-2xl">
+                              <p className="text-sm text-zinc-500 leading-snug mb-2">
                                 {job.healthHeadline}
                               </p>
                             )}

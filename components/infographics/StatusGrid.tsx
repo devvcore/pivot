@@ -41,7 +41,7 @@ export default function StatusGrid({ items, title, columns = 2 }: StatusGridProp
           return (
             <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${bg}`}>
               <Icon className={`w-4 h-4 shrink-0 ${color}`} />
-              <span className="text-xs text-zinc-700 truncate">{item.label}</span>
+              <span className="text-xs text-zinc-700 break-words">{item.label}</span>
             </div>
           );
         })}

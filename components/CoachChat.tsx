@@ -98,7 +98,7 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName }: Co
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 z-50 w-[380px] h-[520px] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-24 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-[380px] h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="bg-emerald-600 text-white px-4 py-3 flex items-center justify-between shrink-0">

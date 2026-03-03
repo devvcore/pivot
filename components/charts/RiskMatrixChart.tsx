@@ -61,8 +61,7 @@ function RiskTooltip({ active, payload }: RiskTooltipProps) {
       </p>
       {d.mitigation && (
         <p style={{ fontSize: 10, margin: "4px 0 0", color: "#52525b" }}>
-          Mitigation: {d.mitigation.slice(0, 120)}
-          {d.mitigation.length > 120 ? "..." : ""}
+          Mitigation: {d.mitigation}
         </p>
       )}
     </div>

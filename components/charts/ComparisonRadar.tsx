@@ -29,7 +29,7 @@ export default function ComparisonRadar({ dimensions, nameKey, valueKey, benchma
   const bk = benchmarkKey || findKey(sample, ["benchmark", "average", "industryavg", "target"]);
 
   const data = dimensions.slice(0, 10).map((item, i) => ({
-    subject: String(item[nk] || `Dim ${i + 1}`).slice(0, 20),
+    subject: String(item[nk] || `Dim ${i + 1}`),
     value: typeof item[vk] === "number" ? item[vk] as number : 0,
     ...(bk ? { benchmark: typeof item[bk] === "number" ? item[bk] as number : 0 } : {}),
   }));

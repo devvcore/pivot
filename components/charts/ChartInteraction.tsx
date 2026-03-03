@@ -138,9 +138,9 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig, on
               key={i}
               onClick={() => askPivvy(prompt)}
               disabled={loading || loadingProjection}
-              className="text-[10px] text-zinc-600 bg-white border border-zinc-200 rounded-lg px-2.5 py-1 hover:bg-zinc-50 hover:border-zinc-400 transition-all disabled:opacity-40 whitespace-nowrap"
+              className="text-[10px] text-zinc-600 bg-white border border-zinc-200 rounded-lg px-2.5 py-1 hover:bg-zinc-50 hover:border-zinc-400 transition-all disabled:opacity-40"
             >
-              {prompt.length > 45 ? prompt.slice(0, 42) + "..." : prompt}
+              {prompt}
             </button>
           ))}
         </div>
@@ -219,10 +219,10 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig, on
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       {projection.title && (
-                        <p className="text-xs font-semibold text-zinc-900 truncate">{projection.title}</p>
+                        <p className="text-xs font-semibold text-zinc-900 break-words">{projection.title}</p>
                       )}
                       {projection.subtitle && (
-                        <p className="text-[10px] text-zinc-500 mt-0.5 truncate">{projection.subtitle}</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5 break-words">{projection.subtitle}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

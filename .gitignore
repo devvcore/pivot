@@ -7,3 +7,8 @@ coverage/
 !.env.example
 uploads/
 data/
+*.db
+*.db-wal
+*.db-shm
+reports/
+*.tsbuildinfo

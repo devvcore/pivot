@@ -4714,7 +4714,18 @@ export async function runPipeline(runId: string): Promise<void> {
     let businessPacket: BusinessPacket | null = null;
     if (job.parsedContext) {
       try {
-        businessPacket = JSON.parse(job.parsedContext) as BusinessPacket;
+        const cached = JSON.parse(job.parsedContext) as BusinessPacket;
+        // Only reuse if the cached packet has real data (not empty extraction)
+        const hasData = (cached.categoryDossiers?.length ?? 0) > 0
+          || (cached.financialFacts?.length ?? 0) > 0
+          || ((cached.consolidatedRisks?.length ?? 0) > 0
+            && !cached.consolidatedRisks?.[0]?.includes("data gap")
+            && !cached.consolidatedRisks?.[0]?.includes("data extraction failure"));
+        if (hasData) {
+          businessPacket = cached;
+        } else {
+          console.log("[Pivot] Cached parsedContext has no real data, re-parsing from scratch");
+        }
       } catch { /* corrupt — re-parse */ }
     }
 
@@ -4739,6 +4750,61 @@ export async function runPipeline(runId: string): Promise<void> {
       setSectionFacts(businessPacket.financialFacts);
       console.log(`[Pivot] Loaded ${businessPacket.financialFacts.length} verified financial facts for synthesis guardrails`);
     }
+
+    // ── Step 1b: Relevance selection (before synthesis to skip irrelevant sections) ──
+    let relevantSections: Set<string> | undefined;
+    const pipelineStartedAt = Date.now();
+    try {
+      const websiteUrl2 = job.questionnaire.website || "";
+      let websiteContent = "";
+      if (websiteUrl2) {
+        console.log(`[Pivot] Scraping website content from ${websiteUrl2} for relevance...`);
+        websiteContent = await scrapeWebsiteContent(websiteUrl2);
+        console.log(`[Pivot] Scraped ${websiteContent.length} chars of website content`);
+      }
+
+      // Inject website content into BusinessPacket so synthesis agents can use it
+      if (websiteContent && businessPacket) {
+        if (!businessPacket.categoryDossiers) businessPacket.categoryDossiers = [];
+        businessPacket.categoryDossiers.push({
+          category: "Website Intelligence",
+          keyFacts: [`Website content from ${job.questionnaire.website}: ${websiteContent.slice(0, 6000)}`],
+          criticalIssues: [],
+          financialAmounts: {},
+        });
+        updateJob(runId, { parsedContext: JSON.stringify(businessPacket) });
+      }
+
+      const businessSummary = formatPacketAsContext(businessPacket).slice(0, 5000);
+      console.log("[Pivot] Running AI section selector...");
+      const aiSelected = await selectSectionsWithAI(job.questionnaire, businessSummary, websiteContent);
+      if (aiSelected) {
+        relevantSections = aiSelected;
+        console.log(`[Pivot] AI selected ${aiSelected.size} relevant sections`);
+      } else {
+        relevantSections = getStrictRelevantSections(job.questionnaire);
+        console.log(`[Pivot] Rule-based fallback: ${relevantSections.size} sections selected`);
+      }
+    } catch (e) {
+      console.warn("[Pivot] Relevance engine failed, using strict fallback:", e);
+      try {
+        relevantSections = getStrictRelevantSections(job.questionnaire);
+      } catch { /* last resort: run everything */ }
+    }
+
+    // Relevance gating helpers — used by all synthesis steps
+    const isSelected = (key: string) => !relevantSections || relevantSections.has(key);
+    const synthIf = <T>(key: string, fn: () => Promise<T | null>): Promise<T | null> => {
+      if (!isSelected(key)) return Promise.resolve(null);
+      if ((deliverables as unknown as Record<string, unknown>)[key]) return Promise.resolve(null);
+      return fn();
+    };
+    const totalSteps = relevantSections ? relevantSections.size : 300;
+    let completedSteps = 0;
+    const trackProgress = (step: string) => {
+      completedSteps++;
+      deliverables = { ...deliverables, _progress: { completed: completedSteps, total: totalSteps, currentStep: step, startedAt: pipelineStartedAt } };
+    };
 
     // ── Step 2: Synthesize ─────────────────────────────────────────────────
     // Skip if deliverables already exist (e.g. crashed during formatting).
@@ -4811,11 +4877,11 @@ export async function runPipeline(runId: string): Promise<void> {
       }
     }
 
-    if (!deliverables.techOptimization || !deliverables.pricingIntelligence) {
+    {
       try {
         const [techOpt, priceInt] = await Promise.allSettled([
-          deliverables.techOptimization ? Promise.resolve(null) : synthesizeTechOptimization(businessPacket, job.questionnaire),
-          deliverables.pricingIntelligence ? Promise.resolve(null) : synthesizePricingIntelligence(businessPacket, job.questionnaire, deliverables.competitorAnalysis),
+          synthIf('techOptimization', () => synthesizeTechOptimization(businessPacket, job.questionnaire)),
+          synthIf('pricingIntelligence', () => synthesizePricingIntelligence(businessPacket, job.questionnaire, deliverables.competitorAnalysis)),
         ]);
         if (techOpt.status === "fulfilled" && techOpt.value) deliverables = { ...deliverables, techOptimization: techOpt.value };
         if (priceInt.status === "fulfilled" && priceInt.value) deliverables = { ...deliverables, pricingIntelligence: priceInt.value };
@@ -4935,490 +5001,92 @@ export async function runPipeline(runId: string): Promise<void> {
       }
     }
 
-    // ── Step 4d: Wave 2 intelligence (SWOT, unit economics, etc.) ──────────
-    // Run pairs in parallel where possible to save time
-    if (!deliverables.swotAnalysis || !deliverables.unitEconomics) {
-      try {
-        console.log("[Pivot] Synthesizing SWOT + unit economics...");
-        const [swot, ue] = await Promise.allSettled([
-          deliverables.swotAnalysis ? Promise.resolve(null) : synthesizeSWOT(businessPacket, job.questionnaire),
-          deliverables.unitEconomics ? Promise.resolve(null) : synthesizeUnitEconomics(businessPacket, job.questionnaire),
-        ]);
-        if (swot.status === "fulfilled" && swot.value) deliverables = { ...deliverables, swotAnalysis: swot.value };
-        if (ue.status === "fulfilled" && ue.value) deliverables = { ...deliverables, unitEconomics: ue.value };
+    // ── Step 4d: Wave 2-10 intelligence (batched, relevance-gated) ──────────
+    {
+      const bp = businessPacket;
+      const q = job.questionnaire;
+
+      // Collect all wave 2-10 synthesis tasks
+      const waveTasks: { key: string; fn: () => Promise<unknown | null> }[] = [
+        { key: 'swotAnalysis', fn: () => synthIf('swotAnalysis', () => synthesizeSWOT(bp, q)) },
+        { key: 'unitEconomics', fn: () => synthIf('unitEconomics', () => synthesizeUnitEconomics(bp, q)) },
+        { key: 'customerSegmentation', fn: () => synthIf('customerSegmentation', () => synthesizeCustomerSegmentation(bp, q)) },
+        { key: 'competitiveWinLoss', fn: () => synthIf('competitiveWinLoss', () => synthesizeCompetitiveWinLoss(bp, q, deliverables)) },
+        { key: 'revenueForecast', fn: () => synthIf('revenueForecast', () => synthesizeRevenueForecast(bp, q)) },
+        { key: 'hiringPlan', fn: () => synthIf('hiringPlan', () => synthesizeHiringPlan(bp, q, deliverables)) },
+        { key: 'churnPlaybook', fn: () => synthIf('churnPlaybook', () => synthesizeChurnPlaybook(bp, q, deliverables)) },
+        { key: 'salesPlaybook', fn: () => synthIf('salesPlaybook', () => synthesizeSalesPlaybook(bp, q, deliverables)) },
+        { key: 'investorOnePager', fn: () => synthIf('investorOnePager', () => synthesizeInvestorOnePager(bp, q, deliverables)) },
+        { key: 'goalTracker', fn: () => synthIf('goalTracker', () => synthesizeGoalTracker(bp, q, deliverables)) },
+        { key: 'benchmarkScore', fn: () => synthIf('benchmarkScore', () => synthesizeBenchmarkScore(bp, q, deliverables)) },
+        { key: 'executiveSummary', fn: () => synthIf('executiveSummary', () => synthesizeExecutiveSummary(bp, q, deliverables)) },
+        { key: 'milestoneTracker', fn: () => synthIf('milestoneTracker', () => synthesizeMilestoneTracker(bp, q)) },
+        { key: 'riskRegister', fn: () => synthIf('riskRegister', () => synthesizeRiskRegister(bp, q)) },
+        { key: 'partnershipOpportunities', fn: () => synthIf('partnershipOpportunities', () => synthesizePartnershipOpportunities(bp, q)) },
+        { key: 'fundingReadiness', fn: () => synthIf('fundingReadiness', () => synthesizeFundingReadiness(bp, q, deliverables)) },
+        { key: 'marketSizing', fn: () => synthIf('marketSizing', () => synthesizeMarketSizing(bp, q)) },
+        { key: 'scenarioPlanner', fn: () => synthIf('scenarioPlanner', () => synthesizeScenarioPlanner(bp, q)) },
+        { key: 'operationalEfficiency', fn: () => synthIf('operationalEfficiency', () => synthesizeOperationalEfficiency(bp, q)) },
+        { key: 'clvAnalysis', fn: () => synthIf('clvAnalysis', () => synthesizeCLVAnalysis(bp, q)) },
+        { key: 'retentionPlaybook', fn: () => synthIf('retentionPlaybook', () => synthesizeRetentionPlaybook(bp, q)) },
+        { key: 'revenueAttribution', fn: () => synthIf('revenueAttribution', () => synthesizeRevenueAttribution(bp, q)) },
+        { key: 'boardDeck', fn: () => synthIf('boardDeck', () => synthesizeBoardDeck(bp, q)) },
+        { key: 'competitiveMoat', fn: () => synthIf('competitiveMoat', () => synthesizeCompetitiveMoat(bp, q)) },
+        { key: 'gtmScorecard', fn: () => synthIf('gtmScorecard', () => synthesizeGTMScorecard(bp, q)) },
+        { key: 'cashOptimization', fn: () => synthIf('cashOptimization', () => synthesizeCashOptimization(bp, q)) },
+        { key: 'talentGapAnalysis', fn: () => synthIf('talentGapAnalysis', () => synthesizeTalentGapAnalysis(bp, q)) },
+        { key: 'revenueDiversification', fn: () => synthIf('revenueDiversification', () => synthesizeRevenueDiversification(bp, q)) },
+        { key: 'customerJourneyMap', fn: () => synthIf('customerJourneyMap', () => synthesizeCustomerJourneyMap(bp, q)) },
+        { key: 'complianceChecklist', fn: () => synthIf('complianceChecklist', () => synthesizeComplianceChecklist(bp, q)) },
+        { key: 'expansionPlaybook', fn: () => synthIf('expansionPlaybook', () => synthesizeExpansionPlaybook(bp, q)) },
+        { key: 'vendorScorecard', fn: () => synthIf('vendorScorecard', () => synthesizeVendorScorecard(bp, q)) },
+        { key: 'productMarketFit', fn: () => synthIf('productMarketFit', () => synthesizeProductMarketFit(bp, q)) },
+        { key: 'brandHealth', fn: () => synthIf('brandHealth', () => synthesizeBrandHealth(bp, q)) },
+        { key: 'pricingElasticity', fn: () => synthIf('pricingElasticity', () => synthesizePricingElasticity(bp, q)) },
+        { key: 'strategicInitiatives', fn: () => synthIf('strategicInitiatives', () => synthesizeStrategicInitiatives(bp, q)) },
+        { key: 'cashConversionCycle', fn: () => synthIf('cashConversionCycle', () => synthesizeCashConversionCycle(bp, q)) },
+        { key: 'innovationPipeline', fn: () => synthIf('innovationPipeline', () => synthesizeInnovationPipeline(bp, q)) },
+        { key: 'stakeholderMap', fn: () => synthIf('stakeholderMap', () => synthesizeStakeholderMap(bp, q)) },
+        { key: 'decisionLog', fn: () => synthIf('decisionLog', () => synthesizeDecisionLog(bp, q)) },
+        { key: 'cultureAssessment', fn: () => synthIf('cultureAssessment', () => synthesizeCultureAssessment(bp, q)) },
+        { key: 'ipPortfolio', fn: () => synthIf('ipPortfolio', () => synthesizeIPPortfolio(bp, q)) },
+        { key: 'exitReadiness', fn: () => synthIf('exitReadiness', () => synthesizeExitReadiness(bp, q)) },
+        { key: 'sustainabilityScore', fn: () => synthIf('sustainabilityScore', () => synthesizeSustainabilityScore(bp, q)) },
+        { key: 'acquisitionTargets', fn: () => synthIf('acquisitionTargets', () => synthesizeAcquisitionTargets(bp, q)) },
+        { key: 'financialRatios', fn: () => synthIf('financialRatios', () => synthesizeFinancialRatios(bp, q)) },
+        { key: 'channelMixModel', fn: () => synthIf('channelMixModel', () => synthesizeChannelMixModel(bp, q)) },
+        { key: 'supplyChainRisk', fn: () => synthIf('supplyChainRisk', () => synthesizeSupplyChainRisk(bp, q)) },
+        { key: 'regulatoryLandscape', fn: () => synthIf('regulatoryLandscape', () => synthesizeRegulatoryLandscape(bp, q)) },
+        { key: 'crisisPlaybook', fn: () => synthIf('crisisPlaybook', () => synthesizeCrisisPlaybook(bp, q)) },
+        { key: 'aiReadiness', fn: () => synthIf('aiReadiness', () => synthesizeAIReadiness(bp, q)) },
+        { key: 'networkEffects', fn: () => synthIf('networkEffects', () => synthesizeNetworkEffects(bp, q)) },
+        { key: 'dataMonetization', fn: () => synthIf('dataMonetization', () => synthesizeDataMonetization(bp, q)) },
+        { key: 'subscriptionMetrics', fn: () => synthIf('subscriptionMetrics', () => synthesizeSubscriptionMetrics(bp, q)) },
+        { key: 'marketTiming', fn: () => synthIf('marketTiming', () => synthesizeMarketTiming(bp, q)) },
+        { key: 'scenarioStressTest', fn: () => synthIf('scenarioStressTest', () => synthesizeScenarioStressTest(bp, q)) },
+      ];
+
+      // Run in batches of 6 for optimal parallelism
+      const BATCH_SIZE = 6;
+      for (let i = 0; i < waveTasks.length; i += BATCH_SIZE) {
+        const batch = waveTasks.slice(i, i + BATCH_SIZE);
+        console.log(`[Pivot] Wave batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(waveTasks.length / BATCH_SIZE)}: ${batch.map(t => t.key).join(', ')}`);
+        const settled = await Promise.allSettled(batch.map(t => t.fn()));
+        for (let j = 0; j < batch.length; j++) {
+          const s = settled[j];
+          if (s.status === "fulfilled" && s.value) {
+            deliverables = { ...deliverables, [batch[j].key]: s.value };
+            trackProgress(batch[j].key);
+          }
+        }
         updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] SWOT/UnitEcon failed (non-fatal):", e);
       }
     }
 
-    if (!deliverables.customerSegmentation || !deliverables.competitiveWinLoss) {
-      try {
-        console.log("[Pivot] Synthesizing customer segmentation + competitive win/loss...");
-        const [cs, cwl] = await Promise.allSettled([
-          deliverables.customerSegmentation ? Promise.resolve(null) : synthesizeCustomerSegmentation(businessPacket, job.questionnaire),
-          deliverables.competitiveWinLoss ? Promise.resolve(null) : synthesizeCompetitiveWinLoss(businessPacket, job.questionnaire, deliverables),
-        ]);
-        if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, customerSegmentation: cs.value };
-        if (cwl.status === "fulfilled" && cwl.value) deliverables = { ...deliverables, competitiveWinLoss: cwl.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Segmentation/WinLoss failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.revenueForecast || !deliverables.hiringPlan) {
-      try {
-        console.log("[Pivot] Synthesizing revenue forecast + hiring plan...");
-        const [rf, hp] = await Promise.allSettled([
-          deliverables.revenueForecast ? Promise.resolve(null) : synthesizeRevenueForecast(businessPacket, job.questionnaire),
-          deliverables.hiringPlan ? Promise.resolve(null) : synthesizeHiringPlan(businessPacket, job.questionnaire, deliverables),
-        ]);
-        if (rf.status === "fulfilled" && rf.value) deliverables = { ...deliverables, revenueForecast: rf.value };
-        if (hp.status === "fulfilled" && hp.value) deliverables = { ...deliverables, hiringPlan: hp.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Forecast/Hiring failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.churnPlaybook || !deliverables.salesPlaybook) {
-      try {
-        console.log("[Pivot] Synthesizing churn playbook + sales playbook...");
-        const [cp, sp] = await Promise.allSettled([
-          deliverables.churnPlaybook ? Promise.resolve(null) : synthesizeChurnPlaybook(businessPacket, job.questionnaire, deliverables),
-          deliverables.salesPlaybook ? Promise.resolve(null) : synthesizeSalesPlaybook(businessPacket, job.questionnaire, deliverables),
-        ]);
-        if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, churnPlaybook: cp.value };
-        if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, salesPlaybook: sp.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Churn/Sales playbook failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.investorOnePager || !deliverables.goalTracker) {
-      try {
-        console.log("[Pivot] Synthesizing investor one-pager + goal tracker...");
-        const [io, gt] = await Promise.allSettled([
-          deliverables.investorOnePager ? Promise.resolve(null) : synthesizeInvestorOnePager(businessPacket, job.questionnaire, deliverables),
-          deliverables.goalTracker ? Promise.resolve(null) : synthesizeGoalTracker(businessPacket, job.questionnaire, deliverables),
-        ]);
-        if (io.status === "fulfilled" && io.value) deliverables = { ...deliverables, investorOnePager: io.value };
-        if (gt.status === "fulfilled" && gt.value) deliverables = { ...deliverables, goalTracker: gt.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Investor/Goals failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.benchmarkScore || !deliverables.executiveSummary) {
-      try {
-        console.log("[Pivot] Synthesizing benchmark score + executive summary...");
-        const [bs, es] = await Promise.allSettled([
-          deliverables.benchmarkScore ? Promise.resolve(null) : synthesizeBenchmarkScore(businessPacket, job.questionnaire, deliverables),
-          deliverables.executiveSummary ? Promise.resolve(null) : synthesizeExecutiveSummary(businessPacket, job.questionnaire, deliverables),
-        ]);
-        if (bs.status === "fulfilled" && bs.value) deliverables = { ...deliverables, benchmarkScore: bs.value };
-        if (es.status === "fulfilled" && es.value) deliverables = { ...deliverables, executiveSummary: es.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Benchmark/ExecSummary failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4e: Wave 4 intelligence (milestones, risk, partnerships, etc.) ──
-    if (!deliverables.milestoneTracker || !deliverables.riskRegister) {
-      try {
-        console.log("[Pivot] Synthesizing milestone tracker + risk register...");
-        const [mt, rr] = await Promise.allSettled([
-          deliverables.milestoneTracker ? Promise.resolve(null) : synthesizeMilestoneTracker(businessPacket, job.questionnaire),
-          deliverables.riskRegister ? Promise.resolve(null) : synthesizeRiskRegister(businessPacket, job.questionnaire),
-        ]);
-        if (mt.status === "fulfilled" && mt.value) deliverables = { ...deliverables, milestoneTracker: mt.value };
-        if (rr.status === "fulfilled" && rr.value) deliverables = { ...deliverables, riskRegister: rr.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Milestone/Risk failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.partnershipOpportunities || !deliverables.fundingReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing partnership opportunities + funding readiness...");
-        const [po, fr] = await Promise.allSettled([
-          deliverables.partnershipOpportunities ? Promise.resolve(null) : synthesizePartnershipOpportunities(businessPacket, job.questionnaire),
-          deliverables.fundingReadiness ? Promise.resolve(null) : synthesizeFundingReadiness(businessPacket, job.questionnaire, deliverables),
-        ]);
-        if (po.status === "fulfilled" && po.value) deliverables = { ...deliverables, partnershipOpportunities: po.value };
-        if (fr.status === "fulfilled" && fr.value) deliverables = { ...deliverables, fundingReadiness: fr.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Partnership/Funding failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.marketSizing || !deliverables.scenarioPlanner) {
-      try {
-        console.log("[Pivot] Synthesizing market sizing + scenario planner...");
-        const [ms, sp] = await Promise.allSettled([
-          deliverables.marketSizing ? Promise.resolve(null) : synthesizeMarketSizing(businessPacket, job.questionnaire),
-          deliverables.scenarioPlanner ? Promise.resolve(null) : synthesizeScenarioPlanner(businessPacket, job.questionnaire),
-        ]);
-        if (ms.status === "fulfilled" && ms.value) deliverables = { ...deliverables, marketSizing: ms.value };
-        if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, scenarioPlanner: sp.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] MarketSizing/Scenario failed (non-fatal):", e);
-      }
-    }
-
-    if (!deliverables.operationalEfficiency || !deliverables.clvAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing operational efficiency + CLV analysis...");
-        const [oe, clv] = await Promise.allSettled([
-          deliverables.operationalEfficiency ? Promise.resolve(null) : synthesizeOperationalEfficiency(businessPacket, job.questionnaire),
-          deliverables.clvAnalysis ? Promise.resolve(null) : synthesizeCLVAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (oe.status === "fulfilled" && oe.value) deliverables = { ...deliverables, operationalEfficiency: oe.value };
-        if (clv.status === "fulfilled" && clv.value) deliverables = { ...deliverables, clvAnalysis: clv.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] OpsEfficiency/CLV failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4i: Wave 5 intelligence (retention, attribution) ───────────────
-    if (!deliverables.retentionPlaybook || !deliverables.revenueAttribution) {
-      try {
-        console.log("[Pivot] Synthesizing retention playbook + revenue attribution...");
-        const [rp, ra] = await Promise.allSettled([
-          deliverables.retentionPlaybook ? Promise.resolve(null) : synthesizeRetentionPlaybook(businessPacket, job.questionnaire),
-          deliverables.revenueAttribution ? Promise.resolve(null) : synthesizeRevenueAttribution(businessPacket, job.questionnaire),
-        ]);
-        if (rp.status === "fulfilled" && rp.value) deliverables = { ...deliverables, retentionPlaybook: rp.value };
-        if (ra.status === "fulfilled" && ra.value) deliverables = { ...deliverables, revenueAttribution: ra.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Retention/Attribution failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4j: Wave 5 intelligence (board deck, competitive moat) ─────────
-    if (!deliverables.boardDeck || !deliverables.competitiveMoat) {
-      try {
-        console.log("[Pivot] Synthesizing board deck + competitive moat...");
-        const [bd, cm] = await Promise.allSettled([
-          deliverables.boardDeck ? Promise.resolve(null) : synthesizeBoardDeck(businessPacket, job.questionnaire),
-          deliverables.competitiveMoat ? Promise.resolve(null) : synthesizeCompetitiveMoat(businessPacket, job.questionnaire),
-        ]);
-        if (bd.status === "fulfilled" && bd.value) deliverables = { ...deliverables, boardDeck: bd.value };
-        if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, competitiveMoat: cm.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] BoardDeck/Moat failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4k: Wave 5 intelligence (GTM scorecard, cash optimization) ─────
-    if (!deliverables.gtmScorecard || !deliverables.cashOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing GTM scorecard + cash optimization...");
-        const [gs, co] = await Promise.allSettled([
-          deliverables.gtmScorecard ? Promise.resolve(null) : synthesizeGTMScorecard(businessPacket, job.questionnaire),
-          deliverables.cashOptimization ? Promise.resolve(null) : synthesizeCashOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (gs.status === "fulfilled" && gs.value) deliverables = { ...deliverables, gtmScorecard: gs.value };
-        if (co.status === "fulfilled" && co.value) deliverables = { ...deliverables, cashOptimization: co.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] GTM/CashOptimization failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4l: Wave 6 intelligence (talent gap analysis, revenue diversification) ──
-    if (!deliverables.talentGapAnalysis || !deliverables.revenueDiversification) {
-      try {
-        console.log("[Pivot] Synthesizing talent gap analysis + revenue diversification...");
-        const [tga, rd] = await Promise.allSettled([
-          deliverables.talentGapAnalysis ? Promise.resolve(null) : synthesizeTalentGapAnalysis(businessPacket, job.questionnaire),
-          deliverables.revenueDiversification ? Promise.resolve(null) : synthesizeRevenueDiversification(businessPacket, job.questionnaire),
-        ]);
-        if (tga.status === "fulfilled" && tga.value) deliverables = { ...deliverables, talentGapAnalysis: tga.value };
-        if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, revenueDiversification: rd.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] TalentGap/RevenueDiversification failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4m: Wave 6 intelligence (customer journey map, compliance checklist) ──
-    if (!deliverables.customerJourneyMap || !deliverables.complianceChecklist) {
-      try {
-        console.log("[Pivot] Synthesizing customer journey map + compliance checklist...");
-        const [cjm, cc] = await Promise.allSettled([
-          deliverables.customerJourneyMap ? Promise.resolve(null) : synthesizeCustomerJourneyMap(businessPacket, job.questionnaire),
-          deliverables.complianceChecklist ? Promise.resolve(null) : synthesizeComplianceChecklist(businessPacket, job.questionnaire),
-        ]);
-        if (cjm.status === "fulfilled" && cjm.value) deliverables = { ...deliverables, customerJourneyMap: cjm.value };
-        if (cc.status === "fulfilled" && cc.value) deliverables = { ...deliverables, complianceChecklist: cc.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CustomerJourney/Compliance failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4n: Wave 6 intelligence (expansion playbook, vendor scorecard) ──
-    if (!deliverables.expansionPlaybook || !deliverables.vendorScorecard) {
-      try {
-        console.log("[Pivot] Synthesizing expansion playbook + vendor scorecard...");
-        const [ep, vs] = await Promise.allSettled([
-          deliverables.expansionPlaybook ? Promise.resolve(null) : synthesizeExpansionPlaybook(businessPacket, job.questionnaire),
-          deliverables.vendorScorecard ? Promise.resolve(null) : synthesizeVendorScorecard(businessPacket, job.questionnaire),
-        ]);
-        if (ep.status === "fulfilled" && ep.value) deliverables = { ...deliverables, expansionPlaybook: ep.value };
-        if (vs.status === "fulfilled" && vs.value) deliverables = { ...deliverables, vendorScorecard: vs.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] Expansion/VendorScorecard failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4o: Wave 7 intelligence (product-market fit, brand health) ──
-    if (!deliverables.productMarketFit || !deliverables.brandHealth) {
-      try {
-        console.log("[Pivot] Synthesizing product-market fit + brand health...");
-        const [pmf, bh] = await Promise.allSettled([
-          deliverables.productMarketFit ? Promise.resolve(null) : synthesizeProductMarketFit(businessPacket, job.questionnaire),
-          deliverables.brandHealth ? Promise.resolve(null) : synthesizeBrandHealth(businessPacket, job.questionnaire),
-        ]);
-        if (pmf.status === "fulfilled" && pmf.value) deliverables = { ...deliverables, productMarketFit: pmf.value };
-        if (bh.status === "fulfilled" && bh.value) deliverables = { ...deliverables, brandHealth: bh.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ProductMarketFit/BrandHealth failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4p: Wave 7 intelligence (pricing elasticity, strategic initiatives) ──
-    if (!deliverables.pricingElasticity || !deliverables.strategicInitiatives) {
-      try {
-        console.log("[Pivot] Synthesizing pricing elasticity + strategic initiatives...");
-        const [pe, si] = await Promise.allSettled([
-          deliverables.pricingElasticity ? Promise.resolve(null) : synthesizePricingElasticity(businessPacket, job.questionnaire),
-          deliverables.strategicInitiatives ? Promise.resolve(null) : synthesizeStrategicInitiatives(businessPacket, job.questionnaire),
-        ]);
-        if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, pricingElasticity: pe.value };
-        if (si.status === "fulfilled" && si.value) deliverables = { ...deliverables, strategicInitiatives: si.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] PricingElasticity/StrategicInitiatives failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4q: Wave 7 intelligence (cash conversion cycle, innovation pipeline) ──
-    if (!deliverables.cashConversionCycle || !deliverables.innovationPipeline) {
-      try {
-        console.log("[Pivot] Synthesizing cash conversion cycle + innovation pipeline...");
-        const [ccc, ip] = await Promise.allSettled([
-          deliverables.cashConversionCycle ? Promise.resolve(null) : synthesizeCashConversionCycle(businessPacket, job.questionnaire),
-          deliverables.innovationPipeline ? Promise.resolve(null) : synthesizeInnovationPipeline(businessPacket, job.questionnaire),
-        ]);
-        if (ccc.status === "fulfilled" && ccc.value) deliverables = { ...deliverables, cashConversionCycle: ccc.value };
-        if (ip.status === "fulfilled" && ip.value) deliverables = { ...deliverables, innovationPipeline: ip.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CashConversionCycle/InnovationPipeline failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4r: Wave 8 intelligence (stakeholder map, decision log) ────────
-    if (!deliverables.stakeholderMap || !deliverables.decisionLog) {
-      try {
-        console.log("[Pivot] Synthesizing stakeholder map + decision log...");
-        const [sm, dl] = await Promise.allSettled([
-          deliverables.stakeholderMap ? Promise.resolve(null) : synthesizeStakeholderMap(businessPacket, job.questionnaire),
-          deliverables.decisionLog ? Promise.resolve(null) : synthesizeDecisionLog(businessPacket, job.questionnaire),
-        ]);
-        if (sm.status === "fulfilled" && sm.value) deliverables = { ...deliverables, stakeholderMap: sm.value };
-        if (dl.status === "fulfilled" && dl.value) deliverables = { ...deliverables, decisionLog: dl.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] StakeholderMap/DecisionLog failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4s: Wave 8 intelligence (culture assessment, IP portfolio) ─────
-    if (!deliverables.cultureAssessment || !deliverables.ipPortfolio) {
-      try {
-        console.log("[Pivot] Synthesizing culture assessment + IP portfolio...");
-        const [ca, ipp] = await Promise.allSettled([
-          deliverables.cultureAssessment ? Promise.resolve(null) : synthesizeCultureAssessment(businessPacket, job.questionnaire),
-          deliverables.ipPortfolio ? Promise.resolve(null) : synthesizeIPPortfolio(businessPacket, job.questionnaire),
-        ]);
-        if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, cultureAssessment: ca.value };
-        if (ipp.status === "fulfilled" && ipp.value) deliverables = { ...deliverables, ipPortfolio: ipp.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CultureAssessment/IPPortfolio failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4t: Wave 8 intelligence (exit readiness, sustainability score) ──
-    if (!deliverables.exitReadiness || !deliverables.sustainabilityScore) {
-      try {
-        console.log("[Pivot] Synthesizing exit readiness + sustainability score...");
-        const [er, ss] = await Promise.allSettled([
-          deliverables.exitReadiness ? Promise.resolve(null) : synthesizeExitReadiness(businessPacket, job.questionnaire),
-          deliverables.sustainabilityScore ? Promise.resolve(null) : synthesizeSustainabilityScore(businessPacket, job.questionnaire),
-        ]);
-        if (er.status === "fulfilled" && er.value) deliverables = { ...deliverables, exitReadiness: er.value };
-        if (ss.status === "fulfilled" && ss.value) deliverables = { ...deliverables, sustainabilityScore: ss.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ExitReadiness/SustainabilityScore failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4u: Wave 9 intelligence (acquisition targets, financial ratios) ──
-    if (!deliverables.acquisitionTargets || !deliverables.financialRatios) {
-      try {
-        console.log("[Pivot] Synthesizing acquisition targets + financial ratios...");
-        const [at, fr] = await Promise.allSettled([
-          deliverables.acquisitionTargets ? Promise.resolve(null) : synthesizeAcquisitionTargets(businessPacket, job.questionnaire),
-          deliverables.financialRatios ? Promise.resolve(null) : synthesizeFinancialRatios(businessPacket, job.questionnaire),
-        ]);
-        if (at.status === "fulfilled" && at.value) deliverables = { ...deliverables, acquisitionTargets: at.value };
-        if (fr.status === "fulfilled" && fr.value) deliverables = { ...deliverables, financialRatios: fr.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] AcquisitionTargets/FinancialRatios failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4v: Wave 9 intelligence (channel mix, supply chain risk) ──
-    if (!deliverables.channelMixModel || !deliverables.supplyChainRisk) {
-      try {
-        console.log("[Pivot] Synthesizing channel mix model + supply chain risk...");
-        const [cm, sc] = await Promise.allSettled([
-          deliverables.channelMixModel ? Promise.resolve(null) : synthesizeChannelMixModel(businessPacket, job.questionnaire),
-          deliverables.supplyChainRisk ? Promise.resolve(null) : synthesizeSupplyChainRisk(businessPacket, job.questionnaire),
-        ]);
-        if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, channelMixModel: cm.value };
-        if (sc.status === "fulfilled" && sc.value) deliverables = { ...deliverables, supplyChainRisk: sc.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ChannelMixModel/SupplyChainRisk failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4w: Wave 9 intelligence (regulatory landscape, crisis playbook) ──
-    if (!deliverables.regulatoryLandscape || !deliverables.crisisPlaybook) {
-      try {
-        console.log("[Pivot] Synthesizing regulatory landscape + crisis playbook...");
-        const [rl, cp] = await Promise.allSettled([
-          deliverables.regulatoryLandscape ? Promise.resolve(null) : synthesizeRegulatoryLandscape(businessPacket, job.questionnaire),
-          deliverables.crisisPlaybook ? Promise.resolve(null) : synthesizeCrisisPlaybook(businessPacket, job.questionnaire),
-        ]);
-        if (rl.status === "fulfilled" && rl.value) deliverables = { ...deliverables, regulatoryLandscape: rl.value };
-        if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, crisisPlaybook: cp.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] RegulatoryLandscape/CrisisPlaybook failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4x: Wave 10 intelligence (AI readiness, network effects) ──
-    if (!deliverables.aiReadiness || !deliverables.networkEffects) {
-      try {
-        console.log("[Pivot] Synthesizing AI readiness + network effects...");
-        const [ar, ne] = await Promise.allSettled([
-          deliverables.aiReadiness ? Promise.resolve(null) : synthesizeAIReadiness(businessPacket, job.questionnaire),
-          deliverables.networkEffects ? Promise.resolve(null) : synthesizeNetworkEffects(businessPacket, job.questionnaire),
-        ]);
-        if (ar.status === "fulfilled" && ar.value) deliverables = { ...deliverables, aiReadiness: ar.value };
-        if (ne.status === "fulfilled" && ne.value) deliverables = { ...deliverables, networkEffects: ne.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] AIReadiness/NetworkEffects failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4y: Wave 10 intelligence (data monetization, subscription metrics) ──
-    if (!deliverables.dataMonetization || !deliverables.subscriptionMetrics) {
-      try {
-        console.log("[Pivot] Synthesizing data monetization + subscription metrics...");
-        const [dm, sm] = await Promise.allSettled([
-          deliverables.dataMonetization ? Promise.resolve(null) : synthesizeDataMonetization(businessPacket, job.questionnaire),
-          deliverables.subscriptionMetrics ? Promise.resolve(null) : synthesizeSubscriptionMetrics(businessPacket, job.questionnaire),
-        ]);
-        if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, dataMonetization: dm.value };
-        if (sm.status === "fulfilled" && sm.value) deliverables = { ...deliverables, subscriptionMetrics: sm.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] DataMonetization/SubscriptionMetrics failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4z: Wave 10 intelligence (market timing, scenario stress test) ──
-    if (!deliverables.marketTiming || !deliverables.scenarioStressTest) {
-      try {
-        console.log("[Pivot] Synthesizing market timing + scenario stress test...");
-        const [mt, ss] = await Promise.allSettled([
-          deliverables.marketTiming ? Promise.resolve(null) : synthesizeMarketTiming(businessPacket, job.questionnaire),
-          deliverables.scenarioStressTest ? Promise.resolve(null) : synthesizeScenarioStressTest(businessPacket, job.questionnaire),
-        ]);
-        if (mt.status === "fulfilled" && mt.value) deliverables = { ...deliverables, marketTiming: mt.value };
-        if (ss.status === "fulfilled" && ss.value) deliverables = { ...deliverables, scenarioStressTest: ss.value };
-        updateJob(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] MarketTiming/ScenarioStressTest failed (non-fatal):", e);
-      }
-    }
-
-    // ── Relevance Engine: AI-powered section selection ─────────────────────
-    let relevantSections: Set<string> | undefined;
-    try {
-      // Scrape website content for business context
-      const websiteUrl = job.questionnaire.website || "";
-      let websiteContent = "";
-      if (websiteUrl) {
-        console.log(`[Pivot] Scraping website content from ${websiteUrl}...`);
-        websiteContent = await scrapeWebsiteContent(websiteUrl);
-        console.log(`[Pivot] Scraped ${websiteContent.length} chars of website content`);
-      }
-
-      // Build business context from parsed documents
-      const businessSummary = formatPacketAsContext(businessPacket).slice(0, 5000);
-
-      // Use AI to select relevant sections
-      console.log("[Pivot] Running AI section selector...");
-      const aiSelected = await selectSectionsWithAI(
-        job.questionnaire,
-        businessSummary,
-        websiteContent,
-      );
-
-      if (aiSelected) {
-        relevantSections = aiSelected;
-        // Store on deliverables for UI filtering
-        deliverables = { ...deliverables, selectedSections: Array.from(aiSelected) };
-        updateJob(runId, { deliverables });
-        console.log(`[Pivot] AI selected ${aiSelected.size} relevant sections`);
-      } else {
-        // Fallback to strict rule-based selection
-        relevantSections = getStrictRelevantSections(job.questionnaire);
-        deliverables = { ...deliverables, selectedSections: Array.from(relevantSections) };
-        updateJob(runId, { deliverables });
-        console.log(`[Pivot] Rule-based fallback: ${relevantSections.size} sections selected`);
-      }
-    } catch (e) {
-      console.warn("[Pivot] Relevance engine failed, using strict fallback:", e);
-      try {
-        relevantSections = getStrictRelevantSections(job.questionnaire);
-        deliverables = { ...deliverables, selectedSections: Array.from(relevantSections) };
-        updateJob(runId, { deliverables });
-      } catch { /* last resort: run everything */ }
+    // Store selected sections in deliverables for UI filtering
+    if (relevantSections) {
+      deliverables = { ...deliverables, selectedSections: Array.from(relevantSections) };
+      updateJob(runId, { deliverables });
     }
 
     // ── Extended wave synthesis (extracted to avoid TS2563 control flow limit) ──

@@ -827,6 +827,30 @@ export async function selectSectionsWithAI(
       questionnaire.marketingChannels?.length ? `Marketing Channels: ${questionnaire.marketingChannels.join(", ")}` : null,
     ].filter(Boolean).join("\n");
 
+    // Determine business scale and data completeness for adaptive targeting
+    const isSmallBusiness = !questionnaire.revenueRange
+      || ["$0 - $500K", "$500K - $1M", "$1M - $5M", "$5M - $10M", "$0 - $10M"].includes(questionnaire.revenueRange);
+    const filledFields = [
+      questionnaire.industry, questionnaire.revenueRange, questionnaire.businessModel,
+      questionnaire.keyConcerns, questionnaire.oneDecisionKeepingOwnerUpAtNight,
+      questionnaire.website, questionnaire.location,
+    ].filter(Boolean).length;
+    const isSparseQuestionnaire = filledFields <= 3;
+
+    // Adaptive section targeting based on business size and data availability
+    let targetRange: string;
+    let targetGuidance: string;
+    if (isSparseQuestionnaire) {
+      targetRange = "15-25";
+      targetGuidance = "The questionnaire has very little data filled in. Be EXTREMELY selective — only include sections where the AI can produce genuinely useful output from the website content and documents alone. DO NOT pad the count with sections that will produce generic boilerplate.";
+    } else if (isSmallBusiness) {
+      targetRange = "20-35";
+      targetGuidance = "This is a small/early-stage business. Skip enterprise-scale sections (fleet, manufacturing, ESG, advanced governance, large-team HR, supply chain complexity). Focus on sections that help a founder make immediate decisions: unit economics, competitive positioning, customer acquisition, cash flow, pricing, and growth strategy.";
+    } else {
+      targetRange = "30-50";
+      targetGuidance = "This appears to be a larger or more established business. Include relevant operational and governance sections, but still skip anything clearly irrelevant to their industry.";
+    }
+
     const prompt = `You are an expert business analyst deciding which intelligence sections to generate for a specific business.
 Your job is to be HIGHLY SELECTIVE — only pick sections that will provide genuine, actionable, non-generic value.
 
@@ -844,9 +868,11 @@ ${sectionList}
 3. Select additional sections ONLY if they are genuinely relevant to this business type
 4. DO NOT select sections that would produce only generic/boilerplate content for this business
 5. DO NOT select sections requiring data the business clearly doesn't have (e.g., fleet management for a web agency, manufacturing for a consulting firm, ESG for a 3-person startup)
-6. Target 25-45 total sections. A focused, relevant 30-section report beats a bloated 500-section report
-7. Consider the business stage (startup vs enterprise) — startups don't need enterprise HR or governance sections
-8. If limited info is available, be MORE selective, not less — fewer high-quality sections is better than many empty ones
+6. For each candidate section: if the business has NO meaningful data to populate it (no relevant docs, no questionnaire fields, no website info), DO NOT include it — an empty section wastes the user's time
+7. Target ${targetRange} total sections. ${targetGuidance}
+8. Consider the business stage (startup vs enterprise) — startups don't need enterprise HR or governance sections
+9. If limited info is available, be MORE selective, not less — fewer high-quality sections is better than many empty ones
+10. A focused, relevant 25-section report is FAR more valuable than a bloated 100+ section report full of generic content
 
 Return ONLY a JSON array of section key strings. No explanation, no markdown, just the array.`;
 

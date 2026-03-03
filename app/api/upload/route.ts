@@ -6,6 +6,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const questionnaire = parseQuestionnaire(formData);
+    const orgId = (formData.get("orgId") as string) || undefined;
 
     // Allow upload-first flow: org name can be empty (filled later via chat)
     const q = { ...questionnaire };
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
       q.organizationName = "TBD";
     }
 
-    const job = createJob(q, []);
+    const job = createJob(q, [], orgId);
     const { filePaths, error: saveError } = await saveUploadedFiles(job.runId, formData);
     if (saveError) {
       return NextResponse.json({ error: saveError }, { status: 400 });

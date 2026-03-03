@@ -37,7 +37,7 @@ export function RevenueLeakChart({ items, overlay, onDismissOverlay }: Props) {
     .slice(0, 8)
     .sort((a, b) => (b.annualImpact ?? b.amount ?? 0) - (a.annualImpact ?? a.amount ?? 0))
     .map((item) => ({
-      name: (item.description ?? "").slice(0, 28) + ((item.description ?? "").length > 28 ? "..." : ""),
+      name: item.description ?? "",
       amount: item.annualImpact ?? item.amount ?? 0,
       confidence: item.confidence ?? "Medium",
     }));
@@ -59,7 +59,7 @@ export function RevenueLeakChart({ items, overlay, onDismissOverlay }: Props) {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 20 }}>
               <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 10 }} />
-              <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 9 }} />
+              <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 9 }} />
               <Tooltip
                 formatter={(v) => formatDollar(Number(v ?? 0))}
                 contentStyle={TOOLTIP_STYLE}

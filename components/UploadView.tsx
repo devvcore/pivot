@@ -52,6 +52,7 @@ interface StagedFile {
 interface UploadViewProps {
   onBack: () => void;
   onUploadComplete: (runId: string) => void;
+  orgId?: string;
 }
 
 // ── Field pill indicator ──────────────────────────────────────────────────────
@@ -275,7 +276,7 @@ function CoverageIndicator({ files }: { files: StagedFile[] }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
+export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps) {
   // Flow: 01 Upload (files first) → 02 Live Call (fill gaps) → 03 Analyze
   const [phase, setPhase] = useState<"upload" | "chat">("upload");
   const [runId, setRunId] = useState<string | null>(null);
@@ -295,6 +296,16 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
   const [extractedFromDocs, setExtractedFromDocs] = useState<Partial<Questionnaire>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Compute data coverage gaps from staged files to pass to phone call
+  const dataCoverageGaps = useMemo(() => {
+    const covered = new Set<string>();
+    for (const f of stagedFiles) {
+      const cat = guessFileCategory(f.name);
+      if (cat !== "Other") covered.add(cat);
+    }
+    return SCHEMA_CATEGORIES.filter((c) => !covered.has(c)) as string[];
+  }, [stagedFiles]);
+
   const handleContinueFromUpload = async () => {
     setError(null);
     if (stagedFiles.length === 0) {
@@ -310,6 +321,7 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
       formData.set("businessModel", "");
       formData.set("keyConcerns", "");
       formData.set("oneDecisionKeepingOwnerUpAtNight", "");
+      if (orgId) formData.set("orgId", orgId);
       if (websiteUrl.trim()) formData.set("website", websiteUrl.trim());
       if (selectedChannels.length > 0) formData.set("marketingChannels", JSON.stringify(selectedChannels));
       const filledSocials = Object.fromEntries(
@@ -504,10 +516,10 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
                       <div className="max-h-60 overflow-y-auto divide-y divide-zinc-50">
                         {stagedFiles.map((f) => (
                           <motion.div key={f.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 flex items-center justify-between group hover:bg-zinc-50 transition-colors">
-                            <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="flex items-center gap-3 min-w-0">
                               <FileText className="w-4 h-4 text-zinc-300 shrink-0" />
-                              <div className="truncate">
-                                <div className="text-xs text-zinc-900 font-medium truncate">{f.name}</div>
+                              <div className="min-w-0">
+                                <div className="text-xs text-zinc-900 font-medium break-words">{f.name}</div>
                                 <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider mt-0.5">{(f.size / 1024 / 1024).toFixed(2)} MB</div>
                               </div>
                             </div>
@@ -612,10 +624,11 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
         )}
 
         {/* ── Phase B: Full-screen live call ── */}
-        {phase === "chat" && (
+        {phase === "chat" && !submitting && (
           <>
             <OnboardingCall
               extractedFromDocs={extractedFromDocs}
+              dataCoverageGaps={dataCoverageGaps}
               onExtracted={(patch) => setExtracted((prev) => ({ ...prev, ...patch }))}
               onComplete={() => handleLaunchAnalysis()}
               onSkip={() => handleLaunchAnalysis()}
@@ -633,6 +646,42 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
               </div>
             )}
           </>
+        )}
+
+        {/* ── Launching Analysis Spinner ── */}
+        {phase === "chat" && submitting && (
+          <motion.div
+            key="launching"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center text-white"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="w-16 h-16 border-2 border-zinc-700 border-t-white rounded-full mb-8"
+            />
+            <div className="text-xl font-light tracking-tight mb-2">Launching Analysis</div>
+            <div className="text-sm text-zinc-500 mb-8">Building your intelligence report...</div>
+            <div className="w-64 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-white/80 rounded-full"
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </div>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-8 max-w-md bg-red-950/80 border border-red-800 rounded-xl p-4 flex items-start gap-3"
+              >
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-red-200">{error}</div>
+              </motion.div>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

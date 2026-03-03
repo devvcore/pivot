@@ -39,7 +39,7 @@ export function TechSavingsChart({ recommendations, overlay, onDismissOverlay }:
   const data = recommendations
     .filter((r) => r.estimatedSaving)
     .map((r) => ({
-      name: `${r.currentTool} → ${r.suggestedAlternative}`.slice(0, 28),
+      name: `${r.currentTool} → ${r.suggestedAlternative}`,
       saving: parseDollarString(r.estimatedSaving),
       effort: r.migrationEffort,
     }))
@@ -56,7 +56,7 @@ export function TechSavingsChart({ recommendations, overlay, onDismissOverlay }:
         <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
           <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
             <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
-            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 9 }} />
+            <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} />
             <Tooltip
               formatter={(v) => formatDollar(Number(v ?? 0))}
               contentStyle={TOOLTIP_STYLE}

@@ -73,6 +73,12 @@ export function extractHandle(url: string): string {
   }
 }
 
+// ── Noise patterns to reject scraper/tool metadata from bios ────────────────
+const NOISE_PATTERNS = [
+  /apify/i, /scraper/i, /actor/i, /crawl/i, /bot/i,
+  /api\s+endpoint/i, /documentation/i, /npm\s+package/i,
+];
+
 // ── Main entry point ────────────────────────────────────────────────────────
 
 export async function scrapeSocialProfile(url: string): Promise<RawSocialData> {
@@ -246,7 +252,7 @@ async function scrapeTwitter(handle: string, url: string): Promise<RawSocialData
 async function scrapeTikTok(handle: string, url: string): Promise<RawSocialData> {
   // Use Perplexity to get real TikTok data (avoids browser dependency)
   const { results } = await perplexitySearch(
-    `@${handle} TikTok profile followers following likes videos bio statistics`,
+    `site:tiktok.com/@${handle} profile bio followers`,
     6
   );
 
@@ -254,7 +260,17 @@ async function scrapeTikTok(handle: string, url: string): Promise<RawSocialData>
     return buildFallback("tiktok", handle, url, "No TikTok data found via search");
   }
 
-  const allText = results.map((r) => r.snippet).join(" ");
+  // Filter results to only those from TikTok or that mention the handle
+  const relevantResults = results.filter(r => {
+    const resultUrl = (r.url || "").toLowerCase();
+    const snippet = (r.snippet || "").toLowerCase();
+    // Must be from tiktok.com OR mention the handle
+    return resultUrl.includes("tiktok.com") || snippet.includes(handle.toLowerCase());
+  });
+  // Fall back to all results only if no relevant ones found
+  const useResults = relevantResults.length > 0 ? relevantResults : results;
+
+  const allText = useResults.map((r) => r.snippet).join(" ");
 
   let followerCount: number | null = null;
   let followingCount: number | null = null;
@@ -276,7 +292,13 @@ async function scrapeTikTok(handle: string, url: string): Promise<RawSocialData>
   if (videoMatch) postCount = parseFollowerString(videoMatch[0]);
 
   // Get bio from first result snippet
-  bio = results[0]?.snippet?.slice(0, 300);
+  bio = useResults[0]?.snippet?.slice(0, 300);
+
+  // Sanity check: reject bios that are clearly scraper/tool metadata
+  if (bio && NOISE_PATTERNS.some(p => p.test(bio!))) {
+    console.warn(`[social-scraper] Rejected noisy bio for @${handle}: "${bio.slice(0, 50)}..."`);
+    bio = undefined;
+  }
 
   return {
     platform: "tiktok",
@@ -358,16 +380,29 @@ async function scrapeViaPerplexity(
   handle: string,
   url: string
 ): Promise<RawSocialData> {
-  const { results } = await perplexitySearch(
-    `${handle} ${platform} social media profile followers posts engagement bio`,
-    6
-  );
+  // Build a targeted site:-based query depending on the platform
+  let query: string;
+  if (platform === "linkedin") {
+    query = `site:linkedin.com/company/${handle} OR site:linkedin.com/in/${handle} followers employees`;
+  } else {
+    query = `site:${platform}.com/${handle} profile bio followers`;
+  }
+
+  const { results } = await perplexitySearch(query, 6);
 
   if (results.length === 0) {
     return buildFallback(platform, handle, url, "No Perplexity data found");
   }
 
-  const allText = results.map((r) => r.snippet).join(" ");
+  // Filter results that actually mention the handle or company name
+  const handleLower = handle.toLowerCase();
+  const relevantResults = results.filter(r => {
+    const text = ((r.snippet || "") + " " + (r.url || "")).toLowerCase();
+    return text.includes(handleLower) || text.includes(platform.toLowerCase() + ".com");
+  });
+  const useResults = relevantResults.length > 0 ? relevantResults : results;
+
+  const allText = useResults.map((r) => r.snippet).join(" ");
 
   // Try to extract follower count
   let followerCount: number | null = null;
@@ -375,7 +410,13 @@ async function scrapeViaPerplexity(
   if (followerMatch) followerCount = parseFollowerString(followerMatch[0]);
 
   // Try to extract bio-ish description
-  const bio = results[0]?.snippet?.slice(0, 300) ?? undefined;
+  let bio: string | undefined = useResults[0]?.snippet?.slice(0, 300) ?? undefined;
+
+  // Sanity check: reject bios that are clearly scraper/tool metadata
+  if (bio && NOISE_PATTERNS.some(p => p.test(bio!))) {
+    console.warn(`[social-scraper] Rejected noisy bio for @${handle}: "${bio.slice(0, 50)}..."`);
+    bio = undefined;
+  }
 
   return {
     platform,

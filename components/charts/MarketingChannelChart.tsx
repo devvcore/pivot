@@ -37,7 +37,7 @@ interface Props {
 
 export function MarketingChannelChart({ channels, socialStrategy, overlay, onDismissOverlay }: Props) {
   const channelData = channels.slice(0, 7).map((c) => ({
-    name: c.channel.length > 20 ? c.channel.slice(0, 18) + "..." : c.channel,
+    name: c.channel,
     rank: channels.length + 1 - c.rank, // invert so rank 1 = tallest bar
     effort: c.effort,
   }));
@@ -61,7 +61,7 @@ export function MarketingChannelChart({ channels, socialStrategy, overlay, onDis
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={channelData} layout="vertical" margin={{ left: 10, right: 20 }}>
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 9 }} />
+                <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 9 }} />
                 <Tooltip
                   formatter={(_v, _name, props) =>
                     [`Effort: ${(props?.payload as Record<string, unknown>)?.effort ?? ""}`, "Priority"]

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, Download, AlertCircle, TrendingUp, DollarSign, Users, Target,
-  ShieldAlert, Sparkles, ChevronRight, BarChart3,
+  ShieldAlert, Sparkles, ChevronRight, BarChart3, Check, Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -15,6 +15,8 @@ import { CHAPTERS, getPopulatedChapters } from "@/lib/chapters";
 import ChapterView from "./ChapterView";
 import { AgentChatButton } from "./AgentChat";
 import { CoachChatButton } from "./CoachChat";
+import { ReuploadDrawer } from "./ReuploadDrawer";
+import { ShareModal } from "./ShareModal";
 import { RevenueLeakChart } from "./charts/RevenueLeakChart";
 import { CashFlowChart } from "./charts/CashFlowChart";
 import { CustomerRiskScatter } from "./charts/CustomerRiskScatter";
@@ -36,6 +38,7 @@ interface ResultsViewProps {
   runId: string;
   onBack: () => void;
   onNewRun: () => void;
+  onReprocess?: () => void;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -112,13 +115,43 @@ function ConfidenceBanner({ provenance }: { provenance: NonNullable<MVPDeliverab
   );
 }
 
-export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
+export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsViewProps) {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeChapter, setActiveChapter] = useState("dashboard");
   const [coreTab, setCoreTab] = useState(0);
   const [chartOverlays, setChartOverlays] = useState<Record<string, any>>({});
+  const [shareOpen, setShareOpen] = useState(false);
+
+  // Action plan task completion (persisted per run)
+  const [completedTasks, setCompletedTasks] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(`pivot_tasks_${runId}`);
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  const toggleTask = (taskId: string) => {
+    setCompletedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      try { localStorage.setItem(`pivot_tasks_${runId}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  // Issues register expand/collapse
+  const [expandedIssues, setExpandedIssues] = useState<Set<number>>(new Set());
+  const toggleIssue = (idx: number) => {
+    setExpandedIssues(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
 
   const handleProjection = (section: string) => (data: { projection: any; insight: string | null }) => {
     setChartOverlays(prev => ({ ...prev, [section]: data.projection }));
@@ -208,22 +241,22 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
   const d = job.deliverables as MVPDeliverables;
   const base = `${typeof window !== "undefined" ? window.location.origin : ""}/api/download`;
 
-  // ── Data helpers ────────────────────────────────────────────────────────────
-  const hs = d.healthScore;
-  const ci = d.cashIntelligence;
-  const rl = d.revenueLeakAnalysis;
-  const ir = d.issuesRegister;
-  const arc = d.atRiskCustomers;
-  const db2 = d.decisionBrief;
-  const ap = d.actionPlan;
+  // ── Data helpers (safe defaults prevent null crashes) ────────────────────────
+  const hs = d.healthScore ?? {} as any;
+  const ci = d.cashIntelligence ?? {} as any;
+  const rl = d.revenueLeakAnalysis ?? {} as any;
+  const ir = d.issuesRegister ?? {} as any;
+  const arc = d.atRiskCustomers ?? {} as any;
+  const db2 = d.decisionBrief ?? {} as any;
+  const ap = d.actionPlan ?? {} as any;
   const chartOrgId = job.questionnaire.orgId ?? "default-org";
 
-  const radarData = (hs.dimensions || []).map((dim) => ({
+  const radarData = (hs?.dimensions || []).map((dim) => ({
     dimension: dim.name.split(" ")[0],
     score: dim.score,
   }));
 
-  const weeklyModel = (ci as any).weeklyProjections || (ci as any).weekly_model || [];
+  const weeklyModel = (ci as any)?.weeklyProjections || (ci as any)?.weekly_model || [];
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex flex-col font-sans">
@@ -246,6 +279,12 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShareOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 text-zinc-600 text-xs font-mono uppercase tracking-wider hover:bg-zinc-50 transition-all rounded-lg"
+          >
+            <Share2 className="w-3.5 h-3.5" /> Share
+          </button>
           <a href={`${base}?runId=${encodeURIComponent(runId)}&format=pdf`}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 text-zinc-600 text-xs font-mono uppercase tracking-wider hover:bg-zinc-50 transition-all rounded-lg">
             <Download className="w-3.5 h-3.5" /> PDF
@@ -259,16 +298,16 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
           <div className="text-center md:text-left flex-1">
             <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-2">Business Health Score</p>
             <div className="flex items-end gap-3 justify-center md:justify-start">
-              <span className="text-7xl font-light tabular-nums">{hs.score ?? "—"}</span>
+              <span className="text-7xl font-light tabular-nums">{hs?.score ?? "—"}</span>
               <span className="text-xl text-zinc-500 mb-2">/100</span>
-              {hs.grade && (
+              {hs?.grade && (
                 <span className={`text-2xl font-bold mb-2 px-3 py-1 rounded-lg ${GRADE_COLORS[hs.grade]?.text ?? "text-zinc-300"} ${GRADE_COLORS[hs.grade]?.bg ?? "bg-zinc-800"}`}>
                   {hs.grade}
                 </span>
               )}
             </div>
-            {hs.headline && <p className="text-lg font-medium mt-2 text-zinc-100">{hs.headline}</p>}
-            {hs.summary && <p className="text-zinc-400 text-sm mt-1 max-w-lg leading-relaxed">{hs.summary}</p>}
+            {hs?.headline && <p className="text-lg font-medium mt-2 text-zinc-100">{hs.headline}</p>}
+            {hs?.summary && <p className="text-zinc-400 text-sm mt-1 max-w-lg leading-relaxed">{hs.summary}</p>}
           </div>
           {radarData.length > 0 && (
             <div className="w-56 h-56 shrink-0">
@@ -386,7 +425,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                         </div>
                       </div>
                     ))}
-                    {hs.summary && (
+                    {hs?.summary && (
                       <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
                         <SectionHeader><Sparkles className="w-3 h-3" /> Summary</SectionHeader>
                         <p className="text-sm text-zinc-600 leading-relaxed">{hs.summary}</p>
@@ -491,25 +530,25 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="bg-white border-2 border-zinc-900 rounded-2xl p-6 text-center shadow-sm">
                         <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Total Recoverable</p>
-                        <p className="text-3xl font-light text-zinc-900">{fmt(rl.totalIdentified || 0)}</p>
+                        <p className="text-3xl font-light text-zinc-900">{fmt(rl?.totalIdentified || 0)}</p>
                       </div>
                       <div className="bg-white border border-zinc-200 rounded-2xl p-6 text-center shadow-sm">
                         <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">90-Day Projection</p>
-                        <p className="text-2xl font-light text-zinc-900">{fmt(Number((rl as any).day90RecoveryProjection ?? (rl as any).day90_recovery_projection ?? 0))}</p>
+                        <p className="text-2xl font-light text-zinc-900">{fmt(Number((rl as any)?.day90RecoveryProjection ?? (rl as any)?.day90_recovery_projection ?? 0))}</p>
                       </div>
                       <div className="bg-white border border-zinc-200 rounded-2xl p-6 text-center shadow-sm">
                         <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">Priority Action</p>
-                        <p className="text-xs text-zinc-700 font-medium leading-snug">{(rl as any).priorityAction ?? (rl as any).priority_action ?? "—"}</p>
+                        <p className="text-xs text-zinc-700 font-medium leading-snug">{(rl as any)?.priorityAction ?? (rl as any)?.priority_action ?? "—"}</p>
                       </div>
                     </div>
 
-                    {rl.summary && (
+                    {rl?.summary && (
                       <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
                         <p className="text-sm text-zinc-600 italic border-l-2 border-zinc-200 pl-4">{rl.summary}</p>
                       </div>
                     )}
 
-                    <RevenueLeakChart items={rl.items || []} overlay={chartOverlays.revenue} onDismissOverlay={clearOverlay("revenue")} />
+                    <RevenueLeakChart items={rl?.items || []} overlay={chartOverlays.revenue} onDismissOverlay={clearOverlay("revenue")} />
                     <ChartInteraction
                       section="revenue"
                       orgId={chartOrgId}
@@ -527,7 +566,7 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       onDismiss={clearOverlay("revenue")}
                     />
 
-                    {(rl.items || []).map((item, i) => (
+                    {(rl?.items || []).map((item, i) => (
                       <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
                           <div className="flex items-center gap-3">
@@ -591,33 +630,90 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                       }}
                     />
 
-                    {(ir.issues || []).map((issue, i) => (
-                      <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
-                        <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-mono text-zinc-400">{issue.id}</span>
-                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${SEVERITY_COLORS[issue.severity ?? "Low"]}`}>
-                              {issue.severity}
-                            </span>
-                            {issue.category && (
-                              <span className="text-[10px] text-zinc-500 bg-zinc-100 rounded px-2 py-0.5 font-mono">{issue.category}</span>
-                            )}
+                    {(ir.issues || []).map((issue, i) => {
+                      const isExpanded = expandedIssues.has(i);
+                      const issueAny = issue as any;
+                      const hasDetails = issueAny.recommendation || issueAny.mitigation || issueAny.owner || issueAny.timeline || issueAny.recoveryActions;
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => hasDetails && toggleIssue(i)}
+                          className={`bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm transition-all ${hasDetails ? "cursor-pointer hover:border-zinc-300" : ""}`}
+                        >
+                          <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-mono text-zinc-400">{issue.id}</span>
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${SEVERITY_COLORS[issue.severity ?? "Low"]}`}>
+                                {issue.severity}
+                              </span>
+                              {issue.category && (
+                                <span className="text-[10px] text-zinc-500 bg-zinc-100 rounded px-2 py-0.5 font-mono">{issue.category}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {issue.financialImpact != null && (
+                                <span className="text-lg font-light text-red-600">{fmt(issue.financialImpact)}</span>
+                              )}
+                              {hasDetails && (
+                                <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            {issue.financialImpact != null && (
-                              <span className="text-lg font-light text-red-600">{fmt(issue.financialImpact)}</span>
+                          <p className="font-semibold text-zinc-900 mb-1 break-words">{issue.description}</p>
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-3 pt-3 border-t border-zinc-100 space-y-2">
+                                  {issueAny.recommendation && (
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Recommendation</span>
+                                      <p className="text-sm text-zinc-700 mt-0.5 break-words">{issueAny.recommendation}</p>
+                                    </div>
+                                  )}
+                                  {issueAny.mitigation && (
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Mitigation</span>
+                                      <p className="text-sm text-zinc-700 mt-0.5 break-words">{issueAny.mitigation}</p>
+                                    </div>
+                                  )}
+                                  {issueAny.owner && (
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Owner</span>
+                                      <p className="text-sm text-zinc-700 mt-0.5">{issueAny.owner}</p>
+                                    </div>
+                                  )}
+                                  {issueAny.timeline && (
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Timeline</span>
+                                      <p className="text-sm text-zinc-700 mt-0.5">{issueAny.timeline}</p>
+                                    </div>
+                                  )}
+                                  {issueAny.recoveryActions && Array.isArray(issueAny.recoveryActions) && (
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Recovery Actions</span>
+                                      <ul className="mt-1 space-y-1">
+                                        {issueAny.recoveryActions.map((a: string, ai: number) => (
+                                          <li key={ai} className="text-sm text-zinc-700 flex items-start gap-2">
+                                            <span className="text-zinc-400 mt-1">-</span>
+                                            <span className="break-words">{a}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
                             )}
-                          </div>
+                          </AnimatePresence>
                         </div>
-                        <p className="font-semibold text-zinc-900 mb-1">{issue.description}</p>
-                        {(issue as any).recommendation && (
-                          <p className="text-sm text-zinc-600 mt-2">
-                            <ChevronRight className="w-3 h-3 inline-block mr-1 text-zinc-400" />
-                            {(issue as any).recommendation}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
@@ -697,13 +793,13 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                   <div className="space-y-4">
                     <div className="bg-zinc-900 text-white rounded-2xl p-8">
                       <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3">Decision Required</p>
-                      <p className="text-2xl font-light mb-3">{db2.decision}</p>
-                      {db2.context && <p className="text-zinc-400 text-sm leading-relaxed">{db2.context}</p>}
+                      <p className="text-2xl font-light mb-3">{db2?.decision ?? "—"}</p>
+                      {db2?.context && <p className="text-zinc-400 text-sm leading-relaxed">{db2.context}</p>}
                     </div>
 
-                    {(db2.options || []).length > 0 && (
+                    {(db2?.options || []).length > 0 && (
                       <div className="grid md:grid-cols-2 gap-4">
-                        {(db2.options || []).map((opt, i) => (
+                        {(db2?.options || []).map((opt, i) => (
                           <div key={i} className={`bg-white border rounded-2xl p-6 shadow-sm transition-all ${opt.recommendation ? "border-zinc-900 ring-2 ring-zinc-900/10" : "border-zinc-200"}`}>
                             {opt.recommendation && (
                               <span className="inline-flex items-center gap-1 text-[9px] font-mono bg-zinc-900 text-white px-2 py-0.5 rounded uppercase tracking-widest mb-3">
@@ -765,19 +861,27 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
                             <div className="h-[1px] w-10 bg-zinc-200 mt-1" />
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {day.tasks.map((task, j) => (
-                              <div key={j} className="bg-white border border-zinc-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
-                                <div className="w-5 h-5 bg-zinc-50 border border-zinc-200 rounded-md flex items-center justify-center shrink-0 mt-0.5">
-                                  <div className="w-2 h-2 border-b border-r border-zinc-300 rotate-45" />
-                                </div>
-                                <div>
-                                  <div className="text-sm text-zinc-800 leading-snug">{task.description}</div>
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-[9px] font-mono text-zinc-400 uppercase">{task.owner}</span>
+                            {day.tasks.map((task, j) => {
+                              const taskKey = `${i}-${j}`;
+                              const isChecked = completedTasks.has(taskKey);
+                              return (
+                                <div
+                                  key={j}
+                                  onClick={() => toggleTask(taskKey)}
+                                  className={`bg-white border p-4 rounded-xl flex items-start gap-3 shadow-sm cursor-pointer transition-all ${isChecked ? "border-emerald-200 bg-emerald-50/30" : "border-zinc-100 hover:border-zinc-300"}`}
+                                >
+                                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-colors ${isChecked ? "bg-emerald-600 border-emerald-600" : "bg-zinc-50 border border-zinc-200"}`}>
+                                    {isChecked && <Check className="w-3 h-3 text-white" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-sm leading-snug break-words ${isChecked ? "line-through text-zinc-400" : "text-zinc-800"}`}>{task.description}</div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase">{task.owner}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
@@ -815,7 +919,18 @@ export function ResultsView({ runId, onBack, onNewRun }: ResultsViewProps) {
         </AnimatePresence>
       </main>
 
+      {/* ── Share Modal ──────────────────────────────────────────────────── */}
+      <ShareModal
+        runId={runId}
+        orgId={job.questionnaire.orgId ?? "default-org"}
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+      />
+
       {/* ── Floating Chat Buttons ──────────────────────────────────────────── */}
+      {onReprocess && (
+        <ReuploadDrawer runId={runId} onReprocess={onReprocess} />
+      )}
       <CoachChatButton
         orgId={job.questionnaire.orgId ?? "default-org"}
         runId={runId}

@@ -32,7 +32,7 @@ export default function WaterfallChart({ items, nameKey, valueKey }: WaterfallCh
     const start = cumulative;
     cumulative += val;
     return {
-      name: String(item[nk] || `Item ${i + 1}`).slice(0, 20),
+      name: String(item[nk] || `Item ${i + 1}`),
       value: val,
       start,
       end: cumulative,

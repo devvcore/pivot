@@ -14,7 +14,7 @@ function formatValue(val: unknown): string {
     return val.toLocaleString();
   }
   if (typeof val === "boolean") return val ? "Yes" : "No";
-  return String(val).slice(0, 120);
+  return String(val);
 }
 
 function formatLabel(key: string): string {
@@ -38,7 +38,7 @@ export default function KeyValueGrid({ data, maxRows = 10, title }: KeyValueGrid
       <div className="grid grid-cols-1 gap-2">
         {entries.map(([key, val]) => (
           <div key={key} className="flex items-center justify-between gap-3 py-1.5 border-b border-zinc-50 last:border-0">
-            <span className="text-xs text-zinc-500 truncate">{formatLabel(key)}</span>
+            <span className="text-xs text-zinc-500 break-words">{formatLabel(key)}</span>
             <span className="text-xs font-medium text-zinc-900 text-right tabular-nums shrink-0">
               {formatValue(val)}
             </span>

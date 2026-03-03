@@ -287,7 +287,7 @@ export function AgentChatButton({ orgId, orgName }: { orgId: string; orgName: st
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-6 z-50 w-96 h-[520px] bg-white border border-zinc-200 rounded-3xl shadow-2xl shadow-zinc-900/20 overflow-hidden flex flex-col"
+            className="fixed bottom-20 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-96 h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-3xl shadow-2xl shadow-zinc-900/20 overflow-hidden flex flex-col"
           >
             <AgentChat orgId={orgId} orgName={orgName} onClose={() => setOpen(false)} />
           </motion.div>

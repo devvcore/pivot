@@ -1,8 +1,8 @@
 import type { Lead, LeadReport } from "../types";
 
 const NYNE_API_BASE = "https://api.nyne.ai";
-const NYNE_API_KEY = process.env.NYNE_API_KEY || "82cae84113b9675fdaa576dec1485f66";
-const NYNE_API_SECRET = process.env.NYNE_API_SECRET || "09d68619416437b4";
+const NYNE_API_KEY = process.env.NYNE_API_KEY || "";
+const NYNE_API_SECRET = process.env.NYNE_API_SECRET || "";
 const MAX_CREDITS = 12; // cap for testing
 
 interface NyneSearchResult {

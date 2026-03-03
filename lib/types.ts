@@ -39,6 +39,7 @@ export interface Job {
   knowledgeGraph?: KnowledgeGraph;
   error?: string;
   deliverables?: MVPDeliverables;
+  progress?: { completed: number; total: number; currentStep: string; startedAt: number };
   relevantSections?: string[];  // sections relevant to this business (from relevance engine)
   createdAt: number;
   updatedAt: number;
@@ -1422,6 +1423,8 @@ export interface MVPDeliverables {
   claimValidations?: ClaimValidation[];
   relevanceScores?: SectionRelevance[];
   selectedSections?: string[];
+  // Progress tracking (embedded in deliverables for DB simplicity)
+  _progress?: { completed: number; total: number; currentStep: string; startedAt: number };
 }
 
 export interface BenchmarkDimension {

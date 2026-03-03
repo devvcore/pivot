@@ -79,6 +79,40 @@ try {
     console.warn("[DB] Email normalization migration failed:", error);
 }
 
+// Share links for role-based access to analyses
+db.exec(`
+    CREATE TABLE IF NOT EXISTS share_links (
+        id TEXT PRIMARY KEY,
+        org_id TEXT NOT NULL,
+        job_id TEXT NOT NULL,
+        created_by TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'employee',
+        employee_name TEXT,
+        token TEXT UNIQUE NOT NULL,
+        expires_at DATETIME,
+        used_count INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
+// Employee roster for team management
+db.exec(`
+    CREATE TABLE IF NOT EXISTS employees (
+        id TEXT PRIMARY KEY,
+        org_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role_title TEXT,
+        department TEXT,
+        salary REAL,
+        start_date TEXT,
+        net_value_estimate REAL,
+        roi_score REAL,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
 // Ensure default org exists for MVP
 const orgCheck = db.prepare("SELECT id FROM organizations WHERE id = 'default-org'").get();
 if (!orgCheck) {

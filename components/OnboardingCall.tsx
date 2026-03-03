@@ -14,6 +14,7 @@ type LiveSessionLike = {
 
 interface OnboardingCallProps {
   extractedFromDocs: Partial<Questionnaire>;
+  dataCoverageGaps?: string[];
   onExtracted: (patch: Partial<Questionnaire>) => void;
   onComplete: () => void;
   onSkip: () => void;
@@ -24,26 +25,89 @@ interface ExtractedPayload extends Partial<Questionnaire> {
   complete?: boolean;
 }
 
-function buildLivePrompt(extractedFromDocs: Partial<Questionnaire>): string {
+function buildLivePrompt(extractedFromDocs: Partial<Questionnaire>, dataCoverageGaps?: string[]): string {
   const known = Object.entries(extractedFromDocs)
     .filter(([, v]) => v !== "" && v !== null && v !== undefined)
     .map(([k, v]) => `${k}: ${String(v)}`)
     .join(", ");
 
   const hasKnown = known.length > 0;
-  const fillGaps = hasKnown
-    ? `FILL-GAPS MODE. We already extracted: ${known}.
-Ask ONLY for missing or unclear fields. Keep questions short and conversational.
-When enough info is collected, say "I have everything I need. You can launch your analysis now." and set complete to true.`
-    : `COLLECTION ORDER:
-1) Business name + industry
-2) Website
-3) Offer/business model
-4) Key competitors
-5) Biggest concern
-6) Critical decision
-7) Revenue range + location
-When done, say "I have everything I need. You can launch your analysis now." and set complete to true.`;
+  const hasGaps = dataCoverageGaps && dataCoverageGaps.length > 0;
+
+  // Build targeted gap questions based on which document categories are missing
+  const gapQuestions: string[] = [];
+  if (hasGaps) {
+    for (const gap of dataCoverageGaps!) {
+      switch (gap) {
+        case "Financial Position":
+          gapQuestions.push("Ask about their current cash position, monthly burn rate, and whether they are profitable or pre-profit. Get approximate monthly revenue and expenses.");
+          break;
+        case "Revenue Model":
+          gapQuestions.push("Ask about their pricing model (subscription, one-time, usage-based), average deal size or price point, and how many paying customers they have.");
+          break;
+        case "Customer Portfolio":
+          gapQuestions.push("Ask about their customer segments, how many active customers they have, their top 3 customer types, and customer retention/churn.");
+          break;
+        case "Team Structure":
+          gapQuestions.push("Ask about their team size, key roles, and whether they have any open positions or plans to hire.");
+          break;
+        case "Compensation & HR":
+          gapQuestions.push("Ask about total payroll as a percentage of revenue and whether compensation is competitive for their market.");
+          break;
+        case "Operations":
+          gapQuestions.push("Ask about their biggest operational bottleneck and what processes take the most time.");
+          break;
+        case "Sales & Pipeline":
+          gapQuestions.push("Ask about their sales process, pipeline size, average sales cycle length, and conversion rate from lead to customer.");
+          break;
+        case "Market & Competition":
+          gapQuestions.push("Ask who their top 2-3 competitors are and what differentiates them from those competitors.");
+          break;
+        case "Strategy & Planning":
+          gapQuestions.push("Ask about their 12-month growth goal and the single biggest obstacle preventing them from reaching it.");
+          break;
+        case "Risk & Compliance":
+          gapQuestions.push("Ask if there are any regulatory, legal, or compliance concerns they need to address.");
+          break;
+      }
+    }
+  }
+
+  let fillGaps: string;
+  if (hasKnown) {
+    fillGaps = `FILL-GAPS MODE. We already extracted from their documents: ${known}.
+
+Ask ONLY for missing or unclear fields. Keep questions short and conversational.${
+      gapQuestions.length > 0
+        ? `\n\nIMPORTANT — The following data categories were NOT covered by their uploaded documents. You MUST ask about these:\n${gapQuestions.map((q, i) => `${i + 1}) ${q}`).join("\n")}`
+        : ""
+    }
+
+After covering the gaps, confirm key details look right, then say "I have everything I need. You can launch your analysis now." and set complete to true.`;
+  } else {
+    // No docs at all — run comprehensive deep-interview
+    fillGaps = `COMPREHENSIVE INTERVIEW MODE — No documents were uploaded, so you need to gather ALL key business intelligence through conversation.
+
+Ask one question at a time. Be warm and conversational. Group related topics naturally.
+
+MUST COVER (in roughly this order):
+1) Business name, industry, and website URL
+2) What they sell — products/services, pricing model (subscription, one-time, hourly), and average price point
+3) Revenue range and whether they are profitable
+4) Monthly expenses breakdown — payroll, tools/software, marketing spend, rent/overhead
+5) Customer segments — who buys, how many active customers, average lifetime value, churn rate
+6) Team — how many employees, key roles, plans to hire or restructure
+7) Sales process — how they acquire customers, conversion funnel, pipeline size
+8) Top 2-3 competitors and what makes them different
+9) Marketing channels they currently use and which ones drive the most business
+10) The single biggest concern or challenge keeping them up at night
+11) One critical business decision they need to make soon
+12) Location and any geographic considerations
+13) 12-month growth target and biggest obstacle to reaching it
+
+When you have covered ALL of the above, say "I have everything I need. You can launch your analysis now." and set complete to true.
+Do NOT set complete to true until you have asked about at least items 1-11.`;
+  }
 
   const schema = `{"organizationName":"","industry":"","website":"","businessModel":"","keyCompetitors":"","keyConcerns":"","oneDecisionKeepingOwnerUpAtNight":"","revenueRange":"","location":"","complete":false}`;
 
@@ -55,6 +119,7 @@ Voice rules:
 - Ask one question at a time. Keep it brief.
 - Do not use any markdown, formatting, or special characters.
 - Do not mention JSON, extraction, or technical details to the user.
+- When the user gives you information, briefly acknowledge it before asking the next question.
 
 Internal rules (hidden from user):
 - After EVERY response, silently append:
@@ -136,7 +201,7 @@ function formatTime(seconds: number): string {
 
 type CallState = "idle" | "ringing" | "connected" | "ready" | "ended";
 
-export function OnboardingCall({ extractedFromDocs, onExtracted, onComplete, onSkip, onError }: OnboardingCallProps) {
+export function OnboardingCall({ extractedFromDocs, dataCoverageGaps, onExtracted, onComplete, onSkip, onError }: OnboardingCallProps) {
   const [callState, setCallState] = useState<CallState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [lastCaption, setLastCaption] = useState("");
@@ -241,7 +306,7 @@ export function OnboardingCall({ extractedFromDocs, onExtracted, onComplete, onS
         model: "gemini-2.5-flash-native-audio-latest",
         config: {
           responseModalities: [Modality.AUDIO],
-          systemInstruction: buildLivePrompt(extractedFromDocs),
+          systemInstruction: buildLivePrompt(extractedFromDocs, dataCoverageGaps),
           outputAudioTranscription: {},
           inputAudioTranscription: {},
         } as Record<string, unknown>,

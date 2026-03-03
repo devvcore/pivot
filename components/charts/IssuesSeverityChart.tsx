@@ -51,7 +51,7 @@ export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props
     .sort((a, b) => (b.financialImpact ?? 0) - (a.financialImpact ?? 0))
     .slice(0, 6)
     .map((i) => ({
-      name: (i.title ?? i.description).slice(0, 25) + ((i.title ?? i.description).length > 25 ? "..." : ""),
+      name: i.title ?? i.description,
       impact: i.financialImpact!,
       severity: i.severity,
     }));
@@ -85,7 +85,7 @@ export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={impactData} layout="vertical" margin={{ left: 10, right: 20 }}>
                 <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
-                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 9 }} />
+                <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 9 }} />
                 <Tooltip
                   formatter={(v) => formatDollar(Number(v ?? 0))}
                   contentStyle={TOOLTIP_STYLE}

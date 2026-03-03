@@ -6,12 +6,13 @@ import { DashboardView } from "@/components/DashboardView";
 import { UploadView } from "@/components/UploadView";
 import { ProcessingView } from "@/components/ProcessingView";
 import { ResultsView } from "@/components/ResultsView";
+import { TeamView } from "@/components/TeamView";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
 
 const RUN_ID_KEY = "pivot_runId";
 
-type AppView = "dashboard" | "upload" | "processing" | "results";
+type AppView = "dashboard" | "upload" | "processing" | "results" | "team";
 
 interface UserProfile {
   id: string;
@@ -93,6 +94,14 @@ export default function Home() {
               setRunId(id);
               setView("results");
             }}
+            onTeam={() => setView("team")}
+          />
+        )}
+
+        {view === "team" && user && (
+          <TeamView
+            orgId={user.organizationId}
+            onBack={() => setView("dashboard")}
           />
         )}
 
@@ -103,6 +112,7 @@ export default function Home() {
               setRunId(id);
               setView("processing");
             }}
+            orgId={user?.organizationId}
           />
         )}
 
@@ -122,6 +132,7 @@ export default function Home() {
               setRunId(null);
               setView("upload");
             }}
+            onReprocess={() => setView("processing")}
           />
         )}
 

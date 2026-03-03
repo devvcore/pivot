@@ -40,7 +40,7 @@ export function CompetitorRadarChart({ competitors, yourGrade, overlay, onDismis
   const yourScore = GRADE_TO_NUM[yourGrade ?? ""] ?? 0;
 
   const data = graded.slice(0, 6).map((c) => ({
-    name: c.name.length > 15 ? c.name.slice(0, 13) + "..." : c.name,
+    name: c.name,
     competitor: GRADE_TO_NUM[c.websiteGrade!] ?? 0,
     you: yourScore,
   }));

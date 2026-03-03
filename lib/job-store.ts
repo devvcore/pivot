@@ -18,13 +18,11 @@ function mapDbToJob(row: any): Job {
   };
 }
 
-export function createJob(questionnaire: Questionnaire, filePaths: string[]): Job {
+export function createJob(questionnaire: Questionnaire, filePaths: string[], orgId?: string): Job {
   const runId = `run_${Date.now()}`;
   const id = uuidv4();
 
-  // For MVP, we'll use a placeholder organization_id if none provided
-  // In a real flow, this would come from the auth'd user
-  const orgId = "default-org";
+  const resolvedOrgId = orgId || "default-org";
 
   const stmt = db.prepare(`
     INSERT INTO jobs (id, run_id, status, phase, organization_id, questionnaire_json, file_paths_json)
@@ -36,7 +34,7 @@ export function createJob(questionnaire: Questionnaire, filePaths: string[]): Jo
     runId,
     "pending",
     "INGEST",
-    orgId,
+    resolvedOrgId,
     JSON.stringify(questionnaire),
     JSON.stringify(filePaths)
   );
@@ -59,10 +57,10 @@ export function updateJob(
   if (updates.status) { sets.push("status = ?"); params.push(updates.status); }
   if (updates.phase) { sets.push("phase = ?"); params.push(updates.phase); }
   if (updates.questionnaire) { sets.push("questionnaire_json = ?"); params.push(JSON.stringify(updates.questionnaire)); }
-  if (updates.parsedContext !== undefined) { sets.push("parsed_context = ?"); params.push(updates.parsedContext); }
-  if (updates.knowledgeGraph) { sets.push("knowledge_graph_json = ?"); params.push(JSON.stringify(updates.knowledgeGraph)); }
-  if (updates.deliverables) { sets.push("results_json = ?"); params.push(JSON.stringify(updates.deliverables)); }
-  if (updates.error) { sets.push("error = ?"); params.push(updates.error); }
+  if (updates.parsedContext !== undefined) { sets.push("parsed_context = ?"); params.push(updates.parsedContext ?? null); }
+  if (updates.knowledgeGraph !== undefined) { sets.push("knowledge_graph_json = ?"); params.push(updates.knowledgeGraph ? JSON.stringify(updates.knowledgeGraph) : null); }
+  if (updates.deliverables !== undefined) { sets.push("results_json = ?"); params.push(updates.deliverables ? JSON.stringify(updates.deliverables) : null); }
+  if (updates.error !== undefined) { sets.push("error = ?"); params.push(updates.error ?? null); }
   if (updates.filePaths) { sets.push("file_paths_json = ?"); params.push(JSON.stringify(updates.filePaths)); }
 
   if (sets.length === 0) return getJob(runId);

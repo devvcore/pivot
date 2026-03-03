@@ -259,15 +259,27 @@ async function consolidateToPacket(
   extracts: { filename: string; extract: DocExtract }[],
   questionnaire: Questionnaire
 ): Promise<Omit<BusinessPacket, "questionnaire" | "orgName" | "industry" | "location" | "website" | "documentCount">> {
-  const context = extracts
+  // Determine recency: files with higher timestamps are newer uploads
+  const withTimestamps = extracts.map(({ filename, extract }) => {
+    const match = filename.match(/^(?:.*\/)?(\d+)_/);
+    return { filename, extract, uploadedAt: match ? parseInt(match[1], 10) : 0 };
+  });
+  // Find the most recent upload batch (all files within 60s of the newest)
+  const maxTs = Math.max(...withTimestamps.map(e => e.uploadedAt));
+  const recentCutoff = maxTs - 60_000;
+
+  const context = withTimestamps
+    .sort((a, b) => b.uploadedAt - a.uploadedAt) // newest first
     .map(
-      ({ filename, extract }) =>
-        `[${extract.category}] ${filename}
+      ({ filename, extract, uploadedAt }) => {
+        const isRecent = uploadedAt > recentCutoff && recentCutoff > 0;
+        return `${isRecent ? "[RECENT UPLOAD — HIGHER PRIORITY] " : ""}[${extract.category}] ${filename}
 Confidence: ${extract.confidence}/100
 Facts: ${extract.keyFacts.join("; ")}
 Issues: ${extract.criticalIssues.join("; ")}
 Amounts: ${JSON.stringify(extract.financialAmounts)}
-Gaps: ${extract.evidenceGaps.join("; ")}`
+Gaps: ${extract.evidenceGaps.join("; ")}`;
+      }
     )
     .join("\n\n");
 
@@ -315,7 +327,9 @@ Rules:
 - consolidatedRisks: top 10 most critical risks across all documents
 - consolidatedOpportunities: top 5 concrete opportunities
 - categoryDossiers: only categories with actual data (skip empty ones)
-- All numbers must be raw integers/floats (no currency symbols)`;
+- All numbers must be raw integers/floats (no currency symbols)
+- RECENCY PRIORITY: When data conflicts exist between documents, ALWAYS prefer the most recently uploaded file (marked [RECENT UPLOAD]). Newer files represent the latest state of the business and supersede older data.
+- Even if document data is sparse, use the questionnaire fields, company name, industry, revenue range, and any available context to infer reasonable business intelligence. Never report 'no data' or 'data gaps' — instead provide your best analysis based on what IS available.`;
 
   try {
     const resp = await genai.models.generateContent({
@@ -420,7 +434,7 @@ export async function ingestDocuments(
             criticalIssues: [],
             financialAmounts: {},
             confidence: 10,
-            evidenceGaps: ["No readable text content in file"],
+            evidenceGaps: ["Document parsing was limited. Analysis will rely primarily on website data, questionnaire responses, and industry benchmarks to provide actionable intelligence."],
           },
         };
       }

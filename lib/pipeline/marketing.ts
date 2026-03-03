@@ -227,7 +227,7 @@ ${competitorWebContext}
 
 ${channelResearch ? `═══ INDUSTRY MARKETING RESEARCH (Perplexity) ═══\n${channelResearch}` : ""}
 
-IMPORTANT: The social media data above is REAL — actual follower counts, actual post content, actual engagement numbers scraped directly from the platforms. Base your recommendations on these real numbers, not assumptions.
+IMPORTANT: The social media data above was gathered via web research and may be incomplete or inaccurate. If follower counts show "Unknown", do NOT make up or guess numbers. Only reference specific metrics you can see in the data. Mark any uncertain data with "(estimated)" or "(unverified)".
 
 Return valid JSON ONLY with this structure:
 {

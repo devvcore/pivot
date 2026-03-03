@@ -95,12 +95,20 @@ interface ProcessingViewProps {
   onError: (message: string) => void;
 }
 
+// camelCase → Title Case
+function formatKey(key: string): string {
+  return key
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
 export function ProcessingView({ runId, onComplete, onError }: ProcessingViewProps) {
   const [realStatus, setRealStatus] = useState<string>("pending");
   const [microIndex, setMicroIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [tipIndex, setTipIndex] = useState(0);
   const [overallProgress, setOverallProgress] = useState(0);
+  const [realProgress, setRealProgress] = useState<{ completed: number; total: number; currentStep: string; startedAt: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusRef = useRef(realStatus);
 
@@ -110,16 +118,30 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
   // ── Poll real backend status ──
   useEffect(() => {
     let cancelled = false;
+    let errorCount = 0;
+    const MAX_ERRORS = 15; // ~30s of consecutive failures before giving up
     const poll = async () => {
       try {
         const res = await fetch(`/api/job?runId=${encodeURIComponent(runId)}`);
         if (cancelled) return;
         if (!res.ok) {
-          if (res.status === 404) setError("Job not found");
+          if (res.status === 404) { setError("Job not found"); return; }
+          errorCount++;
+          if (errorCount >= MAX_ERRORS) {
+            setError("Server error — please refresh and try again");
+            return;
+          }
+          setTimeout(poll, Math.min(2000 * Math.pow(1.5, errorCount), 10000));
           return;
         }
+        errorCount = 0; // reset on success
         const job = await res.json();
         const newStatus = job.status ?? "pending";
+
+        const prog = job.deliverables?._progress;
+        if (prog && typeof prog.completed === "number") {
+          setRealProgress(prog);
+        }
 
         if (newStatus !== statusRef.current) {
           setRealStatus(newStatus);
@@ -136,7 +158,14 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
           return;
         }
       } catch {
-        if (!cancelled) setError("Failed to fetch status");
+        if (cancelled) return;
+        errorCount++;
+        if (errorCount >= MAX_ERRORS) {
+          setError("Connection lost — please check your internet and refresh");
+          return;
+        }
+        // Retry with backoff
+        setTimeout(poll, Math.min(2000 * Math.pow(1.5, errorCount), 10000));
         return;
       }
       setTimeout(poll, 2000);
@@ -180,6 +209,15 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
     const statusIdx = STATUS_ORDER.indexOf(realStatus);
     if (statusIdx < 0) return;
 
+    // When real progress data exists during synthesis, use it for a more accurate bar
+    if (realStatus === "synthesizing" && realProgress && realProgress.total > 0) {
+      const synthProgress = (realProgress.completed / realProgress.total) * 100;
+      // Synthesizing is ~60% of total work (parse=5%, ingest=10%, synth=60%, format=5%)
+      const total = Math.min(99, 15 + Math.round(synthProgress * 0.6));
+      setOverallProgress(total);
+      return;
+    }
+
     const totalPhases = STATUS_ORDER.length;
     const phaseWeight = 100 / totalPhases;
     const baseProgress = statusIdx * phaseWeight;
@@ -189,7 +227,7 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
 
     const total = Math.min(100, Math.round(baseProgress + microProgress * 0.8));
     setOverallProgress(realStatus === "completed" ? 100 : total);
-  }, [realStatus, microIndex, currentMicros.length]);
+  }, [realStatus, microIndex, currentMicros.length, realProgress]);
 
   // ── Rotate tips ──
   useEffect(() => {
@@ -198,6 +236,22 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
     }, 8000);
     return () => clearInterval(interval);
   }, []);
+
+  // ── ETA calculation from real progress ──
+  const eta = useMemo(() => {
+    if (!realProgress || realProgress.completed < 2) return null;
+    const elapsed = Date.now() - realProgress.startedAt;
+    const perItem = elapsed / realProgress.completed;
+    const remaining = perItem * (realProgress.total - realProgress.completed);
+    if (remaining < 60000) return "< 1 min remaining";
+    return `~${Math.ceil(remaining / 60000)} min remaining`;
+  }, [realProgress]);
+
+  // ── Derive display values when real progress is available during synthesis ──
+  const hasRealSynthProgress = realProgress && realStatus === "synthesizing";
+  const realStepLabel = hasRealSynthProgress ? formatKey(realProgress.currentStep) : null;
+  const realStepDetail = hasRealSynthProgress ? `Analyzing ${formatKey(realProgress.currentStep)}...` : null;
+  const realStepCount = hasRealSynthProgress ? `${realProgress.completed} / ${realProgress.total} sections` : null;
 
   const isFailed = realStatus === "failed";
   const isCompleted = realStatus === "completed";
@@ -279,6 +333,9 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
               transition={{ duration: 0.8, ease: "easeOut" }}
             />
           </div>
+          {eta && realStatus === "synthesizing" && (
+            <div className="text-[10px] font-mono text-zinc-500 mt-2 text-right">{eta}</div>
+          )}
           {/* Phase dots */}
           <div className="flex items-center justify-between mt-3 px-1">
             {STATUS_ORDER.filter(s => s !== "pending").map((phase) => {
@@ -344,25 +401,40 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
 
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-medium text-white mb-1 tracking-tight">
-                    {currentMicro.label}
+                    {hasRealSynthProgress ? realStepLabel : currentMicro.label}
                   </h3>
                   <p className="text-sm text-zinc-400 leading-relaxed">
-                    {currentMicro.detail}
+                    {hasRealSynthProgress ? realStepDetail : currentMicro.detail}
                   </p>
+                  {hasRealSynthProgress && (
+                    <p className="text-xs font-mono text-zinc-500 mt-1">
+                      {realStepCount}
+                    </p>
+                  )}
 
                   {/* Micro-phase progress bar */}
                   {!isCompleted && (
                     <div className="mt-4 h-0.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-white/40 to-white/10"
-                        initial={{ width: "0%" }}
-                        animate={{ width: "100%" }}
-                        transition={{
-                          duration: currentMicro.durationMs / 1000,
-                          ease: "easeInOut",
-                        }}
-                        key={`bar-${realStatus}-${microIndex}`}
-                      />
+                      {hasRealSynthProgress ? (
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-blue-500/60 to-violet-500/40"
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${Math.round((realProgress.completed / realProgress.total) * 100)}%` }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                          key={`bar-real-${realProgress.completed}`}
+                        />
+                      ) : (
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-white/40 to-white/10"
+                          initial={{ width: "0%" }}
+                          animate={{ width: "100%" }}
+                          transition={{
+                            duration: currentMicro.durationMs / 1000,
+                            ease: "easeInOut",
+                          }}
+                          key={`bar-${realStatus}-${microIndex}`}
+                        />
+                      )}
                     </div>
                   )}
                 </div>

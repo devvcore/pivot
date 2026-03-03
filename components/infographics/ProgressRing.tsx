@@ -46,7 +46,7 @@ export default function ProgressRing({ score, maxScore = 100, size = 64, strokeW
       {(grade || label) && (
         <div className="flex flex-col">
           {grade && <span className="text-xs font-bold text-zinc-700">{grade}</span>}
-          {label && <span className="text-[10px] text-zinc-400 truncate max-w-[100px]">{label}</span>}
+          {label && <span className="text-[10px] text-zinc-400 text-center">{label}</span>}
         </div>
       )}
     </div>

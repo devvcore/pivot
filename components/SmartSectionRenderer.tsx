@@ -219,8 +219,8 @@ function DataTable({ items, label, maxRows }: { items: any[]; label?: string; ma
               {cols.map((k, j) => {
                 const v = item[k];
                 return (
-                  <td key={j} className="py-2 pr-3 text-zinc-700">
-                    {typeof v === "number" ? v.toLocaleString() : String(v ?? "—").slice(0, 80)}
+                  <td key={j} className="py-2 pr-3 text-zinc-700 break-words whitespace-normal">
+                    {typeof v === "number" ? v.toLocaleString() : String(v ?? "—")}
                   </td>
                 );
               })}
@@ -288,7 +288,7 @@ export default function SmartSectionRenderer({ sectionKey, data, title, claimVal
         <div className={`grid gap-3 ${metrics.length <= 2 ? "grid-cols-2" : metrics.length === 3 ? "grid-cols-3" : "grid-cols-2 md:grid-cols-4"}`}>
           {metrics.map(({ key, value, source }) => (
             <div key={key} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider truncate">{formatKey(key)}</p>
+              <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider break-words leading-tight">{formatKey(key)}</p>
               <p className={`mt-1 text-lg font-bold tabular-nums ${getMetricColor(key, value)}`}>
                 {formatMetricValue(key, value)}
               </p>

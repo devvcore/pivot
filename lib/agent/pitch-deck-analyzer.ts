@@ -10,7 +10,7 @@ import type { PitchDeckAnalysis, BusinessPacket, Questionnaire } from "@/lib/typ
 const FLASH_MODEL = "gemini-2.5-flash-preview-05-20";
 
 const TWOSLIDES_API = "https://2slides.com/api/v1";
-const TWOSLIDES_KEY = process.env.TWOSLIDES_API_KEY ?? "sk-2slides-b13d964c5dc144d048acd0677ffd441a4603da350f794ebc764184eee2a7ade2";
+const TWOSLIDES_KEY = process.env.TWOSLIDES_API_KEY ?? "";
 
 // ── Pitch Deck Analysis ─────────────────────────────────────────────────────
 

@@ -158,7 +158,7 @@ export default function ChapterView({ chapterId, sections, deliverables, title, 
               transition={{ delay: i * 0.05 }}
               className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm"
             >
-              <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1 truncate">
+              <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest mb-1 break-words leading-tight">
                 {kpi.label}
               </div>
               <div className="text-xl font-light text-zinc-900 tabular-nums">

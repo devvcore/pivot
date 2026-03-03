@@ -27,7 +27,7 @@ export default function FunnelChart({ stages, nameKey, valueKey }: FunnelChartPr
   const vk = valueKey || findKey(sample, ["count", "value", "volume", "number", "leads", "amount"]) || Object.keys(sample).find(k => typeof sample[k] === "number") || Object.keys(sample)[1];
 
   const data = stages.slice(0, 8).map((item, i) => ({
-    name: String(item[nk] || `Stage ${i + 1}`).slice(0, 25),
+    name: String(item[nk] || `Stage ${i + 1}`),
     value: typeof item[vk] === "number" ? item[vk] as number : parseFloat(String(item[vk])) || 0,
   }));
 
@@ -35,7 +35,7 @@ export default function FunnelChart({ stages, nameKey, valueKey }: FunnelChartPr
     <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
       <BarChart data={data} layout="vertical" margin={{ left: 10, right: 40 }}>
         <XAxis type="number" fontSize={11} tick={{ fill: "#71717a" }} />
-        <YAxis type="category" dataKey="name" width={120} fontSize={11} tick={{ fill: "#71717a" }} />
+        <YAxis type="category" dataKey="name" width={160} fontSize={11} tick={{ fill: "#71717a" }} />
         <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           <LabelList dataKey="value" position="right" fontSize={11} fill="#71717a" />

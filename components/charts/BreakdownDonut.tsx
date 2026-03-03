@@ -27,7 +27,7 @@ export default function BreakdownDonut({ items, nameKey, valueKey }: BreakdownDo
   const vk = valueKey || findKey(sample, ["percentage", "share", "value", "amount", "allocation"]) || Object.keys(sample).find((k: string) => typeof sample[k] === "number") || Object.keys(sample)[1];
 
   const data = items.slice(0, 8).map((item: any, i: number) => ({
-    name: String(item[nk] || `Segment ${i + 1}`).slice(0, 25),
+    name: String(item[nk] || `Segment ${i + 1}`),
     value: typeof item[vk] === "number" ? Math.abs(item[vk] as number) : parseFloat(String(item[vk])) || 0,
   })).filter((d: any) => d.value > 0);
 

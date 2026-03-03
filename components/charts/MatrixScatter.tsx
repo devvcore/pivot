@@ -39,7 +39,7 @@ export default function MatrixScatter({ items, xKey, yKey, labelKey, colorKey }:
   const data = items.slice(0, 20).map((item, i) => ({
     x: severityToNumber(item[xk]),
     y: severityToNumber(item[yk]),
-    name: String(item[lk] || `Item ${i + 1}`).slice(0, 30),
+    name: String(item[lk] || `Item ${i + 1}`),
     color: ck ? (SEVERITY_COLORS[String(item[ck])] || CHART_COLORS.accent) : CHART_COLORS.accent,
     z: 100,
   }));

@@ -28,7 +28,7 @@ export default function RankedBarsChart({ items, nameKey, valueKey, isCurrency }
   const vk = valueKey || findKey(sample, ["amount", "value", "revenue", "cost", "impact", "score", "count"]) || Object.keys(sample).find(k => typeof sample[k] === "number") || Object.keys(sample)[1];
 
   const data = items.slice(0, 12).map((item, i) => ({
-    name: String(item[nk] || `Item ${i + 1}`).slice(0, 30),
+    name: String(item[nk] || `Item ${i + 1}`),
     value: typeof item[vk] === "number" ? item[vk] as number : parseFloat(String(item[vk])) || 0,
   })).sort((a, b) => b.value - a.value);
 
@@ -36,7 +36,7 @@ export default function RankedBarsChart({ items, nameKey, valueKey, isCurrency }
     <ResponsiveContainer width="100%" height={Math.max(200, data.length * 36)}>
       <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
         <XAxis type="number" tickFormatter={isCurrency ? formatDollar : undefined} fontSize={11} />
-        <YAxis type="category" dataKey="name" width={120} fontSize={11} tick={{ fill: "#71717a" }} />
+        <YAxis type="category" dataKey="name" width={160} fontSize={11} tick={{ fill: "#71717a" }} />
         <Tooltip formatter={((v: number) => isCurrency ? formatDollar(v) : v.toLocaleString()) as any} contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           {data.map((_, i) => (
