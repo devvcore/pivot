@@ -13,7 +13,7 @@ import {
 import type { Job, MVPDeliverables } from "@/lib/types";
 import { CHAPTERS, getPopulatedChapters } from "@/lib/chapters";
 import ChapterView from "./ChapterView";
-import { AgentChatButton } from "./AgentChat";
+import { AgentChatButton, type NavigateAction } from "./AgentChat";
 import { CoachChatButton } from "./CoachChat";
 import { ReuploadDrawer } from "./ReuploadDrawer";
 import { ShareModal } from "./ShareModal";
@@ -163,6 +163,16 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
       delete next[section];
       return next;
     });
+  };
+
+  // Navigation handler for Pivvy/Coach chat agents
+  const handleAgentNavigate = (action: NavigateAction) => {
+    setActiveChapter(action.chapter);
+    if (action.chapter === "dashboard" && action.coreTab != null) {
+      setCoreTab(action.coreTab);
+    }
+    // Scroll to top of content area
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -633,7 +643,9 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
                     {(ir.issues || []).map((issue, i) => {
                       const isExpanded = expandedIssues.has(i);
                       const issueAny = issue as any;
-                      const hasDetails = issueAny.recommendation || issueAny.mitigation || issueAny.owner || issueAny.timeline || issueAny.recoveryActions;
+                      const hasSolution = issue.solution || issue.solutionSteps?.length || issue.expectedROI || issue.implementationCost || issue.implementationTimeline || issue.alternativeSolutions?.length;
+                      const hasLegacyDetails = issueAny.recommendation || issueAny.mitigation || issueAny.owner || issueAny.timeline || issueAny.recoveryActions;
+                      const hasDetails = hasSolution || hasLegacyDetails;
                       return (
                         <div
                           key={i}
@@ -660,6 +672,41 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
                             </div>
                           </div>
                           <p className="font-semibold text-zinc-900 mb-1 break-words">{issue.description}</p>
+
+                          {/* Solution preview — always visible */}
+                          {issue.solution && (
+                            <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <span className="text-[10px] font-mono font-bold text-emerald-700 uppercase tracking-widest">Recommended Solution</span>
+                              </div>
+                              <p className="text-sm text-emerald-900 leading-relaxed break-words">{issue.solution}</p>
+                              {/* ROI / Cost / Timeline badges */}
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {issue.expectedROI && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                    ROI: {issue.expectedROI}
+                                  </span>
+                                )}
+                                {issue.implementationCost && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-zinc-100 text-zinc-700 px-2.5 py-1 rounded-full border border-zinc-200">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    Cost: {issue.implementationCost}
+                                  </span>
+                                )}
+                                {issue.implementationTimeline && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-200">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    {issue.implementationTimeline}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           <AnimatePresence>
                             {isExpanded && (
                               <motion.div
@@ -669,7 +716,36 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
                                 transition={{ duration: 0.2 }}
                                 className="overflow-hidden"
                               >
-                                <div className="mt-3 pt-3 border-t border-zinc-100 space-y-2">
+                                <div className="mt-3 pt-3 border-t border-zinc-100 space-y-3">
+                                  {/* Implementation Steps */}
+                                  {issue.solutionSteps && issue.solutionSteps.length > 0 && (
+                                    <div className="bg-zinc-50 rounded-xl p-4">
+                                      <span className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest">Implementation Steps</span>
+                                      <ol className="mt-2 space-y-2">
+                                        {issue.solutionSteps.map((step: string, si: number) => (
+                                          <li key={si} className="text-sm text-zinc-700 flex items-start gap-3">
+                                            <span className="flex-shrink-0 w-5 h-5 bg-zinc-900 text-white text-[10px] font-mono rounded-full flex items-center justify-center mt-0.5">{si + 1}</span>
+                                            <span className="break-words">{step}</span>
+                                          </li>
+                                        ))}
+                                      </ol>
+                                    </div>
+                                  )}
+                                  {/* Alternative Solutions */}
+                                  {issue.alternativeSolutions && issue.alternativeSolutions.length > 0 && (
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Alternative Approaches</span>
+                                      <ul className="mt-1.5 space-y-1.5">
+                                        {issue.alternativeSolutions.map((alt: string, ai: number) => (
+                                          <li key={ai} className="text-sm text-zinc-600 flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                                            <span className="text-amber-500 mt-0.5 flex-shrink-0">&#x25C6;</span>
+                                            <span className="break-words">{alt}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  {/* Legacy detail fields */}
                                   {issueAny.recommendation && (
                                     <div>
                                       <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Recommendation</span>
@@ -934,10 +1010,12 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
       <CoachChatButton
         orgId={job.questionnaire.orgId ?? "default-org"}
         runId={runId}
+        onNavigate={handleAgentNavigate}
       />
       <AgentChatButton
         orgId={job.questionnaire.orgId ?? "default-org"}
         orgName={job.questionnaire.organizationName}
+        onNavigate={handleAgentNavigate}
       />
     </div>
   );

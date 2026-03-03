@@ -7,7 +7,7 @@ export interface ShareLink {
   orgId: string;
   jobId: string;
   createdBy: string;
-  role: "owner" | "employee" | "coach";
+  role: "owner" | "employee" | "coach" | "other";
   employeeName?: string;
   token: string;
   expiresAt?: string;
@@ -34,7 +34,7 @@ export function createShareLink(params: {
   orgId: string;
   jobId: string;
   createdBy: string;
-  role: "owner" | "employee" | "coach";
+  role: "owner" | "employee" | "coach" | "other";
   employeeName?: string;
   expiresInDays?: number;
 }): ShareLink {

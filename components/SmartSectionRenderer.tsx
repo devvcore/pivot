@@ -18,6 +18,7 @@ import InsightCallout from "./infographics/InsightCallout";
 import KeyValueGrid from "./infographics/KeyValueGrid";
 import StatusGrid from "./infographics/StatusGrid";
 import ComparisonBar from "./infographics/ComparisonBar";
+import { AcronymText } from "./AcronymTooltip";
 
 interface SmartSectionRendererProps {
   sectionKey: string;
@@ -75,6 +76,19 @@ function extractRecommendations(data: Record<string, unknown>): string[] {
     return recs.filter((r): r is string => typeof r === "string").slice(0, 5);
   }
   return [];
+}
+
+/** Extract all additional string arrays (e.g., contentPillars, toolsRecommended) beyond recommendations */
+function extractStringArrays(data: Record<string, unknown>): { key: string; items: string[] }[] {
+  const skipKeys = new Set(["recommendations", "actions", "actionItems", "nextSteps"]);
+  const result: { key: string; items: string[] }[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    if (skipKeys.has(key) || key.endsWith("_source") || key.startsWith("_")) continue;
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === "string") {
+      result.push({ key, items: val.filter((v): v is string => typeof v === "string") });
+    }
+  }
+  return result.slice(0, 4);
 }
 
 /** Extract top-level metrics (non-array, non-object scalar values) */
@@ -253,6 +267,7 @@ export default function SmartSectionRenderer({ sectionKey, data, title, claimVal
   const recommendations = useMemo(() => extractRecommendations(data), [data]);
   const metrics = useMemo(() => extractMetrics(data), [data]);
   const subObjects = useMemo(() => extractSubObjects(data), [data]);
+  const stringArrays = useMemo(() => extractStringArrays(data), [data]);
   const relevanceNote = typeof data.relevanceNote === "string" ? data.relevanceNote : null;
   const summary = typeof data.summary === "string" ? data.summary : null;
   const headline = typeof data.headline === "string" ? data.headline : null;
@@ -275,7 +290,7 @@ export default function SmartSectionRenderer({ sectionKey, data, title, claimVal
       {/* Summary + relevance + claim validation */}
       {(summary || relevanceNote || (claimValidations && claimValidations.length > 0)) && (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          {summary && <p className="text-sm text-zinc-700 leading-relaxed">{summary}</p>}
+          {summary && <p className="text-sm text-zinc-700 leading-relaxed"><AcronymText text={summary} /></p>}
           {relevanceNote && (
             <p className="mt-2 text-xs text-zinc-500 italic">{relevanceNote}</p>
           )}
@@ -299,7 +314,7 @@ export default function SmartSectionRenderer({ sectionKey, data, title, claimVal
         <div className={`grid gap-3 ${metrics.length <= 2 ? "grid-cols-2" : metrics.length === 3 ? "grid-cols-3" : "grid-cols-2 md:grid-cols-4"}`}>
           {metrics.map(({ key, value, source }) => (
             <div key={key} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider break-words leading-tight">{formatKey(key)}</p>
+              <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider break-words leading-tight"><AcronymText text={formatKey(key)} /></p>
               <p className={`mt-1 text-lg font-bold tabular-nums ${getMetricColor(key, value)}`}>
                 {formatMetricValue(key, value)}
               </p>
@@ -376,6 +391,25 @@ export default function SmartSectionRenderer({ sectionKey, data, title, claimVal
         </div>
       )}
 
+      {/* Additional string arrays (contentPillars, toolsRecommended, etc.) */}
+      {stringArrays.length > 0 && (
+        <div className={`grid gap-3 ${stringArrays.length === 1 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
+          {stringArrays.map(({ key, items }) => (
+            <div key={key} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <h4 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-3">{formatKey(key)}</h4>
+              <ul className="space-y-2">
+                {items.slice(0, compact ? 4 : 8).map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-zinc-700">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-zinc-400 flex-shrink-0" />
+                    <AcronymText text={item} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Recommendations */}
       {recommendations.length > 0 && (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -384,7 +418,7 @@ export default function SmartSectionRenderer({ sectionKey, data, title, claimVal
             {recommendations.slice(0, compact ? 3 : 5).map((rec, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-zinc-700">
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-zinc-400 flex-shrink-0" />
-                {rec}
+                <AcronymText text={rec} />
               </li>
             ))}
           </ul>

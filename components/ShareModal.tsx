@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Share2, Link, Copy, Trash2, Shield, User, GraduationCap,
-  X, Check, Loader2, AlertCircle, Users,
+  X, Check, Loader2, AlertCircle, Users, Globe,
 } from "lucide-react";
 
 interface ShareLink {
   id: string;
-  role: "owner" | "employee" | "coach";
+  role: "owner" | "employee" | "coach" | "other" | "other";
   employeeName?: string;
   token: string;
   url?: string;
@@ -60,10 +60,20 @@ const ROLES = [
     borderColor: "border-emerald-200",
     activeColor: "bg-emerald-600 text-white border-emerald-600",
   },
+  {
+    value: "other" as const,
+    label: "Other",
+    description: "Generic guide with health score and recommendations",
+    icon: Globe,
+    color: "text-zinc-600",
+    bgColor: "bg-zinc-50",
+    borderColor: "border-zinc-200",
+    activeColor: "bg-zinc-600 text-white border-zinc-600",
+  },
 ];
 
 export function ShareModal({ runId, orgId, open, onClose }: ShareModalProps) {
-  const [selectedRole, setSelectedRole] = useState<"owner" | "employee" | "coach">("owner");
+  const [selectedRole, setSelectedRole] = useState<"owner" | "employee" | "coach" | "other">("owner");
   const [employeeName, setEmployeeName] = useState("");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
@@ -230,7 +240,7 @@ export function ShareModal({ runId, orgId, open, onClose }: ShareModalProps) {
                   <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-3 block">
                     Select Role
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {ROLES.map((role) => {
                       const Icon = role.icon;
                       const isActive = selectedRole === role.value;

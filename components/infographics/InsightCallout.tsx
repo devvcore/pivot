@@ -1,6 +1,7 @@
 "use client";
 
 import { Info, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
+import { AcronymText } from "../AcronymTooltip";
 
 type Variant = "info" | "warning" | "success" | "critical";
 
@@ -31,7 +32,7 @@ export default function InsightCallout({ text, variant = "info", label }: Insigh
               {label}
             </p>
           )}
-          <p className={`text-sm leading-relaxed ${v.text}`}>{text}</p>
+          <p className={`text-sm leading-relaxed ${v.text}`}><AcronymText text={text} /></p>
         </div>
       </div>
     </div>

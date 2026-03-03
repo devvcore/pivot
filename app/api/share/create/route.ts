@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["owner", "employee", "coach"].includes(role)) {
+    if (!["owner", "employee", "coach", "other"].includes(role)) {
       return NextResponse.json(
-        { error: "role must be owner, employee, or coach" },
+        { error: "role must be owner, employee, coach, or other" },
         { status: 400 },
       );
     }

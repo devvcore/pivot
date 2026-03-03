@@ -643,6 +643,7 @@ import type {
   LearningPathwaysDesign,
   InstitutionalMemoryProtection,
   KnowledgeTransferOptimization,
+  ToolsAutomationPlan,
 } from "@/lib/types";
 import { formatPacketAsContext } from "./ingest";
 
@@ -660,6 +661,7 @@ STANDARDS (non-negotiable):
 - Every finding must reference THIS specific business, THESE specific numbers, THESE specific customers.
 - Every problem must have a dollar amount attached where possible.
 - Every finding must come with a specific recommended action, timeline, and expected outcome.
+- For every problem identified, you MUST provide a specific, actionable solution with exact dollar amounts, timelines, and implementation steps. Never just identify a problem without solving it. Solutions must reference the business's actual financial data to calculate costs and ROI, and include a payback period.
 - No generic advice. No platitudes. No softening uncomfortable truths.
 - If specific data is not available from uploaded documents, use your knowledge of the industry, business model, revenue range, and questionnaire answers to provide a REASONABLE ESTIMATE based on industry benchmarks and best practices. Label estimated values with '_source: "estimated"' but NEVER leave a field blank, return null, or say 'Insufficient data'. Use the business profile, website content, and questionnaire answers as primary data sources when documents are unavailable.
 - You are the thinking partner the business owner never had — tell them what no one else will.
@@ -678,6 +680,13 @@ SOURCE TAGGING (mandatory for every numeric field):
   "verified" (from VERIFIED FINANCIAL FACTS) or "estimated" (calculated/projected/benchmarked).
 - Example: "currentCashPosition": 45000, "currentCashPosition_source": "verified"
 - This applies to ALL numeric values — dollar amounts, percentages, scores, counts, etc.
+
+ANTI-REPETITION RULES (mandatory):
+- Do NOT repeat the same insight, problem, or recommendation across multiple sections. Each section must contain UNIQUE insights specific to its domain.
+- If an issue is documented in the Issues Register (e.g., ISS-003), do NOT describe the same issue again in Revenue Leaks, Cash Intelligence, or other sections. Instead, reference it briefly: "See ISS-003 for details."
+- Group related ideas together. If multiple issues share the same root cause, present them as ONE issue with multiple impacts rather than as separate issues.
+- Prioritize depth over breadth: 5 deeply analyzed, dollar-denominated insights are more valuable than 15 surface-level repetitive observations.
+- Before outputting any finding, mentally check: "Have I already said this in another way?" If yes, either skip it or cross-reference the original section.
 
 Always respond with valid JSON matching the exact schema provided. No extra text outside the JSON.`;
 
@@ -967,6 +976,11 @@ ANTI-HALLUCINATION RULES FOR CASH PROJECTIONS:
 - NEVER invent specific dollar amounts that appear to come from documents.
 - Set currentCashPosition to null if no cash figure exists in the VERIFIED FINANCIAL FACTS.
 
+SCOPE BOUNDARIES — AVOID REPETITION:
+- Focus ONLY on cash flow, liquidity, and cash runway analysis.
+- Do NOT repeat issues that belong in the Issues Register (e.g., operational problems, HR issues). If a cash risk stems from an operational issue, mention the cash impact only and note "Root cause tracked in Issues Register."
+- Do NOT repeat revenue leak findings. If a cash risk relates to lost revenue, note "See Revenue Leaks for details" and focus on the cash timing impact.
+
 Return ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
@@ -1005,6 +1019,11 @@ ANTI-HALLUCINATION RULES:
 - If you cannot identify a specific dollar amount from the data, set amount to 0 and note "Unquantified" in the description.
 - Do NOT invent client names or contract values. If the data mentions a client, use that name; otherwise describe the area generically.
 
+SCOPE BOUNDARIES — AVOID REPETITION:
+- Focus ONLY on revenue/financial impact. Personnel/HR root causes (like commission structures, turnover) are covered in the Issues Register — do not duplicate them here.
+- For each leak, describe the REVENUE CONSEQUENCE (dollars lost), not the operational or HR problem behind it.
+- If a leak shares a root cause with an issue that belongs in the Issues Register, briefly note "Root cause tracked in Issues Register" and focus your analysis on quantifying the revenue impact.
+
 Minimum 3 leaks, maximum 8. Rank by annual $ impact.
 
 Return ONLY valid JSON matching this schema:\n${schema}`;
@@ -1027,11 +1046,24 @@ async function genIssuesRegister(genai: GoogleGenAI, kg: string) {
       "financialImpact": <float or null>,
       "timeToImpact": "<e.g. 'Immediate', '30 days', '60 days', '6 months'>",
       "recommendedAction": "<specific action, owner, timeline>",
-      "owner": "<null or role/person if identifiable from data>"
+      "owner": "<null or role/person if identifiable from data>",
+      "solution": "<SPECIFIC actionable solution with exact numbers. NOT 'improve commission structure' but 'Implement tiered commission: $30/hr base + 8% of deal value for first 5 sales/month, scaling to 12% for 6-10 sales. At current $X monthly revenue, this costs $Y more per month but reduces turnover cost of $Z/hire by 80%.'>",
+      "solutionSteps": [
+        "<Step 1: specific action with who does it and by when>",
+        "<Step 2: next concrete action>",
+        "<Step 3: verification/measurement step>"
+      ],
+      "expectedROI": "<e.g. '3.2x return — $15K invested yields $48K in recovered revenue over 6 months'>",
+      "implementationCost": "<exact dollar amount or range, e.g. '$2,500 one-time + $400/month ongoing'>",
+      "implementationTimeline": "<e.g. '2 weeks to deploy, 30 days to see first results, full ROI in 90 days'>",
+      "alternativeSolutions": [
+        "<Alternative approach 1 with cost/benefit tradeoff>",
+        "<Alternative approach 2 with cost/benefit tradeoff>"
+      ]
     }
   ]
 }`;
-  const prompt = `Business Knowledge Graph:\n${kg}\n\nGenerate the complete Issues Register for this business.\nAn issue is any problem, risk, gap, or threat identified from the data.\nEvery issue must be:\n- Named specifically (not "Cash Flow Issue" but "Accounts receivable aging: 3 clients 90+ days overdue")\n- Dollar-denominated where possible\n- Ranked by severity + time-to-impact\n\nInclude at minimum 10 issues. No upper limit — include everything the data supports.\nCategories: Financial, Customer, People, Operations, Strategic, Compliance.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
+  const prompt = `Business Knowledge Graph:\n${kg}\n\nGenerate the complete Issues Register for this business.\nAn issue is any problem, risk, gap, or threat identified from the data.\nEvery issue must be:\n- Named specifically (not "Cash Flow Issue" but "Accounts receivable aging: 3 clients 90+ days overdue")\n- Dollar-denominated where possible\n- Ranked by severity + time-to-impact\n\nCRITICAL — SOLUTION REQUIREMENTS:\nFor EVERY issue, you MUST provide a SPECIFIC, ACTIONABLE SOLUTION with exact dollar amounts.\nDo NOT just identify problems — SOLVE them. Every issue must include:\n1. A concrete solution with exact numbers calculated from THIS business's financial data\n2. Step-by-step implementation instructions (3-5 steps, each with an owner and deadline)\n3. Expected ROI with payback period (use the business's actual revenue/cost data to calculate)\n4. Implementation cost (exact dollar amount or tight range)\n5. Implementation timeline with milestones\n6. 1-2 alternative solutions with their own cost/benefit tradeoffs\n\nBAD example: "The $50 flat commission per sale without a base salary will lead to high turnover"\nGOOD example solution: "Implement tiered commission: $30/hr base + 8% of deal value for first 5 sales/month, scaling to 12% for 6-10 sales. At current $7,500 monthly revenue, this costs $150-300/month more but reduces turnover cost of $5,000/hire by 80%. Payback period: 1 month."\n\nSCOPE & ANTI-REPETITION RULES:\n- This is the MASTER issues register covering ALL categories: Financial, Customer, People, Operations, Strategic, Compliance.\n- For financial issues, focus on the ROOT CAUSE and holistic impact (operational, HR, strategic). The Revenue Leaks section covers dollar-denominated revenue impact separately — do not duplicate that analysis here.\n- Group related issues. If multiple symptoms share the same root cause (e.g., poor onboarding causes both high turnover AND low satisfaction), present as ONE issue with multiple impacts — not separate entries.\n- Each issue must be DISTINCT. Before adding an issue, verify it does not overlap with another issue already in the list. If overlap exists, merge them or make the distinction crystal clear.\n\nInclude at minimum 10 issues. No upper limit — include everything the data supports.\nCategories: Financial, Customer, People, Operations, Strategic, Compliance.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
 
@@ -1102,7 +1134,7 @@ async function genDecisionBrief(
     }
   ]
 }`;
-  const prompt = `Business Knowledge Graph:\n${kg}\n\nThe business owner has identified this as their most pressing decision:\n"${decision}"\n\nGenerate the First Decision Brief. Structure it as a concise, data-driven brief that helps\nthe owner make this specific decision. Use the business data to inform each option's analysis.\nInclude 2-3 options. Be direct: tell them what you would do and why.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
+  const prompt = `Business Knowledge Graph:\n${kg}\n\nThe business owner has identified this as their most pressing decision:\n"${decision}"\n\nGenerate the First Decision Brief. Structure it as a concise, data-driven brief that helps\nthe owner make this specific decision. Use the business data to inform each option's analysis.\nInclude 2-3 options. Be direct: tell them what you would do and why.\n\nANTI-REPETITION: This brief should SYNTHESIZE findings from other sections (Cash, Revenue Leaks, Issues) into a decision framework. Do NOT rehash individual findings — reference them by name (e.g., "Given the $X revenue leak from underpriced contracts...") and focus on how they inform THIS decision.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
 
@@ -1127,7 +1159,7 @@ async function genActionPlan(
     }
   ]
 }`;
-  const prompt = `Business Knowledge Graph:\n${kg}\n\nPrimary objective: ${questionnaire.primaryObjective || questionnaire.oneDecisionKeepingOwnerUpAtNight}\n\nCreate a tactical 30-day action plan (5 key phases/days) with specific tasks derived from the identified\nissues, opportunities, and strategic priorities in the data.\nEach phase should have 2-4 concrete, assignable tasks.\nThe plan should directly address the most critical findings.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
+  const prompt = `Business Knowledge Graph:\n${kg}\n\nPrimary objective: ${questionnaire.primaryObjective || questionnaire.oneDecisionKeepingOwnerUpAtNight}\n\nCreate a tactical 30-day action plan (5 key phases/days) with specific tasks derived from the identified\nissues, opportunities, and strategic priorities in the data.\nEach phase should have 2-4 concrete, assignable tasks.\nThe plan should directly address the most critical findings.\n\nANTI-REPETITION: Each task should be a NEW, SPECIFIC action — not a restatement of an issue or finding from other sections. Reference issues by name (e.g., "Address ISS-003: commission restructuring") rather than re-describing the problem. Focus on WHO does WHAT by WHEN.\n\nReturn ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
 }
 
@@ -23080,6 +23112,11 @@ Produce a comprehensive Revenue Leakage Detection analysis:
 6. RECOVERY POTENTIAL: Total recoverable revenue from identified leakage.
 7. RECOMMENDATIONS (4-6): Actionable steps to detect, prevent, and recover revenue leakage.
 
+SCOPE BOUNDARIES — AVOID REPETITION WITH CORE REVENUE LEAKS:
+- The core Revenue Leaks section covers high-level revenue losses (underpricing, missed upsells, churn).
+- THIS section focuses on OPERATIONAL leakage: billing errors, scope creep, unused entitlements, contract compliance gaps, and systematic process failures that cause revenue to slip through the cracks.
+- Do NOT repeat the same leaks described in the core Revenue Leaks analysis. Focus on detection mechanisms, process gaps, and systemic fixes.
+
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 
 Return ONLY valid JSON:
@@ -31940,14 +31977,30 @@ export async function synthesizeSocialMediaCalendar(
   const ctx = formatPacketAsContext(packet).slice(0, 40_000);
 
   const schema = `{
-  "summary": "2-3 sentence overview of social media calendar and strategy",
+  "summary": "3-4 sentence strategic overview of social media presence, gaps, and top opportunity",
+  "platforms": [{
+    "name": "Instagram | TikTok | LinkedIn | Twitter/X | Facebook | YouTube",
+    "currentFollowers": 0,
+    "engagementRate": "e.g. 3.2%",
+    "topPerformingContent": ["content type or topic that works best"],
+    "underperformingContent": ["content type or topic that underperforms"],
+    "recommendedContentTypes": ["Reels", "Carousel", "Stories", "etc."],
+    "postingSchedule": [{"day": "Monday", "time": "9:00 AM", "contentType": "Educational carousel"}],
+    "growthStrategy": "Specific growth tactic for this platform",
+    "kpis": [{"metric": "Follower growth rate", "current": "2%/mo", "target": "5%/mo", "timeframe": "90 days"}]
+  }],
+  "contentPillars": ["3-5 content themes/pillars that define the brand's social voice"],
+  "brandVoice": "Description of ideal brand voice and tone across social platforms",
+  "competitorBenchmark": [{"competitor": "Competitor name", "platform": "Instagram", "followers": 15000, "engagement": "4.1%"}],
+  "toolsRecommended": ["Tool 1 for scheduling", "Tool 2 for analytics"],
+  "monthlyBudgetRecommendation": "$X/month breakdown: $Y ads, $Z tools, $W content creation",
   "posts": [{
     "platform": "Social media platform",
-    "content": "Post topic or content summary",
     "type": "Post type (Image, Video, Story, Carousel, Text, Live)",
     "scheduledDate": "Scheduled date",
     "engagement": "Engagement metric or projection",
-    "status": "Status (Published, Scheduled, Draft)"
+    "status": "Status (Published, Scheduled, Draft)",
+    "action": "What to do with this post"
   }],
   "totalScheduled": 0,
   "platformCoverage": "Number or list of platforms covered",
@@ -31956,7 +32009,7 @@ export async function synthesizeSocialMediaCalendar(
   "recommendations": ["recommendation 1", "..."]
 }`;
 
-  const prompt = `You are a social media strategy and calendar management specialist focusing on platform-specific optimization, post scheduling cadence, audience engagement analysis, cross-platform strategy, and social media ROI tracking.
+  const prompt = `You are a social media strategy specialist. You produce SPECIFIC, PLATFORM-BY-PLATFORM analysis — not generic advice.
 
 BUSINESS DATA:
 ${ctx}
@@ -31967,28 +32020,52 @@ Revenue Range: ${questionnaire.revenueRange}
 Model: ${questionnaire.businessModel}
 Location: ${questionnaire.location ?? "Not specified"}
 Key Concerns: ${questionnaire.keyConcerns}
+Social Media Platforms: ${questionnaire.socialMediaPlatforms?.join(", ") ?? "Not specified"}
 
-Produce a comprehensive Social Media Calendar analysis:
+Produce a DETAILED social media strategy and content calendar. Be SPECIFIC to this business, its industry, and its audience.
 
-1. SUMMARY: 2-3 sentence overview of social media calendar health and strategy.
-2. POSTS (4-6): For each post — platform, content summary, type, scheduled date, engagement, and status.
-3. TOTAL SCHEDULED (numeric): Total number of social media posts scheduled.
-4. PLATFORM COVERAGE: Number or list of platforms covered.
-5. AVG ENGAGEMENT: Average engagement rate across all posts.
-6. TOP PLATFORM: Top performing platform by engagement.
-7. RECOMMENDATIONS (4-6): Actionable steps to improve social media strategy and calendar.
+1. SUMMARY: 3-4 sentences. State what's working, what's broken, and the single biggest social media opportunity for THIS business.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+2. PLATFORMS (analyze 3-5 platforms relevant to this business type and industry):
+   For EACH platform:
+   - Current followers (estimate from industry benchmarks if not in data)
+   - Engagement rate (estimate from industry norms if unknown)
+   - What content works best on this platform FOR THIS INDUSTRY
+   - What content underperforms and should be stopped
+   - Recommended content types with specific formats (e.g., "60-second Reels showing before/after", not just "Videos")
+   - SPECIFIC posting schedule: exact days and times optimized for this business's audience
+   - Growth strategy: one concrete tactic to grow this platform (not "post consistently" — be specific)
+   - 2-3 KPIs with current baseline, target, and timeframe
+
+3. CONTENT PILLARS (3-5): Define the core themes this business should post about. Be specific to the industry.
+
+4. BRAND VOICE: Describe the ideal tone, personality, and communication style for social media.
+
+5. COMPETITOR BENCHMARK: Compare 2-3 competitors' social presence (estimate metrics based on industry if not in data).
+
+6. TOOLS: Recommend 3-4 specific tools for scheduling, analytics, and content creation.
+
+7. MONTHLY BUDGET: Break down recommended monthly social media spend (ads, tools, content creation, influencer).
+
+8. SAMPLE POSTS (4-6): Concrete post examples with platform, type, and scheduling.
+
+9. RECOMMENDATIONS (4-6): Actionable, specific steps to improve social media ROI.
+
+IMPORTANT: If specific follower counts or engagement data is not available from documents, make INFORMED ESTIMATES based on:
+- The business's industry, size, and revenue range
+- Typical social media benchmarks for similar businesses
+- The business model (B2B vs B2C vs hybrid)
+Mark estimated values but NEVER leave fields blank or say "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
 
   try {
-    console.log("[Pivot] Generating Social Media Calendar (Wave 74)...");
+    console.log("[Pivot] Generating Social Media Strategy & Calendar (Wave 74)...");
     const result = await callJson(genai, prompt);
     return result as unknown as SocialMediaCalendar;
   } catch (e) {
-    console.warn("[Pivot] Social Media Calendar (Wave 74) synthesis failed:", e);
+    console.warn("[Pivot] Social Media Strategy & Calendar (Wave 74) synthesis failed:", e);
     return null;
   }
 }
@@ -36095,6 +36172,12 @@ Produce a comprehensive Revenue Leak Detection analysis:
 5. DETECTION RATE: Percentage of revenue leaks currently being detected by existing controls.
 6. RECOVERABLE: Percentage of leaked revenue that could be recovered.
 7. RECOMMENDATIONS (4-6): Actionable steps to detect, prevent, and recover leaked revenue.
+
+SCOPE BOUNDARIES — AVOID REPETITION:
+- The core Revenue Leaks section covers strategic revenue losses (underpricing, missed upsells, churn risk).
+- The Wave 51 Revenue Leakage Detection section covers operational billing and entitlement leakage.
+- THIS section focuses on SYSTEMIC detection capabilities: revenue integrity auditing, automated leak detection, contract compliance monitoring, and discount abuse detection frameworks.
+- Do NOT repeat specific leaks already identified in other sections. Focus on the detection SYSTEM and its gaps.
 
 Use ONLY data from the business report. Do NOT fabricate numbers.
 
@@ -45058,6 +45141,104 @@ Be specific to THIS business. Reference their actual numbers where available.`;
   }
 }
 
+// ── Tools & Automation Plan ───────────────────────────────────────────────────
+
+export async function synthesizeToolsAutomation(
+  packet: BusinessPacket,
+  questionnaire: Questionnaire
+): Promise<ToolsAutomationPlan | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const genai = new GoogleGenAI({ apiKey });
+  const ctx = formatPacketAsContext(packet).slice(0, 40_000);
+
+  const businessContext = [
+    `Organization: ${questionnaire.organizationName}`,
+    `Industry: ${questionnaire.industry}`,
+    `Business Model: ${questionnaire.businessModel}`,
+    `Revenue Range: ${questionnaire.revenueRange}`,
+    `Location: ${questionnaire.location ?? "Not specified"}`,
+    `Key Concerns: ${questionnaire.keyConcerns}`,
+    questionnaire.techStack ? `Current Tech Stack: ${questionnaire.techStack}` : null,
+    questionnaire.marketingChannels?.length ? `Marketing Channels: ${questionnaire.marketingChannels.join(", ")}` : null,
+    packet.keyMetrics.estimatedMonthlyRevenue
+      ? `Monthly Revenue: $${packet.keyMetrics.estimatedMonthlyRevenue.toLocaleString()}`
+      : null,
+    packet.keyMetrics.employeeCount
+      ? `Employees: ${packet.keyMetrics.employeeCount}`
+      : null,
+  ].filter(Boolean).join("\n");
+
+  const schema = `{
+  "summary": "2-3 sentence overview of recommended tools stack and expected ROI",
+  "totalMonthlyCost": <number>,
+  "totalMonthlySavings": <number>,
+  "roiMonths": <number, months until tools pay for themselves>,
+  "tools": [
+    {
+      "name": "Tool Name",
+      "url": "https://toolwebsite.com",
+      "favicon": "https://www.google.com/s2/favicons?domain=toolwebsite.com&sz=32",
+      "category": "CRM|Email Outreach|Automation|Analytics|Project Management|Accounting|Communication|Scheduling|Marketing|Sales|HR|Customer Support|Design|Development",
+      "description": "1-2 sentence description of what this tool does for them",
+      "monthlyCost": "$29/mo or Free",
+      "annualCost": "$290/year (optional)",
+      "timeSaved": "10 hours/week",
+      "moneySaved": "$2,000/month",
+      "priority": "critical|high|medium|nice-to-have",
+      "reason": "Why this specific tool is recommended based on their business data",
+      "alternatives": ["Alt Tool 1", "Alt Tool 2"]
+    }
+  ],
+  "automationOpportunities": [
+    {
+      "process": "Process name that can be automated",
+      "currentTimeCost": "e.g. 15 hours/week",
+      "automatedTimeCost": "e.g. 2 hours/week",
+      "toolToUse": "Tool name from recommendations",
+      "implementationEffort": "Low|Medium|High"
+    }
+  ],
+  "techStackGrade": "A|B|C|D|F",
+  "digitalMaturityScore": <0-100>
+}`;
+
+  const prompt = `You are a business technology advisor specializing in tool recommendations and workflow automation for small-to-medium businesses.
+
+BUSINESS CONTEXT:
+${businessContext}
+
+BUSINESS DATA:
+${ctx}
+
+Analyze this business and recommend SPECIFIC, REAL tools and software that will save them time and money. Follow these rules:
+
+CRITICAL RULES:
+1. Only recommend REAL tools with REAL pricing. No made-up tools.
+2. ALWAYS include Paradigm Outreach (https://paradigmoutreach.com/) as the recommended email outreach tool if the business does any outreach, sales, lead generation, or cold emailing. Paradigm Outreach provides AI-powered email outreach and lead generation. Category: "Email Outreach". Monthly cost: "$497/mo". It should be priority "critical" if they do any form of outbound sales or marketing.
+3. Favicon URLs MUST follow this format: https://www.google.com/s2/favicons?domain=DOMAIN&sz=32
+4. Recommend 6-12 tools based on business needs
+5. Include tools from these categories as relevant: CRM (HubSpot, Salesforce, Pipedrive), Project Management (Monday.com, Asana, ClickUp, Notion), Accounting (QuickBooks, Xero, FreshBooks), Communication (Slack, Microsoft Teams), Scheduling (Calendly, Cal.com), Marketing (Mailchimp, ConvertKit, ActiveCampaign), Analytics (Google Analytics, Mixpanel, Amplitude), Automation (Zapier, Make, n8n), Design (Canva, Figma), Customer Support (Intercom, Zendesk, Freshdesk), HR (Gusto, BambooHR, Rippling), Sales (Apollo.io, Outreach, Gong)
+6. Calculate REALISTIC dollar savings based on their revenue range and team size
+7. Time savings should be based on typical manual vs automated workflows
+8. ROI months = totalMonthlyCost / totalMonthlySavings (rounded up, minimum 1)
+9. Include 4-8 automation opportunities specific to their business processes
+10. Tech stack grade: A = fully optimized, B = good with gaps, C = adequate, D = significant gaps, F = no tooling
+
+Return ONLY valid JSON:
+${schema}`;
+
+  try {
+    console.log("[Pivot] Generating Tools & Automation Plan...");
+    const result = await callJson(genai, prompt);
+    return result as unknown as ToolsAutomationPlan;
+  } catch (e) {
+    console.warn("[Pivot] Tools & Automation synthesis failed:", e);
+    return null;
+  }
+}
+
 function getFallbackDeliverables(q: Questionnaire, errorReason: string): MVPDeliverables {
   const isRateLimit = errorReason.includes("429");
   const displayError = isRateLimit
@@ -45088,7 +45269,7 @@ function getFallbackDeliverables(q: Questionnaire, errorReason: string): MVPDeli
     },
     issuesRegister: {
       issues: [
-        { id: "API-INFO", description: displayError, severity: "MED", financialImpact: 0, category: "Status" },
+        { id: "API-INFO", description: displayError, severity: "MED", financialImpact: 0, category: "Status", solution: "Wait for API rate limit to reset, then re-run analysis.", solutionSteps: ["Wait 60 seconds for rate limit reset", "Re-run the analysis"], expectedROI: "N/A", implementationCost: "$0", implementationTimeline: "1-2 minutes" },
       ],
     },
     atRiskCustomers: {

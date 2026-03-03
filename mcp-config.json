@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pivot": {
+      "command": "npx",
+      "args": ["tsx", "/Users/manny2fly/pivot/mcp-server.ts"]
+    }
+  }
+}

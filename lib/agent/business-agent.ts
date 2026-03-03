@@ -18,6 +18,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { getAgentMemory } from "./memory";
 import { analyzeWebsite } from "./website-analyzer";
+import { findRoute, findRouteById } from "./page-routes";
 import { getJob, listJobs } from "@/lib/job-store";
 import type { ChatMessage, AgentMemory, MVPDeliverables } from "@/lib/types";
 
@@ -225,6 +226,7 @@ const TOOLS = [
             "orgStructureAnalysis", "spanOfControlOptimization", "decisionRightsMapping", "collaborationNetworkMapping", "roleOptimizationAnalysis", "successionPlanningFramework",
             "impactMeasurementDashboard", "esgReportingCompliance", "stakeholderEngagementAnalytics", "communityInvestmentStrategy", "diversityMetricsAnalytics", "greenOperationsOptimization",
             "knowledgeAuditAssessment", "expertiseMappingSystem", "documentationStrategyFramework", "learningPathwaysDesign", "institutionalMemoryProtection", "knowledgeTransferOptimization",
+            "toolsAutomationPlan",
           ],
           description: "Which section of the report to retrieve",
         },
@@ -273,6 +275,25 @@ const TOOLS = [
         },
       },
       required: ["projectionType", "timeframeMonths", "scenario"],
+    },
+  },
+  {
+    name: "navigate_to_page",
+    description:
+      "Navigate the user to a specific page or section in the Pivot analysis. Use this when the user asks to see something, go somewhere, view a specific report section, or when showing them relevant data would help. Examples: 'show me revenue leaks', 'take me to issues', 'where is my health score', 'go to marketing'.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "What the user wants to see or navigate to",
+        },
+        routeId: {
+          type: "string",
+          description: "The specific route ID to navigate to, if known (e.g. 'health-score', 'revenue-leaks', 'financial', 'customers', 'market', 'growth', 'marketing', 'operations', 'risk')",
+        },
+      },
+      required: ["query"],
     },
   },
 ];
@@ -411,10 +432,49 @@ Rules:
       if (!jsonMatch) return `Projection generation failed — could not parse response.`;
 
       const projection = JSON.parse(jsonMatch[0]);
-      return `[Projection Generated]\n${projection.insight}\n${projection.totalImpact}\n\n<!--PROJECTION:${JSON.stringify(projection)}-->`;
+
+      // Build enhanced projection with chartData and metrics for rich chart rendering
+      const chartData = (projection.dataPoints ?? []).map((dp: any) => ({
+        period: dp.month,
+        baseline: dp.baseline,
+        projected: dp.projected,
+      }));
+
+      const firstPoint = projection.dataPoints?.[0];
+      const lastPoint = projection.dataPoints?.[projection.dataPoints.length - 1];
+      const currentValue = firstPoint?.baseline ?? 0;
+      const projectedValue = lastPoint?.projected ?? 0;
+      const changePercent = currentValue > 0
+        ? Math.round(((projectedValue - currentValue) / currentValue) * 100)
+        : 0;
+
+      const enhanced = {
+        ...projection,
+        chartData,
+        metrics: {
+          currentValue,
+          projectedValue,
+          changePercent,
+          timeframe: `${timeframeMonths} months`,
+        },
+      };
+
+      return `[Projection Generated]\n${projection.insight}\n${projection.totalImpact}\n\n<!--PROJECTION:${JSON.stringify(enhanced)}-->`;
     } catch (e) {
       return `Projection generation failed: ${String(e)}`;
     }
+  }
+
+  if (toolName === "navigate_to_page") {
+    const query = args.query as string;
+    const routeId = args.routeId as string | undefined;
+
+    const route = routeId ? findRouteById(routeId) : findRoute(query);
+    if (!route) {
+      return `No matching page found for "${query}". Available sections: Health Score, Cash Intelligence, Revenue Leaks, Issues, At-Risk Clients, Decision Brief, Action Plan, Financial Intelligence, Customers & Revenue, Market & Competition, Growth & Strategy, Marketing & Brand, Operations & Team, Risk & Compliance.`;
+    }
+
+    return `<!--NAVIGATE:${JSON.stringify(route)}-->\nNavigating to ${route.label}: ${route.description}`;
   }
 
   return `Unknown tool: ${toolName}`;
@@ -456,6 +516,7 @@ YOUR TOOLS:
 - get_report_section(section): Get full details from the intelligence report
 - analyze_website(url): Grade and analyze any website for marketing effectiveness
 - generate_projection(projectionType, timeframeMonths, scenario): Create what-if financial projections that render as interactive charts. Use for cash forecasts, revenue recovery modeling, customer churn impact, or growth scenarios.
+- navigate_to_page(query, routeId?): Navigate the user to a specific page or section in the analysis. Use when they say "show me", "take me to", "go to", "where is", or ask to see specific data. Available pages: health-score, cash-intelligence, revenue-leaks, issues, at-risk-clients, decision-brief, action-plan, financial, customers, market, growth, marketing, operations, risk.
 
 AVAILABLE REPORT SECTIONS (for get_report_section):
 Core: healthScore, cashIntelligence, revenueLeakAnalysis, issuesRegister, atRiskCustomers, decisionBrief, actionPlan
@@ -567,6 +628,7 @@ Wave 24: dataGovernance, analyticsMaturity, customerDataPlatform, predictiveMode
 - Wave 106 (Organizational Design): orgStructureAnalysis (organizational structure analysis), spanOfControlOptimization (span of control optimization), decisionRightsMapping (decision rights mapping and clarity), collaborationNetworkMapping (collaboration network analysis), roleOptimizationAnalysis (role optimization and clarity analysis), successionPlanningFramework (succession planning framework)
 - Wave 107 (Social Impact & ESG): impactMeasurementDashboard (social impact measurement dashboard), esgReportingCompliance (ESG reporting compliance assessment), stakeholderEngagementAnalytics (stakeholder engagement analytics), communityInvestmentStrategy (community investment strategy), diversityMetricsAnalytics (diversity and inclusion metrics), greenOperationsOptimization (green operations optimization)
 - Wave 108 (Knowledge Management): knowledgeAuditAssessment (knowledge audit and assessment), expertiseMappingSystem (expertise mapping across organization), documentationStrategyFramework (documentation strategy framework), learningPathwaysDesign (learning pathways design), institutionalMemoryProtection (institutional memory protection), knowledgeTransferOptimization (knowledge transfer optimization)
+- Tools & Automation: toolsAutomationPlan (recommended tools, software, and automations with costs, savings, ROI, and implementation priorities)
 
 BUSINESS INTELLIGENCE MEMORY (${memory.orgName}):
 ${memory.summary}

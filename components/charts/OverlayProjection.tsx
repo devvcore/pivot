@@ -2,7 +2,7 @@
 "use client";
 
 import { ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { X } from "lucide-react";
+import { X, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import { CHART_COLORS, TOOLTIP_STYLE, formatDollar } from "./chart-utils";
 
@@ -11,6 +11,13 @@ interface OverlayProjectionProps {
     title?: string;
     subtitle?: string;
     dataPoints: { month: string; baseline: number; projected: number }[];
+    chartData?: { period: string; baseline: number; projected: number }[];
+    metrics?: {
+      currentValue: number;
+      projectedValue: number;
+      changePercent: number;
+      timeframe: string;
+    };
     insight?: string;
     totalImpact?: string;
   };
@@ -18,7 +25,15 @@ interface OverlayProjectionProps {
 }
 
 export function OverlayProjection({ data, onDismiss }: OverlayProjectionProps) {
-  if (!data.dataPoints?.length) return null;
+  // Use chartData if available, fall back to dataPoints
+  const chartPoints = data.dataPoints?.length
+    ? data.dataPoints
+    : data.chartData?.map(d => ({ month: d.period, baseline: d.baseline, projected: d.projected })) ?? [];
+
+  if (!chartPoints.length) return null;
+
+  const metrics = data.metrics;
+  const isPositive = metrics ? metrics.changePercent >= 0 : true;
 
   return (
     <motion.div
@@ -33,8 +48,35 @@ export function OverlayProjection({ data, onDismiss }: OverlayProjectionProps) {
       )}
       {data.title && <h4 className="text-xs font-semibold text-zinc-900 mb-0.5">{data.title}</h4>}
       {data.subtitle && <p className="text-[10px] text-zinc-500 mb-3">{data.subtitle}</p>}
+
+      {/* Metrics cards */}
+      {metrics && (
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="bg-white/70 rounded-lg px-2.5 py-1.5 border border-blue-100">
+            <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Current</p>
+            <p className="text-xs font-bold text-zinc-900 tabular-nums">{formatDollar(metrics.currentValue)}</p>
+          </div>
+          <div className="bg-white/70 rounded-lg px-2.5 py-1.5 border border-blue-100 flex flex-col items-center justify-center">
+            <ArrowRight className="w-3 h-3 text-zinc-400 mb-0.5" />
+            <p className="text-[8px] font-mono text-zinc-400 uppercase">{metrics.timeframe}</p>
+          </div>
+          <div className={`rounded-lg px-2.5 py-1.5 border ${isPositive ? "bg-emerald-50/70 border-emerald-200" : "bg-red-50/70 border-red-200"}`}>
+            <p className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Projected</p>
+            <div className="flex items-center gap-0.5">
+              <p className={`text-xs font-bold tabular-nums ${isPositive ? "text-emerald-700" : "text-red-700"}`}>
+                {formatDollar(metrics.projectedValue)}
+              </p>
+              <span className={`flex items-center text-[8px] font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
+                {isPositive ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                {isPositive ? "+" : ""}{metrics.changePercent}%
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ResponsiveContainer width="100%" height={160}>
-        <ComposedChart data={data.dataPoints} margin={{ left: 5, right: 10 }}>
+        <ComposedChart data={chartPoints} margin={{ left: 5, right: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
           <XAxis dataKey="month" tick={{ fontSize: 9 }} tickFormatter={(v) => String(v).split(" ")[0]?.slice(0, 3) ?? v} />
           <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => formatDollar(v)} />

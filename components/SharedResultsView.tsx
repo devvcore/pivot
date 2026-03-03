@@ -17,7 +17,7 @@ import {
 
 interface SharedResultsViewProps {
   deliverables: Record<string, unknown>;
-  role: "owner" | "employee" | "coach";
+  role: "owner" | "employee" | "coach" | "other";
   employeeName?: string;
   orgName: string;
   runId: string;
@@ -54,6 +54,10 @@ export default function SharedResultsView({
         onToggleCoach={() => setShowCoach(!showCoach)}
       />
     );
+  }
+
+  if (role === "other") {
+    return <OtherView deliverables={deliverables} orgName={orgName} />;
   }
 
   // Coach role
@@ -95,7 +99,7 @@ function OwnerView({
   const currentChapter = populatedChapters.find((c) => c.id === activeChapter) || populatedChapters[0];
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD]">
+    <div className="min-h-screen bg-[#FDFDFD] flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -139,7 +143,7 @@ function OwnerView({
       </nav>
 
       {/* Chapter Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 flex-1">
         {currentChapter && (
           <ChapterView
             chapterId={currentChapter.id}
@@ -150,6 +154,8 @@ function OwnerView({
           />
         )}
       </main>
+
+      <PivotFooter />
     </div>
   );
 }
@@ -206,7 +212,7 @@ function EmployeeView({
   }, [kpis]);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD]">
+    <div className="min-h-screen bg-[#FDFDFD] flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-zinc-200">
         <div className="max-w-4xl mx-auto px-6 py-6">
@@ -231,7 +237,7 @@ function EmployeeView({
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8 flex-1">
         {/* Health Score Banner */}
         {healthScore && (
           <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-sm">
@@ -360,6 +366,8 @@ function EmployeeView({
         )}
       </main>
 
+      <PivotFooter />
+
       {/* Coach Chat Overlay */}
       {showCoach && (
         <CoachOverlay
@@ -417,7 +425,7 @@ function CoachRoleView({
   }, [deliverables]);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD]">
+    <div className="min-h-screen bg-[#FDFDFD] flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-zinc-200">
         <div className="max-w-5xl mx-auto px-6 py-6">
@@ -440,7 +448,7 @@ function CoachRoleView({
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8 flex-1">
         {coachSections.map((section, idx) => (
           <section key={idx}>
             <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -472,6 +480,8 @@ function CoachRoleView({
       </main>
 
       {/* Coach Chat Overlay */}
+      <PivotFooter />
+
       {showCoach && (
         <CoachOverlay
           runId={runId}
@@ -480,6 +490,145 @@ function CoachRoleView({
         />
       )}
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Other View: Generic improvement guide (minimal data, no sensitive info)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function OtherView({
+  deliverables,
+  orgName,
+}: {
+  deliverables: Record<string, unknown>;
+  orgName: string;
+}) {
+  const healthScore = deliverables.healthScore as Record<string, unknown> | undefined;
+  const actionPlan = deliverables.actionPlan as Record<string, unknown> | undefined;
+  const healthChecklist = deliverables.healthChecklist as Record<string, unknown> | undefined;
+
+  const recommendations = useMemo(() => {
+    if (!actionPlan?.days) return [];
+    const days = actionPlan.days as Array<{
+      day: number;
+      title: string;
+      tasks: Array<{ description: string }>;
+    }>;
+    return days.flatMap((d) =>
+      d.tasks.map((t) => ({ ...t, day: d.day, dayTitle: d.title })),
+    ).slice(0, 10);
+  }, [actionPlan]);
+
+  return (
+    <div className="min-h-screen bg-[#FDFDFD] flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b border-zinc-200">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          <p className="text-xs text-zinc-400 uppercase tracking-widest mb-1">{orgName}</p>
+          <h1 className="text-2xl font-light text-zinc-900">Business Improvement Guide</h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            General recommendations and health overview
+          </p>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-8 flex-1">
+        {/* Health Score */}
+        {healthScore && (
+          <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-zinc-50 border-2 border-zinc-200 flex items-center justify-center">
+                <span className="text-2xl font-light text-zinc-900">
+                  {typeof healthScore.score === "number" ? healthScore.score : "--"}
+                </span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900">Business Health Score</h2>
+                {typeof healthScore.grade === "string" && (
+                  <p className="text-sm text-zinc-500">Grade: {healthScore.grade}</p>
+                )}
+                {typeof healthScore.summary === "string" && (
+                  <p className="text-sm text-zinc-500 mt-1 line-clamp-3">{healthScore.summary}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* General Recommendations */}
+        {recommendations.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Target className="w-4 h-4 text-zinc-400" />
+              Recommendations
+            </h2>
+            <div className="space-y-2">
+              {recommendations.map((rec, i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm flex items-start gap-3"
+                >
+                  <div className="mt-0.5 w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-mono text-zinc-500">{i + 1}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-900">{rec.description}</p>
+                    <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1 mt-1">
+                      <Clock className="w-3 h-3" />
+                      Day {rec.day} &mdash; {rec.dayTitle}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Health Checklist */}
+        {healthChecklist && (
+          <section>
+            <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-zinc-400" />
+              Health Checklist
+            </h2>
+            <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+              <GenericSectionDisplay data={healthChecklist} />
+            </div>
+          </section>
+        )}
+
+        {/* No data fallback */}
+        {!healthScore && recommendations.length === 0 && (
+          <div className="text-center py-16">
+            <AlertTriangle className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
+            <p className="text-zinc-500 text-sm">No data available for this link.</p>
+          </div>
+        )}
+      </main>
+
+      {/* Powered by Pivot Footer */}
+      <PivotFooter />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Powered by Pivot Footer
+   ───────────────────────────────────────────────────────────────────────────── */
+
+function PivotFooter() {
+  return (
+    <footer className="border-t border-zinc-200 bg-white py-6 mt-auto">
+      <div className="max-w-5xl mx-auto px-6 flex items-center justify-center gap-2">
+        <div className="w-5 h-5 bg-zinc-900 flex items-center justify-center rounded-md">
+          <div className="w-1.5 h-1.5 bg-white rounded-sm rotate-45" />
+        </div>
+        <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">
+          Powered by Pivot
+        </span>
+      </div>
+    </footer>
   );
 }
 

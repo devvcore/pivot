@@ -1419,12 +1419,47 @@ export interface MVPDeliverables {
   institutionalMemoryProtection?: InstitutionalMemoryProtection;
   knowledgeTransferOptimization?: KnowledgeTransferOptimization;
 
+  // Tools & Automation
+  toolsAutomationPlan?: ToolsAutomationPlan;
+
   // Anti-hallucination & relevance metadata
   claimValidations?: ClaimValidation[];
   relevanceScores?: SectionRelevance[];
   selectedSections?: string[];
   // Progress tracking (embedded in deliverables for DB simplicity)
   _progress?: { completed: number; total: number; currentStep: string; startedAt: number };
+}
+
+export interface ToolRecommendation {
+  name: string;
+  url: string;
+  favicon: string;
+  category: string; // "CRM", "Email Outreach", "Automation", "Analytics", "Project Management", etc.
+  description: string;
+  monthlyCost: string; // "$29/mo", "Free", "$99/mo"
+  annualCost?: string;
+  timeSaved: string; // "10 hours/week", "20 hours/month"
+  moneySaved: string; // "$2,000/month", "$500/month"
+  priority: "critical" | "high" | "medium" | "nice-to-have";
+  reason: string; // Why this specific tool is recommended based on their data
+  alternatives?: string[]; // Alternative tool names
+}
+
+export interface ToolsAutomationPlan {
+  summary: string;
+  totalMonthlyCost: number;
+  totalMonthlySavings: number;
+  roiMonths: number; // How many months until tools pay for themselves
+  tools: ToolRecommendation[];
+  automationOpportunities: {
+    process: string;
+    currentTimeCost: string;
+    automatedTimeCost: string;
+    toolToUse: string;
+    implementationEffort: string;
+  }[];
+  techStackGrade: string; // A-F
+  digitalMaturityScore: number; // 0-100
 }
 
 export interface BenchmarkDimension {
@@ -1800,6 +1835,12 @@ export interface IssuesRegister {
     recommendedAction?: string;
     recommendation?: string;
     owner?: string;
+    solution?: string;
+    solutionSteps?: string[];
+    expectedROI?: string;
+    implementationCost?: string;
+    implementationTimeline?: string;
+    alternativeSolutions?: string[];
   }[];
 }
 
@@ -4081,8 +4122,36 @@ export interface AttributionTouchpoint { touchpoint: string; firstTouch: string;
 export interface MarketingAttribution { summary: string; touchpoints: AttributionTouchpoint[]; primaryModel: string; topChannel: string; crossChannelEffect: string; attributionGap: string; recommendations: string[]; }
 export interface ContentItem { title: string; type: string; status: string; publishDate: string; performance: string; action: string; }
 export interface ContentCalendar { summary: string; items: ContentItem[]; totalPlanned: number; publishedPct: string; avgEngagement: string; topContent: string; recommendations: string[]; }
+export interface SocialPostSchedule { day: string; time: string; contentType: string; }
+export interface SocialPlatformKPI { metric: string; current: string; target: string; timeframe: string; }
+export interface CompetitorSocialBenchmark { competitor: string; platform: string; followers: number; engagement: string; }
+export interface SocialPlatformAnalysis {
+  name: string;
+  currentFollowers?: number;
+  engagementRate?: string;
+  topPerformingContent?: string[];
+  underperformingContent?: string[];
+  recommendedContentTypes: string[];
+  postingSchedule: SocialPostSchedule[];
+  growthStrategy: string;
+  kpis: SocialPlatformKPI[];
+}
 export interface SocialPost { platform: string; type: string; scheduledDate: string; status: string; engagement: string; action: string; }
-export interface SocialMediaCalendar { summary: string; posts: SocialPost[]; totalScheduled: number; platformCoverage: string; avgEngagement: string; topPlatform: string; recommendations: string[]; }
+export interface SocialMediaCalendar {
+  summary: string;
+  platforms: SocialPlatformAnalysis[];
+  contentPillars: string[];
+  brandVoice: string;
+  competitorBenchmark?: CompetitorSocialBenchmark[];
+  toolsRecommended: string[];
+  monthlyBudgetRecommendation: string;
+  posts: SocialPost[];
+  totalScheduled: number;
+  platformCoverage: string;
+  avgEngagement: string;
+  topPlatform: string;
+  recommendations: string[];
+}
 
 // ── Wave 75: Financial Planning ───────────────────────────────────────────────
 export interface BudgetLine { category: string; budgeted: string; actual: string; variance: string; trend: string; action: string; }

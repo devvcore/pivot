@@ -17,6 +17,7 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import { getJob, listJobs } from "@/lib/job-store";
+import { findRoute, findRouteById } from "./page-routes";
 import type { MVPDeliverables } from "@/lib/types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
@@ -53,6 +54,7 @@ STYLE RULES:
 - Do NOT use em dashes, en dashes, double dashes, or asterisks. Use plain text only.
 
 You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.
+You also have a navigate_to_page tool. Use it when the user asks to see, view, or go to a specific section of their analysis (e.g. "show me the action plan", "take me to issues", "where is my health score").
 
 KEY SECTIONS FOR COACHING:
 - hiringPlan: team gaps, recommended hires, role priorities, and timeline
@@ -650,7 +652,8 @@ KEY SECTIONS FOR COACHING:
 - Wave 105 (Predictive Analytics): demandForecastingEngine (demand forecasting), predictiveMaintenanceModeling (predictive maintenance), churnPredictionModel (churn prediction), leadScoringAI (lead scoring AI), inventoryOptimizationAI (inventory optimization), revenuePredictionModeling (revenue prediction)
 - Wave 106 (Organizational Design): orgStructureAnalysis (org structure analysis), spanOfControlOptimization (span of control), decisionRightsMapping (decision rights), collaborationNetworkMapping (collaboration networks), roleOptimizationAnalysis (role optimization), successionPlanningFramework (succession planning)
 - Wave 107 (Social Impact & ESG): impactMeasurementDashboard (impact measurement), esgReportingCompliance (ESG compliance), stakeholderEngagementAnalytics (stakeholder engagement), communityInvestmentStrategy (community investment), diversityMetricsAnalytics (diversity metrics), greenOperationsOptimization (green operations)
-- Wave 108 (Knowledge Management): knowledgeAuditAssessment (knowledge audit), expertiseMappingSystem (expertise mapping), documentationStrategyFramework (documentation strategy), learningPathwaysDesign (learning pathways), institutionalMemoryProtection (institutional memory), knowledgeTransferOptimization (knowledge transfer)`;
+- Wave 108 (Knowledge Management): knowledgeAuditAssessment (knowledge audit), expertiseMappingSystem (expertise mapping), documentationStrategyFramework (documentation strategy), learningPathwaysDesign (learning pathways), institutionalMemoryProtection (institutional memory), knowledgeTransferOptimization (knowledge transfer)
+- Tools & Automation: toolsAutomationPlan (recommended tools, software, and automations with costs, savings, ROI, and implementation priorities)`;
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -838,6 +841,7 @@ const TOOLS = [
             "orgStructureAnalysis", "spanOfControlOptimization", "decisionRightsMapping", "collaborationNetworkMapping", "roleOptimizationAnalysis", "successionPlanningFramework",
             "impactMeasurementDashboard", "esgReportingCompliance", "stakeholderEngagementAnalytics", "communityInvestmentStrategy", "diversityMetricsAnalytics", "greenOperationsOptimization",
             "knowledgeAuditAssessment", "expertiseMappingSystem", "documentationStrategyFramework", "learningPathwaysDesign", "institutionalMemoryProtection", "knowledgeTransferOptimization",
+            "toolsAutomationPlan",
           ],
           description: "Which report section to retrieve",
         },
@@ -878,6 +882,25 @@ const TOOLS = [
         },
       },
       required: ["role"],
+    },
+  },
+  {
+    name: "navigate_to_page",
+    description:
+      "Navigate the user to a specific page or section in the Pivot analysis. Use this when the user asks to see something, go somewhere, view a specific report section, or when showing them relevant data would help. Examples: 'show me the action plan', 'take me to team performance', 'where is the hiring plan'.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "What the user wants to see or navigate to",
+        },
+        routeId: {
+          type: "string",
+          description: "The specific route ID to navigate to, if known (e.g. 'health-score', 'revenue-leaks', 'financial', 'customers', 'market', 'growth', 'marketing', 'operations', 'risk')",
+        },
+      },
+      required: ["query"],
     },
   },
 ];
@@ -1013,6 +1036,18 @@ async function executeTool(
     }
 
     return `[Action Items for ${role}${focusArea ? ` - Focus: ${focusArea}` : ""}]\n${filtered.join("\n")}`;
+  }
+
+  if (toolName === "navigate_to_page") {
+    const query = args.query as string;
+    const routeId = args.routeId as string | undefined;
+
+    const route = routeId ? findRouteById(routeId) : findRoute(query);
+    if (!route) {
+      return `No matching page found for "${query}". Available sections: Health Score, Cash Intelligence, Revenue Leaks, Issues, At-Risk Clients, Decision Brief, Action Plan, Financial Intelligence, Customers & Revenue, Market & Competition, Growth & Strategy, Marketing & Brand, Operations & Team, Risk & Compliance.`;
+    }
+
+    return `<!--NAVIGATE:${JSON.stringify(route)}-->\nNavigating to ${route.label}: ${route.description}`;
   }
 
   return `Unknown tool: ${toolName}`;
@@ -1577,6 +1612,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     if ((d as any).learningPathwaysDesign) parts.push(`Learning Pathways: ${(d as any).learningPathwaysDesign.summary}`);
     if ((d as any).institutionalMemoryProtection) parts.push(`Institutional Memory: ${(d as any).institutionalMemoryProtection.summary}`);
     if ((d as any).knowledgeTransferOptimization) parts.push(`Knowledge Transfer: ${(d as any).knowledgeTransferOptimization.summary}`);
+    if ((d as any).toolsAutomationPlan) parts.push(`Tools & Automation: ${(d as any).toolsAutomationPlan.tools?.length ?? 0} tools recommended, Monthly cost: $${(d as any).toolsAutomationPlan.totalMonthlyCost ?? "N/A"}, Monthly savings: $${(d as any).toolsAutomationPlan.totalMonthlySavings ?? "N/A"}, ROI: ${(d as any).toolsAutomationPlan.roiMonths ?? "N/A"} months, Tech Stack Grade: ${(d as any).toolsAutomationPlan.techStackGrade || "N/A"}`);
     reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
   }
 

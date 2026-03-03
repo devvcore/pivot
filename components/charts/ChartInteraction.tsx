@@ -2,8 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, TrendingUp, Loader2, X, MessageCircle } from "lucide-react";
+import { Bot, TrendingUp, TrendingDown, Loader2, X, MessageCircle, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { formatDollar } from "./chart-utils";
 
 interface ChartInteractionProps {
   /** Which tab/section this chart belongs to — maps to projection type */
@@ -213,7 +214,7 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig, on
                 </div>
               )}
 
-              {/* Compact insight banner (replaces ProjectionChart rendering) */}
+              {/* Projection insight banner with metrics */}
               {projection && (
                 <div className="mt-3 bg-gradient-to-r from-blue-50/60 to-white border border-blue-200 rounded-xl p-3">
                   <div className="flex items-start justify-between gap-3">
@@ -230,6 +231,32 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig, on
                       <span className="text-[9px] font-mono text-blue-600 uppercase tracking-wider">Overlay Active</span>
                     </div>
                   </div>
+
+                  {/* Metrics cards */}
+                  {projection.metrics && (
+                    <div className="grid grid-cols-3 gap-1.5 mt-2">
+                      <div className="bg-white/70 rounded-lg px-2 py-1 border border-blue-100">
+                        <p className="text-[8px] font-mono text-zinc-400 uppercase">Current</p>
+                        <p className="text-[11px] font-bold text-zinc-900 tabular-nums">{formatDollar(projection.metrics.currentValue)}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg px-2 py-1 border border-blue-100 flex flex-col items-center justify-center">
+                        <ArrowRight className="w-2.5 h-2.5 text-zinc-400" />
+                        <p className="text-[7px] font-mono text-zinc-400 uppercase">{projection.metrics.timeframe}</p>
+                      </div>
+                      <div className={`rounded-lg px-2 py-1 border ${projection.metrics.changePercent >= 0 ? "bg-emerald-50/70 border-emerald-200" : "bg-red-50/70 border-red-200"}`}>
+                        <p className="text-[8px] font-mono text-zinc-400 uppercase">Projected</p>
+                        <div className="flex items-center gap-0.5">
+                          <p className={`text-[11px] font-bold tabular-nums ${projection.metrics.changePercent >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                            {formatDollar(projection.metrics.projectedValue)}
+                          </p>
+                          <span className={`text-[8px] font-semibold ${projection.metrics.changePercent >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                            {projection.metrics.changePercent >= 0 ? "+" : ""}{projection.metrics.changePercent}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {(projection.insight || projection.totalImpact) && (
                     <div className="mt-2 pt-2 border-t border-blue-100 flex gap-4 text-[10px]">
                       {projection.insight && <p className="text-zinc-600 flex-1">{projection.insight}</p>}

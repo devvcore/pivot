@@ -655,6 +655,7 @@ import {
   synthKnowledgeAuditAssessment, synthExpertiseMappingSystem, synthDocumentationStrategyFramework, synthLearningPathwaysDesign, synthInstitutionalMemoryProtection, synthKnowledgeTransferOptimization,
   setSectionFacts,
   synthesizeSummaryOnly,
+  synthesizeToolsAutomation,
 } from "./synthesize";
 import { GoogleGenAI } from "@google/genai";
 import { detectTerminology } from "./terminology";
@@ -4693,6 +4694,18 @@ async function runExtendedWaves(
         if (r2.status === "fulfilled" && r2.value) deliverables.knowledgeTransferOptimization = r2.value;
         updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pk+4pl failed:", e); }
+    }
+
+    // ── Tools & Automation Plan ──
+    if (!deliverables.toolsAutomationPlan) {
+      try {
+        console.log("[Pivot] Synthesizing Tools & Automation Plan...");
+        const [tap] = await Promise.allSettled([
+          synthIf('toolsAutomationPlan', () => synthesizeToolsAutomation(businessPacket, job.questionnaire)),
+        ]);
+        if (tap.status === "fulfilled" && tap.value) deliverables.toolsAutomationPlan = tap.value;
+        updateJob(runId, { deliverables });
+      } catch (e) { console.warn("Tools & Automation Plan failed:", e); }
     }
 
   return deliverables;

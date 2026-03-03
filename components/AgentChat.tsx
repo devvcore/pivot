@@ -2,16 +2,23 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, X, Bot, Globe, BarChart3, Search, MessageCircle, ChevronDown, TrendingUp } from "lucide-react";
+import { Send, Loader2, X, Bot, Globe, BarChart3, Search, MessageCircle, ChevronDown, TrendingUp, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { ChatMessage } from "@/lib/types";
-import { ProjectionChart } from "./charts/ProjectionChart";
+import { ProjectionChart, parseTextToChartData } from "./charts/ProjectionChart";
+
+export interface NavigateAction {
+  chapter: string;
+  coreTab?: number;
+  label: string;
+}
 
 interface AgentChatProps {
   orgId: string;
   orgName: string;
   onClose?: () => void;
   embedded?: boolean; // if true, renders inline; if false, renders as floating panel
+  onNavigate?: (action: NavigateAction) => void;
 }
 
 const TOOL_ICONS: Record<string, React.ReactNode> = {
@@ -19,18 +26,71 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   get_report_section:  <BarChart3 className="w-3 h-3" />,
   analyze_website:     <Globe className="w-3 h-3" />,
   generate_projection: <TrendingUp className="w-3 h-3" />,
+  navigate_to_page:    <Navigation className="w-3 h-3" />,
 };
 
-/** Extract projection JSON from <!--PROJECTION:{...}--> markers in message text */
+/** Extract projection JSON from <!--PROJECTION:{...}--> markers in message text.
+ *  If no marker found but the text contains projection-like numbers, attempt to parse them. */
 function extractProjection(content: string): { text: string; projection: any | null } {
   const match = content.match(/<!--PROJECTION:([\s\S]*?)-->/);
-  if (!match) return { text: content, projection: null };
+  if (match) {
+    try {
+      const projection = JSON.parse(match[1]);
+      const text = content.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim();
+      return { text, projection };
+    } catch {
+      return { text: content, projection: null };
+    }
+  }
+
+  // Fallback: try to parse text-only projections with number patterns
+  const hasProjectionKeywords = /(?:projection|forecast|scenario|week\s*\d|month\s*\d|opening\s*balance|closing\s*balance)/i.test(content);
+  if (hasProjectionKeywords) {
+    const parsed = parseTextToChartData(content);
+    if (parsed && parsed.length >= 2) {
+      const firstBaseline = parsed[0].baseline;
+      const lastProjected = parsed[parsed.length - 1].projected;
+      const changePercent = firstBaseline > 0
+        ? Math.round(((lastProjected - firstBaseline) / firstBaseline) * 100)
+        : 0;
+
+      return {
+        text: content,
+        projection: {
+          title: "Projection",
+          subtitle: "Parsed from analysis",
+          dataPoints: parsed,
+          metrics: {
+            currentValue: firstBaseline,
+            projectedValue: lastProjected,
+            changePercent,
+            timeframe: `${parsed.length} periods`,
+          },
+        },
+      };
+    }
+  }
+
+  return { text: content, projection: null };
+}
+
+/** Extract navigation JSON from <!--NAVIGATE:{...}--> markers in message text */
+function extractNavigation(content: string): { text: string; navigation: NavigateAction | null } {
+  const match = content.match(/<!--NAVIGATE:([\s\S]*?)-->/);
+  if (!match) return { text: content, navigation: null };
   try {
-    const projection = JSON.parse(match[1]);
-    const text = content.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim();
-    return { text, projection };
+    const route = JSON.parse(match[1]);
+    const text = content.replace(/<!--NAVIGATE:[\s\S]*?-->/, "").trim();
+    return {
+      text,
+      navigation: {
+        chapter: route.chapter,
+        coreTab: route.coreTab,
+        label: route.label,
+      },
+    };
   } catch {
-    return { text: content, projection: null };
+    return { text: content, navigation: null };
   }
 }
 
@@ -42,7 +102,7 @@ const STARTER_PROMPTS = [
   "What's my growth trajectory if I implement all quick wins?",
 ];
 
-export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentChatProps) {
+export function AgentChat({ orgId, orgName, onClose, embedded = false, onNavigate }: AgentChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,9 +143,17 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentCh
         }),
       });
       const data = await res.json();
+      const responseContent = data.message ?? "I encountered an issue — please try again.";
+
+      // Check for navigation action in the response
+      const { navigation } = extractNavigation(responseContent);
+      if (navigation && onNavigate) {
+        onNavigate(navigation);
+      }
+
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.message ?? "I encountered an issue — please try again.",
+        content: responseContent,
         timestamp: Date.now(),
       };
       const msgIndex = messages.length + 1;
@@ -155,21 +223,31 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentCh
             )}
             <div className={`max-w-[85%] ${msg.role === "user" ? "order-last" : ""}`}>
               {(() => {
-                const { text, projection } = msg.role === "assistant"
-                  ? extractProjection(msg.content)
-                  : { text: msg.content, projection: null };
+                if (msg.role !== "assistant") {
+                  return (
+                    <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap bg-zinc-900 text-white rounded-br-sm">
+                      {msg.content}
+                    </div>
+                  );
+                }
+                // Strip navigation markers first, then extract projections
+                const { text: navStripped, navigation: navAction } = extractNavigation(msg.content);
+                const { text, projection } = extractProjection(navStripped);
                 return (
                   <>
-                    <div
-                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === "user"
-                          ? "bg-zinc-900 text-white rounded-br-sm"
-                          : "bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm"
-                      }`}
-                    >
+                    <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm">
                       {text}
                     </div>
-                    {projection && <ProjectionChart data={projection} />}
+                    {navAction && onNavigate && (
+                      <button
+                        onClick={() => onNavigate(navAction)}
+                        className="flex items-center gap-1.5 mt-2 ml-1 text-[11px] font-mono text-zinc-600 bg-zinc-100 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-200 hover:border-zinc-400 transition-all"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        Go to {navAction.label}
+                      </button>
+                    )}
+                    {projection && <ProjectionChart data={projection} narrative={projection.dataPoints?.length ? text : undefined} />}
                   </>
                 );
               })()}
@@ -251,7 +329,7 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentCh
           </button>
         </div>
         <div className="text-[9px] font-mono text-zinc-400 text-center mt-2 uppercase tracking-widest">
-          Pivvy can search the web · access your full report · analyze websites · generate projections
+          Pivvy can search the web · access your full report · analyze websites · generate projections · navigate pages
         </div>
       </div>
     </div>
@@ -260,7 +338,7 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false }: AgentCh
 
 // ── Floating button variant ───────────────────────────────────────────────────
 
-export function AgentChatButton({ orgId, orgName }: { orgId: string; orgName: string }) {
+export function AgentChatButton({ orgId, orgName, onNavigate }: { orgId: string; orgName: string; onNavigate?: (action: NavigateAction) => void }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -289,7 +367,7 @@ export function AgentChatButton({ orgId, orgName }: { orgId: string; orgName: st
             transition={{ duration: 0.2 }}
             className="fixed bottom-20 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-96 h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-3xl shadow-2xl shadow-zinc-900/20 overflow-hidden flex flex-col"
           >
-            <AgentChat orgId={orgId} orgName={orgName} onClose={() => setOpen(false)} />
+            <AgentChat orgId={orgId} orgName={orgName} onClose={() => setOpen(false)} onNavigate={onNavigate} />
           </motion.div>
         )}
       </AnimatePresence>

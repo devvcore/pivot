@@ -1,19 +1,41 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { GraduationCap, Send, Loader2, X, MessageCircle } from "lucide-react";
+import { GraduationCap, Send, Loader2, X, MessageCircle, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import type { NavigateAction } from "./AgentChat";
 
 interface CoachChatProps {
   orgId: string;
   runId?: string;
   memberRole?: "owner" | "employee";
   memberName?: string;
+  onNavigate?: (action: NavigateAction) => void;
 }
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+/** Extract navigation JSON from <!--NAVIGATE:{...}--> markers in message text */
+function extractNavigation(content: string): { text: string; navigation: NavigateAction | null } {
+  const match = content.match(/<!--NAVIGATE:([\s\S]*?)-->/);
+  if (!match) return { text: content, navigation: null };
+  try {
+    const route = JSON.parse(match[1]);
+    const text = content.replace(/<!--NAVIGATE:[\s\S]*?-->/, "").trim();
+    return {
+      text,
+      navigation: {
+        chapter: route.chapter,
+        coreTab: route.coreTab,
+        label: route.label,
+      },
+    };
+  } catch {
+    return { text: content, navigation: null };
+  }
 }
 
 const OWNER_PROMPTS = [
@@ -30,7 +52,7 @@ const EMPLOYEE_PROMPTS = [
   "How does my role impact the business?",
 ];
 
-export function CoachChat({ orgId, runId, memberRole = "owner", memberName }: CoachChatProps) {
+export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNavigate }: CoachChatProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -66,9 +88,17 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName }: Co
         }),
       });
       const data = await res.json();
+      const responseContent = data.message || "No response.";
+
+      // Check for navigation action in the response
+      const { navigation } = extractNavigation(responseContent);
+      if (navigation && onNavigate) {
+        onNavigate(navigation);
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.message || "No response." },
+        { role: "assistant", content: responseContent },
       ]);
     } catch {
       setMessages((prev) => [
@@ -146,22 +176,38 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName }: Co
                 </div>
               )}
 
-              {messages.map((msg, i) => (
+              {messages.map((msg, i) => {
+                const { text: displayText, navigation: navAction } = msg.role === "assistant"
+                  ? extractNavigation(msg.content)
+                  : { text: msg.content, navigation: null };
+                return (
                 <div
                   key={i}
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${
-                      msg.role === "user"
-                        ? "bg-emerald-600 text-white"
-                        : "bg-zinc-100 text-zinc-800"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  <div className="max-w-[85%]">
+                    <div
+                      className={`rounded-2xl px-3.5 py-2.5 text-sm ${
+                        msg.role === "user"
+                          ? "bg-emerald-600 text-white"
+                          : "bg-zinc-100 text-zinc-800"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
+                    </div>
+                    {navAction && onNavigate && (
+                      <button
+                        onClick={() => onNavigate(navAction)}
+                        className="flex items-center gap-1.5 mt-2 text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        Go to {navAction.label}
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {loading && (
                 <div className="flex justify-start">
@@ -209,9 +255,11 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName }: Co
 export function CoachChatButton({
   orgId,
   runId,
+  onNavigate,
 }: {
   orgId: string;
   runId?: string;
+  onNavigate?: (action: NavigateAction) => void;
 }) {
-  return <CoachChat orgId={orgId} runId={runId} memberRole="owner" />;
+  return <CoachChat orgId={orgId} runId={runId} memberRole="owner" onNavigate={onNavigate} />;
 }
