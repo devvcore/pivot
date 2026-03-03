@@ -7,9 +7,9 @@
  */
 import { getJob, updateJob } from "@/lib/job-store";
 import { parseFiles } from "./parse";
-import { ingestDocuments } from "./ingest";
+import { ingestDocuments, scrapeWebsiteContent, formatPacketAsContext } from "./ingest";
 import { categorizeAndBuildGraph } from "./categorize";
-import { getRelevantSections, scoreSectionRelevance, getRelevanceDepth } from "./relevance";
+import { selectSectionsWithAI, getStrictRelevantSections, scoreSectionRelevance, getRelevanceDepth } from "./relevance";
 import {
   synthesizeDeliverables,
   synthesizeTechOptimization,
@@ -683,19 +683,13 @@ async function runExtendedWaves(
   job: any,
   relevantSections?: Set<string>,
 ): Promise<MVPDeliverables> {
-    // Helper: skip sections not relevant to this business
-    const isRelevant = (key: string) => !relevantSections || relevantSections.has(key);
-    // Create genai instance for summary-mode synthesis
-    const apiKey = process.env.GEMINI_API_KEY || "";
-    const genai = apiKey ? new GoogleGenAI({ apiKey }) : null;
-    // Wrapper: only call synthesis if section is relevant AND not already done
-    // Uses graduated relevance depth: "full" runs the full synthesis, "summary" runs a lightweight summary, "skip" returns null
+    // Helper: skip sections not selected by AI relevance engine
+    const isSelected = (key: string) => !relevantSections || relevantSections.has(key);
+    // Wrapper: only call synthesis if section is AI-selected AND not already done
+    // Binary: selected = full synthesis, not selected = skip entirely
     const synthIf = <T>(key: string, fn: () => Promise<T | null>): Promise<T | null> => {
-      if (!isRelevant(key)) return Promise.resolve(null);
+      if (!isSelected(key)) return Promise.resolve(null);
       if ((deliverables as unknown as Record<string, unknown>)[key]) return Promise.resolve(null);
-      const depth = getRelevanceDepth(scoreSectionRelevance(job.questionnaire, key));
-      if (depth === "skip") return Promise.resolve(null);
-      if (depth === "summary" && genai) return synthesizeSummaryOnly(genai, key, businessPacket, job.questionnaire) as any;
       return fn();
     };
     if (!deliverables.pricingStrategyMatrix || !deliverables.customerHealthScore) {
@@ -5382,13 +5376,49 @@ export async function runPipeline(runId: string): Promise<void> {
       }
     }
 
-    // ── Relevance Engine: Determine which sections apply to this business ──
+    // ── Relevance Engine: AI-powered section selection ─────────────────────
     let relevantSections: Set<string> | undefined;
     try {
-      relevantSections = getRelevantSections(job.questionnaire);
-      console.log(`[Pivot] Relevance engine: ${relevantSections.size} sections relevant for this business`);
+      // Scrape website content for business context
+      const websiteUrl = job.questionnaire.website || "";
+      let websiteContent = "";
+      if (websiteUrl) {
+        console.log(`[Pivot] Scraping website content from ${websiteUrl}...`);
+        websiteContent = await scrapeWebsiteContent(websiteUrl);
+        console.log(`[Pivot] Scraped ${websiteContent.length} chars of website content`);
+      }
+
+      // Build business context from parsed documents
+      const businessSummary = formatPacketAsContext(businessPacket).slice(0, 5000);
+
+      // Use AI to select relevant sections
+      console.log("[Pivot] Running AI section selector...");
+      const aiSelected = await selectSectionsWithAI(
+        job.questionnaire,
+        businessSummary,
+        websiteContent,
+      );
+
+      if (aiSelected) {
+        relevantSections = aiSelected;
+        // Store on deliverables for UI filtering
+        deliverables = { ...deliverables, selectedSections: Array.from(aiSelected) };
+        updateJob(runId, { deliverables });
+        console.log(`[Pivot] AI selected ${aiSelected.size} relevant sections`);
+      } else {
+        // Fallback to strict rule-based selection
+        relevantSections = getStrictRelevantSections(job.questionnaire);
+        deliverables = { ...deliverables, selectedSections: Array.from(relevantSections) };
+        updateJob(runId, { deliverables });
+        console.log(`[Pivot] Rule-based fallback: ${relevantSections.size} sections selected`);
+      }
     } catch (e) {
-      console.warn("[Pivot] Relevance engine failed, running all sections:", e);
+      console.warn("[Pivot] Relevance engine failed, using strict fallback:", e);
+      try {
+        relevantSections = getStrictRelevantSections(job.questionnaire);
+        deliverables = { ...deliverables, selectedSections: Array.from(relevantSections) };
+        updateJob(runId, { deliverables });
+      } catch { /* last resort: run everything */ }
     }
 
     // ── Extended wave synthesis (extracted to avoid TS2563 control flow limit) ──
@@ -5401,19 +5431,20 @@ export async function runPipeline(runId: string): Promise<void> {
       console.warn("[Pivot] Agent memory build failed (non-fatal):", e);
     }
 
-    // ── Post-processing: Compute relevance scores for all sections ──
+    // ── Post-processing: Compute relevance scores for populated sections ──
     try {
+      const metaKeys = new Set(["claimValidations", "relevanceScores", "dataProvenance", "selectedSections"]);
       const sectionKeys = Object.keys(deliverables).filter(
         k => typeof (deliverables as any)[k] === "object" && (deliverables as any)[k] !== null
-          && !["claimValidations", "relevanceScores", "dataProvenance"].includes(k)
+          && !metaKeys.has(k)
       );
       deliverables.relevanceScores = sectionKeys.map(key => {
-        const score = scoreSectionRelevance(job.questionnaire, key);
+        const isAISelected = deliverables.selectedSections?.includes(key) ?? true;
         return {
           key,
-          score,
-          depth: getRelevanceDepth(score),
-          reason: "",
+          score: isAISelected ? 100 : 0,
+          depth: isAISelected ? "full" as const : "skip" as const,
+          reason: isAISelected ? "AI-selected" : "Not selected",
         };
       });
       console.log(`[Pivot] Computed relevance scores for ${sectionKeys.length} sections`);

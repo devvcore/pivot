@@ -648,3 +648,39 @@ export function formatPacketAsContext(packet: BusinessPacket): string {
 
   return lines.filter((l) => l !== "").join("\n");
 }
+
+// ── Website Content Scraping ────────────────────────────────────────────────
+
+/**
+ * Fetches a website's HTML and extracts text content.
+ * Used to understand what the business actually does when questionnaire data is sparse.
+ */
+export async function scrapeWebsiteContent(url: string): Promise<string> {
+  try {
+    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
+    const resp = await fetch(normalizedUrl, {
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; PivotBot/1.0; Business Intelligence)",
+        "Accept": "text/html",
+      },
+    });
+    if (!resp.ok) return "";
+    const html = await resp.text();
+
+    // Strip scripts, styles, and HTML tags to get readable text
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, " ")
+      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&[a-z]+;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return text.slice(0, 4000);
+  } catch {
+    return "";
+  }
+}

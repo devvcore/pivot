@@ -613,13 +613,26 @@ export function UploadView({ onBack, onUploadComplete }: UploadViewProps) {
 
         {/* ── Phase B: Full-screen live call ── */}
         {phase === "chat" && (
-          <OnboardingCall
-            extractedFromDocs={extractedFromDocs}
-            onExtracted={(patch) => setExtracted((prev) => ({ ...prev, ...patch }))}
-            onComplete={() => handleLaunchAnalysis()}
-            onSkip={() => handleLaunchAnalysis()}
-            onError={setError}
-          />
+          <>
+            <OnboardingCall
+              extractedFromDocs={extractedFromDocs}
+              onExtracted={(patch) => setExtracted((prev) => ({ ...prev, ...patch }))}
+              onComplete={() => handleLaunchAnalysis()}
+              onSkip={() => handleLaunchAnalysis()}
+              onError={setError}
+            />
+            {error && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-md w-full px-4">
+                <div className="bg-red-950/90 border border-red-800 rounded-xl p-4 flex items-start gap-3 shadow-2xl backdrop-blur-sm">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs text-red-200 leading-normal">{error}</div>
+                  <button onClick={() => setPhase("upload")} className="text-[10px] font-mono text-red-400 hover:text-white uppercase tracking-wider shrink-0">
+                    Back
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </AnimatePresence>
     </div>

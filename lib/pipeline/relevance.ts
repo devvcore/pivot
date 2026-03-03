@@ -781,35 +781,74 @@ export function getRelevanceDepth(score: number): RelevanceDepth {
 }
 
 /**
- * AI-enhanced relevance classification (optional, costs ~1 API call).
- * Uses Gemini to refine the relevance set for edge cases.
- * Only called when the questionnaire has unusual characteristics.
+ * AI-powered section selection — the primary relevance gate.
+ *
+ * Uses Gemini to analyze the business profile (questionnaire, website content,
+ * document summaries) and select ONLY the sections that would provide genuine,
+ * actionable value. This replaces the old rule-based system that let everything through.
+ *
+ * Costs ~1 API call. If it fails, falls back to rule-based classification.
  */
-export async function getAIRelevantSections(q: Questionnaire): Promise<Set<string> | null> {
+export async function selectSectionsWithAI(
+  questionnaire: Questionnaire,
+  businessContext: string,
+  websiteContent: string,
+): Promise<Set<string> | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
   try {
     const genai = new GoogleGenAI({ apiKey });
-    const allSections = Object.keys(SECTION_CATEGORIES);
 
-    const prompt = `You are classifying which business intelligence sections are relevant for this specific business.
+    // Group sections by category for better AI understanding
+    const grouped: Record<string, string[]> = {};
+    for (const [key, cats] of Object.entries(SECTION_CATEGORIES)) {
+      const primary = cats[0] || "other";
+      if (!grouped[primary]) grouped[primary] = [];
+      grouped[primary].push(key);
+    }
 
-Business: ${q.organizationName}
-Industry: ${q.industry}
-Revenue: ${q.revenueRange}
-Model: ${q.businessModel}
-Concerns: ${q.keyConcerns}
-Objective: ${q.primaryObjective || "Not specified"}
+    const sectionList = Object.entries(grouped)
+      .map(([cat, keys]) => `[${cat}]: ${keys.join(", ")}`)
+      .join("\n");
 
-Here are ALL available section keys (${allSections.length} total):
-${allSections.join(", ")}
+    const totalSections = Object.keys(SECTION_CATEGORIES).length;
 
-Return ONLY a JSON array of section keys that are RELEVANT for this specific business.
-Include "core" sections (healthScore, cashIntelligence, etc.) plus any sections that make sense for their business model and industry.
-Exclude sections that would be irrelevant or confusing (e.g., fleetManagement for a SaaS company, or carbonReduction for a solo consultant).
+    // Build business profile from whatever we know
+    const profile = [
+      `Name: ${questionnaire.organizationName || "Unknown"}`,
+      questionnaire.industry ? `Industry: ${questionnaire.industry}` : null,
+      questionnaire.revenueRange ? `Revenue: ${questionnaire.revenueRange}` : null,
+      questionnaire.businessModel ? `Business Model: ${questionnaire.businessModel}` : null,
+      questionnaire.keyConcerns ? `Key Concerns: ${questionnaire.keyConcerns}` : null,
+      questionnaire.oneDecisionKeepingOwnerUpAtNight ? `Critical Decision: ${questionnaire.oneDecisionKeepingOwnerUpAtNight}` : null,
+      questionnaire.website ? `Website: ${questionnaire.website}` : null,
+      questionnaire.location ? `Location: ${questionnaire.location}` : null,
+      questionnaire.marketingChannels?.length ? `Marketing Channels: ${questionnaire.marketingChannels.join(", ")}` : null,
+    ].filter(Boolean).join("\n");
 
-Return ONLY the JSON array, no other text.`;
+    const prompt = `You are an expert business analyst deciding which intelligence sections to generate for a specific business.
+Your job is to be HIGHLY SELECTIVE — only pick sections that will provide genuine, actionable, non-generic value.
+
+═══ BUSINESS PROFILE ═══
+${profile}
+
+${websiteContent ? `═══ WEBSITE CONTENT (scraped from their site) ═══\n${websiteContent.slice(0, 3000)}\n` : "═══ NO WEBSITE CONTENT AVAILABLE ═══\n"}
+${businessContext ? `═══ DOCUMENT SUMMARY (from uploaded files) ═══\n${businessContext.slice(0, 4000)}\n` : "═══ NO DOCUMENTS UPLOADED ═══\n"}
+═══ AVAILABLE SECTIONS (${totalSections} total, grouped by category) ═══
+${sectionList}
+
+═══ SELECTION RULES ═══
+1. ALWAYS include these core sections: healthScore, cashIntelligence, revenueLeakAnalysis, issuesRegister, decisionBrief, executiveSummary, swotAnalysis, goalTracker, riskRegister, kpis, healthChecklist, milestoneTracker, benchmarkScore, competitiveMoat, scenarioPlanner
+2. INFER the business type from the website content and name if industry/model fields are empty
+3. Select additional sections ONLY if they are genuinely relevant to this business type
+4. DO NOT select sections that would produce only generic/boilerplate content for this business
+5. DO NOT select sections requiring data the business clearly doesn't have (e.g., fleet management for a web agency, manufacturing for a consulting firm, ESG for a 3-person startup)
+6. Target 25-45 total sections. A focused, relevant 30-section report beats a bloated 500-section report
+7. Consider the business stage (startup vs enterprise) — startups don't need enterprise HR or governance sections
+8. If limited info is available, be MORE selective, not less — fewer high-quality sections is better than many empty ones
+
+Return ONLY a JSON array of section key strings. No explanation, no markdown, just the array.`;
 
     const result = await genai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -819,9 +858,47 @@ Return ONLY the JSON array, no other text.`;
     const text = result.text?.trim() || "";
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned) as string[];
-    return new Set(parsed);
+
+    // Validate: ensure core sections are always included
+    const coreRequired = [
+      "healthScore", "cashIntelligence", "revenueLeakAnalysis", "issuesRegister",
+      "decisionBrief", "executiveSummary", "swotAnalysis", "goalTracker", "riskRegister",
+      "kpis", "healthChecklist", "milestoneTracker", "benchmarkScore",
+    ];
+    const selected = new Set(parsed);
+    for (const core of coreRequired) {
+      selected.add(core);
+    }
+
+    console.log(`[Pivot] AI selected ${selected.size} relevant sections out of ${totalSections}`);
+    return selected;
   } catch (e) {
-    console.warn("[Pivot] AI relevance classification failed, falling back to rule-based:", e);
+    console.warn("[Pivot] AI section selection failed, falling back to rule-based:", e);
     return null;
   }
+}
+
+/**
+ * Fallback: Strict rule-based selection when AI selector fails.
+ * Much more conservative than the old system — requires strong category match.
+ */
+export function getStrictRelevantSections(q: Questionnaire): Set<string> {
+  const profile = classifyBusiness(q);
+  const relevant = new Set<string>();
+
+  for (const [sectionKey, sectionCategories] of Object.entries(SECTION_CATEGORIES)) {
+    // Core sections always included
+    if (sectionCategories.includes("core")) {
+      relevant.add(sectionKey);
+      continue;
+    }
+    // Non-core: require at least 2 category matches, or 1 match from a specific (non-default) category
+    const matches = sectionCategories.filter(cat => profile.categories.has(cat));
+    const specificMatches = matches.filter(cat => !["financial", "marketing"].includes(cat));
+    if (specificMatches.length >= 1 || matches.length >= 2) {
+      relevant.add(sectionKey);
+    }
+  }
+
+  return relevant;
 }

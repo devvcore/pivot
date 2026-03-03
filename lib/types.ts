@@ -1421,6 +1421,7 @@ export interface MVPDeliverables {
   // Anti-hallucination & relevance metadata
   claimValidations?: ClaimValidation[];
   relevanceScores?: SectionRelevance[];
+  selectedSections?: string[];
 }
 
 export interface BenchmarkDimension {

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { GoogleGenAI, Modality } from "@google/genai";
-import { Phone, PhoneOff, SkipForward } from "lucide-react";
+import { Phone, PhoneOff, SkipForward, Rocket } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Questionnaire } from "@/lib/types";
 
@@ -134,7 +134,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-type CallState = "idle" | "ringing" | "connected" | "ended";
+type CallState = "idle" | "ringing" | "connected" | "ready" | "ended";
 
 export function OnboardingCall({ extractedFromDocs, onExtracted, onComplete, onSkip, onError }: OnboardingCallProps) {
   const [callState, setCallState] = useState<CallState>("idle");
@@ -263,7 +263,10 @@ export function OnboardingCall({ extractedFromDocs, onExtracted, onComplete, onS
               if (full) {
                 const { fields, complete } = parseExtractedFromResponse(full);
                 if (Object.keys(fields).length > 0) onExtracted(fields);
-                if (complete) onComplete();
+                if (complete) {
+                  // Show "Start Analysis" button instead of immediately ending
+                  setCallState("ready");
+                }
               }
             }
             if (e.data) void playPcm24k(e.data);
@@ -378,6 +381,49 @@ export function OnboardingCall({ extractedFromDocs, onExtracted, onComplete, onS
                   <PhoneOff className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] text-red-400 uppercase tracking-wider">End Call</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Ready: AI done, show Start Analysis ── */}
+        {callState === "ready" && (
+          <motion.div key="ready" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-6 w-full max-w-md px-6">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className="relative"
+            >
+              <div className="w-24 h-24 rounded-full bg-emerald-900/30 border-2 border-emerald-500/40 flex items-center justify-center">
+                <Rocket className="w-10 h-10 text-emerald-400" />
+              </div>
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-emerald-400/30"
+                animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            </motion.div>
+
+            <div className="text-center">
+              <div className="text-xl font-semibold text-white mb-1">Ready to Analyze</div>
+              <div className="text-sm text-zinc-400">
+                {lastCaption || "I have everything I need to build your intelligence report."}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-3 w-full mt-2">
+              <button
+                onClick={() => { stopCall(); onComplete(); }}
+                className="w-full max-w-xs flex items-center justify-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-2xl transition-all shadow-lg shadow-emerald-600/30 active:scale-95"
+              >
+                <Rocket className="w-5 h-5" />
+                Start Analysis
+              </button>
+              <button
+                onClick={() => setCallState("connected")}
+                className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 uppercase tracking-wider transition-colors py-2"
+              >
+                Continue Talking
               </button>
             </div>
           </motion.div>
