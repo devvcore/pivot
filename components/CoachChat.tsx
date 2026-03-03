@@ -181,31 +181,31 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
                   ? extractNavigation(msg.content)
                   : { text: msg.content, navigation: null };
                 return (
-                <div
-                  key={i}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div className="max-w-[85%]">
-                    <div
-                      className={`rounded-2xl px-3.5 py-2.5 text-sm ${
-                        msg.role === "user"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-zinc-100 text-zinc-800"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
-                    </div>
-                    {navAction && onNavigate && (
-                      <button
-                        onClick={() => onNavigate(navAction)}
-                        className="flex items-center gap-1.5 mt-2 text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className="max-w-[85%]">
+                      <div
+                        className={`rounded-2xl px-3.5 py-2.5 text-sm ${
+                          msg.role === "user"
+                            ? "bg-emerald-600 text-white"
+                            : "bg-zinc-100 text-zinc-800"
+                        }`}
                       >
-                        <Navigation className="w-3 h-3" />
-                        Go to {navAction.label}
-                      </button>
-                    )}
+                        <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
+                      </div>
+                      {navAction && onNavigate && (
+                        <button
+                          onClick={() => onNavigate(navAction)}
+                          className="flex items-center gap-1.5 mt-2 text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-100 hover:border-emerald-400 transition-all"
+                        >
+                          <Navigation className="w-3 h-3" />
+                          Go to {navAction.label}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
                 );
               })}
 
