@@ -48,8 +48,8 @@ export default function MatrixScatter({ items, xKey, yKey, labelKey, colorKey }:
     <ResponsiveContainer width="100%" height={300}>
       <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-        <XAxis type="number" dataKey="x" name={xk} domain={[0, 6]} fontSize={11} tick={{ fill: "#71717a" }} label={{ value: xk, position: "bottom", fontSize: 11 }} />
-        <YAxis type="number" dataKey="y" name={yk} domain={[0, 6]} fontSize={11} tick={{ fill: "#71717a" }} label={{ value: yk, angle: -90, position: "left", fontSize: 11 }} />
+        <XAxis type="number" dataKey="x" name={xk} domain={[0, 6]} fontSize={11} tick={{ fill: "#71717a" }} label={{ value: xk.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, s => s.toUpperCase()), position: "bottom", fontSize: 11, fill: "#71717a" }} />
+        <YAxis type="number" dataKey="y" name={yk} domain={[0, 6]} fontSize={11} tick={{ fill: "#71717a" }} label={{ value: yk.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, s => s.toUpperCase()), angle: -90, position: "left", fontSize: 11, fill: "#71717a" }} />
         <ZAxis dataKey="z" range={[60, 60]} />
         <Tooltip content={({ payload }) => {
           if (!payload?.[0]) return null;

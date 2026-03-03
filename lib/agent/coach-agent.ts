@@ -1600,7 +1600,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
   try {
     // First call — may request tool use
     const resp = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-flash",
       contents: chatMessages,
       config: {
         systemInstruction: systemPrompt,
@@ -1640,7 +1640,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
       ];
 
       const resp2 = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-05-20",
+        model: "gemini-2.5-flash",
         contents: contentsWithTools,
         config: {
           systemInstruction: systemPrompt,

@@ -59,9 +59,9 @@ export function MarketingChannelChart({ channels, socialStrategy, overlay, onDis
               Recommended Channels (by priority)
             </h3>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={channelData} layout="vertical" margin={{ left: 10, right: 20 }}>
+              <BarChart data={channelData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 9 }} />
+                <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
                 <Tooltip
                   formatter={(_v, _name, props) =>
                     [`Effort: ${(props?.payload as Record<string, unknown>)?.effort ?? ""}`, "Priority"]

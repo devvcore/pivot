@@ -372,7 +372,7 @@ CTA Assessment: ${analysis.ctaAssessment}`;
 
       const genai = new GoogleGenAI({ apiKey });
       const projResp = await genai.models.generateContent({
-        model: "gemini-2.5-flash-preview-05-20",
+        model: "gemini-2.5-flash",
         contents: [{
           role: "user",
           parts: [{ text: `Generate a ${timeframeMonths}-month financial projection.

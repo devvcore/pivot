@@ -218,9 +218,20 @@ function DataTable({ items, label, maxRows }: { items: any[]; label?: string; ma
             <tr key={i} className="border-b border-zinc-50">
               {cols.map((k, j) => {
                 const v = item[k];
+                let display: string;
+                if (v == null) display = "—";
+                else if (typeof v === "number") display = v.toLocaleString();
+                else if (typeof v === "string") display = v;
+                else if (Array.isArray(v)) display = v.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(", ");
+                else if (typeof v === "object") {
+                  // Extract meaningful value from nested objects
+                  const obj = v as Record<string, unknown>;
+                  display = obj.value != null ? String(obj.value) : obj.name != null ? String(obj.name) : obj.label != null ? String(obj.label) : obj.amount != null ? String(obj.amount) : Object.values(obj).filter(x => typeof x === "string" || typeof x === "number").map(String).join(", ") || "—";
+                }
+                else display = String(v);
                 return (
                   <td key={j} className="py-2 pr-3 text-zinc-700 break-words whitespace-normal">
-                    {typeof v === "number" ? v.toLocaleString() : String(v ?? "—")}
+                    {display}
                   </td>
                 );
               })}

@@ -83,9 +83,9 @@ export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props
               Top Financial Exposure
             </h3>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={impactData} layout="vertical" margin={{ left: 10, right: 20 }}>
+              <BarChart data={impactData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
                 <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
-                <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 9 }} />
+                <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
                 <Tooltip
                   formatter={(v) => formatDollar(Number(v ?? 0))}
                   contentStyle={TOOLTIP_STYLE}

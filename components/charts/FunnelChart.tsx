@@ -33,9 +33,9 @@ export default function FunnelChart({ stages, nameKey, valueKey }: FunnelChartPr
 
   return (
     <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
-      <BarChart data={data} layout="vertical" margin={{ left: 10, right: 40 }}>
+      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 40, top: 5, bottom: 5 }}>
         <XAxis type="number" fontSize={11} tick={{ fill: "#71717a" }} />
-        <YAxis type="category" dataKey="name" width={160} fontSize={11} tick={{ fill: "#71717a" }} />
+        <YAxis type="category" dataKey="name" width={180} fontSize={10} tick={{ fill: "#71717a" }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
         <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           <LabelList dataKey="value" position="right" fontSize={11} fill="#71717a" />

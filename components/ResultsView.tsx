@@ -310,11 +310,11 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
             {hs?.summary && <p className="text-zinc-400 text-sm mt-1 max-w-lg leading-relaxed">{hs.summary}</p>}
           </div>
           {radarData.length > 0 && (
-            <div className="w-56 h-56 shrink-0">
+            <div className="w-72 h-72 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
+                <RadarChart data={radarData} outerRadius="60%">
                   <PolarGrid stroke="#3f3f46" />
-                  <PolarAngleAxis dataKey="dimension" tick={{ fill: "#71717a", fontSize: 10 }} />
+                  <PolarAngleAxis dataKey="dimension" tick={{ fill: "#71717a", fontSize: 9 }} tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 12) + "…" : v} />
                   <Radar name="Score" dataKey="score" stroke="#e4e4e7" fill="#e4e4e7" fillOpacity={0.25} />
                 </RadarChart>
               </ResponsiveContainer>
@@ -485,11 +485,11 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
                         <ResponsiveContainer width="100%" height={220}>
                           <BarChart data={weeklyModel}>
                             <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `W${v}`} />
-                            <YAxis tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
+                            <YAxis tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} width={65} />
                             <Tooltip formatter={(v) => fmt(v as number)} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                            <Bar dataKey="closing_balance" radius={[4, 4, 0, 0]}>
+                            <Bar dataKey={weeklyModel[0]?.closingBalance != null ? "closingBalance" : "closing_balance"} radius={[4, 4, 0, 0]}>
                               {weeklyModel.map((entry: any, i: number) => (
-                                <Cell key={i} fill={entry.risk_flag ? "#ef4444" : "#18181b"} />
+                                <Cell key={i} fill={(entry.riskFlag || entry.risk_flag) ? "#ef4444" : "#18181b"} />
                               ))}
                             </Bar>
                           </BarChart>

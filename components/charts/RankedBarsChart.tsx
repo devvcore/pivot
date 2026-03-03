@@ -34,9 +34,9 @@ export default function RankedBarsChart({ items, nameKey, valueKey, isCurrency }
 
   return (
     <ResponsiveContainer width="100%" height={Math.max(200, data.length * 36)}>
-      <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
+      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
         <XAxis type="number" tickFormatter={isCurrency ? formatDollar : undefined} fontSize={11} />
-        <YAxis type="category" dataKey="name" width={160} fontSize={11} tick={{ fill: "#71717a" }} />
+        <YAxis type="category" dataKey="name" width={180} fontSize={10} tick={{ fill: "#71717a" }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
         <Tooltip formatter={((v: number) => isCurrency ? formatDollar(v) : v.toLocaleString()) as any} contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           {data.map((_, i) => (

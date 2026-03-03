@@ -7,7 +7,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { PitchDeckAnalysis, BusinessPacket, Questionnaire } from "@/lib/types";
 
-const FLASH_MODEL = "gemini-2.5-flash-preview-05-20";
+const FLASH_MODEL = "gemini-2.5-flash";
 
 const TWOSLIDES_API = "https://2slides.com/api/v1";
 const TWOSLIDES_KEY = process.env.TWOSLIDES_API_KEY ?? "";

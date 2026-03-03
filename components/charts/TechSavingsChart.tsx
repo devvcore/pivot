@@ -54,9 +54,9 @@ export function TechSavingsChart({ recommendations, overlay, onDismissOverlay }:
           Potential Savings by Migration
         </h3>
         <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
-          <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
+          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
             <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
-            <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} />
+            <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
             <Tooltip
               formatter={(v) => formatDollar(Number(v ?? 0))}
               contentStyle={TOOLTIP_STYLE}

@@ -51,10 +51,10 @@ export function CompetitorRadarChart({ competitors, yourGrade, overlay, onDismis
         <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
           Website Grade: You vs Competitors
         </h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <RadarChart data={data}>
+        <ResponsiveContainer width="100%" height={300}>
+          <RadarChart data={data} outerRadius="55%">
             <PolarGrid stroke="#e4e4e7" />
-            <PolarAngleAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <PolarAngleAxis dataKey="name" tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + "…" : v} />
             {yourScore > 0 && (
               <Radar
                 name="You"

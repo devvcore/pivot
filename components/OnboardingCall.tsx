@@ -25,11 +25,37 @@ interface ExtractedPayload extends Partial<Questionnaire> {
   complete?: boolean;
 }
 
+// Placeholder values that don't count as "covered"
+const PLACEHOLDER_VALUES = new Set(["", "tbd", "not specified", "n/a", "unknown", "none", "not provided"]);
+function isRealValue(v: unknown): boolean {
+  if (v === null || v === undefined) return false;
+  if (typeof v === "string" && PLACEHOLDER_VALUES.has(v.trim().toLowerCase())) return false;
+  return true;
+}
+
+// Core questionnaire fields Pivvy should try to fill
+const QUESTIONNAIRE_FIELDS: { key: string; label: string; question: string }[] = [
+  { key: "organizationName", label: "Business Name", question: "What is the name of your business?" },
+  { key: "industry", label: "Industry", question: "What industry are you in?" },
+  { key: "website", label: "Website", question: "Do you have a website URL?" },
+  { key: "revenueRange", label: "Revenue Range", question: "What is your approximate annual revenue range?" },
+  { key: "businessModel", label: "Business Model", question: "In one sentence, what does your business sell and how do you make money?" },
+  { key: "keyCompetitors", label: "Competitors", question: "Who are your top 2-3 competitors?" },
+  { key: "keyConcerns", label: "Key Concerns", question: "What is the biggest concern or challenge facing your business right now?" },
+  { key: "oneDecisionKeepingOwnerUpAtNight", label: "Critical Decision", question: "Is there one critical business decision you need to make soon?" },
+  { key: "location", label: "Location", question: "Where is your business located?" },
+];
+
 function buildLivePrompt(extractedFromDocs: Partial<Questionnaire>, dataCoverageGaps?: string[]): string {
   const known = Object.entries(extractedFromDocs)
-    .filter(([, v]) => v !== "" && v !== null && v !== undefined)
+    .filter(([, v]) => isRealValue(v))
     .map(([k, v]) => `${k}: ${String(v)}`)
     .join(", ");
+
+  // Identify which questionnaire fields are still missing
+  const missingFields = QUESTIONNAIRE_FIELDS.filter(
+    (f) => !isRealValue((extractedFromDocs as Record<string, unknown>)[f.key])
+  );
 
   const hasKnown = known.length > 0;
   const hasGaps = dataCoverageGaps && dataCoverageGaps.length > 0;
@@ -75,15 +101,22 @@ function buildLivePrompt(extractedFromDocs: Partial<Questionnaire>, dataCoverage
 
   let fillGaps: string;
   if (hasKnown) {
+    // Build missing field instructions
+    const missingFieldInstructions = missingFields.length > 0
+      ? `\n\nYou MUST ask about these missing fields (one at a time):\n${missingFields.map((f, i) => `${i + 1}) ${f.label}: ${f.question}`).join("\n")}`
+      : "";
+
+    // Deeper questions from document category gaps
+    const categoryGapInstructions = gapQuestions.length > 0
+      ? `\n\nFor deeper analysis, also ask about these topics:\n${gapQuestions.map((q, i) => `${missingFields.length + i + 1}) ${q}`).join("\n")}`
+      : "";
+
     fillGaps = `FILL-GAPS MODE. We already extracted from their documents: ${known}.
 
-Ask ONLY for missing or unclear fields. Keep questions short and conversational.${
-      gapQuestions.length > 0
-        ? `\n\nIMPORTANT — The following data categories were NOT covered by their uploaded documents. You MUST ask about these:\n${gapQuestions.map((q, i) => `${i + 1}) ${q}`).join("\n")}`
-        : ""
-    }
+Acknowledge what you already know, then ask ONLY about what is missing. Keep questions short and conversational.${missingFieldInstructions}${categoryGapInstructions}
 
-After covering the gaps, confirm key details look right, then say "I have everything I need. You can launch your analysis now." and set complete to true.`;
+After covering ${missingFields.length > 0 ? "all missing fields" : "the gaps"}, confirm key details look right, then say "I have everything I need. You can launch your analysis now." and set complete to true.
+Do NOT set complete to true until you have asked about ALL missing fields listed above.`;
   } else {
     // No docs at all — run comprehensive deep-interview
     fillGaps = `COMPREHENSIVE INTERVIEW MODE — No documents were uploaded, so you need to gather ALL key business intelligence through conversation.
@@ -206,6 +239,8 @@ export function OnboardingCall({ extractedFromDocs, dataCoverageGaps, onExtracte
   const [elapsed, setElapsed] = useState(0);
   const [lastCaption, setLastCaption] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sessionRef = useRef<LiveSessionLike | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -266,6 +301,8 @@ export function OnboardingCall({ extractedFromDocs, dataCoverageGaps, onExtracte
     streamRef.current = null;
     audioInCtxRef.current?.close().catch(() => {});
     audioInCtxRef.current = null;
+    if (thinkingTimerRef.current) { clearTimeout(thinkingTimerRef.current); thinkingTimerRef.current = null; }
+    setIsThinking(false);
     setCallState("ended");
   }, []);
 
@@ -325,16 +362,26 @@ export function OnboardingCall({ extractedFromDocs, dataCoverageGaps, onExtracte
             if (e.serverContent?.turnComplete) {
               const full = transcriptBuf.current;
               transcriptBuf.current = "";
+              setIsThinking(false);
+              // After Pivvy finishes, user will speak, then Pivvy thinks
+              if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+              thinkingTimerRef.current = setTimeout(() => setIsThinking(true), 3000);
               if (full) {
                 const { fields, complete } = parseExtractedFromResponse(full);
                 if (Object.keys(fields).length > 0) onExtracted(fields);
                 if (complete) {
-                  // Show "Start Analysis" button instead of immediately ending
+                  setIsThinking(false);
+                  if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
                   setCallState("ready");
                 }
               }
             }
-            if (e.data) void playPcm24k(e.data);
+            if (e.data) {
+              // Audio arriving = Pivvy is speaking, not thinking
+              setIsThinking(false);
+              if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+              void playPcm24k(e.data);
+            }
           },
           onerror: () => onError("Call dropped. Please try again."),
           onclose: () => stopCall(),
@@ -416,11 +463,35 @@ export function OnboardingCall({ extractedFromDocs, dataCoverageGaps, onExtracte
                   transition={{ duration: 1, repeat: Infinity }}
                 />
               )}
+              {isThinking && !isSpeaking && (
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-violet-400/50"
+                  animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                />
+              )}
             </div>
 
             <div className="text-center">
               <div className="text-xl font-semibold">Pivvy</div>
               <div className="text-sm text-green-400 mt-1 font-mono">{formatTime(elapsed)}</div>
+              {isThinking && !isSpeaking && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center justify-center gap-1.5 mt-2"
+                >
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-violet-400"
+                      animate={{ y: [0, -6, 0], opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                    />
+                  ))}
+                  <span className="text-[10px] text-violet-400/70 ml-1.5 font-mono">thinking</span>
+                </motion.div>
+              )}
             </div>
 
             {lastCaption && (

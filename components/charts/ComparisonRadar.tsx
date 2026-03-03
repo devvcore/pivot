@@ -36,9 +36,9 @@ export default function ComparisonRadar({ dimensions, nameKey, valueKey, benchma
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <RadarChart data={data}>
+      <RadarChart data={data} outerRadius="55%">
         <PolarGrid stroke="#e4e4e7" />
-        <PolarAngleAxis dataKey="subject" fontSize={11} tick={{ fill: "#71717a" }} />
+        <PolarAngleAxis dataKey="subject" fontSize={10} tick={{ fill: "#71717a" }} tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + "…" : v} />
         <PolarRadiusAxis fontSize={10} tick={{ fill: "#a1a1aa" }} />
         <Radar name="Score" dataKey="value" stroke={CHART_COLORS.accent} fill={CHART_COLORS.accent} fillOpacity={0.2} strokeWidth={2} />
         {bk && <Radar name="Benchmark" dataKey="benchmark" stroke={CHART_COLORS.secondary} fill={CHART_COLORS.secondary} fillOpacity={0.1} strokeWidth={1} strokeDasharray="4 4" />}

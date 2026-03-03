@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   ArrowLeft, FileText, UploadCloud, X,
   ChevronRight, AlertCircle, CheckCircle2,
-  ShieldAlert, TrendingUp, Info,
+  ShieldAlert, TrendingUp, Info, Phone, Sparkles, Rocket,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Questionnaire } from "@/lib/types";
@@ -68,22 +68,32 @@ const FIELD_LABELS: { key: keyof Questionnaire; label: string }[] = [
   { key: "revenueRange", label: "Revenue" },
 ];
 
+const PLACEHOLDER_SET = new Set(["", "tbd", "not specified", "n/a", "unknown", "none"]);
+function hasRealValue(v: unknown): boolean {
+  if (!v) return false;
+  if (typeof v === "string" && PLACEHOLDER_SET.has(v.trim().toLowerCase())) return false;
+  return true;
+}
+
 function FieldPills({ extracted }: { extracted: Partial<Questionnaire> }) {
   return (
     <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-      {FIELD_LABELS.map(({ key, label }) => (
-        <span
-          key={key}
-          className={`flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full transition-all ${
-            extracted[key]
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-zinc-100 text-zinc-400 border border-zinc-200"
-          }`}
-        >
-          {extracted[key] && <CheckCircle2 className="w-2.5 h-2.5" />}
-          {label}
-        </span>
-      ))}
+      {FIELD_LABELS.map(({ key, label }) => {
+        const filled = hasRealValue(extracted[key]);
+        return (
+          <span
+            key={key}
+            className={`flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full transition-all ${
+              filled
+                ? "bg-green-50 text-green-700 border border-green-200"
+                : "bg-zinc-100 text-zinc-400 border border-zinc-200"
+            }`}
+          >
+            {filled && <CheckCircle2 className="w-2.5 h-2.5" />}
+            {label}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -277,8 +287,8 @@ function CoverageIndicator({ files }: { files: StagedFile[] }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps) {
-  // Flow: 01 Upload (files first) → 02 Live Call (fill gaps) → 03 Analyze
-  const [phase, setPhase] = useState<"upload" | "chat">("upload");
+  // Flow: 01 Upload → 02 Analyze (extraction preview) → 03 Call (fill gaps) → 04 Launch
+  const [phase, setPhase] = useState<"upload" | "analyze" | "chat">("upload");
   const [runId, setRunId] = useState<string | null>(null);
 
   // Upload phase state
@@ -349,7 +359,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
       setExtractedFromDocs(fromDocs);
       setExtracted((prev) => ({ ...fromDocs, ...prev }));
 
-      setPhase("chat");
+      setPhase("analyze");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -376,14 +386,24 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
   const handleLaunchAnalysis = async () => {
     setError(null);
     if (!runId) return;
-    if (!extracted.organizationName?.trim() || extracted.organizationName === "TBD") {
-      setError("Business name is required — please complete the live call.");
-      return;
+    // Derive a fallback org name from website URL if not provided
+    let orgName = extracted.organizationName?.trim() || "";
+    if (!orgName || orgName === "TBD") {
+      // Try to derive from website URL
+      const url = extracted.website || websiteUrl;
+      if (url) {
+        try {
+          const hostname = new URL(url).hostname.replace(/^www\./, "");
+          orgName = hostname.split(".")[0].charAt(0).toUpperCase() + hostname.split(".")[0].slice(1);
+        } catch { orgName = "My Business"; }
+      } else {
+        orgName = "My Business";
+      }
     }
     setSubmitting(true);
     try {
       const questionnaire: Questionnaire = {
-        organizationName: extracted.organizationName ?? "",
+        organizationName: orgName,
         industry: extracted.industry ?? "",
         revenueRange: extracted.revenueRange ?? "$0 - $10M",
         businessModel: extracted.businessModel ?? "",
@@ -402,14 +422,28 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
         socialMediaPlatforms: extracted.socialMediaPlatforms,
       };
 
-      const updateRes = await fetch("/api/job/update-questionnaire", {
+      // Retry helper for network resilience (handles sleep/suspend)
+      const fetchRetry = async (url: string, opts: RequestInit, retries = 3): Promise<Response> => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const res = await fetch(url, opts);
+            return res;
+          } catch (e) {
+            if (i === retries - 1) throw e;
+            await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+          }
+        }
+        throw new Error("Network error");
+      };
+
+      const updateRes = await fetchRetry("/api/job/update-questionnaire", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ runId, questionnaire }),
       });
       if (!updateRes.ok) throw new Error("Failed to update");
 
-      const runRes = await fetch("/api/job", {
+      const runRes = await fetchRetry("/api/job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ runId }),
@@ -440,7 +474,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
           <div>
             <div className="font-bold tracking-tight text-lg text-zinc-900 leading-none">Pivot</div>
             <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-1">
-              {phase === "upload" ? "Document Upload" : "Live Call"}
+              {phase === "upload" ? "Document Upload" : phase === "analyze" ? "Extraction Results" : "Live Call"}
             </div>
           </div>
         </div>
@@ -449,9 +483,11 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
         <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
           <span className={phase === "upload" ? "text-zinc-900 font-bold" : ""}>01 Upload</span>
           <span>→</span>
-          <span className={phase === "chat" ? "text-zinc-900 font-bold" : ""}>02 Call</span>
+          <span className={phase === "analyze" ? "text-zinc-900 font-bold" : ""}>02 Analyze</span>
           <span>→</span>
-          <span>03 Analyze</span>
+          <span className={phase === "chat" ? "text-zinc-900 font-bold" : ""}>03 Call</span>
+          <span>→</span>
+          <span className={submitting ? "text-zinc-900 font-bold" : ""}>04 Launch</span>
         </div>
       </header>
 
@@ -623,7 +659,104 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
           </motion.div>
         )}
 
-        {/* ── Phase B: Full-screen live call ── */}
+        {/* ── Phase B: Extraction Preview ── */}
+        {phase === "analyze" && (
+          <motion.div
+            key="analyze"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex-1 p-8 lg:p-12 overflow-y-auto"
+          >
+            <div className="max-w-2xl mx-auto space-y-8">
+              <div className="text-center">
+                <div className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-2xl font-light tracking-tight text-zinc-900 mb-2">
+                  Here&apos;s what I found
+                </h2>
+                <p className="text-sm text-zinc-500 max-w-md mx-auto">
+                  I&apos;ve extracted what I can from your {stagedFiles.length} document{stagedFiles.length !== 1 ? "s" : ""}
+                  {websiteUrl ? " and website" : ""}. Fields marked green are covered — everything else will be filled via the live call.
+                </p>
+              </div>
+
+              {/* Coverage pills */}
+              <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-4">Data Coverage</div>
+                <FieldPills extracted={extracted} />
+              </div>
+
+              {/* Extracted fields preview */}
+              <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
+                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Extracted Details</div>
+                </div>
+                <div className="divide-y divide-zinc-50">
+                  {[
+                    { label: "Business Name", value: extracted.organizationName },
+                    { label: "Industry", value: extracted.industry },
+                    { label: "Revenue Range", value: extracted.revenueRange },
+                    { label: "Business Model", value: extracted.businessModel },
+                    { label: "Website", value: extracted.website },
+                    { label: "Location", value: extracted.location },
+                    { label: "Key Competitors", value: extracted.keyCompetitors },
+                    { label: "Key Concerns", value: extracted.keyConcerns },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="px-6 py-3 flex items-center justify-between">
+                      <span className="text-xs text-zinc-500">{label}</span>
+                      {value && value !== "TBD" && value.toLowerCase() !== "not specified" && value.toLowerCase() !== "n/a" ? (
+                        <span className="text-xs text-zinc-900 font-medium flex items-center gap-1.5 max-w-[60%] text-right">
+                          <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+                          <span className="break-words">{value}</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-300 italic">Will ask on call</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gap summary */}
+              {dataCoverageGaps.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-xs font-bold text-amber-900 mb-1">Missing data categories</div>
+                      <div className="text-xs text-amber-700 leading-relaxed">
+                        The live call will focus on: {dataCoverageGaps.slice(0, 5).join(", ")}
+                        {dataCoverageGaps.length > 5 ? ` and ${dataCoverageGaps.length - 5} more` : ""}.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => setPhase("chat")}
+                  className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/10 active:scale-95 rounded-xl"
+                >
+                  <Phone className="w-4 h-4" />
+                  Continue to Live Call
+                </button>
+                <button
+                  onClick={() => handleLaunchAnalysis()}
+                  className="w-full flex items-center justify-center gap-3 px-8 py-3 bg-white text-zinc-600 text-xs font-mono uppercase tracking-[0.2em] border border-zinc-200 hover:border-zinc-400 hover:text-zinc-900 transition-all rounded-xl"
+                >
+                  <Rocket className="w-4 h-4" />
+                  Skip Call — Launch Analysis Now
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Phase C: Full-screen live call ── */}
         {phase === "chat" && !submitting && (
           <>
             <OnboardingCall
@@ -639,7 +772,10 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
                 <div className="bg-red-950/90 border border-red-800 rounded-xl p-4 flex items-start gap-3 shadow-2xl backdrop-blur-sm">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                   <div className="flex-1 text-xs text-red-200 leading-normal">{error}</div>
-                  <button onClick={() => setPhase("upload")} className="text-[10px] font-mono text-red-400 hover:text-white uppercase tracking-wider shrink-0">
+                  <button onClick={() => handleLaunchAnalysis()} className="text-[10px] font-mono text-emerald-400 hover:text-white uppercase tracking-wider shrink-0 mr-2">
+                    Retry
+                  </button>
+                  <button onClick={() => setPhase("analyze")} className="text-[10px] font-mono text-red-400 hover:text-white uppercase tracking-wider shrink-0">
                     Back
                   </button>
                 </div>
