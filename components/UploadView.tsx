@@ -5,6 +5,8 @@ import {
   ArrowLeft, FileText, UploadCloud, X,
   ChevronRight, AlertCircle, CheckCircle2,
   ShieldAlert, TrendingUp, Info, Phone, Sparkles, Rocket,
+  MessageSquare, Mail, Receipt, CreditCard, Target,
+  Check, Plus, ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Questionnaire } from "@/lib/types";
@@ -41,6 +43,15 @@ const SOCIAL_PLATFORMS = [
   { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@yourchannel" },
   { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/yourpage" },
 ];
+
+const OAUTH_PROVIDERS = [
+  { key: "slack", name: "Slack", description: "Analyze team communication", color: "bg-purple-600", hoverColor: "hover:bg-purple-700", Icon: MessageSquare },
+  { key: "gmail", name: "Gmail", description: "Analyze email patterns", color: "bg-red-500", hoverColor: "hover:bg-red-600", Icon: Mail },
+  { key: "quickbooks", name: "QuickBooks", description: "Live financial data", color: "bg-green-600", hoverColor: "hover:bg-green-700", Icon: Receipt },
+  { key: "stripe", name: "Stripe", description: "Revenue & subscriptions", color: "bg-violet-600", hoverColor: "hover:bg-violet-700", Icon: CreditCard },
+  { key: "salesforce", name: "Salesforce", description: "Pipeline & deals", color: "bg-sky-500", hoverColor: "hover:bg-sky-600", Icon: TrendingUp },
+  { key: "hubspot", name: "HubSpot", description: "Marketing & contacts", color: "bg-orange-500", hoverColor: "hover:bg-orange-600", Icon: Target },
+] as const;
 
 interface StagedFile {
   id: string;
@@ -296,6 +307,9 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [socialUrls, setSocialUrls] = useState<Record<string, string>>({});
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>([""]);
+  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -305,6 +319,40 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
   const [extracted, setExtracted] = useState<Partial<Questionnaire>>({});
   const [extractedFromDocs, setExtractedFromDocs] = useState<Partial<Questionnaire>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  // Check connected integrations on mount
+  useEffect(() => {
+    if (!orgId) return;
+    fetch(`/api/integrations/list?orgId=${encodeURIComponent(orgId)}`)
+      .then((res) => (res.ok ? res.json() : { providers: [] }))
+      .then((data) => {
+        if (data.providers && Array.isArray(data.providers)) {
+          setConnectedProviders(new Set(data.providers));
+        }
+      })
+      .catch(() => {});
+  }, [orgId]);
+
+  const handleConnectProvider = async (providerKey: string) => {
+    if (!orgId) return;
+    setConnectingProvider(providerKey);
+    try {
+      const res = await fetch("/api/integrations/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: providerKey, orgId }),
+      });
+      if (!res.ok) throw new Error("Failed to initiate connection");
+      const { authUrl } = await res.json();
+      if (authUrl) {
+        window.location.href = authUrl;
+      }
+    } catch {
+      setError(`Failed to connect ${providerKey}. Please try again.`);
+    } finally {
+      setConnectingProvider(null);
+    }
+  };
 
   // Compute data coverage gaps from staged files to pass to phone call
   const dataCoverageGaps = useMemo(() => {
@@ -338,6 +386,8 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
         Object.entries(socialUrls).filter(([, v]) => v.trim())
       );
       if (Object.keys(filledSocials).length > 0) formData.set("socialMediaUrls", JSON.stringify(filledSocials));
+      const filteredCompetitorUrls = competitorUrls.filter((u) => u.trim());
+      if (filteredCompetitorUrls.length > 0) formData.set("competitorUrls", JSON.stringify(filteredCompetitorUrls));
       stagedFiles.forEach((f) => formData.append("files", f.file));
 
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
@@ -505,7 +555,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
               <div>
                 <h2 className="text-sm font-medium text-zinc-900 mb-2">Drop your documents first</h2>
                 <p className="text-sm text-zinc-500 mb-6">
-                  Upload P&amp;L statements, cash flow reports, invoices, customer lists — anything that shows your business. I will extract what I can, then run a live voice call only for missing details.
+                  Upload everything you have — P&amp;L statements, cash flow reports, invoices, customer lists, emails, WhatsApp exports, Slack exports, team communications, contracts, proposals. The more data you provide, the deeper and more accurate your analysis will be. You can also connect tools like Slack and Gmail below for live communication analysis.
                 </p>
 
                 <input
@@ -631,6 +681,118 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
                       />
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Competitor website URLs */}
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">
+                  Competitor Websites (optional)
+                </label>
+                <p className="text-[11px] text-zinc-400 mb-3">
+                  Enter competitor URLs so we can benchmark your business against them.
+                </p>
+                <div className="space-y-2">
+                  {competitorUrls.map((url, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) =>
+                          setCompetitorUrls((prev) =>
+                            prev.map((u, i) => (i === idx ? e.target.value : u))
+                          )
+                        }
+                        placeholder="https://competitor.com"
+                        className="flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm focus:border-zinc-900 focus:outline-none transition-all"
+                      />
+                      {competitorUrls.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCompetitorUrls((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCompetitorUrls((prev) => [...prev, ""])}
+                    className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 transition-colors mt-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another competitor
+                  </button>
+                </div>
+              </div>
+
+              {/* Connect data sources (OAuth) */}
+              <div>
+                <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">
+                  Connect Your Tools
+                </label>
+                <p className="text-[11px] text-zinc-400 mb-4">
+                  Optional — connect for deeper analysis with live data
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {OAUTH_PROVIDERS.map(({ key, name, description, color, hoverColor, Icon }) => {
+                    const isConnected = connectedProviders.has(key);
+                    const isConnecting = connectingProvider === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => !isConnected && handleConnectProvider(key)}
+                        disabled={isConnected || isConnecting}
+                        className={`relative flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+                          isConnected
+                            ? "bg-green-50 border-green-200 cursor-default"
+                            : `bg-white border-zinc-200 hover:border-zinc-400 hover:shadow-md cursor-pointer`
+                        }`}
+                      >
+                        <div
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white ${
+                            isConnected ? "bg-green-500" : color
+                          } ${!isConnected ? hoverColor : ""} transition-colors`}
+                        >
+                          {isConnected ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Icon className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-zinc-900 flex items-center gap-1.5">
+                            {name}
+                            {isConnected && (
+                              <span className="text-[9px] font-mono text-green-600 uppercase tracking-wider">
+                                Connected
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-zinc-400 leading-snug">
+                            {description}
+                          </div>
+                        </div>
+                        {!isConnected && (
+                          <ExternalLink className="w-3.5 h-3.5 text-zinc-300 shrink-0 ml-auto" />
+                        )}
+                        {isConnecting && (
+                          <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full"
+                            />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

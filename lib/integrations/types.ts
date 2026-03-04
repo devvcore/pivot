@@ -124,7 +124,7 @@ export const PROVIDER_CAPABILITIES: ProviderCapability[] = [
       'Bottleneck detection',
       'Relationship mapping',
     ],
-    requiredScopes: ['channels:history', 'channels:read', 'users:read', 'reactions:read'],
+    requiredScopes: ['channels:history', 'channels:read', 'users:read', 'reactions:read', 'groups:history', 'im:history'],
     docsUrl: 'https://api.slack.com/docs',
   },
   {

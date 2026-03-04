@@ -90,8 +90,8 @@ export async function POST(req: Request) {
         params.set('scope', config.scopes.join(' '));
         break;
       case 'slack':
-        // Slack uses user_scope for user tokens
-        params.set('user_scope', config.scopes.join(','));
+        // Slack OAuth v2 uses comma-delimited `scope` for bot token scopes
+        params.set('scope', config.scopes.join(','));
         break;
       case 'quickbooks':
         // QuickBooks requires realm_id tracking

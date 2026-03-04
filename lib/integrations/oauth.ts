@@ -28,7 +28,7 @@ const OAUTH_CONFIGS: Record<IntegrationProvider, OAuthProviderConfig> = {
     revokeUrl: 'https://slack.com/api/auth.revoke',
     clientIdEnv: 'SLACK_CLIENT_ID',
     clientSecretEnv: 'SLACK_CLIENT_SECRET',
-    defaultScopes: ['channels:history', 'channels:read', 'users:read', 'reactions:read'],
+    defaultScopes: ['channels:history', 'channels:read', 'users:read', 'reactions:read', 'groups:history', 'im:history'],
   },
   gmail: {
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -97,7 +97,7 @@ const OAUTH_CONFIGS: Record<IntegrationProvider, OAuthProviderConfig> = {
 // ─── Get Redirect URI ─────────────────────────────────────────────────────────
 
 function getRedirectUri(provider: IntegrationProvider): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
   return `${baseUrl}/api/integrations/${provider}/callback`;
 }
 
