@@ -1,28 +1,21 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
-import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
-  try {
-    const { email, newPassword } = await req.json();
+  const { email } = await req.json();
+  if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
 
-    if (!email || !newPassword) {
-      return NextResponse.json({ error: "Email and new password are required" }, { status: 400 });
-    }
-    if (newPassword.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
-    }
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 
-    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any;
-    if (!user) {
-      return NextResponse.json({ error: "No account found with that email address" }, { status: 404 });
-    }
+  const { error } = await supabase.auth.admin.generateLink({
+    type: "recovery",
+    email: email.trim().toLowerCase(),
+  });
 
-    const hash = await bcrypt.hash(newPassword, 10);
-    db.prepare("UPDATE users SET password_hash = ? WHERE email = ?").run(hash, email);
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
-  }
+  // Always return success to prevent email enumeration
+  return NextResponse.json({ success: true });
 }

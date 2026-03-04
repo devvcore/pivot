@@ -6,7 +6,7 @@
  * can query business intelligence results via the MCP standard.
  *
  * Transport: stdio
- * Database:  SQLite (better-sqlite3) at ./pivot.db
+ * Database:  Supabase PostgreSQL (migrated from SQLite)
  *
  * Usage:
  *   npx tsx mcp-server.ts
@@ -24,24 +24,43 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import Database from "better-sqlite3";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import fs from "fs";
+import path from "path";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Database setup
+// Load environment variables from .env
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DB_PATH = path.join(path.dirname(new URL(import.meta.url).pathname), "pivot.db");
-
-let db: Database.Database;
-try {
-  db = new Database(DB_PATH, { readonly: true });
-  db.pragma("journal_mode = WAL");
-} catch (err) {
-  // If the database doesn't exist yet, we'll handle it gracefully in each tool
-  db = null as any;
+const envPath = path.join(path.dirname(new URL(import.meta.url).pathname), ".env");
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, "utf-8");
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    let value = trimmed.slice(eqIndex + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Supabase setup (service role key bypasses RLS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -53,18 +72,19 @@ interface JobRow {
   status: string;
   phase: string;
   organization_id: string;
-  questionnaire_json: string | null;
-  file_paths_json: string | null;
+  questionnaire_json: any;
+  file_paths_json: any;
   parsed_context: string | null;
-  results_json: string | null;
-  knowledge_graph_json: string | null;
+  results_json: any;
+  knowledge_graph_json: any;
   error: string | null;
   created_at: string;
   updated_at: string;
 }
 
-function safeJsonParse(raw: string | null | undefined, fallback: any = null): any {
+function safeJsonParse(raw: any, fallback: any = null): any {
   if (!raw) return fallback;
+  if (typeof raw === "object") return raw; // Already parsed by Supabase (JSONB)
   try {
     return JSON.parse(raw);
   } catch {
@@ -72,18 +92,23 @@ function safeJsonParse(raw: string | null | undefined, fallback: any = null): an
   }
 }
 
-function getJobRow(runId: string): JobRow | null {
-  if (!db) return null;
+async function getJobRow(runId: string): Promise<JobRow | null> {
   try {
-    const row = db.prepare("SELECT * FROM jobs WHERE run_id = ?").get(runId) as JobRow | undefined;
-    return row ?? null;
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("run_id", runId)
+      .single();
+
+    if (error || !data) return null;
+    return data as JobRow;
   } catch {
     return null;
   }
 }
 
-function getDeliverables(runId: string): any | null {
-  const row = getJobRow(runId);
+async function getDeliverables(runId: string): Promise<any | null> {
+  const row = await getJobRow(runId);
   if (!row) return null;
   return safeJsonParse(row.results_json);
 }
@@ -126,12 +151,14 @@ server.tool(
   "List all completed analyses with runId, organization name, date, and health score",
   {},
   async () => {
-    if (!db) return errorResult("Database not available. Run an analysis first.");
-
     try {
-      const rows = db
-        .prepare("SELECT * FROM jobs WHERE status = 'completed' ORDER BY created_at DESC")
-        .all() as JobRow[];
+      const { data: rows, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false });
+
+      if (error || !rows) return errorResult("Failed to query analyses.");
 
       const analyses = rows.map((row) => {
         const questionnaire = safeJsonParse(row.questionnaire_json, {});
@@ -164,7 +191,7 @@ server.tool(
   "Get health score, grade, headline, interpretation, and dimension breakdown for a specific analysis",
   { runId: z.string().describe("The run ID of the analysis (e.g. run_1234567890)") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const hs = deliverables.healthScore;
@@ -188,7 +215,7 @@ server.tool(
   "Get all issues from the issues register — includes severity, category, financial impact, and recommended action",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const ir = deliverables.issuesRegister;
@@ -221,7 +248,7 @@ server.tool(
   "Get the action plan and recommendations — includes daily tasks, owners, and decision brief",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const result: any = {};
@@ -279,7 +306,7 @@ server.tool(
   "Get financial data — cash intelligence, revenue leak analysis, burn rate, and runway",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const result: any = {};
@@ -346,7 +373,7 @@ server.tool(
   "Get the full executive summary — subject, key findings, critical actions, financial summary, and outlook",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const es = deliverables.executiveSummary;
@@ -371,7 +398,7 @@ server.tool(
   "Get competitor analysis — competitor sites, industry leaders, positioning, and differentiation opportunities",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const result: any = {};
@@ -434,7 +461,7 @@ server.tool(
   "Get team and workforce analysis — hiring plan, team performance, talent gaps, culture assessment",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const deliverables = getDeliverables(runId);
+    const deliverables = await getDeliverables(runId);
     if (!deliverables) return errorResult(`No completed analysis found for runId: ${runId}`);
 
     const result: any = {};
@@ -465,7 +492,7 @@ server.tool(
   "Get all deliverables for a specific analysis — full data dump of every section. Warning: response can be very large.",
   { runId: z.string().describe("The run ID of the analysis") },
   async ({ runId }) => {
-    const row = getJobRow(runId);
+    const row = await getJobRow(runId);
     if (!row) return errorResult(`No analysis found for runId: ${runId}`);
 
     const deliverables = safeJsonParse(row.results_json);
@@ -500,7 +527,7 @@ async function main() {
   await server.connect(transport);
   // Server is now running and listening on stdio
   // Log to stderr so it doesn't interfere with MCP protocol on stdout
-  console.error("[Pivot MCP] Server started on stdio transport");
+  console.error("[Pivot MCP] Server started on stdio transport (Supabase backend)");
 }
 
 main().catch((err) => {

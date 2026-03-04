@@ -1,77 +1,118 @@
-import db from "./db";
+/**
+ * Pivot Job Store — Supabase PostgreSQL backend
+ *
+ * All functions are async (return Promises) since Supabase uses HTTP.
+ * Callers MUST await these functions.
+ */
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Job, Questionnaire, JobStatus, MVPDeliverables, KnowledgeGraph } from "./types";
 import { v4 as uuidv4 } from "uuid";
+
+const supabase = createAdminClient();
 
 function mapDbToJob(row: any): Job {
   return {
     runId: row.run_id,
     status: row.status as JobStatus,
     phase: row.phase as any,
-    questionnaire: JSON.parse(row.questionnaire_json),
-    filePaths: JSON.parse(row.file_paths_json || "[]"),
+    questionnaire: typeof row.questionnaire_json === "string"
+      ? JSON.parse(row.questionnaire_json)
+      : row.questionnaire_json,
+    filePaths: typeof row.file_paths_json === "string"
+      ? JSON.parse(row.file_paths_json || "[]")
+      : (row.file_paths_json || []),
     parsedContext: row.parsed_context,
-    knowledgeGraph: row.knowledge_graph_json ? JSON.parse(row.knowledge_graph_json) : undefined,
+    knowledgeGraph: row.knowledge_graph_json
+      ? (typeof row.knowledge_graph_json === "string"
+        ? JSON.parse(row.knowledge_graph_json)
+        : row.knowledge_graph_json)
+      : undefined,
     error: row.error,
-    deliverables: row.results_json ? JSON.parse(row.results_json) : undefined,
+    deliverables: row.results_json
+      ? (typeof row.results_json === "string"
+        ? JSON.parse(row.results_json)
+        : row.results_json)
+      : undefined,
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
   };
 }
 
-export function createJob(questionnaire: Questionnaire, filePaths: string[], orgId?: string): Job {
+export async function createJob(questionnaire: Questionnaire, filePaths: string[], orgId?: string): Promise<Job> {
   const runId = `run_${Date.now()}`;
   const id = uuidv4();
-
   const resolvedOrgId = orgId || "default-org";
 
-  const stmt = db.prepare(`
-    INSERT INTO jobs (id, run_id, status, phase, organization_id, questionnaire_json, file_paths_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(
+  const { error } = await supabase.from("jobs").insert({
     id,
-    runId,
-    "pending",
-    "INGEST",
-    resolvedOrgId,
-    JSON.stringify(questionnaire),
-    JSON.stringify(filePaths)
-  );
+    run_id: runId,
+    status: "pending",
+    phase: "INGEST",
+    organization_id: resolvedOrgId,
+    questionnaire_json: questionnaire,
+    file_paths_json: filePaths,
+  });
 
-  return getJob(runId)!;
+  if (error) {
+    console.error("[job-store] createJob error:", error);
+    throw new Error(`Failed to create job: ${error.message}`);
+  }
+
+  const job = await getJob(runId);
+  if (!job) throw new Error("Failed to retrieve created job");
+  return job;
 }
 
-export function getJob(runId: string): Job | undefined {
-  const row = db.prepare("SELECT * FROM jobs WHERE run_id = ?").get(runId);
-  return row ? mapDbToJob(row) : undefined;
+export async function getJob(runId: string): Promise<Job | undefined> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("run_id", runId)
+    .single();
+
+  if (error || !data) return undefined;
+  return mapDbToJob(data);
 }
 
-export function updateJob(
+export async function updateJob(
   runId: string,
   updates: Partial<Pick<Job, "status" | "parsedContext" | "knowledgeGraph" | "deliverables" | "error" | "filePaths" | "phase" | "questionnaire">>
-): Job | undefined {
-  const params: any[] = [];
-  const sets: string[] = [];
+): Promise<Job | undefined> {
+  const updateData: Record<string, any> = {};
 
-  if (updates.status) { sets.push("status = ?"); params.push(updates.status); }
-  if (updates.phase) { sets.push("phase = ?"); params.push(updates.phase); }
-  if (updates.questionnaire) { sets.push("questionnaire_json = ?"); params.push(JSON.stringify(updates.questionnaire)); }
-  if (updates.parsedContext !== undefined) { sets.push("parsed_context = ?"); params.push(updates.parsedContext ?? null); }
-  if (updates.knowledgeGraph !== undefined) { sets.push("knowledge_graph_json = ?"); params.push(updates.knowledgeGraph ? JSON.stringify(updates.knowledgeGraph) : null); }
-  if (updates.deliverables !== undefined) { sets.push("results_json = ?"); params.push(updates.deliverables ? JSON.stringify(updates.deliverables) : null); }
-  if (updates.error !== undefined) { sets.push("error = ?"); params.push(updates.error ?? null); }
-  if (updates.filePaths) { sets.push("file_paths_json = ?"); params.push(JSON.stringify(updates.filePaths)); }
+  if (updates.status) updateData.status = updates.status;
+  if (updates.phase) updateData.phase = updates.phase;
+  if (updates.questionnaire) updateData.questionnaire_json = updates.questionnaire;
+  if (updates.parsedContext !== undefined) updateData.parsed_context = updates.parsedContext ?? null;
+  if (updates.knowledgeGraph !== undefined) updateData.knowledge_graph_json = updates.knowledgeGraph ?? null;
+  if (updates.deliverables !== undefined) updateData.results_json = updates.deliverables ?? null;
+  if (updates.error !== undefined) updateData.error = updates.error ?? null;
+  if (updates.filePaths) updateData.file_paths_json = updates.filePaths;
 
-  if (sets.length === 0) return getJob(runId);
+  if (Object.keys(updateData).length === 0) return getJob(runId);
 
-  params.push(runId);
-  db.prepare(`UPDATE jobs SET ${sets.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE run_id = ?`).run(...params);
+  const { error } = await supabase
+    .from("jobs")
+    .update(updateData)
+    .eq("run_id", runId);
+
+  if (error) {
+    console.error("[job-store] updateJob error:", error);
+  }
 
   return getJob(runId);
 }
 
-export function listJobs(): Job[] {
-  const rows = db.prepare("SELECT * FROM jobs ORDER BY created_at DESC").all();
-  return rows.map(mapDbToJob);
+export async function listJobs(): Promise<Job[]> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("[job-store] listJobs error:", error);
+    return [];
+  }
+
+  return data.map(mapDbToJob);
 }

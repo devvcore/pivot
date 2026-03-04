@@ -1,43 +1,57 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
-import bcrypt from "bcryptjs";
-import { v4 as uuidv4 } from "uuid";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
-    try {
-        const { email, password } = await req.json();
-
-        if (!email || !password) {
-            return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
-        }
-
-        // Use case-insensitive email comparison
-        const user = db.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?)").get(email.trim()) as any;
-
-        if (!user) {
-            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-        }
-
-        // Check if password_hash exists (defensive check)
-        if (!user.password_hash) {
-            console.error(`[LOGIN] User ${user.email} has no password_hash`);
-            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-        }
-
-        const valid = await bcrypt.compare(password, user.password_hash);
-        if (!valid) {
-            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-        }
-
-        // In a real app, you'd set a session cookie/JWT here
-        return NextResponse.json({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            organizationId: user.organization_id
-        });
-    } catch (error: any) {
-        console.error("[LOGIN] Error:", error);
-        return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  try {
+    const { email, password } = await req.json();
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
+
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll(); },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              try { cookieStore.set(name, value, options); } catch {}
+            });
+          },
+        },
+      }
+    );
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // Look up profile in Supabase
+    const admin = createAdminClient();
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("*")
+      .eq("id", data.user.id)
+      .single();
+
+    const response = NextResponse.json({
+      id: data.user.id,
+      email: data.user.email,
+      name: data.user.user_metadata?.name || profile?.name || email.split("@")[0],
+      organizationId: profile?.organization_id || data.user.user_metadata?.organizationId || "",
+    });
+
+    return response;
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
+  }
 }

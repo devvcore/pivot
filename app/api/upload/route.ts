@@ -14,12 +14,12 @@ export async function POST(request: Request) {
       q.organizationName = "TBD";
     }
 
-    const job = createJob(q, [], orgId);
+    const job = await createJob(q, [], orgId);
     const { filePaths, error: saveError } = await saveUploadedFiles(job.runId, formData);
     if (saveError) {
       return NextResponse.json({ error: saveError }, { status: 400 });
     }
-    updateJob(job.runId, { filePaths });
+    await updateJob(job.runId, { filePaths });
 
     return NextResponse.json({ runId: job.runId });
   } catch (e) {

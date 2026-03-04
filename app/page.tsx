@@ -25,7 +25,9 @@ export default function Home() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [view, setView] = useState<AppView>("dashboard");
   const [runId, setRunId] = useState<string | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
+  // On mount: hydrate from localStorage for instant UI, then verify with Supabase session
   useEffect(() => {
     try {
       const stored = localStorage.getItem(RUN_ID_KEY);
@@ -36,6 +38,27 @@ export default function Home() {
     } catch {
       // ignore
     }
+
+    // Verify session with Supabase
+    fetch("/api/auth/session")
+      .then((r) => {
+        if (r.ok) return r.json();
+        throw new Error("No session");
+      })
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+          localStorage.setItem("pivot_user", JSON.stringify(data.user));
+        } else {
+          setUser(null);
+          localStorage.removeItem("pivot_user");
+        }
+      })
+      .catch(() => {
+        setUser(null);
+        localStorage.removeItem("pivot_user");
+      })
+      .finally(() => setSessionChecked(true));
   }, []);
 
   useEffect(() => {
@@ -69,6 +92,16 @@ export default function Home() {
       })
       .catch(() => setView("processing"));
   }, [runId, view]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    setUser(null);
+    localStorage.removeItem("pivot_user");
+  };
 
   if (!user) {
     return <AuthView onLogin={(u: any) => setUser(u)} />;
@@ -137,7 +170,7 @@ export default function Home() {
         )}
 
         <button
-          onClick={() => setUser(null)}
+          onClick={handleLogout}
           className="fixed bottom-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-zinc-500 hover:text-zinc-900 transition-all border border-zinc-200 shadow-sm z-50 group"
           title="Sign Out"
         >

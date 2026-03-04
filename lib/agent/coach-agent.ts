@@ -907,11 +907,11 @@ const TOOLS = [
 
 // ── Tool execution ────────────────────────────────────────────────────────────
 
-function findJobForOrg(orgId: string, runId?: string): ReturnType<typeof getJob> {
+async function findJobForOrg(orgId: string, runId?: string): Promise<ReturnType<typeof getJob>> {
   if (runId) {
     return getJob(runId);
   }
-  const allJobs = listJobs();
+  const allJobs = await listJobs();
   return (
     allJobs.find((j) => j.questionnaire.orgId === orgId && j.status === "completed") ??
     allJobs.find((j) => j.status === "completed")
@@ -926,7 +926,7 @@ async function executeTool(
 ): Promise<string> {
   if (toolName === "get_report_section") {
     const section = args.section as string;
-    const job = findJobForOrg(orgId, runId);
+    const job = await findJobForOrg(orgId, runId);
 
     if (!job?.deliverables) return `No completed report found for section: ${section}`;
 
@@ -942,7 +942,7 @@ async function executeTool(
   if (toolName === "get_team_data") {
     // Team data would come from uploaded HR/payroll documents
     // For now, check if the report has any employee-related data
-    const job = findJobForOrg(orgId, runId);
+    const job = await findJobForOrg(orgId, runId);
 
     if (!job?.deliverables) {
       return "No team data available. The business owner needs to upload payroll records, org charts, or performance reviews for team analysis.";
@@ -989,7 +989,7 @@ async function executeTool(
   if (toolName === "generate_action_items") {
     const role = args.role as string;
     const focusArea = args.focusArea as string | undefined;
-    const job = findJobForOrg(orgId, runId);
+    const job = await findJobForOrg(orgId, runId);
 
     if (!job?.deliverables) {
       return "No report data available to generate action items. Complete a business analysis first.";
@@ -1098,7 +1098,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
 
   // Build business context from report
   let reportContext = "";
-  const job = findJobForOrg(orgId, runId);
+  const job = await findJobForOrg(orgId, runId);
   if (job?.deliverables) {
     const d = job.deliverables as MVPDeliverables;
     const parts: string[] = [];

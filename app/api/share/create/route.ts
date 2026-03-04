@@ -28,14 +28,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const job = getJob(runId);
+    const job = await getJob(runId);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
     const orgId = job.questionnaire.orgId || "default-org";
 
-    const link = createShareLink({
+    const link = await createShareLink({
       orgId,
       jobId: runId,
       createdBy: "owner", // MVP: no auth, assume owner

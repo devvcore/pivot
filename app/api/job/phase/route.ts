@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import { updateJob } from "@/lib/job-store";
 
 export async function POST(req: Request) {
     try {
         const { runId, phase } = await req.json();
 
-        const stmt = db.prepare("UPDATE jobs SET phase = ?, updated_at = CURRENT_TIMESTAMP WHERE run_id = ?");
-        const info = stmt.run(phase, runId);
+        const result = await updateJob(runId, { phase });
 
-        if (info.changes === 0) {
+        if (!result) {
             return NextResponse.json({ error: "Job not found" }, { status: 404 });
         }
 

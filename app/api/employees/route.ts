@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const employees = listEmployees(orgId);
+    const employees = await listEmployees(orgId);
     return NextResponse.json(employees);
   } catch (err) {
     console.error("[api/employees] GET error:", err);
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const employee = createEmployee({
+    const employee = await createEmployee({
       orgId,
       name,
       roleTitle: roleTitle || undefined,

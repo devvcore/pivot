@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if (authError) return authError;
 
   try {
-    const jobs = listJobs();
+    const jobs = await listJobs();
 
     const analyses = jobs
       .filter((j) => j.status === "completed" && j.deliverables)

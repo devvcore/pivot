@@ -1,53 +1,55 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
-import bcrypt from "bcryptjs";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
-    try {
-        const { email, password, name, organizationName } = await req.json();
-
-        if (!email || !password || !name || !organizationName) {
-            return NextResponse.json({ error: "All fields are required" }, { status: 400 });
-        }
-
-        // Normalize email: trim and lowercase for storage (but preserve original for display)
-        const normalizedEmail = email.trim().toLowerCase();
-
-        // Check if user already exists (case-insensitive)
-        const existingUser = db.prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)").get(normalizedEmail);
-        if (existingUser) {
-            return NextResponse.json({ error: "User already exists" }, { status: 400 });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const orgId = uuidv4();
-        const userId = uuidv4();
-
-        const insertOrg = db.prepare(`
-      INSERT INTO organizations (id, name) 
-      VALUES (?, ?)
-    `);
-
-        const insertUser = db.prepare(`
-      INSERT INTO users (id, email, password_hash, name, organization_id)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-        // Wrap in transaction
-        const transaction = db.transaction(() => {
-            insertOrg.run(orgId, organizationName);
-            insertUser.run(userId, normalizedEmail, hashedPassword, name, orgId);
-        });
-
-        transaction();
-
-        return NextResponse.json({ success: true, userId });
-    } catch (error: any) {
-        if (error.code === 'SQLITE_CONSTRAINT') {
-            return NextResponse.json({ error: "User already exists" }, { status: 400 });
-        }
-        console.error("[SIGNUP] Error:", error);
-        return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
+  try {
+    const { email, password, name, organizationName } = await req.json();
+    if (!email || !password || !name || !organizationName) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
+
+    const supabase = createAdminClient();
+
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password,
+      email_confirm: true,
+      user_metadata: { name, organizationName },
+    });
+
+    if (authError) {
+      return NextResponse.json({ error: authError.message }, { status: 400 });
+    }
+
+    // Create org in Supabase
+    const orgId = uuidv4();
+    try {
+      await supabase.from("organizations").insert({
+        id: orgId,
+        name: organizationName,
+        owner_user_id: authData.user.id,
+      });
+
+      // Create profile linked to auth user
+      await supabase.from("profiles").insert({
+        id: authData.user.id,
+        email: email.trim().toLowerCase(),
+        name,
+        organization_id: orgId,
+      });
+
+      // Link user to org
+      await supabase.from("user_organizations").insert({
+        user_id: authData.user.id,
+        org_id: orgId,
+        role: "OWNER",
+      });
+    } catch { /* org/profile may already exist */ }
+
+    return NextResponse.json({ success: true, userId: authData.user.id });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
+  }
 }

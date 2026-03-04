@@ -11,10 +11,11 @@
  * The agent uses a get_report_section tool when it needs deeper data.
  */
 import { GoogleGenAI } from "@google/genai";
-import db from "@/lib/db";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { MVPDeliverables, AgentMemory, WebsiteAnalysis } from "@/lib/types";
 
 const LITE_MODEL = "gemini-3-flash-preview";
+const supabase = createAdminClient();
 
 export async function buildAgentMemory(
   orgId: string,
@@ -99,7 +100,7 @@ Target: 500-600 words exactly.`;
   }
 
   // Get existing memory for this org to append report summaries
-  const existing = getAgentMemory(orgId);
+  const existing = await getAgentMemory(orgId);
   const existingSummaries = existing?.reportSummaries ?? [];
 
   const newSummary: AgentMemory["reportSummaries"][number] = {
@@ -126,7 +127,7 @@ Target: 500-600 words exactly.`;
   };
 
   // Persist to DB
-  saveAgentMemory(orgId, memory);
+  await saveAgentMemory(orgId, memory);
 
   return memory;
 }
@@ -152,47 +153,60 @@ RECOMMENDATION: ${db2?.recommendation ?? ""}
 WEBSITE: ${wa ? `Grade ${wa.grade} — ${wa.synopsis}` : "Not analyzed"}`;
 }
 
-// ── DB helpers ────────────────────────────────────────────────────────────────
+// ── DB helpers (Supabase) ────────────────────────────────────────────────────
 
-export function getAgentMemory(orgId: string): AgentMemory | null {
+export async function getAgentMemory(orgId: string): Promise<AgentMemory | null> {
   try {
-    const row = db
-      .prepare("SELECT agent_memory_json FROM organizations WHERE id = ?")
-      .get(orgId) as { agent_memory_json: string | null } | undefined;
-    if (!row?.agent_memory_json) return null;
-    return JSON.parse(row.agent_memory_json) as AgentMemory;
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("agent_memory_json")
+      .eq("id", orgId)
+      .single();
+
+    if (error || !data?.agent_memory_json) return null;
+
+    // Supabase returns JSONB as already-parsed objects
+    const raw = data.agent_memory_json;
+    return (typeof raw === "string" ? JSON.parse(raw) : raw) as AgentMemory;
   } catch {
     return null;
   }
 }
 
-export function saveAgentMemory(orgId: string, memory: AgentMemory): void {
+export async function saveAgentMemory(orgId: string, memory: AgentMemory): Promise<void> {
   try {
-    db.prepare(
-      "UPDATE organizations SET agent_memory_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-    ).run(JSON.stringify(memory), orgId);
+    await supabase
+      .from("organizations")
+      .update({ agent_memory_json: memory })
+      .eq("id", orgId);
   } catch (e) {
     console.warn("[Memory] Failed to save agent memory:", e);
   }
 }
 
-export function getOrgWebsiteAnalysis(orgId: string): WebsiteAnalysis | null {
+export async function getOrgWebsiteAnalysis(orgId: string): Promise<WebsiteAnalysis | null> {
   try {
-    const row = db
-      .prepare("SELECT website_analysis_json FROM organizations WHERE id = ?")
-      .get(orgId) as { website_analysis_json: string | null } | undefined;
-    if (!row?.website_analysis_json) return null;
-    return JSON.parse(row.website_analysis_json) as WebsiteAnalysis;
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("website_analysis_json")
+      .eq("id", orgId)
+      .single();
+
+    if (error || !data?.website_analysis_json) return null;
+
+    const raw = data.website_analysis_json;
+    return (typeof raw === "string" ? JSON.parse(raw) : raw) as WebsiteAnalysis;
   } catch {
     return null;
   }
 }
 
-export function saveWebsiteAnalysis(orgId: string, analysis: WebsiteAnalysis): void {
+export async function saveWebsiteAnalysis(orgId: string, analysis: WebsiteAnalysis): Promise<void> {
   try {
-    db.prepare(
-      "UPDATE organizations SET website_analysis_json = ?, website = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-    ).run(JSON.stringify(analysis), analysis.url, orgId);
+    await supabase
+      .from("organizations")
+      .update({ website_analysis_json: analysis, website: analysis.url })
+      .eq("id", orgId);
   } catch (e) {
     console.warn("[Memory] Failed to save website analysis:", e);
   }

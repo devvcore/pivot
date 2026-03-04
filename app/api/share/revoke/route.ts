@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deleted = revokeShareLink(id);
+    const deleted = await revokeShareLink(id);
 
     if (!deleted) {
       return NextResponse.json(

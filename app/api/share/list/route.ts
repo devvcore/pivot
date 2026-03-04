@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const links = listShareLinksForJob(runId);
+    const links = await listShareLinksForJob(runId);
     return NextResponse.json(links);
   } catch (err) {
     console.error("[api/share/list]", err);

@@ -702,7 +702,7 @@ async function runExtendedWaves(
         ]);
         if (psm.status === "fulfilled" && psm.value) deliverables = { ...deliverables, pricingStrategyMatrix: psm.value };
         if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] PricingStrategyMatrix/CustomerHealthScore failed (non-fatal):", e);
       }
@@ -718,7 +718,7 @@ async function runExtendedWaves(
         ]);
         if (rw.status === "fulfilled" && rw.value) deliverables = { ...deliverables, revenueWaterfall: rw.value };
         if (td.status === "fulfilled" && td.value) deliverables = { ...deliverables, techDebtAssessment: td.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] RevenueWaterfall/TechDebtAssessment failed (non-fatal):", e);
       }
@@ -734,7 +734,7 @@ async function runExtendedWaves(
         ]);
         if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, teamPerformance: tp.value };
         if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, marketEntryStrategy: me.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] TeamPerformance/MarketEntryStrategy failed (non-fatal):", e);
       }
@@ -750,7 +750,7 @@ async function runExtendedWaves(
         ]);
         if (cif.status === "fulfilled" && cif.value) deliverables = { ...deliverables, competitiveIntelFeed: cif.value };
         if (cfs.status === "fulfilled" && cfs.value) deliverables = { ...deliverables, cashFlowSensitivity: cfs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CompetitiveIntelFeed/CashFlowSensitivity failed (non-fatal):", e);
       }
@@ -766,7 +766,7 @@ async function runExtendedWaves(
         ]);
         if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, digitalMaturity: dm.value };
         if (af.status === "fulfilled" && af.value) deliverables = { ...deliverables, acquisitionFunnel: af.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] DigitalMaturity/AcquisitionFunnel failed (non-fatal):", e);
       }
@@ -782,7 +782,7 @@ async function runExtendedWaves(
         ]);
         if (sa.status === "fulfilled" && sa.value) deliverables = { ...deliverables, strategicAlignment: sa.value };
         if (bo.status === "fulfilled" && bo.value) deliverables = { ...deliverables, budgetOptimizer: bo.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] StrategicAlignment/BudgetOptimizer failed (non-fatal):", e);
       }
@@ -798,7 +798,7 @@ async function runExtendedWaves(
         ]);
         if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, revenueDrivers: rd.value };
         if (mo.status === "fulfilled" && mo.value) deliverables = { ...deliverables, marginOptimization: mo.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] RevenueDrivers/MarginOptimization failed (non-fatal):", e);
       }
@@ -814,7 +814,7 @@ async function runExtendedWaves(
         ]);
         if (df.status === "fulfilled" && df.value) deliverables = { ...deliverables, demandForecasting: df.value };
         if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, cohortAnalysis: ca.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] DemandForecasting/CohortAnalysis failed (non-fatal):", e);
       }
@@ -830,7 +830,7 @@ async function runExtendedWaves(
         ]);
         if (wl.status === "fulfilled" && wl.value) deliverables = { ...deliverables, winLossAnalysis: wl.value };
         if (sf.status === "fulfilled" && sf.value) deliverables = { ...deliverables, salesForecast: sf.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] WinLossAnalysis/SalesForecast failed (non-fatal):", e);
       }
@@ -846,7 +846,7 @@ async function runExtendedWaves(
         ]);
         if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, processEfficiency: pe.value };
         if (vr.status === "fulfilled" && vr.value) deliverables = { ...deliverables, vendorRisk: vr.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] ProcessEfficiency/VendorRisk failed (non-fatal):", e);
       }
@@ -862,7 +862,7 @@ async function runExtendedWaves(
         ]);
         if (qm.status === "fulfilled" && qm.value) deliverables = { ...deliverables, qualityMetrics: qm.value };
         if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, capacityPlanning: cp.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] QualityMetrics/CapacityPlanning failed (non-fatal):", e);
       }
@@ -878,7 +878,7 @@ async function runExtendedWaves(
         ]);
         if (km.status === "fulfilled" && km.value) deliverables = { ...deliverables, knowledgeManagement: km.value };
         if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, complianceScorecard: cs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] KnowledgeManagement/ComplianceScorecard failed (non-fatal):", e);
       }
@@ -894,7 +894,7 @@ async function runExtendedWaves(
         ]);
         if (mp.status === "fulfilled" && mp.value) deliverables = { ...deliverables, marketPenetration: mp.value };
         if (fa.status === "fulfilled" && fa.value) deliverables = { ...deliverables, flywheelAnalysis: fa.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] MarketPenetration/FlywheelAnalysis failed (non-fatal):", e);
       }
@@ -910,7 +910,7 @@ async function runExtendedWaves(
         ]);
         if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, partnershipsStrategy: ps.value };
         if (ie.status === "fulfilled" && ie.value) deliverables = { ...deliverables, internationalExpansion: ie.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] PartnershipsStrategy/InternationalExpansion failed (non-fatal):", e);
       }
@@ -926,7 +926,7 @@ async function runExtendedWaves(
         ]);
         if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, rdEffectiveness: rd.value };
         if (be.status === "fulfilled" && be.value) deliverables = { ...deliverables, brandEquity: be.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] RDEffectiveness/BrandEquity failed (non-fatal):", e);
       }
@@ -942,7 +942,7 @@ async function runExtendedWaves(
         ]);
         if (wc.status === "fulfilled" && wc.value) deliverables = { ...deliverables, workingCapital: wc.value };
         if (ds.status === "fulfilled" && ds.value) deliverables = { ...deliverables, debtStrategy: ds.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] WorkingCapital/DebtStrategy failed (non-fatal):", e);
       }
@@ -958,7 +958,7 @@ async function runExtendedWaves(
         ]);
         if (ts.status === "fulfilled" && ts.value) deliverables = { ...deliverables, taxStrategy: ts.value };
         if (ir.status === "fulfilled" && ir.value) deliverables = { ...deliverables, investorReadiness: ir.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] TaxStrategy/InvestorReadiness failed (non-fatal):", e);
       }
@@ -974,7 +974,7 @@ async function runExtendedWaves(
         ]);
         if (ma.status === "fulfilled" && ma.value) deliverables = { ...deliverables, maReadiness: ma.value };
         if (sr.status === "fulfilled" && sr.value) deliverables = { ...deliverables, strategicRoadmap: sr.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] MAReadiness/StrategicRoadmap failed (non-fatal):", e);
       }
@@ -990,7 +990,7 @@ async function runExtendedWaves(
         ]);
         if (cv.status === "fulfilled" && cv.value) deliverables = { ...deliverables, customerVoice: cv.value };
         if (re.status === "fulfilled" && re.value) deliverables = { ...deliverables, referralEngine: re.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CustomerVoice/ReferralEngine failed (non-fatal):", e);
       }
@@ -1006,7 +1006,7 @@ async function runExtendedWaves(
         ]);
         if (psi.status === "fulfilled" && psi.value) deliverables = { ...deliverables, priceSensitivityIndex: psi.value };
         if (ces.status === "fulfilled" && ces.value) deliverables = { ...deliverables, customerEffortScore: ces.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] PriceSensitivityIndex/CustomerEffortScore failed (non-fatal):", e);
       }
@@ -1022,7 +1022,7 @@ async function runExtendedWaves(
         ]);
         if (aem.status === "fulfilled" && aem.value) deliverables = { ...deliverables, accountExpansionMap: aem.value };
         if (lpd.status === "fulfilled" && lpd.value) deliverables = { ...deliverables, loyaltyProgramDesign: lpd.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] AccountExpansionMap/LoyaltyProgramDesign failed (non-fatal):", e);
       }
@@ -1038,7 +1038,7 @@ async function runExtendedWaves(
         ]);
         if (cpm.status === "fulfilled" && cpm.value) deliverables = { ...deliverables, competitivePricingMatrix: cpm.value };
         if (msi.status === "fulfilled" && msi.value) deliverables = { ...deliverables, marketSentimentIndex: msi.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CompetitivePricingMatrix/MarketSentimentIndex failed (non-fatal):", e);
       }
@@ -1054,7 +1054,7 @@ async function runExtendedWaves(
         ]);
         if (dr.status === "fulfilled" && dr.value) deliverables = { ...deliverables, disruptionRadar: dr.value };
         if (em.status === "fulfilled" && em.value) deliverables = { ...deliverables, ecosystemMap: em.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] DisruptionRadar/EcosystemMap failed (non-fatal):", e);
       }
@@ -1070,7 +1070,7 @@ async function runExtendedWaves(
         ]);
         if (cc.status === "fulfilled" && cc.value) deliverables = { ...deliverables, categoryCreation: cc.value };
         if (mv.status === "fulfilled" && mv.value) deliverables = { ...deliverables, marketVelocity: mv.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CategoryCreation/MarketVelocity failed (non-fatal):", e);
       }
@@ -1086,7 +1086,7 @@ async function runExtendedWaves(
         ]);
         if (okr.status === "fulfilled" && okr.value) deliverables = { ...deliverables, okrCascade: okr.value };
         if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, meetingEffectiveness: me.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] OKRCascade/MeetingEffectiveness failed (non-fatal):", e);
       }
@@ -1102,7 +1102,7 @@ async function runExtendedWaves(
         ]);
         if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, communicationAudit: ca.value };
         if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, decisionVelocity: dv.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CommunicationAudit/DecisionVelocity failed (non-fatal):", e);
       }
@@ -1118,7 +1118,7 @@ async function runExtendedWaves(
         ]);
         if (ro.status === "fulfilled" && ro.value) deliverables = { ...deliverables, resourceOptimizer: ro.value };
         if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, changeManagement: cm.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] ResourceOptimizer/ChangeManagement failed (non-fatal):", e);
       }
@@ -1134,7 +1134,7 @@ async function runExtendedWaves(
         ]);
         if (crs.status === "fulfilled" && crs.value) deliverables = { ...deliverables, cashReserveStrategy: crs.value };
         if (rqs.status === "fulfilled" && rqs.value) deliverables = { ...deliverables, revenueQualityScore: rqs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CashReserveStrategy/RevenueQualityScore failed (non-fatal):", e);
       }
@@ -1150,7 +1150,7 @@ async function runExtendedWaves(
         ]);
         if (ci.status === "fulfilled" && ci.value) deliverables = { ...deliverables, costIntelligence: ci.value };
         if (fm.status === "fulfilled" && fm.value) deliverables = { ...deliverables, financialModeling: fm.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CostIntelligence/FinancialModeling failed (non-fatal):", e);
       }
@@ -1166,7 +1166,7 @@ async function runExtendedWaves(
         ]);
         if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, profitabilityMap: pm.value };
         if (cal.status === "fulfilled" && cal.value) deliverables = { ...deliverables, capitalAllocation: cal.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] ProfitabilityMap/CapitalAllocation failed (non-fatal):", e);
       }
@@ -1182,7 +1182,7 @@ async function runExtendedWaves(
         ]);
         if (sph.status === "fulfilled" && sph.value) deliverables = { ...deliverables, salesPipelineHealth: sph.value };
         if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, dealVelocity: dv.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] SalesPipelineHealth/DealVelocity failed (non-fatal):", e);
       }
@@ -1198,7 +1198,7 @@ async function runExtendedWaves(
         ]);
         if (wro.status === "fulfilled" && wro.value) deliverables = { ...deliverables, winRateOptimizer: wro.value };
         if (se.status === "fulfilled" && se.value) deliverables = { ...deliverables, salesEnablement: se.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] WinRateOptimizer/SalesEnablement failed (non-fatal):", e);
       }
@@ -1214,7 +1214,7 @@ async function runExtendedWaves(
         ]);
         if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, territoryPlanning: tp.value };
         if (qi.status === "fulfilled" && qi.value) deliverables = { ...deliverables, quotaIntelligence: qi.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] TerritoryPlanning/QuotaIntelligence failed (non-fatal):", e);
       }
@@ -1230,7 +1230,7 @@ async function runExtendedWaves(
         ]);
         if (fp.status === "fulfilled" && fp.value) deliverables = { ...deliverables, featurePrioritization: fp.value };
         if (pua.status === "fulfilled" && pua.value) deliverables = { ...deliverables, productUsageAnalytics: pua.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] FeaturePrioritization/ProductUsageAnalytics failed (non-fatal):", e);
       }
@@ -1246,7 +1246,7 @@ async function runExtendedWaves(
         ]);
         if (tsa.status === "fulfilled" && tsa.value) deliverables = { ...deliverables, techStackAudit: tsa.value };
         if (as_.status === "fulfilled" && as_.value) deliverables = { ...deliverables, apiStrategy: as_.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] TechStackAudit/ApiStrategy failed (non-fatal):", e);
       }
@@ -1262,7 +1262,7 @@ async function runExtendedWaves(
         ]);
         if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, platformScalability: ps.value };
         if (uo.status === "fulfilled" && uo.value) deliverables = { ...deliverables, userOnboarding: uo.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] PlatformScalability/UserOnboarding failed (non-fatal):", e);
       }
@@ -1278,7 +1278,7 @@ async function runExtendedWaves(
         ]);
         if (ee.status === "fulfilled" && ee.value) deliverables = { ...deliverables, employeeEngagement: ee.value };
         if (taf.status === "fulfilled" && taf.value) deliverables = { ...deliverables, talentAcquisitionFunnel: taf.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] EmployeeEngagement/TalentAcquisitionFunnel failed (non-fatal):", e);
       }
@@ -1294,7 +1294,7 @@ async function runExtendedWaves(
         ]);
         if (cb.status === "fulfilled" && cb.value) deliverables = { ...deliverables, compensationBenchmark: cb.value };
         if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, successionPlanning: sp.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CompensationBenchmark/SuccessionPlanning failed (non-fatal):", e);
       }
@@ -1310,7 +1310,7 @@ async function runExtendedWaves(
         ]);
         if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, diversityMetrics: dm.value };
         if (eb.status === "fulfilled" && eb.value) deliverables = { ...deliverables, employerBrand: eb.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] DiversityMetrics/EmployerBrand failed (non-fatal):", e);
       }
@@ -1326,7 +1326,7 @@ async function runExtendedWaves(
         ]);
         if (dg.status === "fulfilled" && dg.value) deliverables = { ...deliverables, dataGovernance: dg.value };
         if (am.status === "fulfilled" && am.value) deliverables = { ...deliverables, analyticsMaturity: am.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] DataGovernance/AnalyticsMaturity failed (non-fatal):", e);
       }
@@ -1342,7 +1342,7 @@ async function runExtendedWaves(
         ]);
         if (cdp.status === "fulfilled" && cdp.value) deliverables = { ...deliverables, customerDataPlatform: cdp.value };
         if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, predictiveModeling: pm.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CustomerDataPlatform/PredictiveModeling failed (non-fatal):", e);
       }
@@ -1358,7 +1358,7 @@ async function runExtendedWaves(
         ]);
         if (rf.status === "fulfilled" && rf.value) deliverables = { ...deliverables, reportingFramework: rf.value };
         if (dqs.status === "fulfilled" && dqs.value) deliverables = { ...deliverables, dataQualityScore: dqs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] ReportingFramework/DataQualityScore failed (non-fatal):", e);
       }
@@ -1374,7 +1374,7 @@ async function runExtendedWaves(
         ]);
         if (scr.status === "fulfilled" && scr.value) deliverables = { ...deliverables, supplyChainRisk: scr.value };
         if (io.status === "fulfilled" && io.value) deliverables = { ...deliverables, inventoryOptimization: io.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] SupplyChainRisk/InventoryOptimization failed (non-fatal):", e);
       }
@@ -1390,7 +1390,7 @@ async function runExtendedWaves(
         ]);
         if (vs.status === "fulfilled" && vs.value) deliverables = { ...deliverables, vendorScorecard: vs.value };
         if (oe.status === "fulfilled" && oe.value) deliverables = { ...deliverables, operationalEfficiency: oe.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] VendorScorecard/OperationalEfficiency failed (non-fatal):", e);
       }
@@ -1406,7 +1406,7 @@ async function runExtendedWaves(
         ]);
         if (qm.status === "fulfilled" && qm.value) deliverables = { ...deliverables, qualityManagement: qm.value };
         if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, capacityPlanning: cp.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] QualityManagement/CapacityPlanning failed (non-fatal):", e);
       }
@@ -1422,7 +1422,7 @@ async function runExtendedWaves(
         ]);
         if (cjm.status === "fulfilled" && cjm.value) deliverables = { ...deliverables, customerJourneyMap: cjm.value };
         if (nps.status === "fulfilled" && nps.value) deliverables = { ...deliverables, npsAnalysis: nps.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] CustomerJourneyMap/NpsAnalysis failed (non-fatal):", e);
       }
@@ -1438,7 +1438,7 @@ async function runExtendedWaves(
         ]);
         if (sti.status === "fulfilled" && sti.value) deliverables = { ...deliverables, supportTicketIntelligence: sti.value };
         if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] SupportTicketIntelligence/CustomerHealthScore failed (non-fatal):", e);
       }
@@ -1454,7 +1454,7 @@ async function runExtendedWaves(
         ]);
         if (voc.status === "fulfilled" && voc.value) deliverables = { ...deliverables, voiceOfCustomer: voc.value };
         if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, customerSegmentation: cs.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] VoiceOfCustomer/CustomerSegmentation failed (non-fatal):", e);
       }
@@ -1470,7 +1470,7 @@ async function runExtendedWaves(
         ]);
         if (ip.status === "fulfilled" && ip.value) deliverables = { ...deliverables, innovationPipeline: ip.value };
         if (ipp.status === "fulfilled" && ipp.value) deliverables = { ...deliverables, ipPortfolio: ipp.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] InnovationPipeline/IpPortfolio failed (non-fatal):", e);
       }
@@ -1486,7 +1486,7 @@ async function runExtendedWaves(
         ]);
         if (rde.status === "fulfilled" && rde.value) deliverables = { ...deliverables, rdEfficiency: rde.value };
         if (tr.status === "fulfilled" && tr.value) deliverables = { ...deliverables, technologyReadiness: tr.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] RdEfficiency/TechnologyReadiness failed (non-fatal):", e);
       }
@@ -1502,7 +1502,7 @@ async function runExtendedWaves(
         ]);
         if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, partnershipEcosystem: pe.value };
         if (ma.status === "fulfilled" && ma.value) deliverables = { ...deliverables, mergersAcquisitions: ma.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] PartnershipEcosystem/MergersAcquisitions failed (non-fatal):", e);
       }
@@ -1518,7 +1518,7 @@ async function runExtendedWaves(
         ]);
         if (esg.status === "fulfilled" && esg.value) deliverables = { ...deliverables, esgScorecard: esg.value };
         if (cf.status === "fulfilled" && cf.value) deliverables = { ...deliverables, carbonFootprint: cf.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] EsgScorecard/CarbonFootprint failed (non-fatal):", e);
       }
@@ -1534,7 +1534,7 @@ async function runExtendedWaves(
         ]);
         if (rc.status === "fulfilled" && rc.value) deliverables = { ...deliverables, regulatoryCompliance: rc.value };
         if (bc.status === "fulfilled" && bc.value) deliverables = { ...deliverables, businessContinuity: bc.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] RegulatoryCompliance/BusinessContinuity failed (non-fatal):", e);
       }
@@ -1550,7 +1550,7 @@ async function runExtendedWaves(
         ]);
         if (ef.status === "fulfilled" && ef.value) deliverables = { ...deliverables, ethicsFramework: ef.value };
         if (si.status === "fulfilled" && si.value) deliverables = { ...deliverables, socialImpact: si.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] EthicsFramework/SocialImpact failed (non-fatal):", e);
       }
@@ -1565,7 +1565,7 @@ async function runExtendedWaves(
         ]);
         if (dp.status === "fulfilled" && dp.value) deliverables.dealPipeline = dp.value;
         if (sf.status === "fulfilled" && sf.value) deliverables.salesForecasting = sf.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cc failed:", e); }
     }
 
@@ -1578,7 +1578,7 @@ async function runExtendedWaves(
         ]);
         if (abm.status === "fulfilled" && abm.value) deliverables.accountBasedMarketing = abm.value;
         if (se.status === "fulfilled" && se.value) deliverables.salesEnablement = se.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cd failed:", e); }
     }
 
@@ -1591,7 +1591,7 @@ async function runExtendedWaves(
         ]);
         if (ra.status === "fulfilled" && ra.value) deliverables.revenueAttribution = ra.value;
         if (co.status === "fulfilled" && co.value) deliverables.commissionOptimization = co.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ce failed:", e); }
     }
 
@@ -1604,7 +1604,7 @@ async function runExtendedWaves(
         ]);
         if (pmf.status === "fulfilled" && pmf.value) deliverables.productMarketFit = pmf.value;
         if (fp.status === "fulfilled" && fp.value) deliverables.featurePrioritization = fp.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cf failed:", e); }
     }
 
@@ -1617,7 +1617,7 @@ async function runExtendedWaves(
         ]);
         if (uo.status === "fulfilled" && uo.value) deliverables.userOnboarding = uo.value;
         if (pa.status === "fulfilled" && pa.value) deliverables.productAnalytics = pa.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cg failed:", e); }
     }
 
@@ -1630,7 +1630,7 @@ async function runExtendedWaves(
         ]);
         if (mt.status === "fulfilled" && mt.value) deliverables.marketTiming = mt.value;
         if (cr.status === "fulfilled" && cr.value) deliverables.competitiveResponse = cr.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ch failed:", e); }
     }
 
@@ -1643,7 +1643,7 @@ async function runExtendedWaves(
         ]);
         if (sp.status === "fulfilled" && sp.value) deliverables.scenarioPlanning = sp.value;
         if (cs.status === "fulfilled" && cs.value) deliverables.capitalStructure = cs.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ci failed:", e); }
     }
 
@@ -1656,7 +1656,7 @@ async function runExtendedWaves(
         ]);
         if (wc.status === "fulfilled" && wc.value) deliverables.workingCapital = wc.value;
         if (ts.status === "fulfilled" && ts.value) deliverables.taxStrategy = ts.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cj failed:", e); }
     }
 
@@ -1669,7 +1669,7 @@ async function runExtendedWaves(
         ]);
         if (fr.status === "fulfilled" && fr.value) deliverables.fundraisingReadiness = fr.value;
         if (es.status === "fulfilled" && es.value) deliverables.exitStrategy = es.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ck failed:", e); }
     }
 
@@ -1682,7 +1682,7 @@ async function runExtendedWaves(
         ]);
         if (ta.status === "fulfilled" && ta.value) deliverables.talentAcquisition = ta.value;
         if (ee.status === "fulfilled" && ee.value) deliverables.employeeEngagement = ee.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cl failed:", e); }
     }
 
@@ -1695,7 +1695,7 @@ async function runExtendedWaves(
         ]);
         if (cb.status === "fulfilled" && cb.value) deliverables.compensationBenchmark = cb.value;
         if (spl.status === "fulfilled" && spl.value) deliverables.successionPlanning = spl.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cm failed:", e); }
     }
 
@@ -1708,7 +1708,7 @@ async function runExtendedWaves(
         ]);
         if (di.status === "fulfilled" && di.value) deliverables.diversityInclusion = di.value;
         if (ca.status === "fulfilled" && ca.value) deliverables.cultureAssessment = ca.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cn failed:", e); }
     }
 
@@ -1721,7 +1721,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.marketEntryPlaybook = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.partnerChannelStrategy = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4co failed:", e); }
     }
 
@@ -1734,7 +1734,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.acquisitionIntegration = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.internationalReadiness = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cp failed:", e); }
     }
 
@@ -1747,7 +1747,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.revenueModelAnalysis = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.growthExperiments = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cq failed:", e); }
     }
 
@@ -1760,7 +1760,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.customerAcquisitionCost = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.lifetimeValueOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cr failed:", e); }
     }
 
@@ -1773,7 +1773,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.churnPrediction = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.netRevenueRetention = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cs failed:", e); }
     }
 
@@ -1786,7 +1786,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.customerAdvocacy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.feedbackLoop = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ct failed:", e); }
     }
 
@@ -1799,7 +1799,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.processAutomation = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.costBenchmark = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cu failed:", e); }
     }
 
@@ -1812,7 +1812,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.vendorNegotiation = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.scalabilityAssessment = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cv failed:", e); }
     }
 
@@ -1825,7 +1825,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.incidentReadiness = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.operationalRisk = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cw failed:", e); }
     }
 
@@ -1838,7 +1838,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.dataStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.aiUseCases = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cx failed:", e); }
     }
 
@@ -1851,7 +1851,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.analyticsRoadmap = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.dataPrivacy = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cy failed:", e); }
     }
 
@@ -1864,7 +1864,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.mlOpsReadiness = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.digitalTransformation = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4cz failed:", e); }
     }
 
@@ -1877,7 +1877,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.revenueOps = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.billingOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4da failed:", e); }
     }
 
@@ -1890,7 +1890,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.contractIntelligence = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.commissionTracking = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4db failed:", e); }
     }
 
@@ -1903,7 +1903,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.revenueRecognition = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.subscriptionHealth = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dc failed:", e); }
     }
 
@@ -1916,7 +1916,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.productRoadmapHealth = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.techDebtPrioritization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dd failed:", e); }
     }
 
@@ -1929,7 +1929,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.releaseVelocity = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.bugTrendAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4de failed:", e); }
     }
 
@@ -1942,7 +1942,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.apiPerformance = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.userExperienceScore = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4df failed:", e); }
     }
 
@@ -1955,7 +1955,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.workforcePlanning = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.skillsGapAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dg failed:", e); }
     }
 
@@ -1968,7 +1968,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.remoteWorkEffectiveness = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.teamVelocity = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dh failed:", e); }
     }
 
@@ -1981,7 +1981,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.burnoutRisk = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.learningDevelopment = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4di failed:", e); }
     }
 
@@ -1994,7 +1994,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.regulatoryRisk = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.contractManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dj failed:", e); }
     }
 
@@ -2007,7 +2007,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.ipStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.legalSpendAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dk failed:", e); }
     }
 
@@ -2020,7 +2020,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.policyCompliance = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.auditReadiness = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dl failed:", e); }
     }
 
@@ -2033,7 +2033,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.salesMethodology = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.pipelineVelocity = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dm failed:", e); }
     }
 
@@ -2046,7 +2046,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.dealQualification = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.salesCoaching = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dn failed:", e); }
     }
 
@@ -2059,7 +2059,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.accountPlanning = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.competitiveBattlecards = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4do failed:", e); }
     }
 
@@ -2072,7 +2072,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.cashBurnAnalysis = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.revenuePerEmployee = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dp failed:", e); }
     }
 
@@ -2085,7 +2085,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.financialBenchmarking = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.investmentPortfolio = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dq failed:", e); }
     }
 
@@ -2098,7 +2098,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.costAllocationModel = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.marginWaterfall = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dr failed:", e); }
     }
 
@@ -2111,7 +2111,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.customerOnboardingMetrics = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.healthScoreModel = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ds failed:", e); }
     }
 
@@ -2124,7 +2124,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.csExpansionPlaybook = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.renewalForecasting = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dt failed:", e); }
     }
 
@@ -2137,7 +2137,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.csOperations = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.customerMilestones = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4du failed:", e); }
     }
 
@@ -2150,7 +2150,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.okrFramework = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.strategicPillars = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dv failed:", e); }
     }
 
@@ -2163,7 +2163,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.competitivePositioning = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.marketShareAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dw failed:", e); }
     }
 
@@ -2176,7 +2176,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.growthCorridors = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.valuePropCanvas = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dx failed:", e); }
     }
 
@@ -2189,7 +2189,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.competitiveMonitoring = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.marketTrendRadar = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dy failed:", e); }
     }
 
@@ -2202,7 +2202,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.industryBenchmarkIndex = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.customerIntelPlatform = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4dz failed:", e); }
     }
 
@@ -2215,7 +2215,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.priceSensitivityModel = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.demandSignalAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ea failed:", e); }
     }
 
@@ -2228,7 +2228,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.digitalMaturityIndex = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.cloudMigrationReadiness = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4eb failed:", e); }
     }
 
@@ -2241,7 +2241,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.automationRoi = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.digitalWorkplace = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ec failed:", e); }
     }
 
@@ -2254,7 +2254,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.cybersecurityPosture = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.techVendorConsolidation = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ed failed:", e); }
     }
 
@@ -2267,7 +2267,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.revenueSourceMapping = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.channelMixOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ee failed:", e); }
     }
 
@@ -2280,7 +2280,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.crossSellEngine = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.priceOptimizationModel = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ef failed:", e); }
     }
 
@@ -2293,7 +2293,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.promotionEffectiveness = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.revenueHealthIndex = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4eg failed:", e); }
     }
 
@@ -2306,7 +2306,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.organizationalNetwork = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.decisionEfficiency = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4eh failed:", e); }
     }
 
@@ -2319,7 +2319,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.meetingEfficiency = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.knowledgeCapital = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ei failed:", e); }
     }
 
@@ -2332,7 +2332,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.changeManagementScore = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.cultureAlignment = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ej failed:", e); }
     }
 
@@ -2345,7 +2345,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.partnerPerformance = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.ecosystemMapping = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ek failed:", e); }
     }
 
@@ -2358,7 +2358,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.allianceStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.channelPartnerHealth = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4el failed:", e); }
     }
 
@@ -2371,7 +2371,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.coSellingPipeline = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.integrationMarketplace = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4em failed:", e); }
     }
 
@@ -2384,7 +2384,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.brandEquityIndex = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.sentimentDashboard = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4en failed:", e); }
     }
 
@@ -2397,7 +2397,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.mediaShareOfVoice = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.crisisCommsReadiness = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4eo failed:", e); }
     }
 
@@ -2410,7 +2410,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.thoughtLeadership = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.brandConsistency = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ep failed:", e); }
     }
 
@@ -2423,7 +2423,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.monetizationModel = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.freeTrialConversion = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4eq failed:", e); }
     }
 
@@ -2436,7 +2436,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.usageBasedPricing = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.bundleOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4er failed:", e); }
     }
 
@@ -2449,7 +2449,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.discountDiscipline = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.revenueLeakageDetection = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4es failed:", e); }
     }
 
@@ -2462,7 +2462,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.customerAcademy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.contentEngagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4et failed:", e); }
     }
 
@@ -2475,7 +2475,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.communityHealth = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.certificationProgram = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4eu failed:", e); }
     }
 
@@ -2488,7 +2488,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.selfServiceAdoption = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.supportDeflection = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ev failed:", e); }
     }
 
@@ -2501,7 +2501,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.investorDeck = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.fundingTimeline = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ew failed:", e); }
     }
 
@@ -2514,7 +2514,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.valuationModel = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.capTableManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ex failed:", e); }
     }
 
@@ -2527,7 +2527,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.investorCommunication = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.boardReporting = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ey failed:", e); }
     }
 
@@ -2540,7 +2540,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.geoExpansionStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.localMarketEntry = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ez failed:", e); }
     }
 
@@ -2553,7 +2553,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.marketRegulations = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.partnerLocalization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fa failed:", e); }
     }
 
@@ -2566,7 +2566,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.culturalAdaptation = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.expansionRoi = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fb failed:", e); }
     }
 
@@ -2579,7 +2579,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.productLedMetrics = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.activationFunnel = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fc failed:", e); }
     }
 
@@ -2592,7 +2592,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.featureAdoption = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.virality = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fd failed:", e); }
     }
 
@@ -2605,7 +2605,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.productQualifiedLeads = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.timeToValue = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fe failed:", e); }
     }
 
@@ -2618,7 +2618,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.aiReadinessScore = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.mlUseCasePriority = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ff failed:", e); }
     }
 
@@ -2631,7 +2631,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.dataInfrastructure = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.aiTalentGap = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fg failed:", e); }
     }
 
@@ -2644,7 +2644,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.ethicalAiFramework = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.aiRoiProjection = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fh failed:", e); }
     }
 
@@ -2659,7 +2659,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.advocacyProgram = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.referralMechanism = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fi failed:", e); }
     }
 
@@ -2672,7 +2672,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.testimonialPipeline = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.caseStudyFactory = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fj failed:", e); }
     }
 
@@ -2685,7 +2685,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.customerAdvisoryBoard = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.npsActionPlan = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fk failed:", e); }
     }
 
@@ -2700,7 +2700,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.procurementEfficiency = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.expenseManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fl failed:", e); }
     }
 
@@ -2713,7 +2713,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.invoiceAutomation = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.paymentOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fm failed:", e); }
     }
 
@@ -2726,7 +2726,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.financialControls = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.treasuryManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fn failed:", e); }
     }
 
@@ -2741,7 +2741,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.demandGenEngine = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.contentMarketingRoi = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fo failed:", e); }
     }
 
@@ -2754,7 +2754,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.seoStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.paidMediaOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fp failed:", e); }
     }
 
@@ -2767,7 +2767,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.eventRoi = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.influencerStrategy = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fq failed:", e); }
     }
 
@@ -2782,7 +2782,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.platformEconomics = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.developerExperience = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fr failed:", e); }
     }
 
@@ -2795,7 +2795,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.apiMonetization = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.marketplaceStrategy = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fs failed:", e); }
     }
 
@@ -2808,7 +2808,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.platformGovernance = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.platformNetworkDynamics = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ft failed:", e); }
     }
 
@@ -2821,7 +2821,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.contractLifecycle = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.complianceAutomation = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fu failed:", e); }
     }
 
@@ -2834,7 +2834,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.legalRiskRegister = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.intellectualPropertyAudit = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fv failed:", e); }
     }
 
@@ -2847,7 +2847,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.regulatoryCalendar = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.privacyCompliance = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fw failed:", e); }
     }
 
@@ -2860,7 +2860,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.dataWarehouseStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.biDashboardDesign = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fx failed:", e); }
     }
 
@@ -2873,7 +2873,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.predictiveModelCatalog = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.dataLineageMap = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fy failed:", e); }
     }
 
@@ -2886,7 +2886,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.metricsDictionary = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.analyticsGovernance = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4fz failed:", e); }
     }
 
@@ -2899,7 +2899,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.employeeJourney = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.workplaceWellness = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ga failed:", e); }
     }
 
@@ -2912,7 +2912,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.learningPathways = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.performanceFramework = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gb failed:", e); }
     }
 
@@ -2925,7 +2925,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.payEquityAnalysis = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.deiBenchmark = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gc failed:", e); }
     }
 
@@ -2938,7 +2938,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.businessModelCanvas = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.revenueModelDesign = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gd failed:", e); }
     }
 
@@ -2951,7 +2951,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.valueChainOptimization = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.costStructureAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ge failed:", e); }
     }
 
@@ -2964,7 +2964,7 @@ async function runExtendedWaves(
         ]);
         if (a.status === "fulfilled" && a.value) deliverables.partnershipModel = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.growthLeverAssessment = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gf failed:", e); }
     }
 
@@ -2974,7 +2974,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeVendorManagement(businessPacket, job.questionnaire), synthesizeSupplyChainVisibility(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.vendorManagement = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.supplyChainVisibility = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gg failed:", e); }
     }
 
@@ -2984,7 +2984,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeSustainableSourcing(businessPacket, job.questionnaire), synthesizeFacilityOptimization(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.sustainableSourcing = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.facilityOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gh failed:", e); }
     }
 
@@ -2994,7 +2994,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeFleetManagement(businessPacket, job.questionnaire), synthesizeCustomerSuccess(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.fleetManagement = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.customerSuccess = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gi failed:", e); }
     }
 
@@ -3004,7 +3004,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeCrisisManagement(businessPacket, job.questionnaire), synthesizeOperationalResilience(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.crisisManagement = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.operationalResilience = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gj failed:", e); }
     }
 
@@ -3014,7 +3014,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeStakeholderMapping(businessPacket, job.questionnaire), synthesizeDigitalPresence(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.stakeholderMapping = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.digitalPresence = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gk failed:", e); }
     }
 
@@ -3024,7 +3024,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeChannelStrategy(businessPacket, job.questionnaire), synthesizeAccountManagement(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.channelStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.accountManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gl failed:", e); }
     }
 
@@ -3034,7 +3034,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeFundraisingStrategy(businessPacket, job.questionnaire), synthesizeCaptableManagement(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.fundraisingStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.captableManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gm failed:", e); }
     }
 
@@ -3044,7 +3044,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeExitPlanning(businessPacket, job.questionnaire), synthesizeBoardGovernance(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.exitPlanning = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.boardGovernance = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gn failed:", e); }
     }
 
@@ -3054,7 +3054,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeRecruitmentFunnel(businessPacket, job.questionnaire), synthesizeEmployerBranding(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.recruitmentFunnel = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.employerBranding = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4go failed:", e); }
     }
 
@@ -3064,7 +3064,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeTeamTopology(businessPacket, job.questionnaire), synthesizeOnboardingOptimization(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.teamTopology = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.onboardingOptimization = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gp failed:", e); }
     }
 
@@ -3074,7 +3074,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeMeetingCulture(businessPacket, job.questionnaire), synthesizeDocumentManagement(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.meetingCulture = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.documentManagement = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gq failed:", e); }
     }
 
@@ -3084,7 +3084,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeWorkflowAutomation(businessPacket, job.questionnaire), synthesizeQualityAssurance(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.workflowAutomation = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.qualityAssurance = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gr failed:", e); }
     }
 
@@ -3094,7 +3094,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeIncidentResponse(businessPacket, job.questionnaire), synthesizeAccessControl(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.incidentResponse = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.accessControl = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gs failed:", e); }
     }
 
@@ -3104,7 +3104,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeAuditTrail(businessPacket, job.questionnaire), synthesizePenetrationTesting(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.auditTrail = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.penetrationTesting = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gt failed:", e); }
     }
 
@@ -3114,7 +3114,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeSecurityAwareness(businessPacket, job.questionnaire), synthesizeDataClassification(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.securityAwareness = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.dataClassification = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gu failed:", e); }
     }
 
@@ -3124,7 +3124,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeApiDesign(businessPacket, job.questionnaire), synthesizeMicroservicesArchitecture(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.apiDesign = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.microservicesArchitecture = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gv failed:", e); }
     }
 
@@ -3134,7 +3134,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeCloudOptimization(businessPacket, job.questionnaire), synthesizeDevopsMaturity(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.cloudOptimization = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.devopsMaturity = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gw failed:", e); }
     }
 
@@ -3144,7 +3144,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeSystemMonitoring(businessPacket, job.questionnaire), synthesizeCodeQuality(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.systemMonitoring = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.codeQuality = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gx failed:", e); }
     }
 
@@ -3154,7 +3154,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeCustomerLifetimeValue(businessPacket, job.questionnaire), synthesizeSentimentAnalysis(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.customerLifetimeValue = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.sentimentAnalysis = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gy failed:", e); }
     }
 
@@ -3164,7 +3164,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeSupportTicketAnalysis(businessPacket, job.questionnaire), synthesizeSegmentProfitability(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.supportTicketAnalysis = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.segmentProfitability = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4gz failed:", e); }
     }
 
@@ -3174,7 +3174,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeReferralAnalytics(businessPacket, job.questionnaire), synthesizeCustomerHealthDashboard(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.referralAnalytics = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.customerHealthDashboard = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ha failed:", e); }
     }
 
@@ -3184,7 +3184,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeInnovationPortfolio(businessPacket, job.questionnaire), synthesizeContingencyPlanning(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.innovationPortfolio = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.contingencyPlanning = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hb failed:", e); }
     }
 
@@ -3194,7 +3194,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeOperatingRhythm(businessPacket, job.questionnaire), synthesizeCrossFunctionalSync(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.operatingRhythm = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.crossFunctionalSync = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hc failed:", e); }
     }
 
@@ -3204,7 +3204,7 @@ async function runExtendedWaves(
         const [a, b] = await Promise.allSettled([synthesizeWardRoomStrategy(businessPacket, job.questionnaire), synthesizeRevenueIntelligence(businessPacket, job.questionnaire)]);
         if (a.status === "fulfilled" && a.value) deliverables.wardRoomStrategy = a.value;
         if (b.status === "fulfilled" && b.value) deliverables.revenueIntelligence = b.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hd failed:", e); }
     }
 
@@ -3217,7 +3217,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.marketResearch = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.competitorTracking = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4he+4hf failed:", e); }
     }
 
@@ -3230,7 +3230,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.industryTrends = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.socialListening = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hg+4hh failed:", e); }
     }
 
@@ -3243,7 +3243,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.uxResearch = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.webAnalytics = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hi+4hj failed:", e); }
     }
 
@@ -3256,7 +3256,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.emailMarketing = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.conversionOptimization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hk+4hl failed:", e); }
     }
 
@@ -3269,7 +3269,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.abTestingFramework = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.marketingAttribution = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hm+4hn failed:", e); }
     }
 
@@ -3282,7 +3282,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.contentCalendar = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.socialMediaCalendar = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ho+4hp failed:", e); }
     }
 
@@ -3295,7 +3295,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.budgetPlanning = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.revenueForecasting = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hq+4hr failed:", e); }
     }
 
@@ -3308,7 +3308,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.cashManagement = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.creditManagement = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hs+4ht failed:", e); }
     }
 
@@ -3321,7 +3321,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.debtStructure = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.financialReporting = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hu+4hv failed:", e); }
     }
 
@@ -3334,7 +3334,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.carbonReduction = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.circularEconomy = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hw+4hx failed:", e); }
     }
 
@@ -3347,7 +3347,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.communityImpact = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.waterManagement = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4hy+4hz failed:", e); }
     }
 
@@ -3360,7 +3360,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.wasteReduction = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.sustainableInnovation = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ia+4ib failed:", e); }
     }
 
@@ -3373,7 +3373,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.talentPipeline = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.leadershipDevelopment = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ic+4id failed:", e); }
     }
 
@@ -3386,7 +3386,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.successionReadiness = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.compensationStrategy = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ie+4if failed:", e); }
     }
 
@@ -3399,7 +3399,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.workforceAnalytics = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.orgEffectiveness = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ig+4ih failed:", e); }
     }
 
@@ -3412,7 +3412,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.salesMotionDesign = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.dealAnalytics = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ii+4ij failed:", e); }
     }
 
@@ -3425,7 +3425,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.territoryOptimization = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.salesCompensation = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ik+4il failed:", e); }
     }
 
@@ -3438,7 +3438,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.revenuePrediction = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.accountPenetration = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4im+4in failed:", e); }
     }
 
@@ -3451,7 +3451,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.productVision = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.featureRoadmap = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4io+4ip failed:", e); }
     }
 
@@ -3464,7 +3464,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.pmfAssessment = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.userActivation = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4iq+4ir failed:", e); }
     }
 
@@ -3477,7 +3477,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.productInsights = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.releaseStrategy = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4is+4it failed:", e); }
     }
 
@@ -3490,7 +3490,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.brandPositionMap = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.brandValuation = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4iu+4iv failed:", e); }
     }
 
@@ -3503,7 +3503,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.brandHierarchy = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.reputationAnalysis = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4iw+4ix failed:", e); }
     }
 
@@ -3516,7 +3516,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.messagingFramework = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.visualBranding = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4iy+4iz failed:", e); }
     }
 
@@ -3530,7 +3530,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.growthPlaybook = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.revenueRunRate = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ja+4jb failed:", e); }
     }
 
@@ -3544,7 +3544,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.breakEvenModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.operatingLeverageIndex = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jc+4jd failed:", e); }
     }
 
@@ -3558,7 +3558,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.grossMarginAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.fundingScenarioModel = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4je+4jf failed:", e); }
     }
 
@@ -3572,7 +3572,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.competitiveWargame = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.marketDisruptionModel = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jg+4jh failed:", e); }
     }
 
@@ -3586,7 +3586,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.firstMoverAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.defensibilityAudit = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ji+4jj failed:", e); }
     }
 
@@ -3600,7 +3600,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.pivotReadiness = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.competitiveTimingModel = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jk+4jl failed:", e); }
     }
 
@@ -3614,7 +3614,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.customerMaturityModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.expansionSignals = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jm+4jn failed:", e); }
     }
 
@@ -3628,7 +3628,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.adoptionScorecard = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.stakeholderSentiment = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jo+4jp failed:", e); }
     }
 
@@ -3642,7 +3642,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.valueRealization = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.renewalPlaybook = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jq+4jr failed:", e); }
     }
 
@@ -3656,7 +3656,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.businessModelInnovation = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.monetizationExperiment = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4js+4jt failed:", e); }
     }
 
@@ -3670,7 +3670,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.pricingArchitecture = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.revenueStreamMap = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ju+4jv failed:", e); }
     }
 
@@ -3684,7 +3684,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.costDriverAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.valueCapture = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jw+4jx failed:", e); }
     }
 
@@ -3698,7 +3698,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.revenueProcessMap = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.billingHealthCheck = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4jy+4jz failed:", e); }
     }
 
@@ -3712,7 +3712,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.quoteToCloseAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.revenueLeakDetector = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ka+4kb failed:", e); }
     }
 
@@ -3726,7 +3726,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.forecastAccuracyModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.dealDeskOptimization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4kc+4kd failed:", e); }
     }
 
@@ -3740,7 +3740,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.talentMarketIntel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.employeeLifecycleMap = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ke+4kf failed:", e); }
     }
 
@@ -3754,7 +3754,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.skillsInventory = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.teamDynamicsAnalysis = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4kg+4kh failed:", e); }
     }
 
@@ -3768,7 +3768,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.hybridWorkModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.compensationPhilosophy = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ki+4kj failed:", e); }
     }
 
@@ -3782,7 +3782,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.dataMaturityAssessment = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.insightsPrioritization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4kk+4kl failed:", e); }
     }
 
@@ -3796,7 +3796,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.experimentVelocity = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.decisionIntelligence = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4km+4kn failed:", e); }
     }
 
@@ -3810,7 +3810,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.feedbackIntelligence = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.benchmarkingEngine = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ko+4kp failed:", e); }
     }
 
@@ -3824,7 +3824,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.partnerValueMap = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.coInnovationPipeline = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4kq+4kr failed:", e); }
     }
 
@@ -3838,7 +3838,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.ecosystemRevenue = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.allianceScorecard = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ks+4kt failed:", e); }
     }
 
@@ -3852,7 +3852,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.partnerEnablementPlan = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.marketplaceReadiness = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ku+4kv failed:", e); }
     }
 
@@ -3866,7 +3866,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.strategyExecution = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.initiativeTracking = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4kw+4kx failed:", e); }
     }
 
@@ -3880,7 +3880,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.resourceAllocationModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.strategicBetting = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ky+4kz failed:", e); }
     }
 
@@ -3894,7 +3894,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.executionCadence = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.alignmentIndex = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4la+4lb failed:", e); }
     }
 
@@ -3908,7 +3908,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.marketSignalRadar = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.competitorMoveTracker = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lc+4ld failed:", e); }
     }
 
@@ -3922,7 +3922,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.customerVoiceAggregator = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.industryConvergenceMap = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4le+4lf failed:", e); }
     }
 
@@ -3936,7 +3936,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.emergingTechRadar = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.regulatoryHorizon = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lg+4lh failed:", e); }
     }
 
@@ -3950,7 +3950,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.cashFlowForecaster = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.profitDriverTree = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4li+4lj failed:", e); }
     }
 
@@ -3964,7 +3964,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.revenueQualityIndex = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.financialResilienceScore = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lk+4ll failed:", e); }
     }
 
@@ -3978,7 +3978,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.workingCapitalOptimizer = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.investmentReadinessGate = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lm+4ln failed:", e); }
     }
 
@@ -3992,7 +3992,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.customerDnaProfile = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.propensityModel = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lo+4lp failed:", e); }
     }
 
@@ -4006,7 +4006,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.churnEarlyWarning = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.customerEffortOptimizer = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lq+4lr failed:", e); }
     }
 
@@ -4020,7 +4020,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.loyaltyDriver = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.accountIntelligence = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ls+4lt failed:", e); }
     }
 
@@ -4034,7 +4034,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.gtmCalendar = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.launchReadiness = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lu+4lv failed:", e); }
     }
 
@@ -4048,7 +4048,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.messageTesting = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.salesCollateral = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4lw+4lx failed:", e); }
     }
 
@@ -4062,7 +4062,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.demandGenPlan = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.channelActivation = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ly+4lz failed:", e); }
     }
 
@@ -4076,7 +4076,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.priceElasticityModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.dynamicPricingEngine = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ma+4mb failed:", e); }
     }
 
@@ -4090,7 +4090,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.discountImpactAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.bundleDesigner = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mc+4md failed:", e); }
     }
 
@@ -4104,7 +4104,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.competitivePriceTracker = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.pricingExperiment = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4me+4mf failed:", e); }
     }
 
@@ -4118,7 +4118,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.kpiWatchlist = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.alertFramework = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mg+4mh failed:", e); }
     }
 
@@ -4132,7 +4132,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.anomalyDetection = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.trendForecast = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mi+4mj failed:", e); }
     }
 
@@ -4146,7 +4146,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.dashboardDesign = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.insightsCatalog = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mk+4ml failed:", e); }
     }
 
@@ -4160,7 +4160,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.ideaPipeline = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.innovationScoring = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mm+4mn failed:", e); }
     }
 
@@ -4174,7 +4174,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.experimentBoard = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.patentAnalysis = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mo+4mp failed:", e); }
     }
 
@@ -4188,7 +4188,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.disruptionPlaybook = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.futureProofing = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mq+4mr failed:", e); }
     }
 
@@ -4202,7 +4202,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.revenueMixAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.accountGrowthPlan = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ms+4mt failed:", e); }
     }
 
@@ -4216,7 +4216,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.contractOptimizer = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.usagePatternAnalysis = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mu+4mv failed:", e); }
     }
 
@@ -4230,7 +4230,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.churnRecoveryPlan = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.winbackProgram = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4mw+4mx failed:", e); }
     }
 
@@ -4244,7 +4244,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.automationAudit = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.processDigitization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4my+4mz failed:", e); }
     }
 
@@ -4258,7 +4258,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.botDeploymentPlan = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.workflowBenchmark = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4na+4nb failed:", e); }
     }
 
@@ -4272,7 +4272,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.handoffEfficiency = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.toolConsolidation = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4nc+4nd failed:", e); }
     }
 
@@ -4286,7 +4286,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.crisisCommunication = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.internalComms = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ne+4nf failed:", e); }
     }
 
@@ -4300,7 +4300,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.investorNarrative = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.pressStrategy = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ng+4nh failed:", e); }
     }
 
@@ -4314,7 +4314,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.thoughtLeadershipPlan = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.brandStoryArc = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ni+4nj failed:", e); }
     }
 
@@ -4328,7 +4328,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.masteryDashboard = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.growthVelocityScore = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4nk+4nl failed:", e); }
     }
 
@@ -4342,7 +4342,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.operationalMaturity = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.leadershipReadiness = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4nm+4nn failed:", e); }
     }
 
@@ -4356,7 +4356,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.marketDominanceIndex = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.futureReadiness = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4no+4np failed:", e); }
     }
 
@@ -4370,7 +4370,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.aiAdoptionPotential = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.mlUseCaseIdentification = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4nq+4nr failed:", e); }
     }
 
@@ -4384,7 +4384,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.dataInfrastructureGapAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.automationROIModeling = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ns+4nt failed:", e); }
     }
 
@@ -4398,7 +4398,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.aiTalentNeedsAssessment = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.ethicalAIFramework = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4nu+4nv failed:", e); }
     }
 
@@ -4412,7 +4412,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.marketEntryScoring = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.regulatoryLandscapeMapping = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4nw+4nx failed:", e); }
     }
 
@@ -4426,7 +4426,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.culturalAdaptationStrategy = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.logisticsExpansionAnalysis = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ny+4nz failed:", e); }
     }
 
@@ -4440,7 +4440,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.localPartnershipStrategy = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.internationalPricingOptimization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oa+4ob failed:", e); }
     }
 
@@ -4454,7 +4454,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.acquisitionFunnelIntelligence = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.onboardingEffectivenessScore = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oc+4od failed:", e); }
     }
 
@@ -4468,7 +4468,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.engagementScoringModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.expansionRevenueOpportunities = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oe+4of failed:", e); }
     }
 
@@ -4482,7 +4482,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.advocacyProgramDesign = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.lifetimeValueModeling = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4og+4oh failed:", e); }
     }
 
@@ -4496,7 +4496,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.apiMonetizationStrategy = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.platformEcosystemHealth = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oi+4oj failed:", e); }
     }
 
@@ -4510,7 +4510,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.developerExperienceOptimization = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.integrationMarketplaceAnalytics = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ok+4ol failed:", e); }
     }
 
@@ -4524,7 +4524,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.partnerEnablementProgram = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.platformGovernanceFramework = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4om+4on failed:", e); }
     }
 
@@ -4538,7 +4538,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.demandForecastingEngine = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.predictiveMaintenanceModeling = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oo+4op failed:", e); }
     }
 
@@ -4552,7 +4552,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.churnPredictionModel = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.leadScoringAI = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oq+4or failed:", e); }
     }
 
@@ -4566,7 +4566,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.inventoryOptimizationAI = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.revenuePredictionModeling = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4os+4ot failed:", e); }
     }
 
@@ -4580,7 +4580,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.orgStructureAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.spanOfControlOptimization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ou+4ov failed:", e); }
     }
 
@@ -4594,7 +4594,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.decisionRightsMapping = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.collaborationNetworkMapping = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4ow+4ox failed:", e); }
     }
 
@@ -4608,7 +4608,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.roleOptimizationAnalysis = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.successionPlanningFramework = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4oy+4oz failed:", e); }
     }
 
@@ -4622,7 +4622,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.impactMeasurementDashboard = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.esgReportingCompliance = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pa+4pb failed:", e); }
     }
 
@@ -4636,7 +4636,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.stakeholderEngagementAnalytics = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.communityInvestmentStrategy = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pc+4pd failed:", e); }
     }
 
@@ -4650,7 +4650,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.diversityMetricsAnalytics = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.greenOperationsOptimization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pe+4pf failed:", e); }
     }
 
@@ -4664,7 +4664,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.knowledgeAuditAssessment = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.expertiseMappingSystem = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pg+4ph failed:", e); }
     }
 
@@ -4678,7 +4678,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.documentationStrategyFramework = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.learningPathwaysDesign = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pi+4pj failed:", e); }
     }
 
@@ -4692,7 +4692,7 @@ async function runExtendedWaves(
         ]);
         if (r1.status === "fulfilled" && r1.value) deliverables.institutionalMemoryProtection = r1.value;
         if (r2.status === "fulfilled" && r2.value) deliverables.knowledgeTransferOptimization = r2.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Step 4pk+4pl failed:", e); }
     }
 
@@ -4704,7 +4704,7 @@ async function runExtendedWaves(
           synthIf('toolsAutomationPlan', () => synthesizeToolsAutomation(businessPacket, job.questionnaire)),
         ]);
         if (tap.status === "fulfilled" && tap.value) deliverables.toolsAutomationPlan = tap.value;
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) { console.warn("Tools & Automation Plan failed:", e); }
     }
 
@@ -4712,13 +4712,13 @@ async function runExtendedWaves(
 }
 
 export async function runPipeline(runId: string): Promise<void> {
-  const job = getJob(runId);
+  const job = await getJob(runId);
   if (!job) return;
   if (!RESUMABLE_ENTRY_STATUSES.has(job.status)) return;
 
   // Reset failed status so the pipeline can proceed.
   if (job.status === "failed") {
-    updateJob(runId, { error: undefined });
+    await updateJob(runId, { error: undefined });
   }
 
   try {
@@ -4743,16 +4743,16 @@ export async function runPipeline(runId: string): Promise<void> {
     }
 
     if (!businessPacket) {
-      updateJob(runId, { status: "parsing" });
+      await updateJob(runId, { status: "parsing" });
       const parsedFiles = await parseFiles(runId, job.filePaths);
 
-      updateJob(runId, { status: "ingesting" });
+      await updateJob(runId, { status: "ingesting" });
       const [bp, knowledgeGraph] = await Promise.all([
         ingestDocuments(parsedFiles, job.questionnaire),
         categorizeAndBuildGraph(parsedFiles, job.questionnaire),
       ]);
       businessPacket = bp;
-      updateJob(runId, {
+      await updateJob(runId, {
         parsedContext: JSON.stringify(businessPacket),
         knowledgeGraph,
       });
@@ -4785,7 +4785,7 @@ export async function runPipeline(runId: string): Promise<void> {
           criticalIssues: [],
           financialAmounts: {},
         });
-        updateJob(runId, { parsedContext: JSON.stringify(businessPacket) });
+        await updateJob(runId, { parsedContext: JSON.stringify(businessPacket) });
       }
 
       const businessSummary = formatPacketAsContext(businessPacket).slice(0, 5000);
@@ -4821,15 +4821,15 @@ export async function runPipeline(runId: string): Promise<void> {
 
     // ── Step 2: Synthesize ─────────────────────────────────────────────────
     // Skip if deliverables already exist (e.g. crashed during formatting).
-    const fresh = getJob(runId);
+    const fresh = await getJob(runId);
     let deliverables: MVPDeliverables;
 
     if (fresh?.deliverables && Object.keys(fresh.deliverables).length > 3) {
       deliverables = fresh.deliverables;
     } else {
-      updateJob(runId, { status: "synthesizing" });
+      await updateJob(runId, { status: "synthesizing" });
       deliverables = await synthesizeDeliverables(job.questionnaire, businessPacket);
-      updateJob(runId, { deliverables });
+      await updateJob(runId, { deliverables });
     }
 
     // ── Step 3: Website + competitor analysis (best-effort) ────────────────
@@ -4841,8 +4841,8 @@ export async function runPipeline(runId: string): Promise<void> {
       try {
         websiteAnalysis = await analyzeWebsite(websiteUrl, { runId, label: "primary" });
         deliverables = { ...deliverables, websiteAnalysis };
-        saveWebsiteAnalysis(orgId, websiteAnalysis);
-        updateJob(runId, { deliverables });
+        await saveWebsiteAnalysis(orgId, websiteAnalysis);
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Website analysis failed (non-fatal):", e);
       }
@@ -4884,7 +4884,7 @@ export async function runPipeline(runId: string): Promise<void> {
           businessPacket
         );
         deliverables = { ...deliverables, competitorAnalysis };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Competitor report build failed (non-fatal):", e);
       }
@@ -4898,7 +4898,7 @@ export async function runPipeline(runId: string): Promise<void> {
         ]);
         if (techOpt.status === "fulfilled" && techOpt.value) deliverables = { ...deliverables, techOptimization: techOpt.value };
         if (priceInt.status === "fulfilled" && priceInt.value) deliverables = { ...deliverables, pricingIntelligence: priceInt.value };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Tech/pricing synthesis failed (non-fatal):", e);
       }
@@ -4925,7 +4925,7 @@ export async function runPipeline(runId: string): Promise<void> {
           competitorRawData
         );
         deliverables = { ...deliverables, marketingStrategy };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Marketing intelligence failed (non-fatal):", e);
       }
@@ -4953,7 +4953,7 @@ export async function runPipeline(runId: string): Promise<void> {
               job.questionnaire
             );
             deliverables = { ...deliverables, pitchDeckAnalysis };
-            updateJob(runId, { deliverables });
+            await updateJob(runId, { deliverables });
           }
         } catch (e) {
           console.warn("[Pivot] Pitch deck analysis failed (non-fatal):", e);
@@ -4966,7 +4966,7 @@ export async function runPipeline(runId: string): Promise<void> {
     if (!deliverables.terminology) {
       try {
         deliverables = { ...deliverables, terminology: detectTerminology(job.questionnaire) };
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       } catch (e) {
         console.warn("[Pivot] Terminology detection failed (non-fatal):", e);
       }
@@ -4979,7 +4979,7 @@ export async function runPipeline(runId: string): Promise<void> {
         const kpiReport = await synthesizeKPIs(businessPacket, job.questionnaire);
         if (kpiReport) {
           deliverables = { ...deliverables, kpiReport };
-          updateJob(runId, { deliverables });
+          await updateJob(runId, { deliverables });
         }
       } catch (e) {
         console.warn("[Pivot] KPI synthesis failed (non-fatal):", e);
@@ -4993,7 +4993,7 @@ export async function runPipeline(runId: string): Promise<void> {
         const healthChecklist = await synthesizeHealthChecklist(businessPacket, job.questionnaire);
         if (healthChecklist) {
           deliverables = { ...deliverables, healthChecklist };
-          updateJob(runId, { deliverables });
+          await updateJob(runId, { deliverables });
         }
       } catch (e) {
         console.warn("[Pivot] Health checklist failed (non-fatal):", e);
@@ -5007,7 +5007,7 @@ export async function runPipeline(runId: string): Promise<void> {
         const roadmap = await synthesizeRoadmap(businessPacket, job.questionnaire, deliverables);
         if (roadmap) {
           deliverables = { ...deliverables, roadmap };
-          updateJob(runId, { deliverables });
+          await updateJob(runId, { deliverables });
         }
       } catch (e) {
         console.warn("[Pivot] Roadmap synthesis failed (non-fatal):", e);
@@ -5092,14 +5092,14 @@ export async function runPipeline(runId: string): Promise<void> {
             trackProgress(batch[j].key);
           }
         }
-        updateJob(runId, { deliverables });
+        await updateJob(runId, { deliverables });
       }
     }
 
     // Store selected sections in deliverables for UI filtering
     if (relevantSections) {
       deliverables = { ...deliverables, selectedSections: Array.from(relevantSections) };
-      updateJob(runId, { deliverables });
+      await updateJob(runId, { deliverables });
     }
 
     // ── Extended wave synthesis (extracted to avoid TS2563 control flow limit) ──
@@ -5129,7 +5129,7 @@ export async function runPipeline(runId: string): Promise<void> {
         };
       });
       console.log(`[Pivot] Computed relevance scores for ${sectionKeys.length} sections`);
-      updateJob(runId, { deliverables });
+      await updateJob(runId, { deliverables });
     } catch (e) {
       console.warn("[Pivot] Relevance score computation failed (non-fatal):", e);
     }
@@ -5146,18 +5146,18 @@ export async function runPipeline(runId: string): Promise<void> {
         else counts.estimated++;
       }
       console.log(`[Pivot] Claim validation: ${counts.verified} verified, ${counts.estimated} estimated, ${counts.conflicting} conflicting`);
-      updateJob(runId, { deliverables });
+      await updateJob(runId, { deliverables });
     }
 
     // ── Step 5: Format PDF + DOCX ──────────────────────────────────────────
-    updateJob(runId, { status: "formatting" });
+    await updateJob(runId, { status: "formatting" });
     await formatAndSave(runId, deliverables);
 
-    updateJob(runId, { status: "completed", phase: "PLAN" });
+    await updateJob(runId, { status: "completed", phase: "PLAN" });
     console.log("[Pivot] Pipeline complete for run:", runId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[Pivot] Pipeline failed:", message);
-    updateJob(runId, { status: "failed", error: message });
+    await updateJob(runId, { status: "failed", error: message });
   }
 }

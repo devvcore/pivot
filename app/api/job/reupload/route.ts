@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "runId required" }, { status: 400 });
     }
 
-    const job = getJob(runId);
+    const job = await getJob(runId);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     // - Clear deliverables to force full re-synthesis
     // - Clear error state
     // - Set status to pending so pipeline picks it up fresh
-    updateJob(runId, {
+    await updateJob(runId, {
       filePaths: allPaths,
       status: "pending",
       phase: "INGEST",

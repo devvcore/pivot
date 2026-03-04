@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { listJobs } from "@/lib/job-store";
 
 export async function GET() {
-    const jobs = listJobs().map((j: any) => {
+    const jobs = (await listJobs()).map((j: any) => {
         const d = j.deliverables as any;
         const hs = d?.healthScore ?? d?.health_score;
         return {

@@ -1,6 +1,14 @@
-import db from "./db";
+/**
+ * Pivot Share Store — Supabase PostgreSQL backend
+ *
+ * All functions are async (return Promises) since Supabase uses HTTP.
+ * Callers MUST await these functions.
+ */
+import { createAdminClient } from "@/lib/supabase/admin";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
+
+const supabase = createAdminClient();
 
 export interface ShareLink {
   id: string;
@@ -30,52 +38,99 @@ function mapRow(row: any): ShareLink {
   };
 }
 
-export function createShareLink(params: {
+export async function createShareLink(params: {
   orgId: string;
   jobId: string;
   createdBy: string;
   role: "owner" | "employee" | "coach" | "other";
   employeeName?: string;
   expiresInDays?: number;
-}): ShareLink {
+}): Promise<ShareLink> {
   const id = uuidv4();
   const token = crypto.randomBytes(24).toString("base64url");
   const expiresAt = params.expiresInDays
     ? new Date(Date.now() + params.expiresInDays * 86400000).toISOString()
     : null;
 
-  db.prepare(`
-    INSERT INTO share_links (id, org_id, job_id, created_by, role, employee_name, token, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, params.orgId, params.jobId, params.createdBy, params.role, params.employeeName || null, token, expiresAt);
+  const { error } = await supabase.from("share_links").insert({
+    id,
+    org_id: params.orgId,
+    job_id: params.jobId,
+    created_by: params.createdBy,
+    role: params.role,
+    employee_name: params.employeeName || null,
+    token,
+    expires_at: expiresAt,
+  });
 
-  return getShareLinkById(id)!;
+  if (error) {
+    console.error("[share-store] createShareLink error:", error);
+    throw new Error(`Failed to create share link: ${error.message}`);
+  }
+
+  const link = await getShareLinkById(id);
+  if (!link) throw new Error("Failed to retrieve created share link");
+  return link;
 }
 
-export function getShareLinkByToken(token: string): ShareLink | undefined {
-  const row = db.prepare("SELECT * FROM share_links WHERE token = ?").get(token);
-  if (!row) return undefined;
-  const link = mapRow(row);
+export async function getShareLinkByToken(token: string): Promise<ShareLink | undefined> {
+  const { data, error } = await supabase
+    .from("share_links")
+    .select("*")
+    .eq("token", token)
+    .single();
+
+  if (error || !data) return undefined;
+
+  const link = mapRow(data);
 
   // Check expiry
   if (link.expiresAt && new Date(link.expiresAt) < new Date()) return undefined;
 
   // Increment use count
-  db.prepare("UPDATE share_links SET used_count = used_count + 1 WHERE id = ?").run(link.id);
+  await supabase
+    .from("share_links")
+    .update({ used_count: (link.usedCount || 0) + 1 })
+    .eq("id", link.id);
+
   return link;
 }
 
-export function getShareLinkById(id: string): ShareLink | undefined {
-  const row = db.prepare("SELECT * FROM share_links WHERE id = ?").get(id);
-  return row ? mapRow(row) : undefined;
+export async function getShareLinkById(id: string): Promise<ShareLink | undefined> {
+  const { data, error } = await supabase
+    .from("share_links")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return undefined;
+  return mapRow(data);
 }
 
-export function listShareLinksForJob(jobId: string): ShareLink[] {
-  const rows = db.prepare("SELECT * FROM share_links WHERE job_id = ? ORDER BY created_at DESC").all(jobId);
-  return rows.map(mapRow);
+export async function listShareLinksForJob(jobId: string): Promise<ShareLink[]> {
+  const { data, error } = await supabase
+    .from("share_links")
+    .select("*")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(mapRow);
 }
 
-export function revokeShareLink(id: string): boolean {
-  const result = db.prepare("DELETE FROM share_links WHERE id = ?").run(id);
-  return result.changes > 0;
+export async function revokeShareLink(id: string): Promise<boolean> {
+  const { error, count } = await supabase
+    .from("share_links")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("[share-store] revokeShareLink error:", error);
+    return false;
+  }
+
+  // Supabase delete doesn't easily return count in all versions.
+  // If no error, we assume it succeeded. Check if the link still exists.
+  const check = await getShareLinkById(id);
+  return !check;
 }

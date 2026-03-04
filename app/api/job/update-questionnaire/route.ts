@@ -10,12 +10,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "runId and questionnaire required" }, { status: 400 });
     }
 
-    const job = getJob(runId);
+    const job = await getJob(runId);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    updateJob(runId, { questionnaire });
+    await updateJob(runId, { questionnaire });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[update-questionnaire]", e);

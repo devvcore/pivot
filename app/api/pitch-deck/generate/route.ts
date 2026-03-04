@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "runId required" }, { status: 400 });
     }
 
-    const job = getJob(runId);
+    const job = await getJob(runId);
     if (!job?.deliverables) {
       return NextResponse.json({ error: "No completed report found" }, { status: 404 });
     }

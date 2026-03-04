@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "format must be pdf or docx" }, { status: 400 });
   }
 
-  const job = getJob(runId);
+  const job = await getJob(runId);
   if (!job || job.status !== "completed") {
     return NextResponse.json(
       { error: "Job not found or not completed" },

@@ -11,7 +11,7 @@ export default async function SharedPage({ params }: SharedPageProps) {
   const { token } = await params;
 
   // Validate the share link
-  const shareLink = getShareLinkByToken(token);
+  const shareLink = await getShareLinkByToken(token);
 
   if (!shareLink) {
     return (
@@ -33,7 +33,7 @@ export default async function SharedPage({ params }: SharedPageProps) {
   }
 
   // Fetch the job data
-  const job = getJob(shareLink.jobId);
+  const job = await getJob(shareLink.jobId);
 
   if (!job || !job.deliverables) {
     return (

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ArrowRight, Building2, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Building2, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { createClient } from "@/lib/supabase/client";
 
 interface UserProfile {
   id: string;
@@ -10,18 +11,39 @@ interface UserProfile {
 }
 
 export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (mode === "forgot") {
+      try {
+        const res = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to send reset email");
+        }
+        setResetSent(true);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
     const body = mode === "login"
@@ -39,8 +61,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       if (!res.ok) throw new Error(data.error || "Authentication failed");
 
       if (mode === "signup") {
-        // Automatically switch to login or log them in directly
-        // For simplicity, let's just attempt login immediately
+        // After signup, log them in to establish session cookies
         const loginRes = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -79,107 +100,143 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
 
           <div className="space-y-2 mb-10">
             <h2 className="text-3xl font-light tracking-tight text-zinc-900">
-              {mode === "login" ? "System Access" : "Network Ingress"}
+              {mode === "login" ? "System Access" : mode === "signup" ? "Network Ingress" : "Password Recovery"}
             </h2>
             <p className="text-sm text-zinc-500">
               {mode === "login"
                 ? "Enter credentials to access the internal intelligence layer."
-                : "Initialize a new organizational node in the Pivot network."}
+                : mode === "signup"
+                ? "Initialize a new organizational node in the Pivot network."
+                : "Enter your email to receive a password reset link."}
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <AnimatePresence mode="wait">
-              {mode === "signup" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-5"
-                >
-                  <div>
-                    <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                      placeholder="Alexander Hamilton"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Company</label>
-                    <input
-                      type="text"
-                      required
-                      value={organizationName}
-                      onChange={e => setOrganizationName(e.target.value)}
-                      className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                      placeholder="Acme Strategic Corp"
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div>
-              <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Email address</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all font-medium"
-                placeholder="executive@pivot.ai"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Security Key</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-600 border border-red-100 text-xs"
+          {mode === "forgot" && resetSent ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-4 py-8"
+            >
+              <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+              <p className="text-sm text-zinc-600 text-center">
+                If an account exists with that email, a password reset link has been sent.
+              </p>
+              <button
+                onClick={() => { setMode("login"); setResetSent(false); setError(null); }}
+                className="text-xs text-zinc-400 hover:text-zinc-900 transition-colors uppercase font-mono tracking-widest mt-4"
               >
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
-              </motion.div>
-            )}
+                Back to Security Gates
+              </button>
+            </motion.div>
+          ) : (
+            <>
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <AnimatePresence mode="wait">
+                  {mode === "signup" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-5"
+                    >
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
+                          placeholder="Alexander Hamilton"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Company</label>
+                        <input
+                          type="text"
+                          required
+                          value={organizationName}
+                          onChange={e => setOrganizationName(e.target.value)}
+                          className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
+                          placeholder="Acme Strategic Corp"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full justify-center items-center gap-2 rounded-xl bg-zinc-900 py-3 px-4 text-sm font-bold text-white shadow-xl shadow-zinc-900/10 hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                <>
-                  {mode === "login" ? "Authorize Access" : "Initialize Node"}
-                  <ArrowRight className="w-4 h-4" />
-                </>
+                <div>
+                  <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Email address</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all font-medium"
+                    placeholder="executive@pivot.ai"
+                  />
+                </div>
+
+                {mode !== "forgot" && (
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Security Key</label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                )}
+
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-600 border border-red-100 text-xs"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full justify-center items-center gap-2 rounded-xl bg-zinc-900 py-3 px-4 text-sm font-bold text-white shadow-xl shadow-zinc-900/10 hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                    <>
+                      {mode === "login" ? "Authorize Access" : mode === "signup" ? "Initialize Node" : "Send Reset Link"}
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {mode === "login" && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => { setMode("forgot"); setError(null); }}
+                    className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               )}
-            </button>
-          </form>
 
-          <div className="mt-8 pt-8 border-t border-zinc-100 text-center">
-            <button
-              onClick={() => setMode(mode === "login" ? "signup" : "login")}
-              className="text-xs text-zinc-400 hover:text-zinc-900 transition-colors uppercase font-mono tracking-widest"
-            >
-              {mode === "login" ? "Request Node Ingress" : "Back to Security Gates"}
-            </button>
-          </div>
+              <div className="mt-8 pt-8 border-t border-zinc-100 text-center">
+                <button
+                  onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); setResetSent(false); }}
+                  className="text-xs text-zinc-400 hover:text-zinc-900 transition-colors uppercase font-mono tracking-widest"
+                >
+                  {mode === "login" ? "Request Node Ingress" : "Back to Security Gates"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -208,7 +265,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
           <div className="mt-20 grid grid-cols-2 gap-x-12 gap-y-8 text-left max-w-sm">
             <div>
               <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-1">Architecture</div>
-              <div className="text-sm text-zinc-300">Phase Ingest → Plan</div>
+              <div className="text-sm text-zinc-300">Phase Ingest &rarr; Plan</div>
             </div>
             <div>
               <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-1">Status</div>

@@ -13,7 +13,7 @@ export async function GET(
   const { runId } = await params;
 
   try {
-    const job = getJob(runId);
+    const job = await getJob(runId);
 
     if (!job) {
       return NextResponse.json({ error: "Analysis not found" }, { status: 404 });

@@ -1,5 +1,13 @@
-import db from "./db";
+/**
+ * Pivot Employee Store — Supabase PostgreSQL backend
+ *
+ * All functions are async (return Promises) since Supabase uses HTTP.
+ * Callers MUST await these functions.
+ */
+import { createAdminClient } from "@/lib/supabase/admin";
 import { v4 as uuidv4 } from "uuid";
+
+const supabase = createAdminClient();
 
 export interface Employee {
   id: string;
@@ -33,53 +41,98 @@ function mapRow(row: any): Employee {
   };
 }
 
-export function createEmployee(params: {
+export async function createEmployee(params: {
   orgId: string;
   name: string;
   roleTitle?: string;
   department?: string;
   salary?: number;
   startDate?: string;
-}): Employee {
+}): Promise<Employee> {
   const id = uuidv4();
-  db.prepare(`
-    INSERT INTO employees (id, org_id, name, role_title, department, salary, start_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, params.orgId, params.name, params.roleTitle || null, params.department || null, params.salary ?? null, params.startDate || null);
-  return getEmployee(id)!;
+
+  const { error } = await supabase.from("employees").insert({
+    id,
+    org_id: params.orgId,
+    name: params.name,
+    role_title: params.roleTitle || null,
+    department: params.department || null,
+    salary: params.salary ?? null,
+    start_date: params.startDate || null,
+  });
+
+  if (error) {
+    console.error("[employee-store] createEmployee error:", error);
+    throw new Error(`Failed to create employee: ${error.message}`);
+  }
+
+  const emp = await getEmployee(id);
+  if (!emp) throw new Error("Failed to retrieve created employee");
+  return emp;
 }
 
-export function getEmployee(id: string): Employee | undefined {
-  const row = db.prepare("SELECT * FROM employees WHERE id = ?").get(id);
-  return row ? mapRow(row) : undefined;
+export async function getEmployee(id: string): Promise<Employee | undefined> {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return undefined;
+  return mapRow(data);
 }
 
-export function listEmployees(orgId: string): Employee[] {
-  const rows = db.prepare("SELECT * FROM employees WHERE org_id = ? ORDER BY name").all(orgId);
-  return rows.map(mapRow);
+export async function listEmployees(orgId: string): Promise<Employee[]> {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("org_id", orgId)
+    .order("name", { ascending: true });
+
+  if (error || !data) return [];
+  return data.map(mapRow);
 }
 
-export function updateEmployee(id: string, updates: Partial<Omit<Employee, "id" | "orgId" | "createdAt" | "updatedAt">>): Employee | undefined {
-  const sets: string[] = [];
-  const params: any[] = [];
+export async function updateEmployee(
+  id: string,
+  updates: Partial<Omit<Employee, "id" | "orgId" | "createdAt" | "updatedAt">>
+): Promise<Employee | undefined> {
+  const updateData: Record<string, any> = {};
 
-  if (updates.name !== undefined) { sets.push("name = ?"); params.push(updates.name); }
-  if (updates.roleTitle !== undefined) { sets.push("role_title = ?"); params.push(updates.roleTitle); }
-  if (updates.department !== undefined) { sets.push("department = ?"); params.push(updates.department); }
-  if (updates.salary !== undefined) { sets.push("salary = ?"); params.push(updates.salary); }
-  if (updates.startDate !== undefined) { sets.push("start_date = ?"); params.push(updates.startDate); }
-  if (updates.netValueEstimate !== undefined) { sets.push("net_value_estimate = ?"); params.push(updates.netValueEstimate); }
-  if (updates.roiScore !== undefined) { sets.push("roi_score = ?"); params.push(updates.roiScore); }
-  if (updates.status !== undefined) { sets.push("status = ?"); params.push(updates.status); }
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.roleTitle !== undefined) updateData.role_title = updates.roleTitle;
+  if (updates.department !== undefined) updateData.department = updates.department;
+  if (updates.salary !== undefined) updateData.salary = updates.salary;
+  if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
+  if (updates.netValueEstimate !== undefined) updateData.net_value_estimate = updates.netValueEstimate;
+  if (updates.roiScore !== undefined) updateData.roi_score = updates.roiScore;
+  if (updates.status !== undefined) updateData.status = updates.status;
 
-  if (sets.length === 0) return getEmployee(id);
+  if (Object.keys(updateData).length === 0) return getEmployee(id);
 
-  params.push(id);
-  db.prepare(`UPDATE employees SET ${sets.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...params);
+  const { error } = await supabase
+    .from("employees")
+    .update(updateData)
+    .eq("id", id);
+
+  if (error) {
+    console.error("[employee-store] updateEmployee error:", error);
+  }
+
   return getEmployee(id);
 }
 
-export function deleteEmployee(id: string): boolean {
-  const result = db.prepare("DELETE FROM employees WHERE id = ?").run(id);
-  return result.changes > 0;
+export async function deleteEmployee(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("employees")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("[employee-store] deleteEmployee error:", error);
+    return false;
+  }
+
+  const check = await getEmployee(id);
+  return !check;
 }

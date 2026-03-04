@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     let searchLocation = location;
 
     if (runId) {
-      const job = getJob(runId);
+      const job = await getJob(runId);
       if (job?.questionnaire) {
         searchIndustry = searchIndustry || job.questionnaire.industry;
         searchLocation = searchLocation || job.questionnaire.location;

@@ -11,7 +11,7 @@ export async function GET(
   const { token } = await params;
 
   try {
-    const shareLink = getShareLinkByToken(token);
+    const shareLink = await getShareLinkByToken(token);
 
     if (!shareLink) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function GET(
       );
     }
 
-    const job = getJob(shareLink.jobId);
+    const job = await getJob(shareLink.jobId);
 
     if (!job || !job.deliverables) {
       return NextResponse.json(

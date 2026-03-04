@@ -1,3 +1,16 @@
+/**
+ * LEGACY: SQLite database (better-sqlite3)
+ *
+ * This module is no longer the primary data store. All data operations
+ * have been migrated to Supabase PostgreSQL. See:
+ *   - lib/job-store.ts (jobs)
+ *   - lib/share-store.ts (share links)
+ *   - lib/employee-store.ts (employees)
+ *   - lib/supabase/admin.ts (admin client)
+ *
+ * This file is kept for backwards compatibility and local development fallback.
+ * Do NOT add new features using this SQLite database.
+ */
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "runId required" }, { status: 400 });
     }
 
-    const job = getJob(runId);
+    const job = await getJob(runId);
     if (!job || !job.filePaths?.length) {
       return NextResponse.json({ error: "Job not found or no files" }, { status: 404 });
     }

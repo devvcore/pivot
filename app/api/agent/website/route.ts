@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const analysis = await analyzeWebsite(url);
 
     // Save to org if orgId provided
-    if (orgId) saveWebsiteAnalysis(orgId, analysis);
+    if (orgId) await saveWebsiteAnalysis(orgId, analysis);
 
     return NextResponse.json(analysis);
   } catch (err) {

@@ -317,10 +317,10 @@ async function executeTool(
     // Find the job
     let job;
     if (runId) {
-      job = getJob(runId);
+      job = await getJob(runId);
     } else {
       // Get most recent completed job for this org
-      const allJobs = listJobs();
+      const allJobs = await listJobs();
       job = allJobs.find((j) => j.questionnaire.orgId === orgId && j.status === "completed")
         ?? allJobs.find((j) => j.status === "completed");
     }
@@ -359,7 +359,7 @@ CTA Assessment: ${analysis.ctaAssessment}`;
     const scenario = args.scenario as string;
 
     // Load report data for context
-    const allJobs = listJobs();
+    const allJobs = await listJobs();
     const job = allJobs.find((j) => j.questionnaire.orgId === orgId && j.status === "completed")
       ?? allJobs.find((j) => j.status === "completed");
 
@@ -668,7 +668,7 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
     return { message: "Pivvy is not available. GEMINI_API_KEY is not configured." };
   }
 
-  const memory = getAgentMemory(req.orgId);
+  const memory = await getAgentMemory(req.orgId);
   if (!memory) {
     return {
       message: `I don't have a memory built for this organization yet. Please complete a full analysis first, then I'll have everything I need to advise you effectively.`,
