@@ -483,7 +483,14 @@ Rules:
 // ── Response sanitizer ────────────────────────────────────────────────────────
 
 function sanitize(text: string): string {
-  return text
+  // Preserve <!--PROJECTION:...--> and <!--NAVIGATE:...--> markers by temporarily replacing them
+  const markers: string[] = [];
+  let cleaned = text.replace(/<!--(PROJECTION|NAVIGATE):[\s\S]*?-->/g, (match) => {
+    markers.push(match);
+    return `__MARKER_${markers.length - 1}__`;
+  });
+
+  cleaned = cleaned
     .replace(/\*\*/g, "")
     .replace(/\*/g, "")
     .replace(/\u2014/g, " - ")   // em dash
@@ -491,6 +498,13 @@ function sanitize(text: string): string {
     .replace(/---/g, " - ")
     .replace(/--/g, " - ")
     .trim();
+
+  // Restore markers
+  markers.forEach((marker, i) => {
+    cleaned = cleaned.replace(`__MARKER_${i}__`, marker);
+  });
+
+  return cleaned;
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
@@ -724,13 +738,27 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
         })
       );
 
-      // Second call with tool results
+      // Extract <!--PROJECTION:...--> and <!--NAVIGATE:...--> markers from tool results
+      // before sending to Gemini (Gemini won't reproduce them), then append to final response
+      const embeddedMarkers: string[] = [];
+      const cleanedToolResults = toolResults.map((tr) => {
+        let cleanResult = tr.result;
+        const markerRegex = /<!--(PROJECTION|NAVIGATE):[\s\S]*?-->/g;
+        let match: RegExpExecArray | null;
+        while ((match = markerRegex.exec(tr.result)) !== null) {
+          embeddedMarkers.push(match[0]);
+        }
+        cleanResult = cleanResult.replace(markerRegex, "").trim();
+        return { name: tr.name, result: cleanResult };
+      });
+
+      // Second call with tool results (markers stripped so Gemini gets clean text)
       const contentsWithTools = [
         ...contents,
         { role: "model" as const, parts },
         {
           role: "user" as const,
-          parts: toolResults.map((tr) => ({
+          parts: cleanedToolResults.map((tr) => ({
             functionResponse: { name: tr.name, response: { result: tr.result } },
           })),
         },
@@ -746,8 +774,14 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
         } as Record<string, unknown>,
       });
 
+      // Append extracted markers to the response so the UI can parse them
+      let finalMessage = sanitize(resp2.text ?? "I encountered an issue generating a response. Please try again.");
+      if (embeddedMarkers.length > 0) {
+        finalMessage = finalMessage + "\n\n" + embeddedMarkers.join("\n");
+      }
+
       return {
-        message: sanitize(resp2.text ?? "I encountered an issue generating a response. Please try again."),
+        message: finalMessage,
         toolsUsed,
       };
     }

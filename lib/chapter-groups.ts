@@ -81,6 +81,7 @@ export const CHAPTER_GROUPS: Record<string, SectionGroup[]> = {
     { id: "leadership", label: "Leadership & Organization", description: "Team performance and succession planning", sections: ["teamPerformance", "teamVelocity", "teamDynamicsAnalysis", "teamTopology", "leadershipDevelopment", "successionPlanning", "successionReadiness", "orgEffectiveness", "organizationalNetwork", "onboardingOptimization", "knowledgeManagement", "knowledgeCapital"] },
     { id: "sales-ops", label: "Sales Operations", description: "Sales playbooks, pipeline, and territory", sections: ["salesPlaybook", "salesEnablement", "salesForecasting", "salesMotionDesign", "salesCompensation", "salesCollateral", "pipelineManagement", "dealAnalytics", "dealVelocity", "territoryOptimization", "territoryPlanning", "subscriptionMetrics"] },
     { id: "vendors", label: "Vendors & Capacity", description: "Vendor management and capacity planning", sections: ["vendorScorecard", "vendorNegotiation", "costBenchmark", "capacityPlanning", "ipPortfolio", "operationalRisk"] },
+    { id: "integrations", label: "Integrations & Live Data", description: "Connected tool insights, communication health, and employee analytics", sections: ["integrationInsights", "employeeAnalytics", "communicationHealth"] },
   ],
 
   // ── Risk & Compliance ─────────────────────────────────────────────────────

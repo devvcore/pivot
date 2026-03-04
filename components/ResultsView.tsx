@@ -266,7 +266,21 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
     score: dim.score,
   }));
 
-  const weeklyModel = (ci as any)?.weeklyProjections || (ci as any)?.weekly_model || [];
+  const rawWeeklyModel = (ci as any)?.weeklyProjections || (ci as any)?.weekly_model || [];
+  // Normalize weekly projections: ensure numeric values, consistent field names, handle "null" strings
+  const weeklyModel = (rawWeeklyModel as any[]).map((entry: any) => ({
+    week: typeof entry.week === "string" ? parseInt(entry.week, 10) : (entry.week ?? 0),
+    label: entry.label ?? `Week ${entry.week ?? 0}`,
+    openingBalance: parseFloat(entry.openingBalance ?? entry.opening_balance ?? 0) || 0,
+    inflows: parseFloat(entry.inflows ?? 0) || 0,
+    outflows: parseFloat(entry.outflows ?? 0) || 0,
+    closingBalance: parseFloat(entry.closingBalance ?? entry.closing_balance ?? 0) || 0,
+    riskFlag: (() => {
+      const flag = entry.riskFlag ?? entry.risk_flag ?? null;
+      return (flag === "null" || flag === null || flag === undefined || flag === "") ? null : flag;
+    })(),
+    action: entry.action ?? null,
+  }));
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex flex-col font-sans">
@@ -497,9 +511,9 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
                             <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `W${v}`} />
                             <YAxis tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} width={65} />
                             <Tooltip formatter={(v) => fmt(v as number)} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                            <Bar dataKey={weeklyModel[0]?.closingBalance != null ? "closingBalance" : "closing_balance"} radius={[4, 4, 0, 0]}>
+                            <Bar dataKey="closingBalance" radius={[4, 4, 0, 0]}>
                               {weeklyModel.map((entry: any, i: number) => (
-                                <Cell key={i} fill={(entry.riskFlag || entry.risk_flag) ? "#ef4444" : "#18181b"} />
+                                <Cell key={i} fill={entry.riskFlag ? "#ef4444" : "#18181b"} />
                               ))}
                             </Bar>
                           </BarChart>

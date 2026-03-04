@@ -198,6 +198,7 @@ export const CHAPTERS: Chapter[] = [
       "pipelineManagement", "dealVelocity", "territoryPlanning",
       "salesCollateral", "subscriptionMetrics",
       "toolsAutomationPlan",
+      "integrationInsights", "employeeAnalytics", "communicationHealth",
     ],
   },
   {

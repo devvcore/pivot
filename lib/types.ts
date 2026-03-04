@@ -1422,6 +1422,23 @@ export interface MVPDeliverables {
   // Tools & Automation
   toolsAutomationPlan?: ToolsAutomationPlan;
 
+  // Integration Insights (live data from connected tools)
+  integrationInsights?: {
+    connectedProviders: string[];
+    communicationHealth?: number;
+    lastSyncAt?: string;
+    employeeRankings?: Array<{
+      name: string;
+      netValue: number;
+      roi: number;
+      performanceScore: number;
+      riskLevel: string;
+      recommendation: string;
+    }>;
+    topFindings?: string[];
+    bottlenecks?: string[];
+  };
+
   // Anti-hallucination & relevance metadata
   claimValidations?: ClaimValidation[];
   relevanceScores?: SectionRelevance[];

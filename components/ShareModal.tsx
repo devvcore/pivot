@@ -9,7 +9,7 @@ import {
 
 interface ShareLink {
   id: string;
-  role: "owner" | "employee" | "coach" | "other" | "other";
+  role: "owner" | "employee" | "coach" | "other";
   employeeName?: string;
   token: string;
   url?: string;
@@ -417,6 +417,16 @@ export function ShareModal({ runId, orgId, open, onClose }: ShareModalProps) {
                                 </span>
                               </div>
                             </div>
+                            <button
+                              onClick={() => {
+                                const fullUrl = `${window.location.origin}/shared/${link.token}`;
+                                navigator.clipboard.writeText(fullUrl);
+                              }}
+                              className="p-2 text-zinc-300 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                              title="Copy link"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => handleRevoke(link.id)}
                               disabled={revoking === link.id}
