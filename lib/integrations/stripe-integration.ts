@@ -8,6 +8,17 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { SyncResult } from './types';
 
+// ─── Direct Environment Configuration ───────────────────────────────────────
+
+const STRIPE_API_KEY = process.env.STRIPE_SECRET_KEY || "";
+
+/**
+ * Returns true if Stripe API key is configured in environment.
+ */
+export function isStripeConfigured(): boolean {
+  return !!process.env.STRIPE_SECRET_KEY;
+}
+
 // ─── Stripe Types ────────────────────────────────────────────────────────────
 
 export interface StripeRevenue {
@@ -683,4 +694,72 @@ export async function syncStripeToAnalytics(
     errors,
     nextSyncAt: nextSync.toISOString(),
   };
+}
+
+// ─── Direct Sync (no OAuth, uses env var) ───────────────────────────────────
+
+/**
+ * Sync Stripe data using the API key from environment variables.
+ * No OAuth required -- works immediately with STRIPE_SECRET_KEY in .env.
+ */
+export async function syncStripeDirectly(orgId: string): Promise<SyncResult> {
+  if (!STRIPE_API_KEY) {
+    return {
+      success: false,
+      recordsProcessed: 0,
+      insightsGenerated: 0,
+      errors: [
+        "Stripe API key not configured. Set STRIPE_SECRET_KEY in .env",
+      ],
+    };
+  }
+
+  return syncStripeToAnalytics(orgId, STRIPE_API_KEY);
+}
+
+/**
+ * Test Stripe connection by fetching the account balance.
+ * Returns balance info if the key is valid.
+ */
+export async function testStripeConnection(): Promise<{
+  connected: boolean;
+  balance?: {
+    available: Array<{ amount: number; currency: string }>;
+    pending: Array<{ amount: number; currency: string }>;
+  };
+  error?: string;
+}> {
+  if (!STRIPE_API_KEY) {
+    return {
+      connected: false,
+      error: "Stripe API key not configured. Set STRIPE_SECRET_KEY in .env",
+    };
+  }
+
+  try {
+    const balance = await stripeFetch<{
+      available: Array<{ amount: number; currency: string }>;
+      pending: Array<{ amount: number; currency: string }>;
+    }>(STRIPE_API_KEY, "balance");
+
+    return {
+      connected: true,
+      balance: {
+        available: balance.available.map((b) => ({
+          amount: centsToAmount(b.amount),
+          currency: b.currency.toUpperCase(),
+        })),
+        pending: balance.pending.map((b) => ({
+          amount: centsToAmount(b.amount),
+          currency: b.currency.toUpperCase(),
+        })),
+      },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      connected: false,
+      error: msg,
+    };
+  }
 }
