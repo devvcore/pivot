@@ -7,6 +7,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { CommunicationInsight, Integration, SyncResult } from "@/lib/integrations/types";
 import { saveCommunicationInsight } from "@/lib/integrations/store";
+import { filterMessages, type FilterableMessage } from "@/lib/integrations/message-filter";
 
 // ── Slack-specific Types ────────────────────────────────────────
 
@@ -312,13 +313,52 @@ export async function analyzeSlackCommunication(
 ): Promise<CommunicationInsight[]> {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-  // Smart filter messages before sending to AI
-  const filtered = filterMessagesForAI(messages);
+  const totalRaw = messages.length;
 
-  if (filtered.length === 0) {
+  // ── Stage 0: Programmatic pre-filter (free, catches obvious noise) ──
+  const programmaticFiltered = filterMessagesForAI(messages);
+
+  if (programmaticFiltered.length === 0) {
     return [];
   }
 
+  const afterStage0 = programmaticFiltered.length;
+
+  // ── Stage 1: AI filter with cheap model (gemini-2.0-flash-lite) ──
+  // Convert SlackMessages to FilterableMessages for the filter agent
+  const filterableMessages: FilterableMessage[] = programmaticFiltered.map((m) => ({
+    id: `${m.channelId}-${m.timestamp}`,
+    text: m.text,
+    sender: m.senderName,
+    channel: m.channelName,
+    timestamp: m.timestamp,
+  }));
+
+  const filterResult = await filterMessages(filterableMessages, orgContext);
+
+  // Map filtered messages back to SlackMessages for the analysis prompt
+  const filteredIds = new Set(filterResult.filteredMessages.map((m) => m.id));
+  const filtered = programmaticFiltered.filter(
+    (m) => filteredIds.has(`${m.channelId}-${m.timestamp}`),
+  );
+
+  if (filtered.length === 0) {
+    console.log(
+      `[filter-agent] Slack: ${totalRaw} messages -> Stage 0 (programmatic): ${afterStage0}` +
+        ` -> Stage 1 (flash-lite): 0 business-relevant. Skipping analysis.`,
+    );
+    return [];
+  }
+
+  console.log(
+    `[filter-agent] Slack: ${totalRaw} messages` +
+      ` -> Stage 0 (programmatic): ${afterStage0}` +
+      ` -> Stage 1 (flash-lite): ${filtered.length} business-relevant` +
+      ` -> Stage 2 (flash): analyzing.` +
+      ` Estimated savings: ${formatTokenEstimate(afterStage0 - filtered.length)} tokens (~$${estimateCostSavings(afterStage0 - filtered.length)})`,
+  );
+
+  // ── Stage 2: Deep analysis with gemini-2.5-flash ──
   // Build a compact representation for the AI
   const messageLines = filtered.map((m) => {
     const ts = new Date(parseFloat(m.timestamp) * 1000).toISOString();
@@ -341,7 +381,7 @@ ORGANIZATION: ${orgContext}
 TEAM MEMBERS:
 ${userSummary}
 
-SLACK MESSAGES (${filtered.length} messages from ${messages.length} total):
+SLACK MESSAGES (${filtered.length} business-relevant messages, pre-filtered from ${totalRaw} total):
 ${messageLines.join("\n")}
 
 Analyze these Slack messages and produce insights. Return a JSON object with these keys:
@@ -603,6 +643,21 @@ Be thorough but realistic. Only flag risks you have genuine evidence for. Base a
   }
 
   return insights;
+}
+
+// ── Filter Stats Helpers ────────────────────────────────────────
+
+function formatTokenEstimate(droppedMessages: number): string {
+  // Rough estimate: ~100 tokens per message on average
+  const tokens = droppedMessages * 100;
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`;
+  return String(tokens);
+}
+
+function estimateCostSavings(droppedMessages: number): string {
+  // gemini-2.5-flash ~$1.25/1M input tokens
+  const tokens = droppedMessages * 100;
+  return ((tokens / 1_000_000) * 1.25).toFixed(4);
 }
 
 // ── Sync Engine Entry Point ─────────────────────────────────────

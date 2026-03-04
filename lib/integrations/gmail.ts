@@ -7,6 +7,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { CommunicationInsight, Integration, SyncResult } from "@/lib/integrations/types";
 import { saveCommunicationInsight } from "@/lib/integrations/store";
+import { filterMessages, type FilterableMessage } from "@/lib/integrations/message-filter";
 
 // ── Gmail-specific Types ────────────────────────────────────────
 
@@ -294,23 +295,62 @@ export async function analyzeGmailCommunication(
     return [];
   }
 
-  // Smart filtering: limit to ~50K chars for token budget
-  const MAX_CHARS = 50_000;
-  let totalChars = 0;
-  const filtered: GmailMessage[] = [];
+  const totalRaw = messages.length;
 
-  // Sort by date descending (most recent first)
+  // ── Stage 0: Programmatic pre-filter (already done during fetch) ──
+  // Automated senders and subjects were already filtered in fetchGmailMessages.
+  // Sort by date descending (most recent first) as the initial cut.
   const sorted = [...messages].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
-  for (const msg of sorted) {
+  const afterStage0 = sorted.length;
+
+  // ── Stage 1: AI filter with cheap model (gemini-2.0-flash-lite) ──
+  // Convert GmailMessages to FilterableMessages for the filter agent
+  const filterableMessages: FilterableMessage[] = sorted.map((m) => ({
+    id: m.id,
+    text: `Subject: ${m.subject}\n${m.body.slice(0, 300)}`,
+    sender: `${m.from} <${m.fromEmail}>`,
+    channel: m.labels.join(","),
+    timestamp: m.date,
+  }));
+
+  const filterResult = await filterMessages(filterableMessages, orgContext);
+
+  // Map filtered messages back to GmailMessages
+  const filteredIds = new Set(filterResult.filteredMessages.map((m) => m.id));
+  const aiFiltered = sorted.filter((m) => filteredIds.has(m.id));
+
+  if (aiFiltered.length === 0) {
+    console.log(
+      `[filter-agent] Gmail: ${totalRaw} messages -> Stage 0 (programmatic): ${afterStage0}` +
+        ` -> Stage 1 (flash-lite): 0 business-relevant. Skipping analysis.`,
+    );
+    return [];
+  }
+
+  // ── Stage 1.5: Apply character budget on the AI-filtered set ──
+  const MAX_CHARS = 50_000;
+  let totalChars = 0;
+  const filtered: GmailMessage[] = [];
+
+  for (const msg of aiFiltered) {
     const line = `[${msg.date}] ${msg.from} -> ${msg.to.join(",")} | ${msg.subject} | ${msg.body.slice(0, 300)}`;
     if (totalChars + line.length > MAX_CHARS) break;
     totalChars += line.length;
     filtered.push(msg);
   }
 
+  console.log(
+    `[filter-agent] Gmail: ${totalRaw} messages` +
+      ` -> Stage 0 (programmatic): ${afterStage0}` +
+      ` -> Stage 1 (flash-lite): ${aiFiltered.length} business-relevant` +
+      ` -> Stage 2 (flash): analyzing ${filtered.length}.` +
+      ` Estimated savings: ${formatTokenEstimate(afterStage0 - aiFiltered.length)} tokens (~$${estimateCostSavings(afterStage0 - aiFiltered.length)})`,
+  );
+
+  // ── Stage 2: Deep analysis with gemini-2.5-flash ──
   // Build email thread summaries for the AI
   const threadMap = new Map<string, GmailMessage[]>();
   for (const msg of filtered) {
@@ -329,7 +369,7 @@ export async function analyzeGmailCommunication(
 
 ORGANIZATION: ${orgContext}
 
-EMAIL MESSAGES (${filtered.length} of ${messages.length} total, last 30 days):
+EMAIL MESSAGES (${filtered.length} business-relevant, pre-filtered from ${totalRaw} total, last 30 days):
 ${emailLines.join("\n---\n")}
 
 THREAD STATISTICS:
@@ -641,6 +681,21 @@ Base analysis ONLY on actual patterns in the emails. If insufficient data for a 
   }
 
   return insights;
+}
+
+// ── Filter Stats Helpers ────────────────────────────────────────
+
+function formatTokenEstimate(droppedMessages: number): string {
+  // Rough estimate: ~150 tokens per email on average (larger than Slack messages)
+  const tokens = droppedMessages * 150;
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`;
+  return String(tokens);
+}
+
+function estimateCostSavings(droppedMessages: number): string {
+  // gemini-2.5-flash ~$1.25/1M input tokens
+  const tokens = droppedMessages * 150;
+  return ((tokens / 1_000_000) * 1.25).toFixed(4);
 }
 
 // ── Sync Engine Entry Point ─────────────────────────────────────
