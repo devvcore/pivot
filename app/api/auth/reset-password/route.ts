@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
-  const { email } = await req.json();
-  if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
+  try {
+    const { email } = await req.json();
+    if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+    const supabase = createAdminClient();
 
-  const { error } = await supabase.auth.admin.generateLink({
-    type: "recovery",
-    email: email.trim().toLowerCase(),
-  });
+    // Use admin to send the recovery email
+    const { error } = await supabase.auth.admin.generateLink({
+      type: "recovery",
+      email: email.trim().toLowerCase(),
+    });
 
-  // Always return success to prevent email enumeration
-  return NextResponse.json({ success: true });
+    // Log but don't expose errors (prevent email enumeration)
+    if (error) {
+      console.error("[auth/reset-password] Error:", error.message);
+    }
+
+    // Always return success
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ success: true });
+  }
 }

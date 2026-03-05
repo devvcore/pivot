@@ -10,6 +10,7 @@ import { TeamView } from "@/components/TeamView";
 import { ExecutionDashboard } from "@/components/execution";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const RUN_ID_KEY = "pivot_runId";
 
@@ -40,26 +41,33 @@ export default function Home() {
       // ignore
     }
 
-    // Verify session with Supabase
-    fetch("/api/auth/session")
-      .then((r) => {
-        if (r.ok) return r.json();
-        throw new Error("No session");
-      })
-      .then((data) => {
-        if (data.user) {
-          setUser(data.user);
-          localStorage.setItem("pivot_user", JSON.stringify(data.user));
-        } else {
-          setUser(null);
-          localStorage.removeItem("pivot_user");
-        }
-      })
-      .catch(() => {
+    // Verify session with Supabase client directly
+    const sb = createClient();
+    sb.auth.getUser().then(async ({ data: { user: authUser } }) => {
+      if (!authUser) {
         setUser(null);
         localStorage.removeItem("pivot_user");
-      })
-      .finally(() => setSessionChecked(true));
+        return;
+      }
+      // Fetch profile for org info
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("name, organization_id")
+        .eq("id", authUser.id)
+        .single();
+
+      const u: UserProfile = {
+        id: authUser.id,
+        email: authUser.email ?? "",
+        name: authUser.user_metadata?.name ?? profile?.name ?? "",
+        organizationId: profile?.organization_id ?? "",
+      };
+      setUser(u);
+      localStorage.setItem("pivot_user", JSON.stringify(u));
+    }).catch(() => {
+      setUser(null);
+      localStorage.removeItem("pivot_user");
+    }).finally(() => setSessionChecked(true));
   }, []);
 
   useEffect(() => {
@@ -96,7 +104,8 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const sb = createClient();
+      await sb.auth.signOut();
     } catch {
       // ignore
     }

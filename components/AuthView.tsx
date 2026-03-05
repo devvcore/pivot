@@ -1,5 +1,7 @@
+"use client";
+
 import { useState } from "react";
-import { ArrowRight, Building2, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Building2, ShieldCheck, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -19,60 +21,97 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    if (mode === "forgot") {
-      try {
-        const res = await fetch("/api/auth/reset-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to send reset email");
-        }
-        setResetSent(true);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
-    const body = mode === "login"
-      ? { email, password }
-      : { email, password, name, organizationName };
-
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Authentication failed");
+      if (mode === "forgot") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          email.trim().toLowerCase(),
+          { redirectTo: `${window.location.origin}/auth/reset` }
+        );
+        if (resetError) throw new Error(resetError.message);
+        setResetSent(true);
+        return;
+      }
 
       if (mode === "signup") {
-        // After signup, log them in to establish session cookies
-        const loginRes = await fetch("/api/auth/login", {
+        if (!name || !organizationName) {
+          throw new Error("Name and company are required");
+        }
+
+        // Sign up directly through Supabase Auth
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: { name, organizationName },
+          },
+        });
+
+        if (signUpError) throw new Error(signUpError.message);
+        if (!signUpData.user) throw new Error("Signup failed");
+
+        // Create org + profile via API (needs admin privileges)
+        const setupRes = await fetch("/api/auth/setup-profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({
+            userId: signUpData.user.id,
+            email: email.trim().toLowerCase(),
+            name,
+            organizationName,
+          }),
         });
-        const loginData = await loginRes.json();
-        if (!loginRes.ok) throw new Error(loginData.error || "Login failed after signup");
-        onLogin(loginData);
-      } else {
-        onLogin(data);
+
+        if (!setupRes.ok) {
+          const err = await setupRes.json().catch(() => ({ error: "Profile setup failed" }));
+          throw new Error(err.error);
+        }
+
+        const setupData = await setupRes.json();
+
+        onLogin({
+          id: signUpData.user.id,
+          email: signUpData.user.email ?? email,
+          name,
+          organizationId: setupData.organizationId ?? "",
+        });
+        return;
       }
+
+      // Login
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (loginError) {
+        if (loginError.message.includes("Invalid login")) {
+          throw new Error("Invalid email or password");
+        }
+        throw new Error(loginError.message);
+      }
+
+      // Fetch profile for org info
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, organization_id")
+        .eq("id", data.user.id)
+        .single();
+
+      onLogin({
+        id: data.user.id,
+        email: data.user.email ?? email,
+        name: data.user.user_metadata?.name ?? profile?.name ?? email.split("@")[0],
+        organizationId: profile?.organization_id ?? data.user.user_metadata?.organizationId ?? "",
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -100,14 +139,14 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
 
           <div className="space-y-2 mb-10">
             <h2 className="text-3xl font-light tracking-tight text-zinc-900">
-              {mode === "login" ? "System Access" : mode === "signup" ? "Network Ingress" : "Password Recovery"}
+              {mode === "login" ? "Welcome back" : mode === "signup" ? "Create your account" : "Reset password"}
             </h2>
             <p className="text-sm text-zinc-500">
               {mode === "login"
-                ? "Enter credentials to access the internal intelligence layer."
+                ? "Sign in to access your workspace."
                 : mode === "signup"
-                ? "Initialize a new organizational node in the Pivot network."
-                : "Enter your email to receive a password reset link."}
+                ? "Get started with Pivot in seconds."
+                : "Enter your email to receive a reset link."}
             </p>
           </div>
 
@@ -119,13 +158,13 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
             >
               <CheckCircle2 className="w-12 h-12 text-emerald-500" />
               <p className="text-sm text-zinc-600 text-center">
-                If an account exists with that email, a password reset link has been sent.
+                If an account exists with that email, a password reset link has been sent. Check your inbox.
               </p>
               <button
                 onClick={() => { setMode("login"); setResetSent(false); setError(null); }}
                 className="text-xs text-zinc-400 hover:text-zinc-900 transition-colors uppercase font-mono tracking-widest mt-4"
               >
-                Back to Security Gates
+                Back to Sign In
               </button>
             </motion.div>
           ) : (
@@ -147,7 +186,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                           value={name}
                           onChange={e => setName(e.target.value)}
                           className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                          placeholder="Alexander Hamilton"
+                          placeholder="Your full name"
                         />
                       </div>
                       <div>
@@ -158,7 +197,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                           value={organizationName}
                           onChange={e => setOrganizationName(e.target.value)}
                           className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                          placeholder="Acme Strategic Corp"
+                          placeholder="Your company name"
                         />
                       </div>
                     </motion.div>
@@ -166,28 +205,39 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                 </AnimatePresence>
 
                 <div>
-                  <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Email address</label>
+                  <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Email</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all font-medium"
-                    placeholder="executive@pivot.ai"
+                    placeholder="you@company.com"
                   />
                 </div>
 
                 {mode !== "forgot" && (
                   <div>
-                    <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Security Key</label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                      placeholder="••••••••"
-                    />
+                    <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 pr-11 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
+                        placeholder="Min 6 characters"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -209,7 +259,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                     <>
-                      {mode === "login" ? "Authorize Access" : mode === "signup" ? "Initialize Node" : "Send Reset Link"}
+                      {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -222,7 +272,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                     onClick={() => { setMode("forgot"); setError(null); }}
                     className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
                   >
-                    Forgot Password?
+                    Forgot password?
                   </button>
                 </div>
               )}
@@ -230,9 +280,13 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
               <div className="mt-8 pt-8 border-t border-zinc-100 text-center">
                 <button
                   onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); setResetSent(false); }}
-                  className="text-xs text-zinc-400 hover:text-zinc-900 transition-colors uppercase font-mono tracking-widest"
+                  className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
                 >
-                  {mode === "login" ? "Request Node Ingress" : "Back to Security Gates"}
+                  {mode === "login" ? (
+                    <>Don&apos;t have an account? <span className="font-semibold text-zinc-900">Sign up</span></>
+                  ) : (
+                    <>Already have an account? <span className="font-semibold text-zinc-900">Sign in</span></>
+                  )}
                 </button>
               </div>
             </>
@@ -241,7 +295,6 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       </div>
 
       <div className="relative hidden w-0 flex-1 lg:block bg-zinc-950 overflow-hidden">
-        {/* Abstract Background Design */}
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-zinc-700 rounded-full blur-[120px]" />
           <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-zinc-800 rounded-full blur-[100px]" />
@@ -265,11 +318,11 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
           <div className="mt-20 grid grid-cols-2 gap-x-12 gap-y-8 text-left max-w-sm">
             <div>
               <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-1">Architecture</div>
-              <div className="text-sm text-zinc-300">Phase Ingest &rarr; Plan</div>
+              <div className="text-sm text-zinc-300">Ingest &rarr; Plan &rarr; Execute</div>
             </div>
             <div>
               <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-1">Status</div>
-              <div className="text-sm text-zinc-300">v2.0 Beta Live</div>
+              <div className="text-sm text-zinc-300">v2.0 Live</div>
             </div>
           </div>
         </div>
