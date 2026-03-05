@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="12" y1="8" x2="40" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon: abstract pivot/rotation mark -->
+  <g transform="translate(4,6)">
+    <!-- Main diamond/pivot shape -->
+    <rect x="8" y="8" width="32" height="32" rx="8" transform="rotate(45 24 24)" fill="url(#g1)"/>
+    <!-- Inner pivot point -->
+    <circle cx="24" cy="24" r="6" fill="white" opacity="0.95"/>
+    <!-- Data bars radiating from center -->
+    <rect x="22" y="4" width="4" height="12" rx="2" fill="url(#g2)" opacity="0.8"/>
+    <rect x="22" y="32" width="4" height="12" rx="2" fill="url(#g2)" opacity="0.8"/>
+    <rect x="4" y="22" width="12" height="4" rx="2" fill="url(#g2)" opacity="0.6"/>
+    <rect x="32" y="22" width="12" height="4" rx="2" fill="url(#g2)" opacity="0.6"/>
+    <!-- Center dot -->
+    <circle cx="24" cy="24" r="2.5" fill="#6366F1"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="62" y="42" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="32" font-weight="700" fill="#18181B" letter-spacing="-0.02em">
+    <tspan>Piv</tspan><tspan fill="#6366F1">o</tspan><tspan>t</tspan>
+  </text>
+</svg>

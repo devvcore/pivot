@@ -39,6 +39,7 @@ interface ResultsViewProps {
   onBack: () => void;
   onNewRun: () => void;
   onReprocess?: () => void;
+  onExecute?: () => void;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string }> = {
@@ -115,7 +116,7 @@ function ConfidenceBanner({ provenance }: { provenance: NonNullable<MVPDeliverab
   );
 }
 
-export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsViewProps) {
+export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }: ResultsViewProps) {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -303,6 +304,14 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess }: ResultsVie
         </div>
 
         <div className="flex items-center gap-3">
+          {onExecute && (
+            <button
+              onClick={onExecute}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white text-xs font-mono uppercase tracking-wider hover:bg-indigo-700 transition-all rounded-lg shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Execute
+            </button>
+          )}
           <button
             onClick={() => setShareOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 text-zinc-600 text-xs font-mono uppercase tracking-wider hover:bg-zinc-50 transition-all rounded-lg"

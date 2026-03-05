@@ -12,3 +12,5 @@ data/
 *.db-shm
 reports/
 *.tsbuildinfo
+.firebase/
+test-hosting/

@@ -29,6 +29,17 @@ const INDUSTRIES = [
   "Accounting / Finance Services", "Franchise", "Other",
 ];
 
+const REVENUE_RANGES = [
+  "$0 - $500K",
+  "$500K - $1M",
+  "$1M - $5M",
+  "$5M - $10M",
+  "$10M - $50M",
+  "$50M - $100M",
+  "$100M - $500M",
+  "$500M+",
+];
+
 const MARKETING_CHANNELS = [
   "Instagram", "LinkedIn", "TikTok", "X / Twitter", "YouTube",
   "Facebook", "Cold Email", "Newsletter", "Google Ads", "Meta Ads",
@@ -850,34 +861,113 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
                 <FieldPills extracted={extracted} />
               </div>
 
-              {/* Extracted fields preview */}
+              {/* Extracted fields — editable */}
               <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
-                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Extracted Details</div>
+                  <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Extracted Details — click to edit</div>
                 </div>
-                <div className="divide-y divide-zinc-50">
-                  {[
-                    { label: "Business Name", value: extracted.organizationName },
-                    { label: "Industry", value: extracted.industry },
-                    { label: "Revenue Range", value: extracted.revenueRange },
-                    { label: "Business Model", value: extracted.businessModel },
-                    { label: "Website", value: extracted.website },
-                    { label: "Location", value: extracted.location },
-                    { label: "Key Competitors", value: extracted.keyCompetitors },
-                    { label: "Key Concerns", value: extracted.keyConcerns },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="px-6 py-3 flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">{label}</span>
-                      {value && value !== "TBD" && value.toLowerCase() !== "not specified" && value.toLowerCase() !== "n/a" ? (
-                        <span className="text-xs text-zinc-900 font-medium flex items-center gap-1.5 max-w-[60%] text-right">
-                          <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
-                          <span className="break-words">{value}</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-zinc-300 italic">Will ask on call</span>
-                      )}
-                    </div>
-                  ))}
+                <div className="divide-y divide-zinc-50 px-6 py-2">
+                  {/* Business Name */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Business Name</label>
+                    <input
+                      type="text"
+                      value={extracted.organizationName ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, organizationName: e.target.value }))}
+                      placeholder="Your business name"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Industry */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Industry</label>
+                    <select
+                      value={extracted.industry ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, industry: e.target.value }))}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all appearance-none"
+                    >
+                      <option value="">Select industry...</option>
+                      {INDUSTRIES.map((ind) => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Revenue Range */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Revenue Range</label>
+                    <select
+                      value={extracted.revenueRange ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, revenueRange: e.target.value }))}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all appearance-none"
+                    >
+                      <option value="">Select revenue range...</option>
+                      {REVENUE_RANGES.map((rr) => (
+                        <option key={rr} value={rr}>{rr}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Business Model */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Business Model</label>
+                    <input
+                      type="text"
+                      value={extracted.businessModel ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, businessModel: e.target.value }))}
+                      placeholder="e.g. B2B subscription, marketplace, services"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Website */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Website</label>
+                    <input
+                      type="url"
+                      value={extracted.website ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, website: e.target.value }))}
+                      placeholder="https://yourcompany.com"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Location */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Location</label>
+                    <input
+                      type="text"
+                      value={extracted.location ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, location: e.target.value }))}
+                      placeholder="City, State or Country"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Key Competitors */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Key Competitors</label>
+                    <input
+                      type="text"
+                      value={extracted.keyCompetitors ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, keyCompetitors: e.target.value }))}
+                      placeholder="Competitor A, Competitor B"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Key Concerns */}
+                  <div className="py-3 space-y-1">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Key Concerns</label>
+                    <textarea
+                      rows={2}
+                      value={extracted.keyConcerns ?? ""}
+                      onChange={(e) => setExtracted((prev) => ({ ...prev, keyConcerns: e.target.value }))}
+                      placeholder="Main challenges or concerns for your business"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none transition-all resize-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -913,6 +1003,13 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
                   <Rocket className="w-4 h-4" />
                   Skip Call — Launch Analysis Now
                 </button>
+                <button
+                  onClick={() => setPhase("upload")}
+                  className="w-full flex items-center justify-center gap-3 px-8 py-3 text-zinc-400 text-xs font-mono uppercase tracking-[0.2em] hover:text-zinc-700 transition-all rounded-xl"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Upload
+                </button>
               </div>
             </div>
           </motion.div>
@@ -929,20 +1026,25 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
               onSkip={() => handleLaunchAnalysis()}
               onError={setError}
             />
-            {error && (
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-md w-full px-4">
+            {/* Persistent back button + error banner */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-md w-full px-4 space-y-2">
+              {error && (
                 <div className="bg-red-950/90 border border-red-800 rounded-xl p-4 flex items-start gap-3 shadow-2xl backdrop-blur-sm">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                   <div className="flex-1 text-xs text-red-200 leading-normal">{error}</div>
                   <button onClick={() => handleLaunchAnalysis()} className="text-[10px] font-mono text-emerald-400 hover:text-white uppercase tracking-wider shrink-0 mr-2">
                     Retry
                   </button>
-                  <button onClick={() => setPhase("analyze")} className="text-[10px] font-mono text-red-400 hover:text-white uppercase tracking-wider shrink-0">
-                    Back
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
+              <button
+                onClick={() => { setError(null); setPhase("analyze"); }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-900/80 border border-zinc-700 text-zinc-300 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-all rounded-xl backdrop-blur-sm shadow-lg"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Review
+              </button>
+            </div>
           </>
         )}
 

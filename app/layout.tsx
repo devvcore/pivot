@@ -8,6 +8,10 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mon
 export const metadata: Metadata = {
   title: 'Pivot | Enterprise Intelligence',
   description: 'Enterprise business intelligence and transformation platform.',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/icon-192.svg',
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
