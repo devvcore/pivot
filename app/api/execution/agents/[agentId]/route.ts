@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
+import { createOrchestrator } from "@/lib/execution/orchestrator";
 
 type RouteContext = { params: Promise<{ agentId: string }> };
 
@@ -11,6 +13,9 @@ export async function GET(
   request: NextRequest,
   context: RouteContext
 ) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { agentId } = await context.params;
     const orgId = request.nextUrl.searchParams.get("orgId");
@@ -86,7 +91,7 @@ export async function GET(
 
     // Determine current status
     const activeTasks = (tasks || []).filter(
-      (t) => t.status === "in_progress" || t.status === "revision"
+      (t: { status: string }) => t.status === "in_progress" || t.status === "revision"
     );
     const status = activeTasks.length > 0 ? "working" : "idle";
 
@@ -123,6 +128,9 @@ export async function POST(
   request: NextRequest,
   context: RouteContext
 ) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { agentId } = await context.params;
     const body = await request.json();
@@ -180,10 +188,13 @@ export async function POST(
       data: { direction: "user_to_agent", message },
     });
 
-    // TODO: Trigger agent processing of the message
-    // This could trigger a lightweight task or wake the agent heartbeat
-    // import { agentHeartbeat } from "@/trigger/agent-heartbeat";
-    // await agentHeartbeat.trigger({ orgId, agentId });
+    // If there's an associated task, trigger the orchestrator to process it
+    if (taskId) {
+      const orchestrator = createOrchestrator();
+      orchestrator.runPipeline(taskId).catch((err: Error) => {
+        console.error(`[POST /api/execution/agents/${agentId}] Pipeline failed for task ${taskId}:`, err.message);
+      });
+    }
 
     return NextResponse.json({
       success: true,

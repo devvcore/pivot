@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
+import { createOrchestrator } from "@/lib/execution/orchestrator";
 
 type RouteContext = { params: Promise<{ taskId: string }> };
 
@@ -8,9 +10,12 @@ type RouteContext = { params: Promise<{ taskId: string }> };
  * Get task details including output, artifacts, review status, and events.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: RouteContext
 ) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { taskId } = await context.params;
 
@@ -84,6 +89,9 @@ export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { taskId } = await context.params;
     const body = await request.json();
@@ -186,18 +194,12 @@ export async function PATCH(
       },
     });
 
-    // If revision requested, re-trigger the execution task
+    // If revision requested, re-trigger the execution pipeline
     if (action === "revise" && newStatus === "revision") {
-      // TODO: Trigger executeTaskJob with feedback
-      // import { executeTaskJob } from "@/trigger/execute-task";
-      // await executeTaskJob.trigger({
-      //   taskId,
-      //   orgId: task.org_id,
-      //   agentId: task.agent_id,
-      //   title: task.title,
-      //   description: `${task.description}\n\nREVISION FEEDBACK: ${feedback}`,
-      //   costCeiling: task.cost_ceiling - task.cost_spent,
-      // });
+      const orchestrator = createOrchestrator();
+      orchestrator.runPipeline(taskId).catch((err: Error) => {
+        console.error(`[PATCH /api/execution/tasks/${taskId}] Revision pipeline failed:`, err.message);
+      });
     }
 
     return NextResponse.json({ task: updatedTask });
@@ -215,9 +217,12 @@ export async function PATCH(
  * Cancel and delete a task.
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   context: RouteContext
 ) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { taskId } = await context.params;
 
@@ -230,7 +235,7 @@ export async function DELETE(
     // Fetch task to verify it exists and get org_id
     const { data: task, error: fetchError } = await supabase
       .from("execution_tasks")
-      .select("id, status, org_id, agent_id, trigger_run_id")
+      .select("id, status, org_id, agent_id")
       .eq("id", taskId)
       .single();
 
@@ -239,13 +244,6 @@ export async function DELETE(
         { error: fetchError?.message || "Task not found" },
         { status: 404 }
       );
-    }
-
-    // If task is in progress, cancel the Trigger.dev run
-    if (task.trigger_run_id && ["queued", "in_progress"].includes(task.status)) {
-      // TODO: Cancel the Trigger.dev run
-      // import { runs } from "@trigger.dev/sdk";
-      // await runs.cancel(task.trigger_run_id);
     }
 
     // Update status to cancelled (soft delete)

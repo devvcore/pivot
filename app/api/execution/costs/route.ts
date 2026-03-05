@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
 
 /**
  * GET /api/execution/costs?orgId=...&agentId=...&from=...&to=...&groupBy=...
@@ -7,6 +8,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * and grouping by agent or day.
  */
 export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { searchParams } = request.nextUrl;
     const orgId = searchParams.get("orgId");

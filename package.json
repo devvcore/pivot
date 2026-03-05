@@ -20,7 +20,7 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "@the-convocation/twitter-scraper": "^0.22.1",
-    "autoprefixer": "^10.4.21",
+"autoprefixer": "^10.4.21",
     "bcryptjs": "^3.0.3",
     "better-browse": "^0.2.1",
     "better-sqlite3": "^12.6.2",

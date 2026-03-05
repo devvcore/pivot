@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
+import { createOrchestrator } from "@/lib/execution/orchestrator";
 
 /**
  * GET /api/execution/approvals?orgId=...&status=...
  * List approval requests for an org, optionally filtered by status.
  */
 export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { searchParams } = request.nextUrl;
     const orgId = searchParams.get("orgId");
@@ -65,6 +70,9 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
     const { approvalId, decision, feedback, decidedBy } = body;
@@ -112,7 +120,7 @@ export async function POST(request: NextRequest) {
       .update({
         status: decision,
         feedback: feedback || null,
-        decided_by: decidedBy || null,
+        decided_by: decidedBy || auth.user.id,
         decided_at: new Date().toISOString(),
       })
       .eq("id", approvalId)
@@ -137,17 +145,18 @@ export async function POST(request: NextRequest) {
         approvalId,
         decision,
         feedback: feedback || null,
-        decidedBy: decidedBy || null,
+        decidedBy: decidedBy || auth.user.id,
       },
     });
 
     // Handle the decision's effect on the task
     if (approval.task_id) {
       if (decision === "approved") {
-        // Resume the task -- the agent can proceed with the approved action
-        // TODO: Trigger agent heartbeat or resume execution
-        // import { agentHeartbeat } from "@/trigger/agent-heartbeat";
-        // await agentHeartbeat.trigger({ orgId: approval.org_id, agentId: approval.agent_id });
+        // Resume the task -- trigger the orchestrator to continue execution
+        const orchestrator = createOrchestrator();
+        orchestrator.runPipeline(approval.task_id).catch((err: Error) => {
+          console.error(`[POST /api/execution/approvals] Pipeline resume failed for ${approval.task_id}:`, err.message);
+        });
       } else if (decision === "rejected") {
         // Update the task to reflect rejection
         await supabase
@@ -158,7 +167,7 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", approval.task_id);
       } else if (decision === "revision_requested") {
-        // The agent should revise its approach
+        // Update task status and trigger revision pipeline
         await supabase
           .from("execution_tasks")
           .update({
@@ -167,6 +176,11 @@ export async function POST(request: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", approval.task_id);
+
+        const orchestrator = createOrchestrator();
+        orchestrator.runPipeline(approval.task_id).catch((err: Error) => {
+          console.error(`[POST /api/execution/approvals] Revision pipeline failed for ${approval.task_id}:`, err.message);
+        });
       }
     }
 

@@ -36,6 +36,33 @@ export async function POST(req: Request) {
       );
     }
 
+    // ─── Handle API-key providers (Stripe) ─────────────────────────────────────
+    const { getOAuthConfig } = await import('@/lib/integrations/oauth');
+    const config = getOAuthConfig(provider as IntegrationProvider);
+
+    if (!config.authUrl) {
+      // API-key provider — save directly, no OAuth redirect needed
+      const { createIntegration, getIntegrationByProvider } = await import(
+        '@/lib/integrations/store'
+      );
+      const existing = await getIntegrationByProvider(orgId, provider as IntegrationProvider);
+      if (existing) {
+        return NextResponse.json({ connected: true, provider });
+      }
+      await createIntegration({
+        orgId,
+        provider: provider as IntegrationProvider,
+        status: 'connected',
+        accessToken: config.clientId, // API key
+        refreshToken: null,
+        tokenExpiresAt: null,
+        scopes: config.scopes,
+        metadata: { type: 'api_key' },
+        syncFrequencyMinutes: 60,
+      });
+      return NextResponse.json({ connected: true, provider });
+    }
+
     // ─── Generate CSRF state token ──────────────────────────────────────────────
     const stateToken = crypto.randomUUID();
     const statePayload = JSON.stringify({
@@ -65,9 +92,6 @@ export async function POST(req: Request) {
     }
 
     // ─── Build OAuth authorization URL ──────────────────────────────────────────
-    const { getOAuthConfig } = await import('@/lib/integrations/oauth');
-    const config = getOAuthConfig(provider as IntegrationProvider);
-
     const params = new URLSearchParams({
       client_id: config.clientId,
       redirect_uri: config.redirectUri,
@@ -104,7 +128,7 @@ export async function POST(req: Request) {
 
     const authUrl = `${config.authUrl}?${params.toString()}`;
 
-    return NextResponse.json({ authUrl, state: stateBase64 });
+    return NextResponse.json({ redirectUrl: authUrl, state: stateBase64 });
   } catch (err) {
     console.error('[integrations/connect] Error:', err);
     return NextResponse.json(

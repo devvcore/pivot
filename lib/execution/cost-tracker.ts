@@ -93,7 +93,11 @@ export class CostTracker {
     breakdown[usage.model].cost += cost;
     breakdown[usage.model].calls += 1;
 
-    // Buffer for async flush
+    // Buffer for async flush (cap at 10k entries to prevent memory leak)
+    if (this.buffer.length >= 10_000) {
+      console.warn('[CostTracker] Buffer full (10k entries), dropping oldest 1000');
+      this.buffer.splice(0, 1000);
+    }
     this.buffer.push({
       agentId,
       orgId,
@@ -203,14 +207,14 @@ export class CostTracker {
 
     try {
       const supabase = createAdminClient();
-      const { error } = await supabase.from('agent_cost_log').insert(
+      const { error } = await supabase.from('execution_costs').insert(
         entries.map((e) => ({
           agent_id: e.agentId,
           org_id: e.orgId,
           model: e.model,
           input_tokens: e.inputTokens,
           output_tokens: e.outputTokens,
-          cost: e.cost,
+          cost_usd: e.cost,
           created_at: e.timestamp,
         }))
       );
@@ -237,14 +241,14 @@ export class CostTracker {
 
       // Get today's total
       const { data: todayData } = await supabase
-        .from('agent_cost_log')
-        .select('cost')
+        .from('execution_costs')
+        .select('cost_usd')
         .eq('agent_id', agentId)
         .gte('created_at', `${dateStr}T00:00:00Z`);
 
       if (todayData) {
         const todayTotal = todayData.reduce(
-          (sum: number, row: { cost: number }) => sum + row.cost,
+          (sum: number, row: { cost_usd: number }) => sum + row.cost_usd,
           0
         );
         const dailyKey = `${agentId}:${dateStr}`;
@@ -253,8 +257,8 @@ export class CostTracker {
 
       // Get all-time total
       const { data: totalData } = await supabase
-        .from('agent_cost_log')
-        .select('cost, model, input_tokens, output_tokens')
+        .from('execution_costs')
+        .select('cost_usd, model, input_tokens, output_tokens')
         .eq('agent_id', agentId);
 
       if (totalData) {
@@ -262,18 +266,18 @@ export class CostTracker {
         const breakdown: Record<string, ModelCostEntry> = {};
 
         for (const row of totalData as Array<{
-          cost: number;
+          cost_usd: number;
           model: string;
           input_tokens: number;
           output_tokens: number;
         }>) {
-          total += row.cost;
+          total += row.cost_usd;
           if (!breakdown[row.model]) {
             breakdown[row.model] = { inputTokens: 0, outputTokens: 0, cost: 0, calls: 0 };
           }
           breakdown[row.model].inputTokens += row.input_tokens;
           breakdown[row.model].outputTokens += row.output_tokens;
-          breakdown[row.model].cost += row.cost;
+          breakdown[row.model].cost += row.cost_usd;
           breakdown[row.model].calls += 1;
         }
 

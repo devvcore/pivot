@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
+import { createOrchestrator } from "@/lib/execution/orchestrator";
 
 /**
  * GET /api/execution/tasks?orgId=...&status=...&agentId=...&limit=...&offset=...
  * List execution tasks for an org with optional filtering.
  */
 export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const { searchParams } = request.nextUrl;
     const orgId = searchParams.get("orgId");
@@ -76,6 +81,9 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
     const { orgId, title, agentId, description, priority, costCeiling, deliverables } = body;
@@ -121,25 +129,11 @@ export async function POST(request: NextRequest) {
       data: { from: null, to: "queued", title },
     });
 
-    // Generate acceptance criteria (async, non-blocking)
-    // TODO: Trigger generateCriteriaJob
-    // import { generateCriteriaJob } from "@/trigger/generate-criteria";
-    // await generateCriteriaJob.trigger({ taskId: task.id, title, description: description || "" });
-
-    // Trigger the execution pipeline (async, non-blocking)
-    // TODO: Trigger executeTaskJob
-    // import { executeTaskJob } from "@/trigger/execute-task";
-    // const handle = await executeTaskJob.trigger({
-    //   taskId: task.id,
-    //   orgId,
-    //   agentId,
-    //   title,
-    //   description: description || "",
-    //   deliverables,
-    //   costCeiling: costCeiling || 1.0,
-    // });
-    // Update task with trigger_run_id
-    // await supabase.from("execution_tasks").update({ trigger_run_id: handle.id }).eq("id", task.id);
+    // Run pipeline async (non-blocking) — fire and forget
+    const orchestrator = createOrchestrator(deliverables);
+    orchestrator.runPipeline(task.id).catch((err: Error) => {
+      console.error(`[POST /api/execution/tasks] Pipeline failed for ${task.id}:`, err.message);
+    });
 
     return NextResponse.json({ task }, { status: 201 });
   } catch (err) {

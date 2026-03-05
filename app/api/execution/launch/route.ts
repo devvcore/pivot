@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
+import { createOrchestrator } from "@/lib/execution/orchestrator";
 
 /**
  * POST /api/execution/launch
@@ -22,6 +24,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * }
  */
 export async function POST(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
     const { orgId, recommendations, budget, defaultPriority } = body;
@@ -133,21 +138,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // TODO: Trigger task execution pipeline
-      // import { executeTaskJob } from "@/trigger/execute-task";
-      // const handle = await executeTaskJob.trigger({
-      //   taskId: task.id,
-      //   orgId,
-      //   agentId: rec.agentId,
-      //   title: rec.title,
-      //   description: rec.description || "",
-      //   deliverables: rec.deliverables,
-      //   costCeiling: taskCostCeiling,
-      // });
-      // await supabase
-      //   .from("execution_tasks")
-      //   .update({ trigger_run_id: handle.id })
-      //   .eq("id", task.id);
+      // Fire pipeline async (non-blocking) for each task
+      const orchestrator = createOrchestrator(rec.deliverables);
+      orchestrator.runPipeline(task.id).catch((err: Error) => {
+        console.error(`[POST /api/execution/launch] Pipeline failed for ${task.id}:`, err.message);
+      });
     }
 
     return NextResponse.json(

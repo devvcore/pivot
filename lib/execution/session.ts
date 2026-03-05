@@ -409,8 +409,10 @@ export class ExecutionSession {
           agent_id: this.agentId,
           org_id: this.orgId,
           messages: JSON.stringify(snapshot.messages),
-          metadata: JSON.stringify(snapshot.metadata),
-          system_prompt: snapshot.systemPrompt,
+          metadata: JSON.stringify({
+            ...snapshot.metadata,
+            systemPrompt: snapshot.systemPrompt,
+          }),
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }
@@ -446,18 +448,33 @@ export class ExecutionSession {
       org_id: string;
       messages: string;
       metadata: string;
-      system_prompt: string;
     };
+
+    let parsedMetadata: SessionMetadata & { systemPrompt?: string } | undefined;
+    try {
+      parsedMetadata = JSON.parse(row.metadata);
+    } catch {
+      // will use defaults
+    }
 
     const session = new ExecutionSession({
       id: row.id,
       agentId: row.agent_id,
       orgId: row.org_id,
-      systemPrompt: row.system_prompt,
+      systemPrompt: parsedMetadata?.systemPrompt ?? '',
     });
 
-    session.messages = JSON.parse(row.messages) as ChatMessage[];
-    session.metadata = JSON.parse(row.metadata) as SessionMetadata;
+    try {
+      session.messages = JSON.parse(row.messages) as ChatMessage[];
+    } catch {
+      console.warn(`[Session] Corrupted messages JSON for session ${sessionId}, starting fresh`);
+      session.messages = [];
+    }
+    try {
+      session.metadata = JSON.parse(row.metadata) as SessionMetadata;
+    } catch {
+      console.warn(`[Session] Corrupted metadata JSON for session ${sessionId}, using defaults`);
+    }
     session.totalInputTokens = estimateTokens(session.messages);
 
     return session;

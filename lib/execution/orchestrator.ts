@@ -10,10 +10,13 @@
  * 6. If REVISE: send feedback, re-execute (max 3 attempts)
  * 7. If ACCEPT: mark complete, return artifacts
  * 8. If FAIL: escalate or notify user
+ *
+ * Production-ready: Supabase-backed task store, event emission, cost tracking.
  */
 
 import { GoogleGenAI } from '@google/genai';
 import { v4 as uuidv4 } from 'uuid';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getAgent, type AgentDefinition } from './agents/index';
 import { OUTFITS, getOutfitSystemPrompt } from './outfits';
 import { globalRegistry, createCostTracker, type ToolContext, type ToolResult } from './tools/index';
@@ -86,6 +89,77 @@ interface FunctionResponsePart {
   functionResponse: { name: string; response: { output: string } };
 }
 
+// ── DB Status Mapping ─────────────────────────────────────────────────────────
+// TypeScript uses fine-grained statuses; DB CHECK constraint has a smaller set.
+// Map between them so DB writes don't violate the constraint.
+
+const STATUS_TO_DB: Record<TaskStatus, string> = {
+  queued: 'queued',
+  triaging: 'in_progress',
+  executing: 'in_progress',
+  reviewing: 'review',
+  revision: 'revision',
+  awaiting_approval: 'review',
+  completed: 'completed',
+  failed: 'failed',
+};
+
+const DB_TO_STATUS: Record<string, TaskStatus> = {
+  queued: 'queued',
+  in_progress: 'executing',
+  review: 'reviewing',
+  revision: 'revision',
+  completed: 'completed',
+  failed: 'failed',
+  cancelled: 'failed',
+};
+
+// ── DB <-> TypeScript Mappers ─────────────────────────────────────────────────
+
+function dbToTask(row: Record<string, unknown>): ExecutionTask {
+  return {
+    id: row.id as string,
+    orgId: row.org_id as string,
+    title: row.title as string,
+    description: (row.description as string) ?? '',
+    agentId: row.agent_id as string,
+    priority: (row.priority as TaskPriority) ?? 'medium',
+    status: DB_TO_STATUS[row.status as string] ?? 'queued',
+    acceptanceCriteria: (row.acceptance_criteria as string[]) ?? [],
+    attempts: (row.attempts as number) ?? 0,
+    maxAttempts: (row.max_attempts as number) ?? 3,
+    result: (row.result as string) ?? undefined,
+    artifacts: (row.artifacts as TaskArtifact[]) ?? undefined,
+    reviewFeedback: (row.review_feedback as string) ?? undefined,
+    costSpent: (row.cost_spent as number) ?? 0,
+    costCeiling: (row.cost_ceiling as number) ?? 1.0,
+    createdAt: (row.created_at as string) ?? new Date().toISOString(),
+    completedAt: (row.completed_at as string) ?? undefined,
+  };
+}
+
+function taskToDb(task: Partial<ExecutionTask>): Record<string, unknown> {
+  const db: Record<string, unknown> = {};
+  if (task.id !== undefined) db.id = task.id;
+  if (task.orgId !== undefined) db.org_id = task.orgId;
+  if (task.title !== undefined) db.title = task.title;
+  if (task.description !== undefined) db.description = task.description;
+  if (task.agentId !== undefined) db.agent_id = task.agentId;
+  if (task.priority !== undefined) db.priority = task.priority;
+  if (task.status !== undefined) db.status = STATUS_TO_DB[task.status] ?? task.status;
+  if (task.acceptanceCriteria !== undefined) db.acceptance_criteria = task.acceptanceCriteria;
+  if (task.attempts !== undefined) db.attempts = task.attempts;
+  if (task.maxAttempts !== undefined) db.max_attempts = task.maxAttempts;
+  if (task.result !== undefined) db.result = task.result;
+  if (task.artifacts !== undefined) db.artifacts = task.artifacts;
+  if (task.reviewFeedback !== undefined) db.review_feedback = task.reviewFeedback;
+  if (task.costSpent !== undefined) db.cost_spent = task.costSpent;
+  if (task.costCeiling !== undefined) db.cost_ceiling = task.costCeiling;
+  if (task.createdAt !== undefined) db.created_at = task.createdAt;
+  if (task.completedAt !== undefined) db.completed_at = task.completedAt;
+  return db;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getGemini(): GoogleGenAI {
@@ -104,10 +178,6 @@ async function quickGenerate(prompt: string): Promise<string> {
   return response.text ?? '';
 }
 
-// ── Task Store (in-memory for now; swap for DB later) ─────────────────────────
-
-const taskStore = new Map<string, ExecutionTask>();
-
 // ── Orchestrator ──────────────────────────────────────────────────────────────
 
 export class Orchestrator {
@@ -117,9 +187,128 @@ export class Orchestrator {
     this.deliverables = deliverables;
   }
 
+  // ── Event Emission ────────────────────────────────────────────────────────────
+
+  /**
+   * Emit an event to the execution_events table.
+   * Fails silently -- events are observability, not control flow.
+   */
+  private async emitEvent(
+    taskId: string,
+    agentId: string,
+    orgId: string,
+    eventType: string,
+    data: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      const supabase = createAdminClient();
+      const { error } = await supabase.from('execution_events').insert({
+        task_id: taskId,
+        agent_id: agentId,
+        org_id: orgId,
+        event_type: eventType,
+        data,
+      });
+      if (error) {
+        console.warn(`[Orchestrator] Event emission failed (${eventType}):`, error.message);
+      }
+    } catch (err) {
+      console.warn(`[Orchestrator] Event emission error (${eventType}):`, err);
+    }
+  }
+
+  // ── Cost Tracking to Supabase ─────────────────────────────────────────────────
+
+  /**
+   * Record a model call's cost to the execution_costs table.
+   * Fails silently -- cost recording is best-effort.
+   */
+  private async recordCost(
+    orgId: string,
+    agentId: string,
+    model: string,
+    inputTokens: number,
+    outputTokens: number,
+    costUsd: number,
+    taskId: string
+  ): Promise<void> {
+    try {
+      const supabase = createAdminClient();
+      const { error } = await supabase.from('execution_costs').insert({
+        org_id: orgId,
+        agent_id: agentId,
+        model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        cost_usd: costUsd,
+        task_id: taskId,
+      });
+      if (error) {
+        console.warn('[Orchestrator] Cost recording failed:', error.message);
+      }
+    } catch (err) {
+      console.warn('[Orchestrator] Cost recording error:', err);
+    }
+  }
+
+  // ── Task DB Helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Persist a partial update to the task row in Supabase.
+   */
+  private async updateTaskInDb(
+    taskId: string,
+    updates: Partial<ExecutionTask>
+  ): Promise<void> {
+    try {
+      const supabase = createAdminClient();
+      const dbUpdates = taskToDb(updates);
+      dbUpdates.updated_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('execution_tasks')
+        .update(dbUpdates)
+        .eq('id', taskId);
+
+      if (error) {
+        console.error(`[Orchestrator] Task update failed (${taskId}):`, error.message);
+      }
+    } catch (err) {
+      console.error(`[Orchestrator] Task update error (${taskId}):`, err);
+    }
+  }
+
+  /**
+   * Update task status in DB and emit a status_change event.
+   */
+  private async setTaskStatus(
+    task: ExecutionTask,
+    newStatus: TaskStatus,
+    extra?: Partial<ExecutionTask>
+  ): Promise<void> {
+    const oldStatus = task.status;
+    task.status = newStatus;
+
+    // Apply extra fields to the in-memory task object
+    if (extra) {
+      Object.assign(task, extra);
+    }
+
+    const updates: Partial<ExecutionTask> = { status: newStatus, ...extra };
+    await this.updateTaskInDb(task.id, updates);
+
+    await this.emitEvent(task.id, task.agentId, task.orgId, 'status_change', {
+      from: oldStatus,
+      to: newStatus,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // ── Public API ────────────────────────────────────────────────────────────────
+
   /**
    * Submit a task into the execution pipeline.
-   * Returns the task ID for tracking.
+   * INSERTs into Supabase execution_tasks and returns the UUID.
    */
   async submitTask(input: TaskInput): Promise<string> {
     const task: ExecutionTask = {
@@ -131,26 +320,82 @@ export class Orchestrator {
       createdAt: new Date().toISOString(),
     };
 
-    taskStore.set(task.id, task);
+    try {
+      const supabase = createAdminClient();
+      const dbRow = taskToDb(task);
+      const { error } = await supabase.from('execution_tasks').insert(dbRow);
+
+      if (error) {
+        console.error('[Orchestrator] Task insert failed:', error.message);
+      }
+    } catch (err) {
+      console.error('[Orchestrator] Task insert error:', err);
+    }
+
     return task.id;
   }
 
   /**
-   * Get a task by ID.
+   * Get a task by ID from Supabase.
    */
-  getTask(taskId: string): ExecutionTask | undefined {
-    return taskStore.get(taskId);
+  async getTask(taskId: string): Promise<ExecutionTask | undefined> {
+    try {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from('execution_tasks')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+
+      if (error || !data) {
+        console.warn(`[Orchestrator] Task not found (${taskId}):`, error?.message);
+        return undefined;
+      }
+
+      return dbToTask(data as Record<string, unknown>);
+    } catch (err) {
+      console.error(`[Orchestrator] getTask error (${taskId}):`, err);
+      return undefined;
+    }
   }
 
   /**
-   * List all tasks, optionally filtered by status.
+   * List tasks from Supabase, optionally filtered by org, status, or agent.
    */
-  listTasks(filters?: { orgId?: string; status?: TaskStatus; agentId?: string }): ExecutionTask[] {
-    let tasks = Array.from(taskStore.values());
-    if (filters?.orgId) tasks = tasks.filter(t => t.orgId === filters.orgId);
-    if (filters?.status) tasks = tasks.filter(t => t.status === filters.status);
-    if (filters?.agentId) tasks = tasks.filter(t => t.agentId === filters.agentId);
-    return tasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  async listTasks(filters?: {
+    orgId?: string;
+    status?: TaskStatus;
+    agentId?: string;
+  }): Promise<ExecutionTask[]> {
+    try {
+      const supabase = createAdminClient();
+      let query = supabase
+        .from('execution_tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.orgId) {
+        query = query.eq('org_id', filters.orgId);
+      }
+      if (filters?.status) {
+        query = query.eq('status', STATUS_TO_DB[filters.status] ?? filters.status);
+      }
+      if (filters?.agentId) {
+        query = query.eq('agent_id', filters.agentId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('[Orchestrator] listTasks failed:', error.message);
+        return [];
+      }
+
+      return (data ?? []).map((row: Record<string, unknown>) => dbToTask(row));
+    } catch (err) {
+      console.error('[Orchestrator] listTasks error:', err);
+      return [];
+    }
   }
 
   /**
@@ -227,6 +472,8 @@ Output ONLY a JSON array of strings, no other text. Example:
   /**
    * Execute a task using the assigned agent with its outfit tools.
    * Runs a multi-turn tool-calling loop.
+   * Emits tool_call, tool_result, and thinking events throughout.
+   * Records per-call costs to execution_costs.
    */
   async executeTask(task: ExecutionTask): Promise<{ result: string; artifacts: TaskArtifact[] }> {
     const agent = getAgent(task.agentId);
@@ -257,6 +504,13 @@ Output ONLY a JSON array of strings, no other text. Example:
       deliverables: this.deliverables,
       costTracker,
     };
+
+    // Emit thinking event at start of execution
+    await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+      phase: 'execution_start',
+      systemPrompt: systemPrompt.slice(0, 500),
+      toolCount: functionDeclarations.length,
+    });
 
     // Run multi-turn agent loop
     const ai = getGemini();
@@ -289,6 +543,28 @@ Output ONLY a JSON array of strings, no other text. Example:
             : undefined,
         } as Record<string, unknown>,
       });
+
+      // Track cost for this model call
+      const usageMetadata = (response as unknown as Record<string, unknown>).usageMetadata as
+        | { promptTokenCount?: number; candidatesTokenCount?: number }
+        | undefined;
+      const inputTokens = usageMetadata?.promptTokenCount ?? 0;
+      const outputTokens = usageMetadata?.candidatesTokenCount ?? 0;
+      // Gemini Flash pricing: $0.15/M input, $0.60/M output
+      const callCost = (inputTokens / 1_000_000) * 0.15 + (outputTokens / 1_000_000) * 0.60;
+
+      if (inputTokens > 0 || outputTokens > 0) {
+        await this.recordCost(
+          task.orgId,
+          task.agentId,
+          FLASH_MODEL,
+          inputTokens,
+          outputTokens,
+          callCost,
+          task.id
+        );
+        task.costSpent += callCost;
+      }
 
       // Check if we have function calls
       const candidate = response.candidates?.[0];
@@ -329,6 +605,13 @@ Output ONLY a JSON array of strings, no other text. Example:
       for (const fc of functionCalls) {
         const { name, args } = fc.functionCall;
 
+        // Emit tool_call event
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_call', {
+          tool: name,
+          args,
+          round,
+        });
+
         // Execute the tool
         const toolResult = await globalRegistry.execute(name, args, toolContext);
 
@@ -337,8 +620,16 @@ Output ONLY a JSON array of strings, no other text. Example:
           allArtifacts.push(...toolResult.artifacts);
         }
 
-        // Track cost
+        // Track cost from tool cost tracker
         task.costSpent = costTracker.totalSpent;
+
+        // Emit tool_result event
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_result', {
+          tool: name,
+          outputSummary: toolResult.output.slice(0, 500),
+          artifactCount: toolResult.artifacts?.length ?? 0,
+          round,
+        });
 
         functionResponses.push({
           functionResponse: {
@@ -419,68 +710,120 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
   }
 
   /**
-   * Full execution pipeline: triage -> criteria -> execute -> review -> (revise?) -> complete
+   * Full execution pipeline: triage -> criteria -> execute -> review -> (revise?) -> complete.
+   * Reads/writes all state through Supabase. Emits events at every stage.
    */
   async runPipeline(taskId: string): Promise<ExecutionTask> {
-    const task = taskStore.get(taskId);
+    const task = await this.getTask(taskId);
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
     try {
       // 1. Triage
-      task.status = 'triaging';
-      taskStore.set(taskId, task);
+      await this.setTaskStatus(task, 'triaging');
       const triageLevel = await this.triageTask(task);
 
       // 2. Generate acceptance criteria
       task.acceptanceCriteria = await this.generateCriteria(task);
-      taskStore.set(taskId, task);
+      await this.updateTaskInDb(taskId, { acceptanceCriteria: task.acceptanceCriteria });
 
       // 3. Execute
-      task.status = 'executing';
+      await this.setTaskStatus(task, 'executing', { attempts: 1 });
       task.attempts = 1;
-      taskStore.set(taskId, task);
+
+      await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+        phase: 'pre_execution',
+        triageLevel,
+        criteriaCount: task.acceptanceCriteria.length,
+      });
 
       let { result, artifacts } = await this.executeTask(task);
       task.result = result;
       task.artifacts = artifacts;
 
+      // Persist result and artifacts after execution
+      await this.updateTaskInDb(taskId, {
+        result: task.result,
+        artifacts: task.artifacts,
+        costSpent: task.costSpent,
+      });
+
       // 4. Review (skip for QUICK tasks)
       if (triageLevel === 'quick') {
-        task.status = 'completed';
         task.completedAt = new Date().toISOString();
-        taskStore.set(taskId, task);
+        await this.setTaskStatus(task, 'completed', {
+          completedAt: task.completedAt,
+          costSpent: task.costSpent,
+        });
+
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+          resultLength: result.length,
+          artifactCount: artifacts.length,
+          triageLevel,
+          totalCost: task.costSpent,
+        });
+
         return task;
       }
 
       // 5. Review loop
-      task.status = 'reviewing';
-      taskStore.set(taskId, task);
+      await this.setTaskStatus(task, 'reviewing');
 
       const maxReviewAttempts = triageLevel === 'heavy' ? 3 : 2;
 
       for (let attempt = 0; attempt < maxReviewAttempts; attempt++) {
+        // Emit thinking event for review phase
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+          phase: 'review',
+          attempt: attempt + 1,
+          maxAttempts: maxReviewAttempts,
+          criteriaCount: task.acceptanceCriteria.length,
+        });
+
         const { verdict, feedback } = await this.reviewOutput(task, result);
 
         if (verdict === 'accept') {
-          task.status = 'completed';
           task.completedAt = new Date().toISOString();
-          taskStore.set(taskId, task);
+          await this.setTaskStatus(task, 'completed', {
+            completedAt: task.completedAt,
+            costSpent: task.costSpent,
+          });
+
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+            resultLength: result.length,
+            artifactCount: (task.artifacts ?? []).length,
+            verdict: 'accept',
+            reviewAttempt: attempt + 1,
+            totalCost: task.costSpent,
+          });
+
           return task;
         }
 
         if (verdict === 'fail') {
-          task.status = 'failed';
           task.reviewFeedback = feedback;
-          taskStore.set(taskId, task);
+          await this.setTaskStatus(task, 'failed', {
+            reviewFeedback: feedback,
+            costSpent: task.costSpent,
+          });
+
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+            verdict: 'fail',
+            feedback,
+            reviewAttempt: attempt + 1,
+            totalCost: task.costSpent,
+          });
+
           return task;
         }
 
         // REVISE
         if (attempt < maxReviewAttempts - 1) {
-          task.status = 'revision';
           task.reviewFeedback = feedback;
           task.attempts += 1;
-          taskStore.set(taskId, task);
+          await this.setTaskStatus(task, 'revision', {
+            reviewFeedback: feedback,
+            attempts: task.attempts,
+          });
 
           // Re-execute with feedback
           const revised = await this.executeWithRevision(task, result, feedback);
@@ -488,23 +831,52 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
           task.result = result;
           task.artifacts = [...(task.artifacts ?? []), ...revised.artifacts];
 
-          task.status = 'reviewing';
-          taskStore.set(taskId, task);
+          // Persist revised result
+          await this.updateTaskInDb(taskId, {
+            result: task.result,
+            artifacts: task.artifacts,
+            costSpent: task.costSpent,
+          });
+
+          await this.setTaskStatus(task, 'reviewing');
         }
       }
 
-      // Exhausted revision attempts — accept what we have
-      task.status = 'completed';
+      // Exhausted revision attempts -- accept what we have
       task.completedAt = new Date().toISOString();
       task.reviewFeedback = (task.reviewFeedback ?? '') + '\n[Accepted after max revision attempts]';
-      taskStore.set(taskId, task);
+      await this.setTaskStatus(task, 'completed', {
+        completedAt: task.completedAt,
+        reviewFeedback: task.reviewFeedback,
+        costSpent: task.costSpent,
+      });
+
+      await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+        resultLength: result.length,
+        artifactCount: (task.artifacts ?? []).length,
+        verdict: 'accepted_after_max_revisions',
+        totalCost: task.costSpent,
+      });
+
       return task;
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       task.status = 'failed';
       task.reviewFeedback = `Pipeline error: ${message}`;
-      taskStore.set(taskId, task);
+
+      await this.updateTaskInDb(taskId, {
+        status: 'failed',
+        reviewFeedback: task.reviewFeedback,
+        costSpent: task.costSpent,
+      });
+
+      await this.emitEvent(task.id, task.agentId, task.orgId, 'error', {
+        error: message,
+        phase: 'pipeline',
+        totalCost: task.costSpent,
+      });
+
       return task;
     }
   }
@@ -582,7 +954,7 @@ export function createOrchestrator(deliverables?: Record<string, unknown>): Orch
 }
 
 /**
- * Quick task execution — submit and run in one step.
+ * Quick task execution -- submit and run in one step.
  */
 export async function executeQuickTask(
   orgId: string,

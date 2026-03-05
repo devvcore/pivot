@@ -45,17 +45,17 @@ export class GraphMemory {
       if (nodeRows) {
         for (const row of nodeRows as Array<{
           id: string;
-          label: string;
-          type: string;
+          name: string;
+          node_type: string;
           aliases: string[];
-          properties: Record<string, string>;
+          data: Record<string, string>;
         }>) {
           this.graph.addNode({
             id: row.id,
-            label: row.label,
-            type: row.type,
+            label: row.name,
+            type: row.node_type,
             aliases: row.aliases ?? [],
-            properties: row.properties ?? {},
+            properties: row.data ?? {},
           });
         }
       }
@@ -63,23 +63,21 @@ export class GraphMemory {
       // Load edges
       const { data: edgeRows } = await supabase
         .from('knowledge_graph_edges')
-        .select('*')
-        .eq('org_id', this.orgId);
+        .select('*, source:source_id, target:target_id');
 
       if (edgeRows) {
         for (const row of edgeRows as Array<{
-          from_id: string;
-          to_id: string;
-          relation: string;
-          weight: number;
-          properties: Record<string, string>;
+          source_id: string;
+          target_id: string;
+          edge_type: string;
+          data: Record<string, string>;
         }>) {
           this.graph.addEdge({
-            from: row.from_id,
-            to: row.to_id,
-            relation: row.relation,
-            weight: row.weight ?? 1.0,
-            properties: row.properties ?? {},
+            from: row.source_id,
+            to: row.target_id,
+            relation: row.edge_type,
+            weight: 1.0,
+            properties: row.data ?? {},
           });
         }
       }
@@ -201,11 +199,10 @@ export class GraphMemory {
       const rows = nodes.map((n) => ({
         id: n.id,
         org_id: this.orgId,
-        type: n.type,
-        label: n.label,
+        node_type: n.type,
+        name: n.label,
         aliases: n.aliases,
-        properties: n.properties,
-        source: n.source,
+        data: n.properties,
         created_at: n.createdAt,
         updated_at: n.updatedAt,
       }));
@@ -228,12 +225,10 @@ export class GraphMemory {
 
       const rows = edges.map((e) => ({
         id: e.id,
-        org_id: this.orgId,
-        from_id: e.fromId,
-        to_id: e.toId,
-        relation: e.relation,
-        weight: e.weight,
-        properties: e.properties,
+        source_id: e.fromId,
+        target_id: e.toId,
+        edge_type: e.relation,
+        data: e.properties,
         created_at: e.createdAt,
       }));
 

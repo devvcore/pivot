@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authenticateRequest } from "@/lib/supabase/auth-api";
 
 /**
  * GET /api/execution/agents?orgId=...
@@ -7,6 +8,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * how many tasks each has, etc.
  */
 export async function GET(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth.error) return auth.error;
+
   try {
     const orgId = request.nextUrl.searchParams.get("orgId");
 
