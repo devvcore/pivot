@@ -9,13 +9,15 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createOrchestrator } from "@/lib/execution/orchestrator";
 
-// Simple bearer token guard — Cloud Scheduler sends this header
+// Simple secret guard — Cloud Scheduler sends via X-Cron-Secret header
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
 
 export async function POST(req: Request) {
   // ─── Auth: verify cron secret ──────────────────────────────────────────────
-  const authHeader = req.headers.get("authorization") ?? "";
-  const token = authHeader.replace("Bearer ", "");
+  const token =
+    req.headers.get("x-cron-secret") ??
+    req.headers.get("authorization")?.replace("Bearer ", "") ??
+    "";
   if (!CRON_SECRET || token !== CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

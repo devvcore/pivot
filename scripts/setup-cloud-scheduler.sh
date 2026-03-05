@@ -36,8 +36,7 @@ gcloud scheduler jobs create http pivot-heartbeat \
   --schedule="*/5 * * * *" \
   --uri="${APP_URL}/api/execution/heartbeat" \
   --http-method=POST \
-  --headers="Authorization=Bearer ${CRON_SECRET}" \
-  --headers="Content-Type=application/json" \
+  --headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json" \
   --message-body='{}' \
   --time-zone="America/New_York" \
   --description="Pivot execution engine heartbeat — checks for queued tasks every 5 minutes" \
@@ -51,8 +50,7 @@ gcloud scheduler jobs create http pivot-heartbeat \
       --schedule="*/5 * * * *" \
       --uri="${APP_URL}/api/execution/heartbeat" \
       --http-method=POST \
-      --update-headers="Authorization=Bearer ${CRON_SECRET}" \
-      --update-headers="Content-Type=application/json" \
+      --update-headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json" \
       --message-body='{}' \
       --time-zone="America/New_York" \
       --description="Pivot execution engine heartbeat — checks for queued tasks every 5 minutes" \
