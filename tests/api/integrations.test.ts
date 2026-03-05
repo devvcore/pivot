@@ -94,8 +94,8 @@ describe('POST /api/integrations/connect', () => {
     const data = await res.json();
 
     expect(res.status).toBe(200);
-    expect(data.authUrl).toBeDefined();
-    expect(data.authUrl).toContain('slack.com/oauth');
+    expect(data.redirectUrl).toBeDefined();
+    expect(data.redirectUrl).toContain('slack.com/oauth');
     expect(data.state).toBeDefined();
   });
 
