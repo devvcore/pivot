@@ -28,6 +28,24 @@ vi.mock('@/lib/integrations/oauth', () => ({
   }),
 }));
 
+// Mock integration store
+const mockGetByProvider = vi.fn().mockResolvedValue(null);
+const mockCreateIntegration = vi.fn().mockResolvedValue({ id: 'test-id' });
+vi.mock('@/lib/integrations/store', () => ({
+  getIntegrationByProvider: (...args: any[]) => mockGetByProvider(...args),
+  createIntegration: (...args: any[]) => mockCreateIntegration(...args),
+}));
+
+// Mock Gmail IMAP
+vi.mock('@/lib/integrations/gmail-imap', () => ({
+  isGmailIMAPConfigured: vi.fn().mockReturnValue(true),
+}));
+
+// Mock Stripe
+vi.mock('@/lib/integrations/stripe-integration', () => ({
+  isStripeConfigured: vi.fn().mockReturnValue(true),
+}));
+
 // ─── POST /api/integrations/connect Tests ──────────────────────
 
 describe('POST /api/integrations/connect', () => {
@@ -36,6 +54,8 @@ describe('POST /api/integrations/connect', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockInsert.mockResolvedValue({ error: null });
+    mockGetByProvider.mockResolvedValue(null);
+    mockCreateIntegration.mockResolvedValue({ id: 'test-id' });
 
     const mod = await import('@/app/api/integrations/connect/route');
     handler = mod.POST;
@@ -83,7 +103,7 @@ describe('POST /api/integrations/connect', () => {
     expect(data.error).toContain('Invalid provider');
   });
 
-  it('returns authUrl for valid slack connection', async () => {
+  it('returns redirectUrl for valid slack connection', async () => {
     const req = new Request('http://localhost:3000/api/integrations/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -132,6 +152,36 @@ describe('POST /api/integrations/connect', () => {
     expect(data.error).toContain('Failed to initiate OAuth flow');
   });
 
+  it('connects Gmail directly via IMAP when configured', async () => {
+    const req = new Request('http://localhost:3000/api/integrations/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'gmail', orgId: 'org-123' }),
+    });
+
+    const res = await handler(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.connected).toBe(true);
+    expect(data.provider).toBe('gmail');
+  });
+
+  it('connects Stripe directly via API key when configured', async () => {
+    const req = new Request('http://localhost:3000/api/integrations/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'stripe', orgId: 'org-123' }),
+    });
+
+    const res = await handler(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.connected).toBe(true);
+    expect(data.provider).toBe('stripe');
+  });
+
   it('accepts all valid provider names', async () => {
     const validProviders = [
       'slack', 'gmail', 'adp', 'workday',
@@ -140,6 +190,7 @@ describe('POST /api/integrations/connect', () => {
 
     for (const provider of validProviders) {
       mockInsert.mockResolvedValue({ error: null });
+      mockGetByProvider.mockResolvedValue(null);
 
       const req = new Request('http://localhost:3000/api/integrations/connect', {
         method: 'POST',

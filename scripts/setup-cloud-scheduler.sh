@@ -12,7 +12,7 @@
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────
-PROJECT_ID="${GCP_PROJECT_ID:-pivot-bi}"
+PROJECT_ID="${GCP_PROJECT_ID:-dev-paradigm}"
 REGION="${GCP_REGION:-us-central1}"
 APP_URL="${APP_URL:-https://pivot-bi.web.app}"
 CRON_SECRET="${CRON_SECRET:-ZXe9we2Nk8_WOR10kjyAlwUYszg6jw1EA_5JYKtNGiQ}"
@@ -58,10 +58,42 @@ gcloud scheduler jobs create http pivot-heartbeat \
       --max-retry-attempts=1
   }
 
+# ── Create token refresh job (every 15 minutes) ────────────────
+echo "3. Creating token refresh cron job (every 15 min)..."
+gcloud scheduler jobs create http pivot-token-refresh \
+  --project="$PROJECT_ID" \
+  --location="$REGION" \
+  --schedule="*/15 * * * *" \
+  --uri="${APP_URL}/api/integrations/refresh-tokens" \
+  --http-method=POST \
+  --headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json" \
+  --message-body='{}' \
+  --time-zone="America/New_York" \
+  --description="Pivot OAuth token refresh — refreshes expiring integration tokens every 15 minutes" \
+  --attempt-deadline="60s" \
+  --max-retry-attempts=2 \
+  2>/dev/null || {
+    echo "   Job already exists, updating..."
+    gcloud scheduler jobs update http pivot-token-refresh \
+      --project="$PROJECT_ID" \
+      --location="$REGION" \
+      --schedule="*/15 * * * *" \
+      --uri="${APP_URL}/api/integrations/refresh-tokens" \
+      --http-method=POST \
+      --update-headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json" \
+      --message-body='{}' \
+      --time-zone="America/New_York" \
+      --description="Pivot OAuth token refresh — refreshes expiring integration tokens every 15 minutes" \
+      --attempt-deadline="60s" \
+      --max-retry-attempts=2
+  }
+
 echo ""
 echo "=== Done! ==="
 echo ""
-echo "Cloud Scheduler will hit POST ${APP_URL}/api/execution/heartbeat every 5 minutes."
+echo "Cloud Scheduler jobs:"
+echo "  - POST ${APP_URL}/api/execution/heartbeat (every 5 min)"
+echo "  - POST ${APP_URL}/api/integrations/refresh-tokens (every 15 min)"
 echo ""
 echo "Useful commands:"
 echo "  gcloud scheduler jobs list --project=$PROJECT_ID --location=$REGION"

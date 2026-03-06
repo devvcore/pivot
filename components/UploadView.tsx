@@ -335,10 +335,12 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
   useEffect(() => {
     if (!orgId) return;
     fetch(`/api/integrations/list?orgId=${encodeURIComponent(orgId)}`)
-      .then((res) => (res.ok ? res.json() : { providers: [] }))
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.providers && Array.isArray(data.providers)) {
-          setConnectedProviders(new Set(data.providers));
+        if (!data) return;
+        // List API returns { connected: [...], available: [...] }
+        if (data.connected && Array.isArray(data.connected)) {
+          setConnectedProviders(new Set(data.connected.map((c: any) => c.provider)));
         }
       })
       .catch(() => {});
@@ -353,13 +355,19 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider: providerKey, orgId }),
       });
-      if (!res.ok) throw new Error("Failed to initiate connection");
-      const { authUrl } = await res.json();
-      if (authUrl) {
-        window.location.href = authUrl;
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to initiate connection");
       }
-    } catch {
-      setError(`Failed to connect ${providerKey}. Please try again.`);
+      if (data.connected) {
+        // Direct connection (API key / IMAP) — no redirect needed
+        setConnectedProviders((prev) => new Set([...prev, providerKey]));
+      } else if (data.redirectUrl) {
+        // OAuth flow — redirect to provider consent screen
+        window.location.href = data.redirectUrl;
+      }
+    } catch (err: any) {
+      setError(err.message || `Failed to connect ${providerKey}. Please try again.`);
     } finally {
       setConnectingProvider(null);
     }

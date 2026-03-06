@@ -27,14 +27,14 @@ export async function GET(req: Request) {
     const errorDesc = searchParams.get('error_description') ?? errorParam;
     console.error('[integrations/callback] OAuth error:', errorDesc);
     return NextResponse.redirect(
-      `${baseUrl}/dashboard?integration=error&message=${encodeURIComponent(errorDesc)}`
+      `${baseUrl}/?integration=error&message=${encodeURIComponent(errorDesc)}`
     );
   }
 
   // ─── Validate required params ─────────────────────────────────────────────
   if (!code || !stateParam) {
     return NextResponse.redirect(
-      `${baseUrl}/dashboard?integration=error&message=${encodeURIComponent('Missing code or state parameter')}`
+      `${baseUrl}/?integration=error&message=${encodeURIComponent('Missing code or state parameter')}`
     );
   }
 
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
       statePayload = JSON.parse(decoded);
     } catch {
       return NextResponse.redirect(
-        `${baseUrl}/dashboard?integration=error&message=${encodeURIComponent('Invalid state parameter')}`
+        `${baseUrl}/?integration=error&message=${encodeURIComponent('Invalid state parameter')}`
       );
     }
 
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     if (stateError || !storedState) {
       console.error('[integrations/callback] Invalid or expired state token');
       return NextResponse.redirect(
-        `${baseUrl}/dashboard?integration=error&message=${encodeURIComponent('Invalid or expired OAuth state')}`
+        `${baseUrl}/?integration=error&message=${encodeURIComponent('Invalid or expired OAuth state')}`
       );
     }
 
@@ -74,7 +74,7 @@ export async function GET(req: Request) {
       // Clean up expired state
       await supabase.from('oauth_states').delete().eq('state_token', stateToken);
       return NextResponse.redirect(
-        `${baseUrl}/dashboard?integration=error&message=${encodeURIComponent('OAuth state expired. Please try again.')}`
+        `${baseUrl}/?integration=error&message=${encodeURIComponent('OAuth state expired. Please try again.')}`
       );
     }
 
@@ -144,14 +144,14 @@ export async function GET(req: Request) {
 
     // ─── Redirect to dashboard with success ─────────────────────────────────
     return NextResponse.redirect(
-      `${baseUrl}/dashboard?integration=connected&provider=${provider}`
+      `${baseUrl}/?integration=connected&provider=${provider}`
     );
   } catch (err) {
     console.error('[integrations/callback] Error:', err);
     const message =
       err instanceof Error ? err.message : 'Unknown error during OAuth callback';
     return NextResponse.redirect(
-      `${baseUrl}/dashboard?integration=error&message=${encodeURIComponent(message)}`
+      `${baseUrl}/?integration=error&message=${encodeURIComponent(message)}`
     );
   }
 }
