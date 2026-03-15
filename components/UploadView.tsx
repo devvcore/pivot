@@ -332,12 +332,24 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
   const [phase, setPhase] = useState<"upload" | "analyze" | "chat">("upload");
   const [runId, setRunId] = useState<string | null>(null);
 
-  // Upload phase state
+  // ── Persist form state to localStorage so it survives refresh/OAuth ────────
+  const DRAFT_KEY = "pivot_uploadDraft";
+
+  function loadDraft() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  const draft = useRef(loadDraft());
+
+  // Upload phase state (hydrate from draft if available)
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-  const [socialUrls, setSocialUrls] = useState<Record<string, string>>({});
-  const [competitorUrls, setCompetitorUrls] = useState<string[]>([""]);
+  const [websiteUrl, setWebsiteUrl] = useState(draft.current?.websiteUrl ?? "");
+  const [selectedChannels, setSelectedChannels] = useState<string[]>(draft.current?.selectedChannels ?? []);
+  const [socialUrls, setSocialUrls] = useState<Record<string, string>>(draft.current?.socialUrls ?? {});
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>(draft.current?.competitorUrls ?? [""]);
   const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -346,8 +358,17 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Call phase state (fill gaps by voice)
-  const [extracted, setExtracted] = useState<Partial<Questionnaire>>({});
-  const [extractedFromDocs, setExtractedFromDocs] = useState<Partial<Questionnaire>>({});
+  const [extracted, setExtracted] = useState<Partial<Questionnaire>>(draft.current?.extracted ?? {});
+  const [extractedFromDocs, setExtractedFromDocs] = useState<Partial<Questionnaire>>(draft.current?.extractedFromDocs ?? {});
+
+  // Save form state to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        websiteUrl, selectedChannels, socialUrls, competitorUrls, extracted, extractedFromDocs,
+      }));
+    } catch {}
+  }, [websiteUrl, selectedChannels, socialUrls, competitorUrls, extracted, extractedFromDocs]);
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch brand logos from OpenBrand
@@ -565,6 +586,8 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
         const d = await runRes.json().catch(() => ({}));
         throw new Error(d.error || "Failed to start analysis");
       }
+      // Clear saved draft on successful launch
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
       onUploadComplete(runId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Launch failed");
