@@ -17,24 +17,27 @@ import {
   Copy,
   Check,
   ChevronDown,
+  ChevronUp,
   Sparkles,
   DollarSign,
   FileText,
   Code,
   Globe,
   Download,
+  Activity,
+  CircleDot,
 } from "lucide-react";
 import { formatLabel } from "@/lib/utils";
 
 /* ── Agent name map ── */
-const AGENT_NAMES: Record<string, { name: string; emoji: string }> = {
-  strategist: { name: "Atlas", emoji: "S" },
-  marketer: { name: "Maven", emoji: "M" },
-  analyst: { name: "Quant", emoji: "Q" },
-  recruiter: { name: "Scout", emoji: "R" },
-  operator: { name: "Forge", emoji: "O" },
-  researcher: { name: "Lens", emoji: "L" },
-  codebot: { name: "CodeBot", emoji: "C" },
+const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; color: string }> = {
+  strategist: { name: "Atlas", emoji: "S", role: "Strategy & Planning", color: "bg-blue-500" },
+  marketer: { name: "Maven", emoji: "M", role: "Marketing & Content", color: "bg-pink-500" },
+  analyst: { name: "Quant", emoji: "Q", role: "Finance & Analytics", color: "bg-emerald-500" },
+  recruiter: { name: "Scout", emoji: "R", role: "HR & Talent", color: "bg-amber-500" },
+  operator: { name: "Forge", emoji: "O", role: "Operations & Process", color: "bg-violet-500" },
+  researcher: { name: "Lens", emoji: "L", role: "Research & Intel", color: "bg-cyan-500" },
+  codebot: { name: "CodeBot", emoji: "C", role: "Engineering & Code", color: "bg-orange-500" },
 };
 
 /* ── Chat message types ── */
@@ -165,6 +168,8 @@ export function ExecutionDashboard({
   const [sending, setSending] = useState(false);
   const [totalCostCents, setTotalCostCents] = useState(0);
   const [activeAgents, setActiveAgents] = useState<Set<string>>(new Set());
+  const [agentTasks, setAgentTasks] = useState<Record<string, { task: string; status: string; costCents: number }>>({});
+  const [showMissionControl, setShowMissionControl] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollIntervals = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -291,6 +296,17 @@ export function ExecutionDashboard({
         if (task.cost_spent) {
           setTotalCostCents(prev => Math.max(prev, Math.round(task.cost_spent * 100)));
         }
+
+        // Track agent task for mission control
+        const resolvedAgent = task.agent_id ?? agentId;
+        setAgentTasks(prev => ({
+          ...prev,
+          [resolvedAgent]: {
+            task: task.title,
+            status: task.status,
+            costCents: Math.round((task.cost_spent ?? 0) * 100),
+          },
+        }));
 
         // Update messages: keep everything before userMsgId, then user msg, then routing, then agent msgs
         setMessages(prev => {
@@ -468,8 +484,8 @@ export function ExecutionDashboard({
             </button>
           </div>
 
-          {/* Status */}
-          <div className="flex items-center gap-3">
+          {/* Status + Mission Control toggle */}
+          <div className="flex items-center gap-2">
             {activeAgents.size > 0 && (
               <span className="flex items-center gap-1.5 text-[10px] font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -479,9 +495,91 @@ export function ExecutionDashboard({
             <span className="text-[10px] font-mono text-zinc-400 tabular-nums">
               ${(totalCostCents / 100).toFixed(2)} spent
             </span>
+            <button
+              onClick={() => setShowMissionControl(!showMissionControl)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-lg border transition-all ${
+                showMissionControl
+                  ? "bg-zinc-900 text-white border-zinc-900"
+                  : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" /> Agents
+              {showMissionControl ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
           </div>
         </div>
       </header>
+
+      {/* ── Mission Control Panel ── */}
+      {showMissionControl && (
+        <div className="bg-white border-b border-zinc-200 shadow-sm">
+          <div className="max-w-5xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-4 h-4 text-zinc-400" />
+              <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em]">Mission Control — All Agents</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {Object.entries(AGENT_NAMES).map(([id, agent]) => {
+                const isActive = activeAgents.has(id);
+                const taskInfo = agentTasks[id];
+                return (
+                  <div
+                    key={id}
+                    className={`relative rounded-xl border p-3 transition-all ${
+                      isActive
+                        ? "border-indigo-200 bg-indigo-50/50 shadow-sm"
+                        : taskInfo
+                        ? "border-zinc-200 bg-zinc-50/50"
+                        : "border-zinc-100 bg-white"
+                    }`}
+                  >
+                    {/* Status dot */}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className={`w-5 h-5 rounded-md ${agent.color} flex items-center justify-center text-[10px] font-bold text-white`}>
+                        {agent.emoji}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-zinc-900 truncate">{agent.name}</div>
+                      </div>
+                      {isActive && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shrink-0" />
+                      )}
+                    </div>
+                    <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider mb-1">{agent.role}</div>
+                    {taskInfo ? (
+                      <div className="mt-1">
+                        <p className="text-[10px] text-zinc-600 truncate">{taskInfo.task}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[8px] font-mono uppercase tracking-wider px-1 py-0.5 rounded ${
+                            isActive
+                              ? "bg-blue-100 text-blue-700"
+                              : taskInfo.status === "completed"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : taskInfo.status === "failed"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-zinc-100 text-zinc-600"
+                          }`}>
+                            {isActive ? "Working" : formatLabel(taskInfo.status)}
+                          </span>
+                          {taskInfo.costCents > 0 && (
+                            <span className="text-[8px] font-mono text-zinc-400 tabular-nums">
+                              ${(taskInfo.costCents / 100).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <span className="text-[9px] font-mono text-zinc-300 uppercase">Ready</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Chat Area ── */}
       <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full">
