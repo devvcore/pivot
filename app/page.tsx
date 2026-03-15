@@ -33,6 +33,7 @@ export default function Home() {
   const [view, setView] = useState<AppView>("dashboard");
   const [runId, setRunId] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
 
   // On mount: hydrate from localStorage for instant UI, then verify with Supabase session
   useEffect(() => {
@@ -105,6 +106,15 @@ export default function Home() {
     }
   }, [user]);
 
+  // Fetch org logo when user is available
+  useEffect(() => {
+    if (!user?.organizationId) return;
+    fetch(`/api/org-logo?orgId=${encodeURIComponent(user.organizationId)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.logoUrl) setOrgLogoUrl(data.logoUrl); })
+      .catch(() => {});
+  }, [user?.organizationId]);
+
   useEffect(() => {
     if (!runId || view !== "upload") return;
     fetch(`/api/job?runId=${encodeURIComponent(runId)}`)
@@ -161,6 +171,7 @@ export default function Home() {
             onMissionControl={() => setView("mission-control")}
             userName={user?.name}
             username={user?.username}
+            orgLogoUrl={orgLogoUrl}
           />
         )}
 

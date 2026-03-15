@@ -4854,6 +4854,15 @@ export async function runPipeline(runId: string): Promise<void> {
     const websiteUrl = job.questionnaire.website;
     let websiteAnalysis: WebsiteAnalysis | undefined = deliverables.websiteAnalysis;
 
+    // Persist website to org table so org-logo can find it
+    if (websiteUrl && orgId !== "default-org") {
+      try {
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        const sb = createAdminClient();
+        await sb.from("organizations").update({ website: websiteUrl }).eq("id", orgId);
+      } catch { /* non-fatal */ }
+    }
+
     if (websiteUrl && !websiteAnalysis) {
       try {
         websiteAnalysis = await analyzeWebsite(websiteUrl, { runId, label: "primary" });

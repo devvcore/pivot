@@ -24,6 +24,7 @@ interface DashboardViewProps {
   onMissionControl?: () => void;
   userName?: string;
   username?: string;
+  orgLogoUrl?: string | null;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -64,7 +65,7 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, userName, username }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, userName, username, orgLogoUrl }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -91,9 +92,15 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
 
       <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 p-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-zinc-900 flex items-center justify-center rounded-xl shadow-lg shadow-zinc-900/10">
-            <div className="w-3.5 h-3.5 bg-white rounded-sm rotate-45" />
-          </div>
+          {orgLogoUrl ? (
+            <div className="w-9 h-9 rounded-xl overflow-hidden bg-white border border-zinc-200 flex items-center justify-center shadow-sm">
+              <img src={orgLogoUrl} alt="" className="w-6 h-6 object-contain" />
+            </div>
+          ) : (
+            <div className="w-9 h-9 bg-zinc-900 flex items-center justify-center rounded-xl shadow-lg shadow-zinc-900/10">
+              <div className="w-3.5 h-3.5 bg-white rounded-sm rotate-45" />
+            </div>
+          )}
           <div>
             <div className="font-bold tracking-tight text-xl text-zinc-900 leading-none">Pivot</div>
             <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-1">Enterprise Intelligence</div>
