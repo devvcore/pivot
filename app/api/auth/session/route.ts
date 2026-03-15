@@ -25,13 +25,24 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  // Look up profile in Supabase
+  // Look up profile + org in Supabase
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
+
+  // Get org name
+  let organizationName = "";
+  if (profile?.organization_id) {
+    const { data: org } = await admin
+      .from("organizations")
+      .select("name")
+      .eq("id", profile.organization_id)
+      .single();
+    organizationName = org?.name || "";
+  }
 
   return NextResponse.json({
     user: {
@@ -40,6 +51,11 @@ export async function GET() {
       name: user.user_metadata?.name || profile?.name || "",
       username: profile?.username || user.user_metadata?.username || "",
       organizationId: profile?.organization_id || "",
+      organizationName,
+      avatarUrl: profile?.avatar_url || "",
+      phone: profile?.phone || "",
+      bio: profile?.bio || "",
+      isActive: profile?.is_active ?? true,
     }
   });
 }

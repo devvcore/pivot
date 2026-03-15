@@ -25,6 +25,7 @@ interface UserProfile {
   name: string;
   username: string;
   organizationId: string;
+  organizationName?: string;
 }
 
 export default function Home() {
@@ -60,12 +61,24 @@ export default function Home() {
         .eq("id", authUser.id)
         .single();
 
+      // Fetch org name
+      let organizationName = "";
+      if (profile?.organization_id) {
+        const { data: org } = await sb
+          .from("organizations")
+          .select("name")
+          .eq("id", profile.organization_id)
+          .single();
+        organizationName = org?.name ?? "";
+      }
+
       const u: UserProfile = {
         id: authUser.id,
         email: authUser.email ?? "",
         name: authUser.user_metadata?.name ?? profile?.name ?? "",
         username: profile?.username ?? authUser.user_metadata?.username ?? "",
         organizationId: profile?.organization_id ?? "",
+        organizationName,
       };
       setUser(u);
       localStorage.setItem("pivot_user", JSON.stringify(u));

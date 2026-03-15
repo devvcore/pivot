@@ -11,6 +11,7 @@ interface UserProfile {
   name: string;
   username: string;
   organizationId: string;
+  organizationName?: string;
 }
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
@@ -134,6 +135,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
           name,
           username: username.toLowerCase(),
           organizationId: setupData.organizationId ?? "",
+          organizationName,
         });
         return;
       }
@@ -158,12 +160,24 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         .eq("id", data.user.id)
         .single();
 
+      // Fetch org name
+      let orgName = "";
+      if (profile?.organization_id) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", profile.organization_id)
+          .single();
+        orgName = org?.name ?? "";
+      }
+
       onLogin({
         id: data.user.id,
         email: data.user.email ?? email,
         name: data.user.user_metadata?.name ?? profile?.name ?? email.split("@")[0],
         username: profile?.username ?? data.user.user_metadata?.username ?? "",
         organizationId: profile?.organization_id ?? data.user.user_metadata?.organizationId ?? "",
+        organizationName: orgName,
       });
     } catch (err: any) {
       setError(err.message);

@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       owner_user_id: userId,
     });
 
-    // Create profile (with username)
+    // Create profile (with username + all user fields)
     await supabase.from("profiles").upsert({
       id: userId,
       email: email.trim().toLowerCase(),
@@ -64,6 +64,10 @@ export async function POST(req: Request) {
       username: sanitizedUsername || null,
       display_name: name,
       organization_id: orgId,
+      is_active: true,
+      invite_status: "active",
+      last_login_at: new Date().toISOString(),
+      preferences: {},
     });
 
     // Link user to org
@@ -73,7 +77,7 @@ export async function POST(req: Request) {
       role: "OWNER",
     });
 
-    return NextResponse.json({ organizationId: orgId });
+    return NextResponse.json({ organizationId: orgId, organizationName });
   } catch (error: any) {
     console.error("[auth/setup-profile] Error:", error);
     return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });

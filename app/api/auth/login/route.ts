@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
-    // Look up profile in Supabase
+    // Look up profile + org in Supabase
     const admin = createAdminClient();
     const { data: profile } = await admin
       .from("profiles")
@@ -43,12 +43,34 @@ export async function POST(req: Request) {
       .eq("id", data.user.id)
       .single();
 
+    // Update last_login_at
+    await admin
+      .from("profiles")
+      .update({ last_login_at: new Date().toISOString() })
+      .eq("id", data.user.id);
+
+    // Get org name
+    let organizationName = "";
+    if (profile?.organization_id) {
+      const { data: org } = await admin
+        .from("organizations")
+        .select("name")
+        .eq("id", profile.organization_id)
+        .single();
+      organizationName = org?.name || "";
+    }
+
     const response = NextResponse.json({
       id: data.user.id,
       email: data.user.email,
       name: data.user.user_metadata?.name || profile?.name || email.split("@")[0],
       username: profile?.username || data.user.user_metadata?.username || "",
       organizationId: profile?.organization_id || data.user.user_metadata?.organizationId || "",
+      organizationName,
+      avatarUrl: profile?.avatar_url || "",
+      phone: profile?.phone || "",
+      bio: profile?.bio || "",
+      isActive: profile?.is_active ?? true,
     });
 
     return response;
