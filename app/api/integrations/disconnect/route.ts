@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
 // POST /api/integrations/disconnect
-// Disconnects an integration: revokes token if possible,
-// deletes the integration record from the database.
+// Disconnects an integration:
+// - Composio providers: deletes the Composio connected account, then DB record
+// - ADP: revokes token manually, then deletes DB record
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
@@ -9,69 +10,21 @@ import {
   getIntegration,
   deleteIntegration,
 } from '@/lib/integrations/store';
+import { isComposioProvider, deleteConnection } from '@/lib/integrations/composio';
+import type { IntegrationProvider } from '@/lib/integrations/types';
 
-// Provider-specific token revocation endpoints
-const REVOKE_ENDPOINTS: Partial<Record<string, string>> = {
-  gmail: 'https://oauth2.googleapis.com/revoke',
-  slack: 'https://slack.com/api/auth.revoke',
-  hubspot: 'https://api.hubapi.com/oauth/v1/refresh-tokens/',
-  salesforce: '/services/oauth2/revoke', // needs instance_url prefix
-};
+// ─── ADP token revocation (manual OAuth) ─────────────────────────────────────
 
-async function revokeToken(
-  provider: string,
+async function revokeAdpToken(
   accessToken: string,
-  metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    switch (provider) {
-      case 'gmail': {
-        await fetch(
-          `${REVOKE_ENDPOINTS.gmail}?token=${encodeURIComponent(accessToken)}`,
-          { method: 'POST' }
-        );
-        break;
-      }
-      case 'slack': {
-        await fetch(REVOKE_ENDPOINTS.slack!, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        });
-        break;
-      }
-      case 'salesforce': {
-        const instanceUrl = metadata?.instanceUrl;
-        if (instanceUrl) {
-          await fetch(
-            `${instanceUrl}${REVOKE_ENDPOINTS.salesforce}?token=${encodeURIComponent(accessToken)}`,
-            { method: 'POST' }
-          );
-        }
-        break;
-      }
-      case 'hubspot': {
-        // HubSpot revokes by refresh token via DELETE
-        if (metadata?.refreshToken) {
-          await fetch(
-            `${REVOKE_ENDPOINTS.hubspot}${encodeURIComponent(metadata.refreshToken)}`,
-            { method: 'DELETE' }
-          );
-        }
-        break;
-      }
-      // ADP, Workday, QuickBooks, Stripe, Jira: no standard revocation or handled differently
-      default:
-        break;
-    }
+    // ADP doesn't have a standard revocation endpoint — best effort.
+    // Their tokens are typically short-lived and managed via certificate-based auth.
+    // We simply discard the token from our DB.
+    console.log('[integrations/disconnect] ADP token discarded (no revocation endpoint)');
   } catch (err) {
-    // Token revocation is best-effort; log but don't fail
-    console.warn(
-      `[integrations/disconnect] Token revocation failed for ${provider}:`,
-      err
-    );
+    console.warn('[integrations/disconnect] ADP token revocation error:', err);
   }
 }
 
@@ -96,25 +49,55 @@ export async function POST(req: Request) {
       );
     }
 
-    // ─── Revoke token if possible ───────────────────────────────────────────
-    if (integration.accessToken) {
-      await revokeToken(
-        integration.provider,
-        integration.accessToken,
-        {
-          ...integration.metadata,
-          refreshToken: integration.refreshToken,
+    const provider = integration.provider as IntegrationProvider;
+
+    // ─── Composio Providers ─────────────────────────────────────────────────
+    if (isComposioProvider(provider)) {
+      // Delete the Composio connected account if we have one
+      if (integration.composioConnectedAccountId) {
+        try {
+          await deleteConnection(integration.composioConnectedAccountId);
+        } catch (err) {
+          // Non-fatal: the Composio account may already be deleted
+          console.warn(
+            `[integrations/disconnect] Failed to delete Composio account ${integration.composioConnectedAccountId}:`,
+            err
+          );
         }
-      );
+      }
+
+      // Delete integration record from our DB
+      await deleteIntegration(integrationId);
+
+      return NextResponse.json({
+        success: true,
+        message: `Disconnected ${provider} integration (Composio)`,
+        provider,
+      });
     }
 
-    // ─── Delete integration record ──────────────────────────────────────────
+    // ─── ADP: Manual revocation ─────────────────────────────────────────────
+    if (provider === 'adp') {
+      if (integration.accessToken) {
+        await revokeAdpToken(integration.accessToken);
+      }
+
+      await deleteIntegration(integrationId);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Disconnected ADP integration',
+        provider: 'adp',
+      });
+    }
+
+    // ─── Fallback: unknown provider — just delete the record ────────────────
     await deleteIntegration(integrationId);
 
     return NextResponse.json({
       success: true,
-      message: `Disconnected ${integration.provider} integration`,
-      provider: integration.provider,
+      message: `Disconnected ${provider} integration`,
+      provider,
     });
   } catch (err) {
     console.error('[integrations/disconnect] Error:', err);

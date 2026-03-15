@@ -5,7 +5,9 @@
 
 export type IntegrationProvider =
   | 'slack' | 'gmail' | 'adp' | 'workday'
-  | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira' | 'github';
+  | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira' | 'github'
+  | 'google_analytics' | 'google_sheets' | 'notion' | 'linear'
+  | 'asana' | 'google_calendar' | 'microsoft_teams' | 'airtable';
 
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing';
 
@@ -17,6 +19,7 @@ export interface Integration {
   accessToken: string | null;
   refreshToken: string | null;
   tokenExpiresAt: string | null;
+  composioConnectedAccountId: string | null;
   scopes: string[];
   metadata: Record<string, any>; // provider-specific config
   lastSyncAt: string | null;
@@ -100,7 +103,7 @@ export interface ProviderCapability {
   provider: IntegrationProvider;
   name: string;
   description: string;
-  category: 'communication' | 'hr' | 'finance' | 'crm' | 'project_management' | 'payments';
+  category: 'communication' | 'hr' | 'finance' | 'crm' | 'project_management' | 'payments' | 'analytics' | 'productivity';
   icon: string; // lucide icon name
   color: string; // tailwind color
   features: string[];
@@ -280,5 +283,143 @@ export const PROVIDER_CAPABILITIES: ProviderCapability[] = [
     ],
     requiredScopes: ['repo', 'read:org'],
     docsUrl: 'https://docs.github.com/en/rest',
+  },
+  {
+    provider: 'google_analytics',
+    name: 'Google Analytics',
+    description: 'Web traffic analytics including user behavior, conversion funnels, traffic sources, and realtime data',
+    category: 'analytics',
+    icon: 'BarChart3',
+    color: 'amber',
+    features: [
+      'Traffic source analysis',
+      'Conversion funnels',
+      'Realtime visitors',
+      'Audience demographics',
+      'Page performance',
+      'Campaign attribution',
+    ],
+    requiredScopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+    docsUrl: 'https://developers.google.com/analytics/devguides/reporting',
+  },
+  {
+    provider: 'google_sheets',
+    name: 'Google Sheets',
+    description: 'Import and export data from spreadsheets for flexible reporting and data pipelines',
+    category: 'productivity',
+    icon: 'Table',
+    color: 'emerald',
+    features: [
+      'Data import/export',
+      'Report generation',
+      'Custom dashboards',
+      'Automated updates',
+      'Formula-driven KPIs',
+    ],
+    requiredScopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    docsUrl: 'https://developers.google.com/sheets/api',
+  },
+  {
+    provider: 'notion',
+    name: 'Notion',
+    description: 'Knowledge base and project data including OKRs, meeting notes, wikis, and team documentation',
+    category: 'productivity',
+    icon: 'BookOpen',
+    color: 'zinc',
+    features: [
+      'OKR tracking',
+      'Meeting notes analysis',
+      'Wiki content search',
+      'Database queries',
+      'Task completion rates',
+    ],
+    requiredScopes: ['read_content', 'read_databases'],
+    docsUrl: 'https://developers.notion.com/',
+  },
+  {
+    provider: 'linear',
+    name: 'Linear',
+    description: 'Engineering project data including issue cycle times, sprint velocity, and team workload',
+    category: 'project_management',
+    icon: 'Zap',
+    color: 'indigo',
+    features: [
+      'Issue cycle time',
+      'Sprint velocity',
+      'Bug tracking',
+      'Team workload',
+      'Release tracking',
+      'Triage analytics',
+    ],
+    requiredScopes: ['read'],
+    docsUrl: 'https://developers.linear.app/docs',
+  },
+  {
+    provider: 'asana',
+    name: 'Asana',
+    description: 'Project management analytics including task completion, team workload, and project timelines',
+    category: 'project_management',
+    icon: 'CheckSquare',
+    color: 'rose',
+    features: [
+      'Task completion rates',
+      'Project timelines',
+      'Team workload',
+      'Milestone tracking',
+      'Portfolio analytics',
+    ],
+    requiredScopes: ['default'],
+    docsUrl: 'https://developers.asana.com/docs',
+  },
+  {
+    provider: 'google_calendar',
+    name: 'Google Calendar',
+    description: 'Meeting patterns and time allocation analysis for productivity insights',
+    category: 'productivity',
+    icon: 'Calendar',
+    color: 'sky',
+    features: [
+      'Meeting time analysis',
+      'Focus time tracking',
+      'Meeting frequency',
+      'Calendar conflicts',
+      'Attendance patterns',
+    ],
+    requiredScopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+    docsUrl: 'https://developers.google.com/calendar/api',
+  },
+  {
+    provider: 'microsoft_teams',
+    name: 'Microsoft Teams',
+    description: 'Enterprise communication analytics including chat patterns, meeting data, and team collaboration',
+    category: 'communication',
+    icon: 'MessagesSquare',
+    color: 'blue',
+    features: [
+      'Chat analytics',
+      'Meeting data',
+      'Channel activity',
+      'Response times',
+      'Collaboration metrics',
+    ],
+    requiredScopes: ['Chat.Read', 'Channel.ReadBasic.All', 'Team.ReadBasic.All'],
+    docsUrl: 'https://learn.microsoft.com/en-us/graph/teams-concept-overview',
+  },
+  {
+    provider: 'airtable',
+    name: 'Airtable',
+    description: 'Flexible database and spreadsheet data for CRM, inventory, project tracking, and custom workflows',
+    category: 'productivity',
+    icon: 'Grid3x3',
+    color: 'teal',
+    features: [
+      'Custom database queries',
+      'Inventory tracking',
+      'Project management',
+      'CRM data',
+      'Workflow automation',
+    ],
+    requiredScopes: ['data.records:read', 'schema.bases:read'],
+    docsUrl: 'https://airtable.com/developers/web/api',
   },
 ];

@@ -20,10 +20,13 @@ import { getAgentMemory } from "./memory";
 import { analyzeWebsite } from "./website-analyzer";
 import { findRoute, findRouteById } from "./page-routes";
 import { getJob, listJobs } from "@/lib/job-store";
+import { collectIntegrationContext, formatIntegrationContextAsText } from "@/lib/integrations/collect";
+import { LoopGuard, closestToolName, smartTruncate } from "./agent-guardrails";
 import type { ChatMessage, AgentMemory, MVPDeliverables } from "@/lib/types";
 
 const FLASH_MODEL = "gemini-3-flash-preview";
 const MAX_HISTORY_MESSAGES = 16;
+const AVAILABLE_TOOL_NAMES = ["search_web", "get_report_section", "analyze_website", "generate_projection", "navigate_to_page", "get_integration_data"];
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -296,6 +299,25 @@ const TOOLS = [
       required: ["query"],
     },
   },
+  {
+    name: "get_integration_data",
+    description:
+      "Retrieve live data from connected business tools (Slack, Gmail, QuickBooks, Stripe, Salesforce, HubSpot, GitHub, Jira, etc.). Use when the user asks about their connected tools, real-time metrics from integrations, or when you need actual data from their business apps.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        provider: {
+          type: "string",
+          description: "Filter by provider (e.g. 'slack', 'quickbooks', 'stripe'). Leave empty for all providers.",
+        },
+        recordType: {
+          type: "string",
+          description: "Filter by record type (e.g. 'channels', 'financial_summary', 'revenue'). Leave empty for all types.",
+        },
+      },
+      required: [],
+    },
+  },
 ];
 
 // ── Tool execution ─────────────────────────────────────────────────────────────
@@ -331,7 +353,8 @@ async function executeTool(
     const sectionData = (d as any)[section];
     if (!sectionData) return `Section "${section}" not found in this report.`;
 
-    return `[Report Section: ${section}]\n${JSON.stringify(sectionData, null, 2)}`;
+    const json = JSON.stringify(sectionData, null, 2);
+    return `[Report Section: ${section}]\n${smartTruncate(json, 3000)}`;
   }
 
   if (toolName === "analyze_website") {
@@ -475,6 +498,37 @@ Rules:
     }
 
     return `<!--NAVIGATE:${JSON.stringify(route)}-->\nNavigating to ${route.label}: ${route.description}`;
+  }
+
+  if (toolName === "get_integration_data") {
+    const provider = args.provider as string | undefined;
+    const recordType = args.recordType as string | undefined;
+
+    try {
+      const ctx = await collectIntegrationContext(orgId);
+      if (ctx.records.length === 0) {
+        return "No integration data available. The business has not connected any tools yet. Suggest connecting Slack, QuickBooks, Stripe, or other tools from the Upload page for richer analysis.";
+      }
+
+      let filtered = ctx.records;
+      if (provider) filtered = filtered.filter((r) => r.provider === provider);
+      if (recordType) filtered = filtered.filter((r) => r.recordType === recordType);
+
+      if (filtered.length === 0) {
+        return `No data found for ${provider ? `provider "${provider}"` : ""}${recordType ? ` record type "${recordType}"` : ""}. Connected providers: ${ctx.providers.join(", ")}`;
+      }
+
+      const result = filtered.map((r) => ({
+        provider: r.provider,
+        type: r.recordType,
+        syncedAt: r.syncedAt,
+        data: typeof r.data === 'string' ? r.data.slice(0, 1500) : JSON.stringify(r.data).slice(0, 1500),
+      }));
+
+      return `[Integration Data — ${filtered.length} records from ${ctx.providers.join(", ")}]\n${JSON.stringify(result, null, 2)}`;
+    } catch (e) {
+      return `Failed to retrieve integration data: ${String(e)}`;
+    }
   }
 
   return `Unknown tool: ${toolName}`;
@@ -660,7 +714,8 @@ ${memory.reportSummaries
   .map((r) => `- ${new Date(r.date).toLocaleDateString()}: ${r.headline} (Score: ${r.score ?? "?"}/${r.grade ?? "?"})`)
   .join("\n")}
 
-Remember: You have access to their full report via tools. Use get_report_section when you need specifics.`;
+Remember: You have access to their full report via tools. Use get_report_section when you need specifics.
+You also have get_integration_data to access live data from connected business tools (Slack, QuickBooks, Stripe, Salesforce, GitHub, etc.). When integration data is available, use real metrics instead of estimating.`;
 }
 
 // ── Main agent function ────────────────────────────────────────────────────────
@@ -728,10 +783,31 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
     const fnCalls = parts.filter((p: any) => p.functionCall);
 
     if (fnCalls.length > 0) {
-      // Execute all requested tools
+      // Execute all requested tools with guardrails
+      const guard = new LoopGuard();
       const toolResults = await Promise.all(
         fnCalls.map(async (part: any) => {
-          const { name, args } = part.functionCall;
+          let { name, args } = part.functionCall;
+
+          // Fuzzy match tool name if not recognized
+          if (!AVAILABLE_TOOL_NAMES.includes(name)) {
+            const matched = closestToolName(name, AVAILABLE_TOOL_NAMES);
+            if (matched) {
+              console.warn(`[Pivvy] Tool name corrected: "${name}" -> "${matched}"`);
+              name = matched;
+            }
+          }
+
+          // Loop guard check
+          const guardResult = guard.check(name, args);
+          if (!guardResult.allowed) {
+            console.warn(`[Pivvy] LoopGuard blocked: ${guardResult.warning}`);
+            return { name, result: `Tool call blocked by safety guard: ${guardResult.warning}` };
+          }
+          if (guardResult.warning) {
+            console.warn(`[Pivvy] LoopGuard warning: ${guardResult.warning}`);
+          }
+
           toolsUsed.push(name);
           const result = await executeTool(name, args as Record<string, unknown>, req.orgId);
           return { name, result };

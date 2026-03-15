@@ -4,19 +4,38 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   try {
-    const { email, password, name, organizationName } = await req.json();
+    const { email, password, name, username, organizationName } = await req.json();
     if (!email || !password || !name || !organizationName) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
     const supabase = createAdminClient();
 
+    // Validate and check username uniqueness if provided
+    const sanitizedUsername = username?.trim().toLowerCase();
+    if (sanitizedUsername) {
+      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+      if (!usernameRegex.test(sanitizedUsername)) {
+        return NextResponse.json({ error: "Username must be 3-20 characters, alphanumeric and underscores only" }, { status: 400 });
+      }
+
+      const { data: existingUsername } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", sanitizedUsername)
+        .limit(1);
+
+      if (existingUsername && existingUsername.length > 0) {
+        return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
+      }
+    }
+
     // Create user in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password,
       email_confirm: true,
-      user_metadata: { name, organizationName },
+      user_metadata: { name, username: sanitizedUsername, organizationName },
     });
 
     if (authError) {
@@ -32,11 +51,13 @@ export async function POST(req: Request) {
         owner_user_id: authData.user.id,
       });
 
-      // Create profile linked to auth user
+      // Create profile linked to auth user (with username)
       await supabase.from("profiles").insert({
         id: authData.user.id,
         email: email.trim().toLowerCase(),
         name,
+        username: sanitizedUsername || null,
+        display_name: name,
         organization_id: orgId,
       });
 

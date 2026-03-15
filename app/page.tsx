@@ -23,6 +23,7 @@ interface UserProfile {
   id: string;
   email: string;
   name: string;
+  username: string;
   organizationId: string;
 }
 
@@ -52,10 +53,10 @@ export default function Home() {
         localStorage.removeItem("pivot_user");
         return;
       }
-      // Fetch profile for org info
+      // Fetch profile for org info and username
       const { data: profile } = await sb
         .from("profiles")
-        .select("name, organization_id")
+        .select("name, username, organization_id")
         .eq("id", authUser.id)
         .single();
 
@@ -63,6 +64,7 @@ export default function Home() {
         id: authUser.id,
         email: authUser.email ?? "",
         name: authUser.user_metadata?.name ?? profile?.name ?? "",
+        username: profile?.username ?? authUser.user_metadata?.username ?? "",
         organizationId: profile?.organization_id ?? "",
       };
       setUser(u);
@@ -144,6 +146,8 @@ export default function Home() {
             onEmployees={() => setView("employees")}
             onLean={() => setView("lean")}
             onMissionControl={() => setView("mission-control")}
+            userName={user?.name}
+            username={user?.username}
           />
         )}
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu } from "lucide-react";
+import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface JobSummary {
@@ -22,6 +22,8 @@ interface DashboardViewProps {
   onEmployees?: () => void;
   onLean?: () => void;
   onMissionControl?: () => void;
+  userName?: string;
+  username?: string;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -62,7 +64,7 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, userName, username }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,6 +101,17 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
         </div>
 
         <div className="flex items-center gap-3">
+          {(username || userName) && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl mr-1">
+              <div className="w-6 h-6 bg-zinc-900 rounded-full flex items-center justify-center">
+                <User className="w-3 h-3 text-white" />
+              </div>
+              <div className="flex flex-col">
+                {userName && <span className="text-xs font-medium text-zinc-900 leading-tight">{userName}</span>}
+                {username && <span className="text-[10px] font-mono text-zinc-400 leading-tight">@{username}</span>}
+              </div>
+            </div>
+          )}
           <button
             onClick={fetchJobs}
             className="p-2.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all"

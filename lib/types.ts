@@ -118,6 +118,23 @@ export interface BusinessPacket {
   documentCount: number;
   financialFacts?: FinancialFact[];    // verified facts from source documents
   identity?: CompanyIdentity;          // anchored company identity
+  integrationData?: IntegrationContext; // data from connected tools (Composio)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Integration Context — data from connected tools (Slack, QuickBooks, etc.)
+// ─────────────────────────────────────────────────────────────────────────────
+export interface IntegrationDataRecord {
+  provider: string;
+  recordType: string;
+  data: any;
+  syncedAt: string;
+}
+
+export interface IntegrationContext {
+  records: IntegrationDataRecord[];
+  providers: string[];          // list of connected providers with data
+  lastSyncedAt: string | null;  // most recent sync timestamp
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Building2, ShieldCheck, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { ArrowRight, Building2, ShieldCheck, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff, AtSign } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -9,21 +9,65 @@ interface UserProfile {
   id: string;
   email: string;
   name: string;
+  username: string;
   organizationId: string;
 }
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 
 export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) {
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [organizationName, setOrganizationName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const usernameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const supabase = createClient();
+
+  const checkUsernameAvailability = useCallback(async (value: string) => {
+    if (!value || value.length < 3) {
+      setUsernameStatus("idle");
+      return;
+    }
+    if (!USERNAME_REGEX.test(value)) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    setUsernameStatus("checking");
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      setUsernameStatus(data.available ? "available" : "taken");
+    } catch {
+      setUsernameStatus("idle");
+    }
+  }, []);
+
+  const handleUsernameChange = (value: string) => {
+    // Only allow valid characters
+    const sanitized = value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
+    setUsername(sanitized);
+    if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
+    if (!sanitized || sanitized.length < 3) {
+      setUsernameStatus(sanitized.length > 0 ? "invalid" : "idle");
+      return;
+    }
+    usernameDebounceRef.current = setTimeout(() => checkUsernameAvailability(sanitized), 400);
+  };
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,13 +89,19 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         if (!name || !organizationName) {
           throw new Error("Name and company are required");
         }
+        if (!username || !USERNAME_REGEX.test(username)) {
+          throw new Error("Username must be 3-20 characters, alphanumeric and underscores only");
+        }
+        if (usernameStatus === "taken") {
+          throw new Error("That username is already taken");
+        }
 
         // Sign up directly through Supabase Auth
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
           options: {
-            data: { name, organizationName },
+            data: { name, username: username.toLowerCase(), organizationName },
           },
         });
 
@@ -66,6 +116,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
             userId: signUpData.user.id,
             email: email.trim().toLowerCase(),
             name,
+            username: username.toLowerCase(),
             organizationName,
           }),
         });
@@ -81,6 +132,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
           id: signUpData.user.id,
           email: signUpData.user.email ?? email,
           name,
+          username: username.toLowerCase(),
           organizationId: setupData.organizationId ?? "",
         });
         return;
@@ -99,10 +151,10 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         throw new Error(loginError.message);
       }
 
-      // Fetch profile for org info
+      // Fetch profile for org info and username
       const { data: profile } = await supabase
         .from("profiles")
-        .select("name, organization_id")
+        .select("name, username, organization_id")
         .eq("id", data.user.id)
         .single();
 
@@ -110,6 +162,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         id: data.user.id,
         email: data.user.email ?? email,
         name: data.user.user_metadata?.name ?? profile?.name ?? email.split("@")[0],
+        username: profile?.username ?? data.user.user_metadata?.username ?? "",
         organizationId: profile?.organization_id ?? data.user.user_metadata?.organizationId ?? "",
       });
     } catch (err: any) {
@@ -188,6 +241,39 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                           className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
                           placeholder="Your full name"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Username</label>
+                        <div className="relative">
+                          <AtSign className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                          <input
+                            type="text"
+                            required
+                            value={username}
+                            onChange={e => handleUsernameChange(e.target.value)}
+                            className={`block w-full rounded-xl border bg-zinc-50/50 py-3 pl-10 pr-10 text-sm focus:bg-white focus:outline-none transition-all ${
+                              usernameStatus === "available" ? "border-green-300 focus:border-green-500" :
+                              usernameStatus === "taken" || usernameStatus === "invalid" ? "border-red-300 focus:border-red-500" :
+                              "border-zinc-200 focus:border-zinc-900"
+                            }`}
+                            placeholder="3-20 chars, letters, numbers, _"
+                          />
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                            {usernameStatus === "checking" && <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />}
+                            {usernameStatus === "available" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                            {usernameStatus === "taken" && <AlertCircle className="w-4 h-4 text-red-500" />}
+                            {usernameStatus === "invalid" && <AlertCircle className="w-4 h-4 text-amber-500" />}
+                          </div>
+                        </div>
+                        {usernameStatus === "taken" && (
+                          <p className="text-[10px] text-red-500 mt-1 font-mono">Username is already taken</p>
+                        )}
+                        {usernameStatus === "invalid" && username.length > 0 && (
+                          <p className="text-[10px] text-amber-500 mt-1 font-mono">Min 3 chars, letters, numbers, underscores only</p>
+                        )}
+                        {usernameStatus === "available" && (
+                          <p className="text-[10px] text-green-500 mt-1 font-mono">Username is available</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Company</label>

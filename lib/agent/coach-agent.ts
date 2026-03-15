@@ -18,7 +18,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { getJob, listJobs } from "@/lib/job-store";
 import { findRoute, findRouteById } from "./page-routes";
+import { collectIntegrationContext } from "@/lib/integrations/collect";
+import { LoopGuard, closestToolName, smartTruncate } from "./agent-guardrails";
 import type { MVPDeliverables } from "@/lib/types";
+
+const COACH_TOOL_NAMES = ["get_report_section", "get_team_data", "generate_action_items", "navigate_to_page", "get_integration_data"];
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
 
@@ -77,6 +81,7 @@ FOR EMPLOYEES:
 
 You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.
 You also have a navigate_to_page tool. Use it when the user asks to see, view, or go to a specific section of their analysis (e.g. "show me the action plan", "take me to issues", "where is my health score").
+You have a get_integration_data tool to access live data from connected business tools (Slack, QuickBooks, Stripe, Salesforce, etc.). Use it when you need real metrics to back up coaching advice — prefer real data over estimates whenever possible.
 
 KEY SECTIONS FOR COACHING:
 - hiringPlan: team gaps, recommended hires, role priorities, and timeline
@@ -925,6 +930,25 @@ const TOOLS = [
       required: ["query"],
     },
   },
+  {
+    name: "get_integration_data",
+    description:
+      "Retrieve live data from connected business tools (Slack, Gmail, QuickBooks, Stripe, Salesforce, HubSpot, GitHub, Jira, etc.). Use when you need real metrics from their connected apps to ground coaching advice.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        provider: {
+          type: "string",
+          description: "Filter by provider (e.g. 'slack', 'quickbooks', 'stripe'). Leave empty for all providers.",
+        },
+        recordType: {
+          type: "string",
+          description: "Filter by record type (e.g. 'channels', 'financial_summary', 'revenue'). Leave empty for all types.",
+        },
+      },
+      required: [],
+    },
+  },
 ];
 
 // ── Tool execution ────────────────────────────────────────────────────────────
@@ -956,9 +980,9 @@ async function executeTool(
     const sectionData = (d as any)[section];
     if (!sectionData) return `Section "${section}" not found in this report.`;
 
-    // Truncate to avoid token overflow
+    // Truncate to avoid token overflow (smart: keeps head + tail context)
     const json = JSON.stringify(sectionData, null, 2);
-    return `[Report Section: ${section}]\n${json.slice(0, 3000)}`;
+    return `[Report Section: ${section}]\n${smartTruncate(json, 3000)}`;
   }
 
   if (toolName === "get_team_data") {
@@ -1070,6 +1094,37 @@ async function executeTool(
     }
 
     return `<!--NAVIGATE:${JSON.stringify(route)}-->\nNavigating to ${route.label}: ${route.description}`;
+  }
+
+  if (toolName === "get_integration_data") {
+    const provider = args.provider as string | undefined;
+    const recordType = args.recordType as string | undefined;
+
+    try {
+      const ctx = await collectIntegrationContext(orgId);
+      if (ctx.records.length === 0) {
+        return "No integration data available. Suggest connecting business tools (Slack, QuickBooks, Stripe, etc.) from the Upload page for data-driven coaching.";
+      }
+
+      let filtered = ctx.records;
+      if (provider) filtered = filtered.filter((r) => r.provider === provider);
+      if (recordType) filtered = filtered.filter((r) => r.recordType === recordType);
+
+      if (filtered.length === 0) {
+        return `No data found for ${provider ? `provider "${provider}"` : ""}${recordType ? ` record type "${recordType}"` : ""}. Connected providers: ${ctx.providers.join(", ")}`;
+      }
+
+      const result = filtered.map((r) => ({
+        provider: r.provider,
+        type: r.recordType,
+        syncedAt: r.syncedAt,
+        data: typeof r.data === 'string' ? r.data.slice(0, 1500) : JSON.stringify(r.data).slice(0, 1500),
+      }));
+
+      return `[Integration Data — ${filtered.length} records]\n${JSON.stringify(result, null, 2)}`;
+    } catch (e) {
+      return `Failed to retrieve integration data: ${String(e)}`;
+    }
   }
 
   return `Unknown tool: ${toolName}`;
@@ -1327,10 +1382,31 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     const fnCalls = parts.filter((p: any) => p.functionCall);
 
     if (fnCalls.length > 0) {
-      // Execute all requested tools
+      // Execute all requested tools with guardrails
+      const guard = new LoopGuard();
       const toolResults = await Promise.all(
         fnCalls.map(async (part: any) => {
-          const { name, args: toolArgs } = part.functionCall;
+          let { name, args: toolArgs } = part.functionCall;
+
+          // Fuzzy match tool name if not recognized
+          if (!COACH_TOOL_NAMES.includes(name)) {
+            const matched = closestToolName(name, COACH_TOOL_NAMES);
+            if (matched) {
+              console.warn(`[Coach] Tool name corrected: "${name}" -> "${matched}"`);
+              name = matched;
+            }
+          }
+
+          // Loop guard check
+          const guardResult = guard.check(name, toolArgs);
+          if (!guardResult.allowed) {
+            console.warn(`[Coach] LoopGuard blocked: ${guardResult.warning}`);
+            return { name, result: `Tool call blocked by safety guard: ${guardResult.warning}` };
+          }
+          if (guardResult.warning) {
+            console.warn(`[Coach] LoopGuard warning: ${guardResult.warning}`);
+          }
+
           toolsUsed.push(name);
           const result = await executeTool(name, toolArgs as Record<string, unknown>, orgId, runId);
           return { name, result };

@@ -31,11 +31,16 @@ CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     name TEXT,
+    username TEXT,
+    display_name TEXT,
     role TEXT DEFAULT 'MEMBER',
     organization_id TEXT REFERENCES organizations(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Unique index on username (only for non-null values)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username) WHERE username IS NOT NULL;
 
 -- ─── User <> Organization membership ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_organizations (
@@ -149,9 +154,9 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 
 -- Service role key bypasses RLS, so these policies only apply to anon/authenticated users.
 
--- Profiles: users can read/update their own profile
-CREATE POLICY IF NOT EXISTS "profiles_select_own" ON profiles
-    FOR SELECT USING (id = auth.uid());
+-- Profiles: authenticated users can read all profiles (for username lookups), update only their own
+CREATE POLICY IF NOT EXISTS "profiles_select_all" ON profiles
+    FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY IF NOT EXISTS "profiles_update_own" ON profiles
     FOR UPDATE USING (id = auth.uid());
 CREATE POLICY IF NOT EXISTS "profiles_insert_own" ON profiles

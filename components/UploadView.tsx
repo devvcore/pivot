@@ -6,7 +6,9 @@ import {
   ChevronRight, AlertCircle, CheckCircle2,
   ShieldAlert, TrendingUp, Info, Phone, Sparkles, Rocket,
   MessageSquare, Mail, Receipt, CreditCard, Target,
-  Check, Plus, ExternalLink,
+  Check, Plus, ExternalLink, GitBranch, Bug, BarChart3,
+  Table, BookOpen, Layers, ListChecks, Calendar, Users,
+  Database, Building2, Briefcase,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Questionnaire } from "@/lib/types";
@@ -56,12 +58,32 @@ const SOCIAL_PLATFORMS = [
 ];
 
 const OAUTH_PROVIDERS = [
-  { key: "slack", name: "Slack", description: "Analyze team communication", color: "bg-purple-600", hoverColor: "hover:bg-purple-700", Icon: MessageSquare },
-  { key: "gmail", name: "Gmail", description: "Analyze email patterns", color: "bg-red-500", hoverColor: "hover:bg-red-600", Icon: Mail },
+  // Communication
+  { key: "slack", name: "Slack", description: "Team communication patterns", color: "bg-purple-600", hoverColor: "hover:bg-purple-700", Icon: MessageSquare },
+  { key: "gmail", name: "Gmail", description: "Email engagement analysis", color: "bg-red-500", hoverColor: "hover:bg-red-600", Icon: Mail },
+  { key: "microsoft_teams", name: "MS Teams", description: "Team collaboration data", color: "bg-blue-600", hoverColor: "hover:bg-blue-700", Icon: Users },
+  // Finance
   { key: "quickbooks", name: "QuickBooks", description: "Live financial data", color: "bg-green-600", hoverColor: "hover:bg-green-700", Icon: Receipt },
   { key: "stripe", name: "Stripe", description: "Revenue & subscriptions", color: "bg-violet-600", hoverColor: "hover:bg-violet-700", Icon: CreditCard },
+  // CRM & Sales
   { key: "salesforce", name: "Salesforce", description: "Pipeline & deals", color: "bg-sky-500", hoverColor: "hover:bg-sky-600", Icon: TrendingUp },
   { key: "hubspot", name: "HubSpot", description: "Marketing & contacts", color: "bg-orange-500", hoverColor: "hover:bg-orange-600", Icon: Target },
+  // Project Management
+  { key: "jira", name: "Jira", description: "Issue tracking & sprints", color: "bg-blue-500", hoverColor: "hover:bg-blue-600", Icon: Bug },
+  { key: "asana", name: "Asana", description: "Task & project tracking", color: "bg-rose-500", hoverColor: "hover:bg-rose-600", Icon: ListChecks },
+  { key: "linear", name: "Linear", description: "Engineering project data", color: "bg-indigo-600", hoverColor: "hover:bg-indigo-700", Icon: Layers },
+  // Development
+  { key: "github", name: "GitHub", description: "Code repos & activity", color: "bg-gray-700", hoverColor: "hover:bg-gray-800", Icon: GitBranch },
+  // Analytics & Data
+  { key: "google_analytics", name: "Analytics", description: "Website traffic & behavior", color: "bg-amber-600", hoverColor: "hover:bg-amber-700", Icon: BarChart3 },
+  { key: "google_sheets", name: "Google Sheets", description: "Custom data imports", color: "bg-emerald-600", hoverColor: "hover:bg-emerald-700", Icon: Table },
+  { key: "airtable", name: "Airtable", description: "Database & workflows", color: "bg-teal-500", hoverColor: "hover:bg-teal-600", Icon: Database },
+  // Productivity
+  { key: "notion", name: "Notion", description: "Docs & knowledge base", color: "bg-stone-700", hoverColor: "hover:bg-stone-800", Icon: BookOpen },
+  { key: "google_calendar", name: "Calendar", description: "Meeting & time analysis", color: "bg-cyan-600", hoverColor: "hover:bg-cyan-700", Icon: Calendar },
+  // HR & Payroll
+  { key: "adp", name: "ADP", description: "Payroll & HR data", color: "bg-red-700", hoverColor: "hover:bg-red-800", Icon: Building2 },
+  { key: "workday", name: "Workday", description: "HR & workforce analytics", color: "bg-yellow-600", hoverColor: "hover:bg-yellow-700", Icon: Briefcase },
 ] as const;
 
 interface StagedFile {

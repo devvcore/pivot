@@ -38,6 +38,7 @@ export async function GET() {
       id: user.id,
       email: user.email,
       name: user.user_metadata?.name || profile?.name || "",
+      username: profile?.username || user.user_metadata?.username || "",
       organizationId: profile?.organization_id || "",
     }
   });

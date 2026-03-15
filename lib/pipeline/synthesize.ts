@@ -1630,6 +1630,8 @@ Identify 5-7 Key Performance Indicators for this specific business:
 4. Set realistic target values based on industry benchmarks
 5. NEVER invent specific current values — if data doesn't exist, say "Unknown"
 
+If CONNECTED TOOL DATA is available, incorporate real metrics from connected tools as current KPI values rather than estimating. Mark these as "[from {provider}]" to distinguish from document-sourced or estimated values.
+
 Return ONLY valid JSON:
 ${schema}`;
 
@@ -2120,6 +2122,8 @@ Use ONLY data from the business report. If data is insufficient for a specific n
 
 Recommend 3-5 hires. Rank by expected ROI.
 
+If CONNECTED TOOL DATA includes ADP or Workday data, reference actual headcount, compensation data, and workforce composition. If GitHub data is present, reference engineering team activity and contribution patterns.
+
 Return ONLY valid JSON:
 ${schema}`;
 
@@ -2269,6 +2273,8 @@ Also include 3-5 general retention tactics applicable to this business.
 CRITICAL: ONLY create entries for customers that appear in the at-risk customer data above. Do NOT invent customer names.
 If no at-risk customers were identified, return an empty entries array and focus on general retention tactics.
 
+If CONNECTED TOOL DATA includes CRM data (Salesforce, HubSpot), reference actual churn indicators from customer records. If Stripe data is present, analyze real subscription cancellation patterns and payment failures.
+
 Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
 
 Return ONLY valid JSON:
@@ -2356,6 +2362,8 @@ Generate a complete, tailored sales playbook:
 - 3 closing techniques suited to their deal size and sales cycle
 
 EVERYTHING must be tailored to THIS specific business — no generic sales advice.
+
+If CONNECTED TOOL DATA includes Salesforce or HubSpot data, reference actual pipeline values, deal stages, and conversion rates rather than estimating. Cite "[from Salesforce]" or "[from HubSpot]".
 
 Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
 
@@ -3732,6 +3740,8 @@ Perform a comprehensive cash optimization analysis:
    - Price increases on underpriced services
 
 7. EXTENDED RUNWAY: Estimate how many additional months of runway these optimizations provide.
+
+If CONNECTED TOOL DATA includes QuickBooks or Stripe data, use those REAL financial metrics (revenue, expenses, cash position) instead of estimating. Cite "[from QuickBooks]" or "[from Stripe]" for any figures sourced from integrations.
 
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 
@@ -6704,6 +6714,8 @@ Produce a comprehensive team performance analysis:
 7. CULTURE INSIGHTS (3-5): Observations about team culture, morale, and organizational health.
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve team performance, close gaps, and build on strengths.
+
+If CONNECTED TOOL DATA includes Slack data, reference real team communication patterns (message volume, active channels, response times). If Jira/Asana/Linear data is present, reference actual project metrics. Cite the data source.
 
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 
@@ -12985,6 +12997,8 @@ Produce a comprehensive Operational Efficiency analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to eliminate bottlenecks, reduce cycle times, and optimize throughput.
 
+If CONNECTED TOOL DATA includes project management data (Jira, Asana, Linear), reference actual sprint velocities, completion rates, and cycle times. If Slack data is present, reference communication patterns and meeting frequency.
+
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 
 Return ONLY valid JSON:
@@ -13598,6 +13612,8 @@ Produce a comprehensive Customer Segmentation analysis:
 6. PERSONALIZATION OPPORTUNITIES (3-5): Ways to personalize the experience for different segments to improve retention and revenue.
 
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize segment targeting, improve engagement, and maximize customer lifetime value.
+
+If CONNECTED TOOL DATA includes CRM data (Salesforce, HubSpot), reference actual customer records, segments, and deal values. If Stripe data is present, reference real subscription and payment patterns.
 
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 
@@ -23117,6 +23133,8 @@ SCOPE BOUNDARIES — AVOID REPETITION WITH CORE REVENUE LEAKS:
 - THIS section focuses on OPERATIONAL leakage: billing errors, scope creep, unused entitlements, contract compliance gaps, and systematic process failures that cause revenue to slip through the cracks.
 - Do NOT repeat the same leaks described in the core Revenue Leaks analysis. Focus on detection mechanisms, process gaps, and systemic fixes.
 
+If CONNECTED TOOL DATA includes financial data (QuickBooks, Stripe), identify specific revenue leaks from real transaction patterns, failed payments, and billing gaps. Cite the data source for each identified leak.
+
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 
 Return ONLY valid JSON:
@@ -31886,6 +31904,8 @@ Produce a comprehensive Marketing Attribution analysis:
 5. CROSS-CHANNEL EFFECT: Key cross-channel interaction effect identified.
 6. ATTRIBUTION GAP: Biggest gap in attribution coverage.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve attribution accuracy and marketing ROI.
+
+If CONNECTED TOOL DATA includes Google Analytics data, reference actual traffic metrics, conversion rates, and user behavior. If HubSpot data is present, reference real marketing campaign performance and lead metrics.
 
 Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
 

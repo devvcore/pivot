@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     name TEXT,
+    username TEXT,
+    display_name TEXT,
     role TEXT DEFAULT 'MEMBER',
     organization_id TEXT REFERENCES organizations(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -171,6 +173,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_share_links_token ON share_links(token);
 CREATE INDEX IF NOT EXISTS idx_share_links_job ON share_links(job_id);
 CREATE INDEX IF NOT EXISTS idx_employees_org ON employees(org_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username) WHERE username IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_agent_conversations_org ON agent_conversations(org_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_job ON tasks(job_id);
 `;
@@ -200,7 +203,7 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
   // Step 5: Create RLS policies using DO blocks to handle "already exists"
   const policies = [
     // Profiles
-    { name: "profiles_select_own", table: "profiles", cmd: "SELECT", using: "id = auth.uid()" },
+    { name: "profiles_select_all", table: "profiles", cmd: "SELECT", using: "auth.uid() IS NOT NULL" },
     { name: "profiles_update_own", table: "profiles", cmd: "UPDATE", using: "id = auth.uid()" },
     { name: "profiles_insert_own", table: "profiles", cmd: "INSERT", check: "id = auth.uid()" },
     // Organizations

@@ -20,6 +20,16 @@ import { syncHubSpotToAnalytics } from './hubspot';
 import { syncStripeToAnalytics } from './stripe-integration';
 import { syncJiraToAnalytics } from './jira';
 import { syncGitHubToAnalytics } from './github';
+import {
+  syncGoogleAnalytics,
+  syncGoogleSheets,
+  syncNotion,
+  syncLinear,
+  syncAsana,
+  syncGoogleCalendar,
+  syncMicrosoftTeams,
+  syncAirtable,
+} from './composio-sync';
 
 // ─── Provider Environment Variables ──────────────────────────────────────────
 
@@ -34,6 +44,14 @@ const PROVIDER_ENV_KEYS: Record<IntegrationProvider, string[]> = {
   adp: ['ADP_CLIENT_ID', 'ADP_CLIENT_SECRET'],
   workday: ['WORKDAY_CLIENT_ID', 'WORKDAY_CLIENT_SECRET'],
   github: ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
+  google_analytics: ['COMPOSIO_AUTH_GOOGLE_ANALYTICS'],
+  google_sheets: ['COMPOSIO_AUTH_GOOGLE_SHEETS'],
+  notion: ['COMPOSIO_AUTH_NOTION'],
+  linear: ['COMPOSIO_AUTH_LINEAR'],
+  asana: ['COMPOSIO_AUTH_ASANA'],
+  google_calendar: ['COMPOSIO_AUTH_GOOGLE_CALENDAR'],
+  microsoft_teams: ['COMPOSIO_AUTH_MICROSOFT_TEAMS'],
+  airtable: ['COMPOSIO_AUTH_AIRTABLE'],
 };
 
 // ─── Token Refresh ───────────────────────────────────────────────────────────
@@ -219,6 +237,63 @@ export async function syncIntegration(
         break;
       }
 
+      // ── Composio-powered providers ──────────────────────────────────
+      case 'google_analytics': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Google Analytics not connected via Composio');
+        result = await syncGoogleAnalytics(orgId, connId);
+        break;
+      }
+
+      case 'google_sheets': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Google Sheets not connected via Composio');
+        result = await syncGoogleSheets(orgId, connId);
+        break;
+      }
+
+      case 'notion': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Notion not connected via Composio');
+        result = await syncNotion(orgId, connId);
+        break;
+      }
+
+      case 'linear': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Linear not connected via Composio');
+        result = await syncLinear(orgId, connId);
+        break;
+      }
+
+      case 'asana': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Asana not connected via Composio');
+        result = await syncAsana(orgId, connId);
+        break;
+      }
+
+      case 'google_calendar': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Google Calendar not connected via Composio');
+        result = await syncGoogleCalendar(orgId, connId);
+        break;
+      }
+
+      case 'microsoft_teams': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Microsoft Teams not connected via Composio');
+        result = await syncMicrosoftTeams(orgId, connId);
+        break;
+      }
+
+      case 'airtable': {
+        const connId = integration.composioConnectedAccountId;
+        if (!connId) throw new Error('Airtable not connected via Composio');
+        result = await syncAirtable(orgId, connId);
+        break;
+      }
+
       default:
         // For providers handled by other modules (slack, gmail, adp, workday),
         // return a pass-through result
@@ -325,21 +400,30 @@ const INDUSTRY_RELEVANCE: Record<string, Partial<Record<IntegrationProvider, { p
   technology: {
     jira: { priority: 'high', reason: 'Track engineering velocity and sprint health' },
     stripe: { priority: 'high', reason: 'Monitor SaaS revenue, MRR, and churn metrics' },
+    github: { priority: 'high', reason: 'Code quality, PR reviews, and CI health' },
+    linear: { priority: 'high', reason: 'Modern issue tracking with cycle time analytics' },
+    google_analytics: { priority: 'high', reason: 'Track product usage and conversion funnels' },
     salesforce: { priority: 'medium', reason: 'Manage enterprise sales pipeline' },
     slack: { priority: 'medium', reason: 'Analyze team communication patterns' },
     hubspot: { priority: 'medium', reason: 'Track marketing and inbound lead generation' },
+    notion: { priority: 'medium', reason: 'OKR tracking and knowledge base analytics' },
   },
   saas: {
     stripe: { priority: 'high', reason: 'Critical for MRR tracking, churn analysis, and revenue forecasting' },
     hubspot: { priority: 'high', reason: 'Track customer lifecycle from lead to expansion' },
     jira: { priority: 'high', reason: 'Monitor product development velocity' },
+    google_analytics: { priority: 'high', reason: 'User behavior, funnels, and traffic attribution' },
     salesforce: { priority: 'medium', reason: 'Manage sales pipeline for enterprise deals' },
     slack: { priority: 'medium', reason: 'Measure team collaboration efficiency' },
+    linear: { priority: 'medium', reason: 'Engineering velocity and issue cycle times' },
+    google_sheets: { priority: 'medium', reason: 'Import/export data for custom reporting' },
   },
   ecommerce: {
     stripe: { priority: 'high', reason: 'Track transaction volume and payment health' },
     quickbooks: { priority: 'high', reason: 'Monitor P&L, inventory costs, and cash flow' },
+    google_analytics: { priority: 'high', reason: 'Conversion funnels, traffic sources, and user behavior' },
     hubspot: { priority: 'medium', reason: 'Manage customer relationships and marketing campaigns' },
+    airtable: { priority: 'medium', reason: 'Inventory tracking and order management' },
     salesforce: { priority: 'low', reason: 'Track B2B wholesale pipeline if applicable' },
   },
   finance: {
@@ -384,15 +468,23 @@ const TEAM_SIZE_PROVIDERS: Record<string, Partial<Record<IntegrationProvider, { 
   medium: { // 11-50
     slack: { priority: 'high', reason: 'Analyze communication patterns across growing teams' },
     jira: { priority: 'high', reason: 'Track development velocity as teams scale' },
+    google_analytics: { priority: 'high', reason: 'Understand user behavior and growth metrics' },
     salesforce: { priority: 'medium', reason: 'Professionalize sales pipeline management' },
     quickbooks: { priority: 'medium', reason: 'Financial reporting for management' },
+    asana: { priority: 'medium', reason: 'Track project delivery across multiple teams' },
+    notion: { priority: 'medium', reason: 'Centralize team knowledge and OKRs' },
+    google_calendar: { priority: 'low', reason: 'Meeting load analysis for growing teams' },
   },
   large: { // 50+
     salesforce: { priority: 'high', reason: 'Enterprise CRM for multi-team sales operations' },
     jira: { priority: 'high', reason: 'Monitor productivity across engineering teams' },
     slack: { priority: 'high', reason: 'Communication analytics across departments' },
+    google_analytics: { priority: 'high', reason: 'Product analytics and marketing attribution' },
     workday: { priority: 'medium', reason: 'HR analytics and workforce planning' },
     adp: { priority: 'medium', reason: 'Payroll and workforce data integration' },
+    microsoft_teams: { priority: 'medium', reason: 'Enterprise communication analytics' },
+    google_calendar: { priority: 'medium', reason: 'Meeting culture and time allocation insights' },
+    linear: { priority: 'medium', reason: 'Engineering team velocity tracking' },
   },
 };
 

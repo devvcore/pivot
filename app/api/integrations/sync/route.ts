@@ -14,7 +14,9 @@ import type { IntegrationProvider } from '@/lib/integrations/types';
 
 const VALID_PROVIDERS: IntegrationProvider[] = [
   'slack', 'gmail', 'adp', 'workday',
-  'quickbooks', 'salesforce', 'hubspot', 'stripe', 'jira',
+  'quickbooks', 'salesforce', 'hubspot', 'stripe', 'jira', 'github',
+  'google_analytics', 'google_sheets', 'notion', 'linear',
+  'asana', 'google_calendar', 'microsoft_teams', 'airtable',
 ];
 
 export async function POST(req: Request) {

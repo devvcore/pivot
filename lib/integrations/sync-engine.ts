@@ -17,6 +17,26 @@ import {
   createSyncLog,
   updateSyncLog,
 } from './store';
+import {
+  syncGoogleAnalytics, syncGoogleSheets, syncNotion, syncLinear,
+  syncAsana, syncGoogleCalendar, syncMicrosoftTeams, syncAirtable,
+  syncSlack, syncGmail, syncGitHub, syncHubSpot,
+  syncQuickBooks, syncSalesforce, syncStripe, syncJira,
+} from './composio-sync';
+
+// ─── Composio Sync Map ──────────────────────────────────────────────────────
+// When composioConnectedAccountId exists, route through Composio instead of
+// the legacy per-provider connectors.
+
+const COMPOSIO_SYNC_MAP: Record<string, (orgId: string, connectedAccountId: string) => Promise<SyncResult>> = {
+  slack: syncSlack, gmail: syncGmail, github: syncGitHub,
+  hubspot: syncHubSpot, quickbooks: syncQuickBooks, salesforce: syncSalesforce,
+  stripe: syncStripe, jira: syncJira,
+  google_analytics: syncGoogleAnalytics, google_sheets: syncGoogleSheets,
+  notion: syncNotion, linear: syncLinear, asana: syncAsana,
+  google_calendar: syncGoogleCalendar, microsoft_teams: syncMicrosoftTeams,
+  airtable: syncAirtable,
+};
 
 // ─── Connector Registry ──────────────────────────────────────────────────────
 // Each connector has its own sync function with a different signature.
@@ -25,7 +45,14 @@ import {
 
 type ConnectorSync = (integration: Integration) => Promise<SyncResult>;
 
-async function getConnectorSync(provider: IntegrationProvider): Promise<ConnectorSync> {
+async function getConnectorSync(provider: IntegrationProvider, integration: Integration): Promise<ConnectorSync> {
+  // ─── Composio path: if a connectedAccountId exists, use Composio sync ─────
+  if (integration.composioConnectedAccountId && COMPOSIO_SYNC_MAP[integration.provider]) {
+    const syncFn = COMPOSIO_SYNC_MAP[integration.provider];
+    return (int: Integration) => syncFn(int.orgId, int.composioConnectedAccountId!);
+  }
+
+  // ─── Legacy per-provider connectors ────────────────────────────────────────
   switch (provider) {
     // ─── Slack & Gmail export syncData(integration) directly ───────────────
     case 'slack': {
@@ -118,6 +145,25 @@ async function getConnectorSync(provider: IntegrationProvider): Promise<Connecto
         });
       }
     }
+
+    // ─── GitHub and other providers handled via Composio map above ──────────
+    case 'github':
+    case 'google_analytics':
+    case 'google_sheets':
+    case 'notion':
+    case 'linear':
+    case 'asana':
+    case 'google_calendar':
+    case 'microsoft_teams':
+    case 'airtable':
+      // These providers are only supported via Composio. If we reach here,
+      // it means no composioConnectedAccountId was set.
+      return async () => ({
+        success: false,
+        recordsProcessed: 0,
+        insightsGenerated: 0,
+        errors: [`${provider} requires a Composio connection. No composioConnectedAccountId found.`],
+      });
 
     default:
       throw new Error(`No connector found for provider: ${provider}`);
@@ -231,7 +277,7 @@ export async function runSync(integrationId: string): Promise<SyncResult> {
     await rateLimitDelay(integration.provider);
 
     // 3. Get the connector and run sync
-    const connectorSync = await getConnectorSync(integration.provider);
+    const connectorSync = await getConnectorSync(integration.provider, integration);
     const result = await connectorSync(integration);
 
     // 4. Update integration status
@@ -361,6 +407,7 @@ export async function getStaleIntegrations(): Promise<Integration[]> {
       accessToken: row.access_token,
       refreshToken: row.refresh_token,
       tokenExpiresAt: row.token_expires_at,
+      composioConnectedAccountId: row.composio_connected_account_id ?? null,
       scopes: row.scopes ?? [],
       metadata: row.metadata ?? {},
       lastSyncAt: row.last_sync_at,

@@ -8,6 +8,7 @@
 import { getJob, updateJob } from "@/lib/job-store";
 import { parseFiles } from "./parse";
 import { ingestDocuments, scrapeWebsiteContent, formatPacketAsContext } from "./ingest";
+import { collectIntegrationContext } from "@/lib/integrations/collect";
 import { categorizeAndBuildGraph } from "./categorize";
 import { selectSectionsWithAI, getStrictRelevantSections, scoreSectionRelevance, getRelevanceDepth } from "./relevance";
 import {
@@ -4756,6 +4757,22 @@ export async function runPipeline(runId: string): Promise<void> {
         parsedContext: JSON.stringify(businessPacket),
         knowledgeGraph,
       });
+    }
+
+    // ── Collect integration data from connected tools (Composio) ────────
+    {
+      const integrationOrgId = job.questionnaire.orgId;
+      if (integrationOrgId) {
+        try {
+          const integrationCtx = await collectIntegrationContext(integrationOrgId);
+          if (integrationCtx.records.length > 0) {
+            businessPacket.integrationData = integrationCtx;
+            console.log(`[Pivot] Loaded integration data from ${integrationCtx.providers.length} providers: ${integrationCtx.providers.join(', ')} (${integrationCtx.records.length} records)`);
+          }
+        } catch (e) {
+          console.warn('[Pivot] Failed to collect integration data:', e);
+        }
+      }
     }
 
     // ── Activate per-section anti-hallucination guardrails ────────────────

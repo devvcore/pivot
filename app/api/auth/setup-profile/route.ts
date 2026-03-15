@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   try {
-    const { userId, email, name, organizationName } = await req.json();
+    const { userId, email, name, username, organizationName } = await req.json();
     if (!userId || !email || !name || !organizationName) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
@@ -28,6 +28,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ organizationId: existing.organization_id });
     }
 
+    // Validate username if provided
+    const sanitizedUsername = username?.trim().toLowerCase();
+    if (sanitizedUsername) {
+      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+      if (!usernameRegex.test(sanitizedUsername)) {
+        return NextResponse.json({ error: "Username must be 3-20 characters, alphanumeric and underscores only" }, { status: 400 });
+      }
+
+      // Check uniqueness
+      const { data: existingUsername } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", sanitizedUsername)
+        .limit(1);
+
+      if (existingUsername && existingUsername.length > 0) {
+        return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
+      }
+    }
+
     // Create organization
     const orgId = uuidv4();
     await supabase.from("organizations").insert({
@@ -36,11 +56,13 @@ export async function POST(req: Request) {
       owner_user_id: userId,
     });
 
-    // Create profile
+    // Create profile (with username)
     await supabase.from("profiles").upsert({
       id: userId,
       email: email.trim().toLowerCase(),
       name,
+      username: sanitizedUsername || null,
+      display_name: name,
       organization_id: orgId,
     });
 

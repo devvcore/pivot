@@ -24,6 +24,7 @@ function toIntegration(row: any): Integration {
     accessToken: row.access_token,
     refreshToken: row.refresh_token,
     tokenExpiresAt: row.token_expires_at,
+    composioConnectedAccountId: row.composio_connected_account_id ?? null,
     scopes: row.scopes ?? [],
     metadata: row.metadata ?? {},
     lastSyncAt: row.last_sync_at,
@@ -97,6 +98,7 @@ export async function createIntegration(data: {
   accessToken?: string | null;
   refreshToken?: string | null;
   tokenExpiresAt?: string | null;
+  composioConnectedAccountId?: string | null;
   scopes?: string[];
   metadata?: Record<string, any>;
   syncFrequencyMinutes?: number;
@@ -111,6 +113,7 @@ export async function createIntegration(data: {
       access_token: data.accessToken ?? null,
       refresh_token: data.refreshToken ?? null,
       token_expires_at: data.tokenExpiresAt ?? null,
+      composio_connected_account_id: data.composioConnectedAccountId ?? null,
       scopes: data.scopes ?? [],
       metadata: data.metadata ?? {},
       sync_frequency_minutes: data.syncFrequencyMinutes ?? 60,
@@ -175,6 +178,7 @@ export async function updateIntegration(
     accessToken: string | null;
     refreshToken: string | null;
     tokenExpiresAt: string | null;
+    composioConnectedAccountId: string | null;
     scopes: string[];
     metadata: Record<string, any>;
     lastSyncAt: string | null;
@@ -189,6 +193,7 @@ export async function updateIntegration(
   if (updates.accessToken !== undefined) dbUpdates.access_token = updates.accessToken;
   if (updates.refreshToken !== undefined) dbUpdates.refresh_token = updates.refreshToken;
   if (updates.tokenExpiresAt !== undefined) dbUpdates.token_expires_at = updates.tokenExpiresAt;
+  if (updates.composioConnectedAccountId !== undefined) dbUpdates.composio_connected_account_id = updates.composioConnectedAccountId;
   if (updates.scopes !== undefined) dbUpdates.scopes = updates.scopes;
   if (updates.metadata !== undefined) dbUpdates.metadata = updates.metadata;
   if (updates.lastSyncAt !== undefined) dbUpdates.last_sync_at = updates.lastSyncAt;

@@ -21,7 +21,10 @@ interface OAuthProviderConfig {
   usesApiKey?: boolean;
 }
 
-const OAUTH_CONFIGS: Record<IntegrationProvider, OAuthProviderConfig> = {
+// Note: Composio-managed providers (google_analytics, google_sheets, notion,
+// linear, asana, google_calendar, microsoft_teams, airtable) do NOT use manual
+// OAuth and are not listed here. They use Composio's hosted OAuth flow instead.
+const OAUTH_CONFIGS: Partial<Record<IntegrationProvider, OAuthProviderConfig>> = {
   slack: {
     authUrl: 'https://slack.com/oauth/v2/authorize',
     tokenUrl: 'https://slack.com/api/oauth.v2.access',
@@ -469,6 +472,7 @@ export function buildWorkdayAuthUrl(
   }
 
   const config = OAUTH_CONFIGS.workday;
+  if (!config) throw new Error('Workday OAuth config not found');
   const urls = getWorkdayUrls(tenant);
 
   const params = new URLSearchParams({

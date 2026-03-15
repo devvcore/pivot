@@ -1,0 +1,481 @@
+// ═══════════════════════════════════════════════════════════════
+// Pivot — Composio Tool Execution Layer
+// High-level typed helper functions wrapping Composio's
+// composio.tools.execute() API for each supported integration.
+// Each function obtains the Composio singleton, executes the
+// named tool with the correct arguments, and returns the result.
+// Errors are caught, logged, and result in a null return value.
+// ═══════════════════════════════════════════════════════════════
+
+import { getComposio } from './composio';
+import type { IntegrationProvider } from './types';
+
+// ─── Toolkit Name Mapping ────────────────────────────────────────────────────
+
+export const COMPOSIO_TOOLKIT_MAP: Record<IntegrationProvider, string> = {
+  slack: 'SLACKBOT',
+  gmail: 'GMAIL',
+  github: 'GITHUB',
+  jira: 'JIRA',
+  hubspot: 'HUBSPOT',
+  salesforce: 'SALESFORCE',
+  stripe: 'STRIPE',
+  quickbooks: 'QUICKBOOKS',
+  workday: 'WORKDAY',
+  google_analytics: 'GOOGLE_ANALYTICS',
+  google_sheets: 'GOOGLESHEETS',
+  notion: 'NOTION',
+  linear: 'LINEAR',
+  asana: 'ASANA',
+  google_calendar: 'GOOGLECALENDAR',
+  microsoft_teams: 'MICROSOFT_TEAMS',
+  airtable: 'AIRTABLE',
+  adp: 'ADP',
+};
+
+// ─── Internal Execute Wrapper ────────────────────────────────────────────────
+
+async function exec(
+  toolName: string,
+  orgId: string,
+  args: Record<string, unknown>,
+): Promise<any> {
+  try {
+    const composio = getComposio();
+    const result = await composio.tools.execute(toolName, {
+      userId: orgId,
+      arguments: args,
+    } as Record<string, unknown>);
+    return result;
+  } catch (error) {
+    console.error(`[composio-tools] ${toolName} failed for org ${orgId}:`, error);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Slack
+// ═══════════════════════════════════════════════════════════════
+
+/** Send a message to a Slack channel. */
+export async function sendSlackMessage(
+  orgId: string,
+  channel: string,
+  text: string,
+): Promise<any> {
+  return exec('SLACKBOT_SEND_MESSAGE', orgId, { channel, text });
+}
+
+/** List all Slack channels in the workspace. */
+export async function getSlackChannels(orgId: string): Promise<any> {
+  return exec('SLACKBOT_LIST_ALL_CHANNELS', orgId, {});
+}
+
+/** Fetch message history for a Slack channel. */
+export async function getSlackChannelHistory(
+  orgId: string,
+  channel: string,
+  limit?: number,
+): Promise<any> {
+  return exec('SLACKBOT_FETCH_CONVERSATION_HISTORY', orgId, {
+    channel,
+    ...(limit !== undefined && { limit }),
+  });
+}
+
+/** List all users in the Slack workspace. */
+export async function getSlackUsers(orgId: string): Promise<any> {
+  return exec('SLACKBOT_LIST_ALL_USERS', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Gmail
+// ═══════════════════════════════════════════════════════════════
+
+/** Send an email via Gmail. */
+export async function sendEmail(
+  orgId: string,
+  to: string,
+  subject: string,
+  body: string,
+): Promise<any> {
+  return exec('GMAIL_SEND_EMAIL', orgId, { to, subject, body });
+}
+
+/** Fetch emails from Gmail matching an optional query. */
+export async function getEmails(
+  orgId: string,
+  query?: string,
+  maxResults?: number,
+): Promise<any> {
+  return exec('GMAIL_FETCH_EMAILS', orgId, {
+    ...(query !== undefined && { query }),
+    ...(maxResults !== undefined && { max_results: maxResults }),
+  });
+}
+
+/** Get the authenticated Gmail user profile. */
+export async function getGmailProfile(orgId: string): Promise<any> {
+  return exec('GMAIL_GET_PROFILE', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GitHub
+// ═══════════════════════════════════════════════════════════════
+
+/** List GitHub repositories. If org is provided, lists org repos; otherwise lists user repos. */
+export async function getGitHubRepos(
+  orgId: string,
+  org?: string,
+): Promise<any> {
+  if (org) {
+    return exec('GITHUB_LIST_ORGANIZATION_REPOSITORIES', orgId, { org });
+  }
+  return exec('GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER', orgId, {});
+}
+
+/** List issues for a GitHub repository. */
+export async function getGitHubIssues(
+  orgId: string,
+  owner: string,
+  repo: string,
+): Promise<any> {
+  return exec('GITHUB_LIST_REPOSITORY_ISSUES', orgId, { owner, repo });
+}
+
+/** List pull requests for a GitHub repository. */
+export async function getGitHubPRs(
+  orgId: string,
+  owner: string,
+  repo: string,
+): Promise<any> {
+  return exec('GITHUB_LIST_PULL_REQUESTS', orgId, { owner, repo });
+}
+
+/** Create an issue in a GitHub repository. */
+export async function createGitHubIssue(
+  orgId: string,
+  owner: string,
+  repo: string,
+  title: string,
+  body: string,
+): Promise<any> {
+  return exec('GITHUB_CREATE_AN_ISSUE', orgId, { owner, repo, title, body });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HubSpot
+// ═══════════════════════════════════════════════════════════════
+
+/** Fetch HubSpot contacts with optional property filters. */
+export async function getHubSpotContacts(
+  orgId: string,
+  properties?: string[],
+  limit?: number,
+): Promise<any> {
+  return exec('HUBSPOT_BATCH_READ_COMPANIES_BY_PROPERTIES', orgId, {
+    ...(properties !== undefined && { properties }),
+    ...(limit !== undefined && { limit }),
+  });
+}
+
+/** Create a new HubSpot contact. */
+export async function createHubSpotContact(
+  orgId: string,
+  email: string,
+  firstname: string,
+  lastname: string,
+  company?: string,
+): Promise<any> {
+  return exec('HUBSPOT_CREATE_CONTACT', orgId, {
+    email,
+    firstname,
+    lastname,
+    ...(company !== undefined && { company }),
+  });
+}
+
+/** List HubSpot deals. */
+export async function getHubSpotDeals(orgId: string): Promise<any> {
+  return exec('HUBSPOT_LIST_DEALS', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Jira
+// ═══════════════════════════════════════════════════════════════
+
+/** Search Jira issues using JQL. */
+export async function searchJiraIssues(
+  orgId: string,
+  jql: string,
+): Promise<any> {
+  return exec('JIRA_SEARCH_ISSUES_JQL', orgId, { jql });
+}
+
+/** List sprints for a Jira board. */
+export async function getJiraSprints(
+  orgId: string,
+  boardId: string,
+): Promise<any> {
+  return exec('JIRA_LIST_SPRINTS', orgId, { board_id: boardId });
+}
+
+/** Create a Jira issue. */
+export async function createJiraIssue(
+  orgId: string,
+  projectKey: string,
+  summary: string,
+  description: string,
+  issueType?: string,
+): Promise<any> {
+  return exec('JIRA_CREATE_ISSUE', orgId, {
+    project_key: projectKey,
+    summary,
+    description,
+    issue_type: issueType ?? 'Task',
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Salesforce
+// ═══════════════════════════════════════════════════════════════
+
+/** List Salesforce accounts. */
+export async function getSalesforceAccounts(orgId: string): Promise<any> {
+  return exec('SALESFORCE_LIST_ACCOUNTS', orgId, {});
+}
+
+/** List Salesforce opportunities. */
+export async function getSalesforceOpportunities(orgId: string): Promise<any> {
+  return exec('SALESFORCE_LIST_OPPORTUNITIES', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Stripe
+// ═══════════════════════════════════════════════════════════════
+
+/** List Stripe customers. */
+export async function getStripeCustomers(
+  orgId: string,
+  limit?: number,
+): Promise<any> {
+  return exec('STRIPE_LIST_CUSTOMERS', orgId, {
+    ...(limit !== undefined && { limit }),
+  });
+}
+
+/** List Stripe payment intents. */
+export async function getStripePayments(
+  orgId: string,
+  limit?: number,
+): Promise<any> {
+  return exec('STRIPE_LIST_PAYMENT_INTENTS', orgId, {
+    ...(limit !== undefined && { limit }),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QuickBooks
+// ═══════════════════════════════════════════════════════════════
+
+/** List QuickBooks invoices. */
+export async function getQuickBooksInvoices(orgId: string): Promise<any> {
+  return exec('QUICKBOOKS_LIST_INVOICES', orgId, {});
+}
+
+/** List QuickBooks accounts. */
+export async function getQuickBooksAccounts(orgId: string): Promise<any> {
+  return exec('QUICKBOOKS_LIST_ACCOUNTS', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Google Analytics
+// ═══════════════════════════════════════════════════════════════
+
+/** Run a Google Analytics report with specified dimensions and metrics. */
+export async function runAnalyticsReport(
+  orgId: string,
+  propertyId: string,
+  dimensions: string[],
+  metrics: string[],
+  startDate: string,
+  endDate: string,
+): Promise<any> {
+  return exec('GOOGLE_ANALYTICS_RUN_REPORT', orgId, {
+    property_id: propertyId,
+    dimensions,
+    metrics,
+    start_date: startDate,
+    end_date: endDate,
+  });
+}
+
+/** Run a Google Analytics realtime report. */
+export async function getRealtimeReport(
+  orgId: string,
+  propertyId: string,
+): Promise<any> {
+  return exec('GOOGLE_ANALYTICS_RUN_REALTIME_REPORT', orgId, {
+    property_id: propertyId,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Google Sheets
+// ═══════════════════════════════════════════════════════════════
+
+/** Read data from a Google Sheets spreadsheet. */
+export async function readSpreadsheet(
+  orgId: string,
+  spreadsheetId: string,
+  range: string,
+): Promise<any> {
+  return exec('GOOGLESHEETS_READ_SPREADSHEET', orgId, {
+    spreadsheet_id: spreadsheetId,
+    range,
+  });
+}
+
+/** Write data to a Google Sheets spreadsheet. */
+export async function writeSpreadsheet(
+  orgId: string,
+  spreadsheetId: string,
+  range: string,
+  values: unknown[][],
+): Promise<any> {
+  return exec('GOOGLESHEETS_WRITE_SPREADSHEET', orgId, {
+    spreadsheet_id: spreadsheetId,
+    range,
+    values,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Notion
+// ═══════════════════════════════════════════════════════════════
+
+/** Search across a Notion workspace. */
+export async function searchNotion(
+  orgId: string,
+  query: string,
+): Promise<any> {
+  return exec('NOTION_SEARCH', orgId, { query });
+}
+
+/** Query a Notion database by ID. */
+export async function getNotionDatabase(
+  orgId: string,
+  databaseId: string,
+): Promise<any> {
+  return exec('NOTION_QUERY_DATABASE', orgId, { database_id: databaseId });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Linear
+// ═══════════════════════════════════════════════════════════════
+
+/** List Linear issues, optionally filtered by team. */
+export async function getLinearIssues(
+  orgId: string,
+  teamId?: string,
+): Promise<any> {
+  return exec('LINEAR_LIST_ISSUES', orgId, {
+    ...(teamId !== undefined && { team_id: teamId }),
+  });
+}
+
+/** List Linear cycles (sprints) for a team. */
+export async function getLinearCycles(
+  orgId: string,
+  teamId: string,
+): Promise<any> {
+  return exec('LINEAR_LIST_CYCLES', orgId, { team_id: teamId });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Asana
+// ═══════════════════════════════════════════════════════════════
+
+/** List Asana tasks for a project. */
+export async function getAsanaTasks(
+  orgId: string,
+  projectId: string,
+): Promise<any> {
+  return exec('ASANA_LIST_TASKS', orgId, { project: projectId });
+}
+
+/** List Asana projects in a workspace. */
+export async function getAsanaProjects(
+  orgId: string,
+  workspaceId: string,
+): Promise<any> {
+  return exec('ASANA_LIST_PROJECTS', orgId, { workspace: workspaceId });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Google Calendar
+// ═══════════════════════════════════════════════════════════════
+
+/** List Google Calendar events with optional time range. */
+export async function getCalendarEvents(
+  orgId: string,
+  calendarId?: string,
+  timeMin?: string,
+  timeMax?: string,
+): Promise<any> {
+  return exec('GOOGLECALENDAR_LIST_EVENTS', orgId, {
+    calendar_id: calendarId ?? 'primary',
+    ...(timeMin !== undefined && { time_min: timeMin }),
+    ...(timeMax !== undefined && { time_max: timeMax }),
+  });
+}
+
+/** List all Google Calendars for the user. */
+export async function getCalendars(orgId: string): Promise<any> {
+  return exec('GOOGLECALENDAR_LIST_CALENDARS', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Microsoft Teams
+// ═══════════════════════════════════════════════════════════════
+
+/** List channels in a Microsoft Teams team. */
+export async function getTeamsChannels(
+  orgId: string,
+  teamId: string,
+): Promise<any> {
+  return exec('MICROSOFT_TEAMS_LIST_CHANNELS', orgId, { team_id: teamId });
+}
+
+/** Get messages from a Microsoft Teams channel. */
+export async function getTeamsMessages(
+  orgId: string,
+  teamId: string,
+  channelId: string,
+): Promise<any> {
+  return exec('MICROSOFT_TEAMS_LIST_CHANNEL_MESSAGES', orgId, {
+    team_id: teamId,
+    channel_id: channelId,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Airtable
+// ═══════════════════════════════════════════════════════════════
+
+/** List all Airtable bases accessible to the user. */
+export async function getAirtableBases(orgId: string): Promise<any> {
+  return exec('AIRTABLE_LIST_BASES', orgId, {});
+}
+
+/** List records from an Airtable table. */
+export async function getAirtableRecords(
+  orgId: string,
+  baseId: string,
+  tableId: string,
+): Promise<any> {
+  return exec('AIRTABLE_LIST_RECORDS', orgId, {
+    base_id: baseId,
+    table_id: tableId,
+  });
+}

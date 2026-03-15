@@ -47,6 +47,7 @@ export async function POST(req: Request) {
       id: data.user.id,
       email: data.user.email,
       name: data.user.user_metadata?.name || profile?.name || email.split("@")[0],
+      username: profile?.username || data.user.user_metadata?.username || "",
       organizationId: profile?.organization_id || data.user.user_metadata?.organizationId || "",
     });
 

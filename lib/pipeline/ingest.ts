@@ -9,7 +9,8 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import type { ParsedFile } from "./parse";
-import type { Questionnaire, BusinessPacket, FinancialFact, CompanyIdentity } from "@/lib/types";
+import type { Questionnaire, BusinessPacket, FinancialFact, CompanyIdentity, IntegrationContext } from "@/lib/types";
+import { formatIntegrationContextAsText } from "@/lib/integrations/collect";
 
 const MICRO_MODEL = process.env.MICRO_AGENT_MODEL || "gemini-3-flash-preview";
 const ORCHESTRATOR_MODEL = process.env.ORCHESTRATOR_MODEL || "gemini-3-flash-preview";
@@ -658,6 +659,12 @@ export function formatPacketAsContext(packet: BusinessPacket): string {
       packet.identity.aliases.length > 0 ? `Aliases: ${packet.identity.aliases.join(", ")}` : "",
       `All analysis MUST be about THIS specific entity only. Do not confuse with similarly-named companies.`,
     );
+  }
+
+  // Add connected tool data (from Composio integrations)
+  const integrationBlock = formatIntegrationContextAsText(packet.integrationData);
+  if (integrationBlock) {
+    lines.push(integrationBlock);
   }
 
   return lines.filter((l) => l !== "").join("\n");
