@@ -113,22 +113,9 @@ export function IntegrationsPanel({ orgId, onBack }: IntegrationsPanelProps) {
       });
       const data = await res.json();
       if (res.ok && data.redirectUrl) {
-        // Open OAuth in new tab so user stays on integrations page
-        window.open(data.redirectUrl, "_blank", "noopener");
-        // Poll for connection status
-        const poll = setInterval(async () => {
-          try {
-            const listRes = await fetch(`/api/integrations/list?orgId=${encodeURIComponent(orgId)}`);
-            if (!listRes.ok) return;
-            const listData = await listRes.json();
-            const connected = (listData.connected ?? []).some((c: any) => c.provider === provider);
-            if (connected) {
-              clearInterval(poll);
-              await fetchConnections();
-            }
-          } catch {}
-        }, 3000);
-        setTimeout(() => clearInterval(poll), 300000);
+        // Save view so we return here after OAuth
+        try { localStorage.setItem("pivot_returnView", "team"); } catch {}
+        window.location.href = data.redirectUrl;
         return;
       }
       if (res.ok && data.connected) {

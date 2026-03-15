@@ -413,23 +413,10 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
       if (data.connected) {
         setConnectedProviders((prev) => new Set([...prev, providerKey]));
       } else if (data.redirectUrl) {
-        // Open OAuth in new tab so user stays on upload page
-        window.open(data.redirectUrl, "_blank", "noopener");
-        // Poll for connection status until connected
-        const poll = setInterval(async () => {
-          try {
-            const listRes = await fetch(`/api/integrations/list?orgId=${encodeURIComponent(orgId!)}`);
-            if (!listRes.ok) return;
-            const listData = await listRes.json();
-            const connected = (listData.connected ?? []).some((c: any) => c.provider === providerKey);
-            if (connected) {
-              clearInterval(poll);
-              setConnectedProviders((prev) => new Set([...prev, providerKey]));
-            }
-          } catch {}
-        }, 3000);
-        // Stop polling after 5 minutes
-        setTimeout(() => clearInterval(poll), 300000);
+        // Save view state so we return here after OAuth callback redirect
+        try { localStorage.setItem("pivot_returnView", "upload"); } catch {}
+        window.location.href = data.redirectUrl;
+        return; // navigating away
       }
     } catch (err: any) {
       setError(err.message || `Failed to connect ${providerKey}. Please try again.`);

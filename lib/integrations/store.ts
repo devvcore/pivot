@@ -125,6 +125,44 @@ export async function createIntegration(data: {
   return toIntegration(row);
 }
 
+/** Upsert: create or update integration on (org_id, provider) conflict */
+export async function upsertIntegration(data: {
+  orgId: string;
+  provider: IntegrationProvider;
+  status?: IntegrationStatus;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  tokenExpiresAt?: string | null;
+  composioConnectedAccountId?: string | null;
+  scopes?: string[];
+  metadata?: Record<string, any>;
+  syncFrequencyMinutes?: number;
+}): Promise<Integration> {
+  const supabase = createAdminClient();
+  const { data: row, error } = await supabase
+    .from('integrations')
+    .upsert(
+      {
+        org_id: data.orgId,
+        provider: data.provider,
+        status: data.status ?? 'connected',
+        access_token: data.accessToken ?? null,
+        refresh_token: data.refreshToken ?? null,
+        token_expires_at: data.tokenExpiresAt ?? null,
+        composio_connected_account_id: data.composioConnectedAccountId ?? null,
+        scopes: data.scopes ?? [],
+        metadata: data.metadata ?? {},
+        sync_frequency_minutes: data.syncFrequencyMinutes ?? 60,
+      },
+      { onConflict: 'org_id,provider' }
+    )
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to upsert integration: ${error.message}`);
+  return toIntegration(row);
+}
+
 export async function getIntegration(id: string): Promise<Integration | null> {
   const supabase = createAdminClient();
   const { data: row, error } = await supabase

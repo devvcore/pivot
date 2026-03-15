@@ -51,6 +51,11 @@ export default function Home() {
         localStorage.removeItem("pivot_returnView");
         setView(returnView as AppView);
       }
+
+      // Clean integration callback params from URL
+      if (window.location.search.includes("integration=")) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
     } catch {}
     setHydrated(true);
 
