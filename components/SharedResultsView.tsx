@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { CHAPTERS } from "@/lib/chapters";
+import { formatLabel } from "@/lib/utils";
 import ChapterView from "./ChapterView";
 import {
   BarChart3,
@@ -250,7 +251,7 @@ function EmployeeView({
               <div>
                 <h2 className="text-lg font-semibold text-zinc-900">Business Health Score</h2>
                 {typeof healthScore.grade === "string" && (
-                  <p className="text-sm text-zinc-500">Grade: {healthScore.grade}</p>
+                  <p className="text-sm text-zinc-500">Grade: {formatLabel(healthScore.grade)}</p>
                 )}
                 {typeof healthScore.summary === "string" && (
                   <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{healthScore.summary}</p>
@@ -546,7 +547,7 @@ function OtherView({
               <div>
                 <h2 className="text-lg font-semibold text-zinc-900">Business Health Score</h2>
                 {typeof healthScore.grade === "string" && (
-                  <p className="text-sm text-zinc-500">Grade: {healthScore.grade}</p>
+                  <p className="text-sm text-zinc-500">Grade: {formatLabel(healthScore.grade)}</p>
                 )}
                 {typeof healthScore.summary === "string" && (
                   <p className="text-sm text-zinc-500 mt-1 line-clamp-3">{healthScore.summary}</p>

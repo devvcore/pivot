@@ -7,6 +7,7 @@ import {
   Fingerprint, Network, FlaskConical, Scale, Rocket
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { formatLabel } from "@/lib/utils";
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Micro-phase definitions — each real backend phase maps to multiple visual
@@ -95,12 +96,8 @@ interface ProcessingViewProps {
   onError: (message: string) => void;
 }
 
-// camelCase → Title Case
-function formatKey(key: string): string {
-  return key
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^./, (c) => c.toUpperCase());
-}
+// code key → Title Case
+const formatKey = formatLabel;
 
 export function ProcessingView({ runId, onComplete, onError }: ProcessingViewProps) {
   const [realStatus, setRealStatus] = useState<string>("pending");

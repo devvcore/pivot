@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User } from "lucide-react";
+import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User, Trophy, Crown } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface JobSummary {
@@ -15,6 +15,13 @@ interface JobSummary {
   healthHeadline: string | null;
 }
 
+interface LeaderboardEntry {
+  name: string;
+  role: string;
+  netValue: number;
+  intangibleScore: number;
+}
+
 interface DashboardViewProps {
   onStartNew: () => void;
   onViewRun: (runId: string) => void;
@@ -25,6 +32,7 @@ interface DashboardViewProps {
   userName?: string;
   username?: string;
   orgLogoUrl?: string | null;
+  orgId?: string;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -65,9 +73,10 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, userName, username, orgLogoUrl }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, userName, username, orgLogoUrl, orgId }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const fetchJobs = () => {
     setLoading(true);
@@ -79,6 +88,35 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
   };
 
   useEffect(() => { fetchJobs(); }, []);
+
+  // Fetch employee leaderboard
+  useEffect(() => {
+    if (!orgId) return;
+    Promise.all([
+      fetch(`/api/employees?orgId=${encodeURIComponent(orgId)}`).then((r) => r.ok ? r.json() : []),
+      fetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`).then((r) => r.ok ? r.json() : { scores: [] }),
+    ])
+      .then(([employees, scoreData]) => {
+        const emps = Array.isArray(employees) ? employees : [];
+        const scores = scoreData?.scores ?? [];
+        const scoreMap = new Map(scores.map((s: any) => [s.employeeId, s]));
+        const ranked: LeaderboardEntry[] = emps
+          .map((e: any) => {
+            const s: any = scoreMap.get(e.id);
+            return {
+              name: e.name ?? "Unknown",
+              role: e.role ?? e.title ?? "",
+              netValue: s?.netValue ?? 0,
+              intangibleScore: s?.intangibleScore ?? 0,
+            };
+          })
+          .filter((e: LeaderboardEntry) => e.netValue !== 0 || e.intangibleScore !== 0)
+          .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.netValue - a.netValue)
+          .slice(0, 5);
+        setLeaderboard(ranked);
+      })
+      .catch(() => {});
+  }, [orgId]);
 
   const completedJobs = jobs.filter(j => j.status === "completed");
   const inProgressJobs = jobs.filter(j => !["completed", "failed"].includes(j.status));
@@ -221,6 +259,56 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
             </div>
           </motion.div>
         </div>
+
+        {/* Employee Leaderboard */}
+        {leaderboard.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mb-12"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs font-mono text-zinc-900 uppercase tracking-[0.3em] flex items-center gap-3">
+                <Trophy className="w-4 h-4 text-amber-500" /> Top Performers
+              </h2>
+              {onEmployees && (
+                <button
+                  onClick={onEmployees}
+                  className="text-[10px] font-mono text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors flex items-center gap-1"
+                >
+                  View All <ChevronRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              {leaderboard.map((entry, i) => (
+                <div
+                  key={entry.name + i}
+                  className={`bg-white border rounded-xl p-4 shadow-sm transition-all hover:shadow-md ${
+                    i === 0 ? "border-amber-200 ring-1 ring-amber-100" : "border-zinc-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-zinc-200 text-zinc-600" : i === 2 ? "bg-orange-100 text-orange-600" : "bg-zinc-100 text-zinc-500"
+                    }`}>
+                      {i === 0 ? <Crown className="w-3 h-3" /> : `#${i + 1}`}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-zinc-900 truncate">{entry.name}</div>
+                      <div className="text-[10px] font-mono text-zinc-400 truncate">{entry.role}</div>
+                    </div>
+                  </div>
+                  <div className="text-lg font-light text-zinc-900 tabular-nums">
+                    ${Math.abs(entry.netValue) >= 1000 ? `${(entry.netValue / 1000).toFixed(0)}K` : entry.netValue.toLocaleString()}
+                  </div>
+                  <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider">Net Value</div>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
 
         {/* Reports List */}
         <section>

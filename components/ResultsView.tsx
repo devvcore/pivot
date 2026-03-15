@@ -11,6 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from "recharts";
 import type { Job, MVPDeliverables } from "@/lib/types";
+import { formatLabel } from "@/lib/utils";
 import { CHAPTERS, getPopulatedChapters } from "@/lib/chapters";
 import ChapterView from "./ChapterView";
 import { AgentChatButton, type NavigateAction } from "./AgentChat";
@@ -335,7 +336,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
               <span className="text-xl text-zinc-500 mb-2">/100</span>
               {hs?.grade && (
                 <span className={`text-2xl font-bold mb-2 px-3 py-1 rounded-lg ${GRADE_COLORS[hs.grade]?.text ?? "text-zinc-300"} ${GRADE_COLORS[hs.grade]?.bg ?? "bg-zinc-800"}`}>
-                  {hs.grade}
+                  {formatLabel(hs.grade)}
                 </span>
               )}
             </div>
@@ -437,7 +438,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                             <div className="text-3xl font-light text-zinc-900 tabular-nums">{dim.score}</div>
                             {dim.grade && (
                               <div className={`text-xs font-bold mt-1 px-2 py-0.5 rounded ${GRADE_COLORS[dim.grade]?.text ?? ""} ${GRADE_COLORS[dim.grade]?.bg ?? ""}`}>
-                                {dim.grade}
+                                {formatLabel(dim.grade)}
                               </div>
                             )}
                           </div>

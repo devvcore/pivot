@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Wrench,
   Brain,
@@ -12,6 +12,8 @@ import {
   X,
   RotateCcw,
   ChevronDown,
+  Send,
+  Loader2,
 } from "lucide-react";
 
 /* ── Feed event types ── */
@@ -44,6 +46,8 @@ export interface AgentFeedProps {
   events: FeedEvent[];
   onApprove?: (approvalId: string) => void;
   onReject?: (approvalId: string) => void;
+  onSendCommand?: (message: string) => void;
+  isLoading?: boolean;
 }
 
 /* ── Event type config ── */
@@ -216,10 +220,13 @@ export function AgentFeed({
   events,
   onApprove,
   onReject,
+  onSendCommand,
+  isLoading,
 }: AgentFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(true);
+  const [commandText, setCommandText] = useState("");
 
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {
@@ -296,6 +303,40 @@ export function AgentFeed({
         >
           <ChevronDown className="w-3 h-3" /> Latest
         </button>
+      )}
+
+      {/* Command input */}
+      {onSendCommand && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const msg = commandText.trim();
+            if (!msg || isLoading) return;
+            onSendCommand(msg);
+            setCommandText("");
+          }}
+          className="shrink-0 border-t border-zinc-200 bg-white px-3 py-2.5 flex items-center gap-2"
+        >
+          <input
+            type="text"
+            value={commandText}
+            onChange={(e) => setCommandText(e.target.value)}
+            placeholder={`Tell ${agentName} what to do...`}
+            disabled={isLoading}
+            className="flex-1 text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 disabled:opacity-50 transition-all"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !commandText.trim()}
+            className="w-9 h-9 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </button>
+        </form>
       )}
 
       {/* Keyframe animation (injected via style tag once) */}

@@ -3,6 +3,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { CHART_COLORS } from "./chart-utils";
+import { formatLabel } from "@/lib/utils";
 
 interface ScoreGaugeProps {
   score: number;         // 0-100
@@ -42,7 +43,7 @@ export default function ScoreGauge({ score, grade, label, maxScore = 100 }: Scor
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
           <span className="text-3xl font-bold text-zinc-900">{score}</span>
-          {grade && <span className="text-lg font-semibold text-zinc-500">Grade: {grade}</span>}
+          {grade && <span className="text-lg font-semibold text-zinc-500">Grade: {formatLabel(grade)}</span>}
         </div>
       </div>
       {label && <p className="mt-1 text-sm font-medium text-zinc-600">{label}</p>}

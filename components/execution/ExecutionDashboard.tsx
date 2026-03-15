@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -68,6 +68,7 @@ type MainView = "tasks" | "feed" | "artifacts" | "launcher" | "costs";
 export interface ExecutionDashboardProps {
   orgName: string;
   runId: string;
+  orgId: string;
   onSwitchToAnalysis: () => void;
   recommendations?: AnalysisRecommendation[];
 }
@@ -87,6 +88,7 @@ function createDemoAgentStates(): Record<AgentType, AgentState> {
 export function ExecutionDashboard({
   orgName,
   runId,
+  orgId,
   onSwitchToAnalysis,
   recommendations = [],
 }: ExecutionDashboardProps) {
@@ -103,15 +105,248 @@ export function ExecutionDashboard({
   const [selectedArtifactId, setSelectedArtifactId] = useState<string>();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const pollIntervals = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
 
-  /* ── Polling for real-time updates (placeholder - replace with Trigger.dev hooks) ── */
-  const pollUpdates = useCallback(async () => {
-    try {
-      // Future: fetch from /api/execution/status?runId=...
-      // For now, agent states are managed locally
-    } catch {
-      // silently ignore polling errors
+  // Cleanup poll intervals on unmount
+  useEffect(() => {
+    return () => {
+      pollIntervals.current.forEach(clearInterval);
+    };
+  }, []);
+
+  /* ── Helpers ── */
+  function isTerminalStatus(status: string) {
+    return ["completed", "failed", "cancelled"].includes(status);
+  }
+
+  function mapDbStatus(dbStatus: string): TaskData["status"] {
+    const map: Record<string, TaskData["status"]> = {
+      queued: "queued",
+      triaging: "executing",
+      executing: "executing",
+      reviewing: "reviewing",
+      revising: "executing",
+      completed: "completed",
+      failed: "failed",
+      cancelled: "failed",
+    };
+    return map[dbStatus] ?? "queued";
+  }
+
+  function mapDbEventToFeedEvent(dbEvent: any): FeedEvent {
+    const data = dbEvent.data ?? {};
+    let type: FeedEvent["type"] = "status_change";
+    let description = data.message ?? data.description ?? dbEvent.event_type;
+    let toolDetails: FeedEvent["toolDetails"];
+    let markdownContent: FeedEvent["markdownContent"];
+
+    switch (dbEvent.event_type) {
+      case "tool_call":
+        type = "tool_use";
+        description = `Using tool: ${data.tool_name ?? "unknown"}`;
+        toolDetails = {
+          toolName: data.tool_name ?? "unknown",
+          argumentsSummary: typeof data.arguments === "string" ? data.arguments : JSON.stringify(data.arguments ?? {}).slice(0, 200),
+          resultPreview: data.result ? String(data.result).slice(0, 300) : undefined,
+        };
+        break;
+      case "tool_result":
+        type = "tool_use";
+        description = `Tool result: ${data.tool_name ?? "unknown"}`;
+        toolDetails = {
+          toolName: data.tool_name ?? "unknown",
+          argumentsSummary: "",
+          resultPreview: data.result ? String(data.result).slice(0, 300) : undefined,
+        };
+        break;
+      case "thinking":
+        type = "thinking";
+        description = data.content ?? data.message ?? "Thinking...";
+        break;
+      case "output":
+        type = "output";
+        description = data.summary ?? "Agent produced output";
+        markdownContent = data.content ?? data.text;
+        break;
+      case "error":
+        type = "error";
+        description = data.message ?? data.error ?? "An error occurred";
+        break;
+      case "status_change":
+        type = "status_change";
+        description = `Status: ${data.from ?? "?"} → ${data.to ?? data.status ?? "?"}`;
+        break;
+      default:
+        description = data.message ?? dbEvent.event_type;
     }
+
+    return {
+      id: dbEvent.id,
+      timestamp: new Date(dbEvent.created_at).getTime(),
+      type,
+      description,
+      toolDetails,
+      markdownContent,
+    };
+  }
+
+  /* ── Poll a task for events ── */
+  function pollTaskEvents(taskId: string, agentType: AgentType) {
+    let pollCount = 0;
+    const interval = setInterval(async () => {
+      pollCount++;
+      if (pollCount > 150) {
+        clearInterval(interval);
+        pollIntervals.current.delete(interval);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/execution/tasks/${taskId}`);
+        if (!res.ok) return;
+        const { task, events: dbEvents } = await res.json();
+
+        // Map DB events to feed events (reverse to chronological order)
+        const feedEvents: FeedEvent[] = (dbEvents ?? [])
+          .reverse()
+          .map(mapDbEventToFeedEvent);
+
+        // Update agent state
+        setAgentStates((prev) => ({
+          ...prev,
+          [agentType]: {
+            ...prev[agentType],
+            events: feedEvents,
+            status: isTerminalStatus(task.status) ? "idle" : "working",
+            currentTask: isTerminalStatus(task.status) ? undefined : task.title,
+            costTodayCents: Math.round((task.costSpent ?? 0) * 100),
+          },
+        }));
+
+        // Update task in tasks list
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, status: mapDbStatus(task.status), costCents: Math.round((task.costSpent ?? 0) * 100) }
+              : t
+          )
+        );
+
+        // If terminal, add final output event and stop polling
+        if (isTerminalStatus(task.status)) {
+          if (task.result) {
+            setAgentStates((prev) => ({
+              ...prev,
+              [agentType]: {
+                ...prev[agentType],
+                events: [
+                  ...feedEvents,
+                  {
+                    id: `result-${taskId}`,
+                    timestamp: Date.now(),
+                    type: task.status === "completed" ? "output" : "error",
+                    description: task.status === "completed" ? "Task completed" : "Task failed",
+                    markdownContent: task.result,
+                  },
+                ],
+              },
+            }));
+          }
+          clearInterval(interval);
+          pollIntervals.current.delete(interval);
+        }
+      } catch {
+        // silently ignore polling errors
+      }
+    }, 2000);
+
+    pollIntervals.current.add(interval);
+  }
+
+  /* ── Send command to agent ── */
+  const handleSendCommand = useCallback(async (message: string) => {
+    if (!selectedAgent || !orgId) return;
+    setChatLoading(true);
+
+    // Add user command as a feed event
+    setAgentStates((prev) => ({
+      ...prev,
+      [selectedAgent]: {
+        ...prev[selectedAgent],
+        status: "working" as AgentStatus,
+        currentTask: message,
+        events: [
+          ...prev[selectedAgent].events,
+          {
+            id: `cmd-${Date.now()}`,
+            timestamp: Date.now(),
+            type: "status_change" as const,
+            description: `Command: ${message}`,
+          },
+        ],
+      },
+    }));
+
+    try {
+      const res = await fetch("/api/execution/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId,
+          title: message,
+          agentId: selectedAgent,
+          priority: "medium",
+          costCeiling: 0.50,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create task");
+      const { task } = await res.json();
+
+      // Add to local tasks list
+      const newTask: TaskData = {
+        id: task.id,
+        title: task.title,
+        assignedAgent: selectedAgent,
+        agentName: AGENTS.find((a) => a.type === selectedAgent)?.name ?? selectedAgent,
+        priority: task.priority ?? "medium",
+        status: "queued",
+        attempt: 1,
+        maxAttempts: 3,
+        costCents: 0,
+        costCeilingCents: 50,
+        startedAt: Date.now(),
+      };
+      setTasks((prev) => [...prev, newTask]);
+
+      // Start polling for events
+      pollTaskEvents(task.id, selectedAgent);
+    } catch (e) {
+      setAgentStates((prev) => ({
+        ...prev,
+        [selectedAgent]: {
+          ...prev[selectedAgent],
+          status: "error" as AgentStatus,
+          events: [
+            ...prev[selectedAgent].events,
+            {
+              id: `err-${Date.now()}`,
+              timestamp: Date.now(),
+              type: "error" as const,
+              description: e instanceof Error ? e.message : "Failed to send command",
+            },
+          ],
+        },
+      }));
+    } finally {
+      setChatLoading(false);
+    }
+  }, [selectedAgent, orgId]);
+
+  /* ── Polling for real-time updates ── */
+  const pollUpdates = useCallback(async () => {
+    // Task polling is handled per-task via pollTaskEvents
   }, [runId]);
 
   useEffect(() => {
@@ -475,6 +710,8 @@ export function ExecutionDashboard({
                     events={agentStates[selectedAgent].events}
                     onApprove={handleFeedApprove}
                     onReject={handleFeedReject}
+                    onSendCommand={handleSendCommand}
+                    isLoading={chatLoading}
                   />
                 ) : (
                   <div className="flex-1 flex items-center justify-center p-8">

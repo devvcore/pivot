@@ -6,6 +6,7 @@ import type { VizType } from "@/lib/viz-types";
 import SourceBadge from "./SourceBadge";
 import type { SourceStatus } from "./SourceBadge";
 import type { ClaimValidation } from "@/lib/types";
+import { formatLabel } from "@/lib/utils";
 import ScoreGauge from "./charts/ScoreGauge";
 import RankedBarsChart from "./charts/RankedBarsChart";
 import BreakdownDonut from "./charts/BreakdownDonut";
@@ -141,12 +142,8 @@ function hasComparisonPattern(items: any[]): boolean {
   );
 }
 
-/** Format camelCase key to readable label */
-function formatKey(key: string): string {
-  return key
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^./, (s) => s.toUpperCase());
-}
+/** Format code key to readable label */
+const formatKey = formatLabel;
 
 /** Format metric value with auto-detection */
 function formatMetricValue(key: string, value: string | number): string {

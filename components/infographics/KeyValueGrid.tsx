@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLabel } from "@/lib/utils";
+
 interface KeyValueGridProps {
   data: Record<string, unknown>;
   maxRows?: number;
@@ -17,11 +19,7 @@ function formatValue(val: unknown): string {
   return String(val);
 }
 
-function formatLabel(key: string): string {
-  return key
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^./, s => s.toUpperCase());
-}
+// formatLabel imported from @/lib/utils
 
 export default function KeyValueGrid({ data, maxRows = 10, title }: KeyValueGridProps) {
   const entries = Object.entries(data)

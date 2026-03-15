@@ -196,6 +196,7 @@ export default function Home() {
             userName={user?.name}
             username={user?.username}
             orgLogoUrl={orgLogoUrl}
+            orgId={user?.organizationId}
           />
         )}
 
@@ -242,6 +243,7 @@ export default function Home() {
           <ExecutionDashboard
             orgName="Pivot"
             runId={runId ?? ""}
+            orgId={user.organizationId}
             onSwitchToAnalysis={() => setView("results")}
           />
         )}
