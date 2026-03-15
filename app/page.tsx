@@ -8,13 +8,16 @@ import { ProcessingView } from "@/components/ProcessingView";
 import { ResultsView } from "@/components/ResultsView";
 import { TeamView } from "@/components/TeamView";
 import { ExecutionDashboard } from "@/components/execution";
+import { EmployeeDashboard } from "@/components/EmployeeDashboard";
+import { LeanDashboard } from "@/components/LeanDashboard";
+import { MissionControl } from "@/components/MissionControl";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const RUN_ID_KEY = "pivot_runId";
 
-type AppView = "dashboard" | "upload" | "processing" | "results" | "team" | "execution";
+type AppView = "dashboard" | "upload" | "processing" | "results" | "team" | "execution" | "employees" | "lean" | "mission-control";
 
 interface UserProfile {
   id: string;
@@ -138,6 +141,9 @@ export default function Home() {
               setView("results");
             }}
             onTeam={() => setView("team")}
+            onEmployees={() => setView("employees")}
+            onLean={() => setView("lean")}
+            onMissionControl={() => setView("mission-control")}
           />
         )}
 
@@ -185,6 +191,26 @@ export default function Home() {
             orgName="Pivot"
             runId={runId ?? ""}
             onSwitchToAnalysis={() => setView("results")}
+          />
+        )}
+
+        {view === "employees" && user && (
+          <EmployeeDashboard
+            orgId={user.organizationId}
+            onBack={() => setView("dashboard")}
+          />
+        )}
+
+        {view === "lean" && user && (
+          <LeanDashboard
+            orgId={user.organizationId}
+            onBack={() => setView("dashboard")}
+          />
+        )}
+
+        {view === "mission-control" && (
+          <MissionControl
+            onBack={() => setView("dashboard")}
           />
         )}
 

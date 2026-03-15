@@ -19,6 +19,7 @@ import { syncSalesforceToAnalytics } from './salesforce';
 import { syncHubSpotToAnalytics } from './hubspot';
 import { syncStripeToAnalytics } from './stripe-integration';
 import { syncJiraToAnalytics } from './jira';
+import { syncGitHubToAnalytics } from './github';
 
 // ─── Provider Environment Variables ──────────────────────────────────────────
 
@@ -32,6 +33,7 @@ const PROVIDER_ENV_KEYS: Record<IntegrationProvider, string[]> = {
   gmail: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
   adp: ['ADP_CLIENT_ID', 'ADP_CLIENT_SECRET'],
   workday: ['WORKDAY_CLIENT_ID', 'WORKDAY_CLIENT_SECRET'],
+  github: ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
 };
 
 // ─── Token Refresh ───────────────────────────────────────────────────────────
@@ -48,6 +50,7 @@ const TOKEN_ENDPOINTS: Partial<Record<IntegrationProvider, string>> = {
   salesforce: 'https://login.salesforce.com/services/oauth2/token',
   hubspot: 'https://api.hubapi.com/oauth/v1/token',
   jira: 'https://auth.atlassian.com/oauth/token',
+  github: 'https://github.com/login/oauth/access_token',
 };
 
 const CLIENT_ENV: Partial<Record<IntegrationProvider, { id: string; secret: string }>> = {
@@ -55,6 +58,7 @@ const CLIENT_ENV: Partial<Record<IntegrationProvider, { id: string; secret: stri
   salesforce: { id: 'SALESFORCE_CLIENT_ID', secret: 'SALESFORCE_CLIENT_SECRET' },
   hubspot: { id: 'HUBSPOT_CLIENT_ID', secret: 'HUBSPOT_CLIENT_SECRET' },
   jira: { id: 'JIRA_CLIENT_ID', secret: 'JIRA_CLIENT_SECRET' },
+  github: { id: 'GITHUB_CLIENT_ID', secret: 'GITHUB_CLIENT_SECRET' },
 };
 
 async function refreshAccessToken(
@@ -206,6 +210,12 @@ export async function syncIntegration(
         const cloudId = integration.metadata?.cloudId;
         if (!cloudId) throw new Error('Jira cloudId not found in integration metadata');
         result = await syncJiraToAnalytics(orgId, accessToken, cloudId);
+        break;
+      }
+
+      case 'github': {
+        const githubOrg = integration.metadata?.githubOrg;
+        result = await syncGitHubToAnalytics(orgId, accessToken, githubOrg);
         break;
       }
 

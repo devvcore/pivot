@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users } from "lucide-react";
+import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface JobSummary {
@@ -19,6 +19,9 @@ interface DashboardViewProps {
   onStartNew: () => void;
   onViewRun: (runId: string) => void;
   onTeam?: () => void;
+  onEmployees?: () => void;
+  onLean?: () => void;
+  onMissionControl?: () => void;
 }
 
 const GRADE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -59,7 +62,7 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun, onTeam }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -109,6 +112,30 @@ export function DashboardView({ onStartNew, onViewRun, onTeam }: DashboardViewPr
               className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
             >
               <Users className="w-4 h-4" /> Team
+            </button>
+          )}
+          {onEmployees && (
+            <button
+              onClick={onEmployees}
+              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
+            >
+              <Activity className="w-4 h-4" /> Value Engine
+            </button>
+          )}
+          {onLean && (
+            <button
+              onClick={onLean}
+              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
+            >
+              <Gauge className="w-4 h-4" /> Lean
+            </button>
+          )}
+          {onMissionControl && (
+            <button
+              onClick={onMissionControl}
+              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
+            >
+              <Cpu className="w-4 h-4" /> Mission Control
             </button>
           )}
           <button

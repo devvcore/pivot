@@ -5,7 +5,7 @@
 
 export type IntegrationProvider =
   | 'slack' | 'gmail' | 'adp' | 'workday'
-  | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira';
+  | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira' | 'github';
 
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing';
 
@@ -262,5 +262,23 @@ export const PROVIDER_CAPABILITIES: ProviderCapability[] = [
     ],
     requiredScopes: ['read:jira-work', 'read:jira-user'],
     docsUrl: 'https://developer.atlassian.com/cloud/jira/',
+  },
+  {
+    provider: 'github',
+    name: 'GitHub',
+    description: 'Code repository analytics including commit velocity, PR quality, review turnaround, and CI health',
+    category: 'project_management',
+    icon: 'GitBranch',
+    color: 'zinc',
+    features: [
+      'Commit velocity tracking',
+      'PR review turnaround',
+      'CI/CD pass rates',
+      'Code quality signals',
+      'Collaboration metrics',
+      'Automated code audits',
+    ],
+    requiredScopes: ['repo', 'read:org'],
+    docsUrl: 'https://docs.github.com/en/rest',
   },
 ];

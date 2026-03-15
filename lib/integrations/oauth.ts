@@ -92,6 +92,13 @@ const OAUTH_CONFIGS: Record<IntegrationProvider, OAuthProviderConfig> = {
     defaultScopes: ['read:jira-work', 'read:jira-user'],
     extraAuthParams: { audience: 'api.atlassian.com', prompt: 'consent' },
   },
+  github: {
+    authUrl: 'https://github.com/login/oauth/authorize',
+    tokenUrl: 'https://github.com/login/oauth/access_token',
+    clientIdEnv: 'GITHUB_CLIENT_ID',
+    clientSecretEnv: 'GITHUB_CLIENT_SECRET',
+    defaultScopes: ['repo', 'read:org', 'read:user'],
+  },
 };
 
 // ─── Get Redirect URI ─────────────────────────────────────────────────────────

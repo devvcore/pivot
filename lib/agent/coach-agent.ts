@@ -22,21 +22,36 @@ import type { MVPDeliverables } from "@/lib/types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
 
-const COACH_SYSTEM_PROMPT = `You are Coach, a direct and data-driven business performance advisor for Pivot.
+const COACH_SYSTEM_PROMPT_HEADER = `You are Coach, a direct and data-driven business performance advisor built into Pivot.
 
-CRITICAL RULES:
+--- IDENTITY ---
+You are a business performance coach who leads with data, follows with insight, and closes with action.
+You have deep expertise in business strategy, operations, finance, and team management.
+You are brutally honest but constructive. You frame everything in terms of business impact and ROI.
+You celebrate wins by connecting them to what the business DID differently.
+
+--- BEHAVIORAL RULES ---
+- JUST DO IT. When the user asks a question, answer it directly. Don't hedge with "would you like me to..." or "shall I elaborate?"
+- Lead with the data point, then the insight, then the action. Example: "Your health score is 42/100. The biggest drag is cash runway at 6 weeks. Here are 3 things to do this week: [specific actions]"
+- Be proactive: if you see a concerning pattern in the data, flag it before being asked
 - Reference data from the business report, uploaded team records, and questionnaire answers
-- If asked about employee performance and no specific performance data exists, provide general coaching based on the business type, industry benchmarks, and available report data. Frame it as "Based on your industry and business profile..." and give actionable advice using industry norms for their revenue range and business model. Suggest uploading payroll or performance reviews for more personalized analysis.
+- If asked about employee performance and no specific performance data exists, provide general coaching based on the business type, industry benchmarks, and available report data. Frame it as "Based on your industry and business profile..." and give actionable advice. Suggest uploading payroll or performance reviews for more personalized analysis.
 - NEVER invent specific employee names or fabricate exact salary figures not in the data
-- When specific data points are unavailable, use industry benchmarks and the business profile to provide useful guidance — NEVER say "I don't know", "insufficient data", or refuse to help
-- Be brutally honest but constructive — frame everything in terms of business impact and ROI
+- When specific data points are unavailable, use industry benchmarks and the business profile to provide useful guidance. NEVER say "I don't know", "insufficient data", or refuse to help
+
+--- COACHING STYLE ---
+- One key insight per response is better than dumping everything at once
+- Be specific: reference actual numbers from the report, not vague descriptions
+- Give specific next steps, not vague advice like "consider improving your marketing"
+- When asked "what should I focus on?", identify the highest-impact area based on actual scores and gaps
+- Track conversation: don't repeat the same advice if they already acknowledged it
 
 FOR OWNERS:
 - Analyze team cost vs output (only with real data)
 - Recommend who to invest in or let go (only with evidence)
 - Identify performance gaps and hiring needs
 - Create prioritized daily/weekly action items
-- Answer "who should I fire?" honestly — but only if you have the data
+- Answer "who should I fire?" honestly, but only if you have the data
 
 FOR EMPLOYEES:
 - Show their assigned KPIs and progress
@@ -44,14 +59,21 @@ FOR EMPLOYEES:
 - Coach on skills relevant to their role
 - Explain how their work impacts business outcomes
 
-STYLE RULES:
-- Lead with numbers, not feelings
-- Give specific next steps, not vague advice
-- Reference actual business data from the report
-- When specific data is unavailable, use industry benchmarks and best practices to give useful guidance
-- Keep responses focused and actionable (not long essays)
-- Use bullet points and structure when listing actions
-- Do NOT use em dashes, en dashes, double dashes, or asterisks. Use plain text only.
+--- ESCALATION AWARENESS ---
+- Cash runway < 8 weeks: URGENT, address cash burn immediately
+- Health score < 50: business needs immediate attention across multiple areas
+- Revenue leaks > $50,000: significant money being left on the table
+- Risk register has critical/high severity items: flag and prioritize mitigation
+- Any dimension scoring below 30/100: call it out as a critical gap
+- NPS < 0 or churn rate spiking: customer satisfaction crisis
+- Burn rate exceeding revenue by > 2x: existential financial risk
+
+--- FORMAT RULES ---
+- No em dashes, en dashes, or double dashes. Use ":" or plain hyphens
+- No markdown bold (**) or italic (*). Plain text only
+- Use bullet points with "-" for lists
+- Keep responses under 300 words unless specifically asked for detail
+- End actionable responses with a clear "This week:" section of 1-3 specific things to do
 
 You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.
 You also have a navigate_to_page tool. Use it when the user asks to see, view, or go to a specific section of their analysis (e.g. "show me the action plan", "take me to issues", "where is my health score").
@@ -1087,6 +1109,159 @@ export interface CoachResponse {
   toolsUsed: string[];
 }
 
+// ── Smart context builder (replaces ~500 lines of manual field checks) ───────
+
+/** Extract a concise summary from a priority section based on known field patterns */
+function extractSectionSummary(key: string, val: any): string | null {
+  if (!val || typeof val !== "object") return null;
+  try {
+    switch (key) {
+      case "healthScore":
+        return `Health Score: ${val.score ?? "?"}/100 (${val.grade || "N/A"})`;
+      case "cashIntelligence":
+        return `Cash Runway: ${val.runwayWeeks ?? "?"} weeks, Monthly burn: ${val.monthlyBurn || "N/A"}`;
+      case "revenueLeakAnalysis":
+        return `Revenue at Risk: $${val.totalIdentified?.toLocaleString() || "?"}, Leaks: ${val.leaks?.length ?? 0}`;
+      case "actionPlan":
+        return `Action Plan: ${val.days?.reduce((n: number, day: any) => n + (day.tasks?.length ?? 0), 0) ?? 0} tasks across ${val.days?.length ?? 0} days`;
+      case "issuesRegister": {
+        const critical = val.issues?.filter((i: any) => i.severity === "Critical" || i.severity === "HIGH")?.length ?? 0;
+        return `Issues: ${val.issues?.length ?? 0} total, ${critical} critical`;
+      }
+      case "kpiReport":
+        return `KPIs: ${val.kpis?.length ?? 0} defined, ${val.kpis?.filter((k: any) => k.status === "at_risk" || k.status === "behind")?.length ?? 0} at risk`;
+      case "executiveSummary":
+        return `Executive Summary: ${val.summary ? String(val.summary).slice(0, 200) : "Available"}`;
+      case "hiringPlan":
+        return `Hiring Plan: ${val.recommendations?.length ?? 0} roles recommended, ${val.currentTeamGaps?.length ?? 0} gaps`;
+      case "healthChecklist":
+        return `Health Checklist: ${val.score ?? "?"}/100 (${val.grade || "N/A"})`;
+      case "goalTracker":
+        return `Goals: ${val.objectives?.length ?? 0} objectives, Theme: ${val.quarterlyTheme || "N/A"}`;
+      case "benchmarkScore":
+        return `Benchmark: ${val.overallScore ?? "?"}/100 (${val.overallPercentile || "N/A"})`;
+      case "riskRegister": {
+        const highRisks = val.risks?.filter((r: any) => r.severity === "Critical" || r.severity === "High")?.length ?? 0;
+        return `Risks: ${val.risks?.length ?? 0} total, ${highRisks} high/critical`;
+      }
+      case "swotAnalysis":
+        return `SWOT: ${val.strengths?.length ?? 0} strengths, ${val.weaknesses?.length ?? 0} weaknesses, ${val.opportunities?.length ?? 0} opportunities, ${val.threats?.length ?? 0} threats`;
+      case "salesPlaybook":
+        return `Sales Playbook: Available${val.stages?.length ? `, ${val.stages.length} stages` : ""}`;
+      case "churnPlaybook":
+        return `Churn Playbook: Available${val.plays?.length ? `, ${val.plays.length} plays` : ""}`;
+      case "fundingReadiness":
+        return `Funding Readiness: ${val.readinessScore ?? "N/A"}/100 (${val.stage || "N/A"})`;
+      case "gtmScorecard":
+        return `GTM Score: ${val.overallScore ?? "N/A"}/100`;
+      case "cashOptimization":
+        return `Cash Optimization: ${val.opportunities?.length ?? 0} opportunities`;
+      case "toolsAutomationPlan":
+        return `Tools & Automation: ${val.tools?.length ?? 0} tools, Cost: $${val.totalMonthlyCost ?? "N/A"}/mo, Savings: $${val.totalMonthlySavings ?? "N/A"}/mo, ROI: ${val.roiMonths ?? "N/A"} months`;
+      default:
+        return null;
+    }
+  } catch {
+    return `${key}: Available`;
+  }
+}
+
+/** Build business context from deliverables using smart auto-detection */
+function buildBusinessContext(d: MVPDeliverables): string {
+  const parts: string[] = [];
+
+  // Priority sections - always include detailed summary
+  const prioritySections = [
+    "healthScore", "cashIntelligence", "revenueLeakAnalysis", "actionPlan",
+    "issuesRegister", "kpiReport", "executiveSummary", "hiringPlan",
+    "healthChecklist", "goalTracker", "benchmarkScore", "riskRegister",
+    "swotAnalysis", "salesPlaybook", "churnPlaybook", "fundingReadiness",
+    "gtmScorecard", "cashOptimization", "toolsAutomationPlan",
+  ];
+
+  for (const key of prioritySections) {
+    const val = (d as any)[key];
+    if (!val) continue;
+    const summary = extractSectionSummary(key, val);
+    if (summary) parts.push(summary);
+  }
+
+  // All other sections - auto-detect and summarize intelligently
+  const otherKeys = Object.keys(d).filter(
+    (k) => !prioritySections.includes(k) && (d as any)[k] != null
+  );
+
+  if (otherKeys.length > 0) {
+    parts.push(`\nAdditional analysis sections available (${otherKeys.length}): ${otherKeys.slice(0, 60).join(", ")}${otherKeys.length > 60 ? ` ... and ${otherKeys.length - 60} more` : ""}`);
+
+    // Extract summary or score from each available section (up to 40)
+    const summaryLines: string[] = [];
+    for (const key of otherKeys.slice(0, 40)) {
+      const val = (d as any)[key];
+      if (!val || typeof val !== "object") continue;
+      if (val.summary) {
+        summaryLines.push(`  ${key}: ${String(val.summary).slice(0, 150)}`);
+      } else if (val.overallScore !== undefined) {
+        summaryLines.push(`  ${key}: Score ${val.overallScore}/100${val.grade ? ` (${val.grade})` : ""}`);
+      } else if (val.score !== undefined) {
+        summaryLines.push(`  ${key}: Score ${val.score}/100`);
+      } else if (val.overallHealth !== undefined) {
+        summaryLines.push(`  ${key}: Health ${val.overallHealth}`);
+      } else if (val.readinessScore !== undefined) {
+        summaryLines.push(`  ${key}: Readiness ${val.readinessScore}/100`);
+      } else if (val.overallRiskScore !== undefined) {
+        summaryLines.push(`  ${key}: Risk ${val.overallRiskScore}/100`);
+      }
+    }
+    if (summaryLines.length > 0) {
+      parts.push(summaryLines.join("\n"));
+    }
+  }
+
+  return parts.join("\n");
+}
+
+/** Detect critical business patterns that need proactive coaching */
+function getBusinessTriggers(d: MVPDeliverables): string | null {
+  const triggers: string[] = [];
+
+  if (d.healthScore?.score != null && d.healthScore.score < 50)
+    triggers.push(`CRITICAL: Business health score is ${d.healthScore.score}/100 - needs immediate attention across multiple areas`);
+
+  if (d.cashIntelligence?.runwayWeeks != null && d.cashIntelligence.runwayWeeks < 8)
+    triggers.push(`URGENT: Cash runway is only ${d.cashIntelligence.runwayWeeks} weeks - address cash burn immediately`);
+
+  if (d.revenueLeakAnalysis?.totalIdentified != null && d.revenueLeakAnalysis.totalIdentified > 50000)
+    triggers.push(`ALERT: $${d.revenueLeakAnalysis.totalIdentified.toLocaleString()} in revenue leaks identified - prioritize recovery`);
+
+  const issues = (d as any).issuesRegister?.issues;
+  if (Array.isArray(issues)) {
+    const critCount = issues.filter((i: any) => i.severity === "Critical" || i.severity === "HIGH").length;
+    if (critCount >= 3) triggers.push(`WARNING: ${critCount} critical issues in the issues register need urgent attention`);
+  }
+
+  const risks = (d as any).riskRegister?.risks;
+  if (Array.isArray(risks)) {
+    const highRisks = risks.filter((r: any) => r.severity === "Critical" || r.severity === "High").length;
+    if (highRisks >= 3) triggers.push(`RISK ALERT: ${highRisks} high/critical risks identified in risk register`);
+  }
+
+  const kpis = d.kpiReport?.kpis;
+  if (Array.isArray(kpis)) {
+    const atRisk = kpis.filter((k) => k.status === "at_risk" || k.status === "behind").length;
+    if (atRisk >= 3) triggers.push(`KPI ALERT: ${atRisk} KPIs are behind or at risk - review priorities`);
+  }
+
+  if ((d as any).benchmarkScore?.overallScore != null && (d as any).benchmarkScore.overallScore < 40)
+    triggers.push(`BENCHMARK: Business scores ${(d as any).benchmarkScore.overallScore}/100 vs industry peers - significant gaps to close`);
+
+  if ((d as any).exitReadiness?.overallScore != null && (d as any).exitReadiness.overallScore < 30)
+    triggers.push(`EXIT READINESS: Score is ${(d as any).exitReadiness.overallScore}/100 - major preparation needed before any exit event`);
+
+  if (triggers.length === 0) return null;
+  return `--- Proactive Coaching Triggers ---\n${triggers.join("\n")}`;
+}
+
 export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse> {
   const { orgId, runId, messages, message, memberRole, memberName } = params;
   const toolsUsed: string[] = [];
@@ -1096,525 +1271,23 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
     return { message: "Coach is not available. GEMINI_API_KEY is not configured.", toolsUsed };
   }
 
-  // Build business context from report
+  // Build business context using smart auto-detection
   let reportContext = "";
+  let triggerContext = "";
   const job = await findJobForOrg(orgId, runId);
   if (job?.deliverables) {
     const d = job.deliverables as MVPDeliverables;
-    const parts: string[] = [];
-    if (d.healthScore) parts.push(`Health Score: ${d.healthScore.score}/100 (${d.healthScore.grade || "N/A"})`);
-    if (d.cashIntelligence) parts.push(`Cash Runway: ${d.cashIntelligence.runwayWeeks ?? "?"} weeks`);
-    if (d.revenueLeakAnalysis) parts.push(`Revenue at Risk: $${d.revenueLeakAnalysis.totalIdentified?.toLocaleString() || "?"}`);
-    if (d.kpiReport) parts.push(`KPIs defined: ${d.kpiReport.kpis?.length || 0}`);
-    if (d.healthChecklist) parts.push(`Health Checklist: ${d.healthChecklist.score}/100 (${d.healthChecklist.grade})`);
-    if (d.hiringPlan) parts.push(`Hiring Plan: ${d.hiringPlan.recommendations?.length || 0} hiring recommendations, ${d.hiringPlan.currentTeamGaps?.length || 0} team gaps identified`);
-    if (d.goalTracker) parts.push(`Goal Tracker: ${d.goalTracker.objectives?.length || 0} objectives, theme: ${d.goalTracker.quarterlyTheme || "N/A"}`);
-    if (d.benchmarkScore) parts.push(`Benchmark Score: ${d.benchmarkScore.overallScore}/100 (${d.benchmarkScore.overallPercentile || "N/A"})`);
-    if ((d as any).milestoneTracker) parts.push(`Milestone Tracker: ${(d as any).milestoneTracker.milestones?.length || 0} milestones tracked`);
-    if ((d as any).riskRegister) parts.push(`Risk Register: ${(d as any).riskRegister.risks?.length || 0} risks identified`);
-    if ((d as any).gtmScorecard) parts.push(`GTM Scorecard: ${(d as any).gtmScorecard.overallScore ?? "N/A"}/100`);
-    if ((d as any).fundingReadiness) parts.push(`Funding Readiness: ${(d as any).fundingReadiness.readinessScore ?? "N/A"}/100 (${(d as any).fundingReadiness.stage || "N/A"})`);
-    if ((d as any).cashOptimization) parts.push(`Cash Optimization: ${(d as any).cashOptimization.opportunities?.length || 0} optimization opportunities identified`);
-    if ((d as any).talentGapAnalysis) parts.push(`Talent Gap Analysis: Team strengths: ${(d as any).talentGapAnalysis.currentTeamStrengths?.length || 0} identified, Roles to hire: ${(d as any).talentGapAnalysis.roleRecommendations?.length || 0}`);
-    if ((d as any).complianceChecklist) parts.push(`Compliance Checklist: Overall readiness: ${(d as any).complianceChecklist.overallReadiness ?? "N/A"}, Immediate actions: ${(d as any).complianceChecklist.immediateActions?.length || 0}`);
-    if ((d as any).vendorScorecard) parts.push(`Vendor Scorecard: Total spend: ${(d as any).vendorScorecard.totalVendorSpend || "?"}, Potential savings: ${(d as any).vendorScorecard.totalPotentialSavings || "?"}`);
-    if ((d as any).productMarketFit) parts.push(`Product-Market Fit: Overall score: ${(d as any).productMarketFit.overallScore ?? "N/A"}, Grade: ${(d as any).productMarketFit.grade || "N/A"}`);
-    if ((d as any).brandHealth) parts.push(`Brand Health: Overall score: ${(d as any).brandHealth.overallScore ?? "N/A"}, Brand strength: ${(d as any).brandHealth.brandStrength || "N/A"}`);
-    if ((d as any).innovationPipeline) parts.push(`Innovation Pipeline: Innovation score: ${(d as any).innovationPipeline.innovationScore ?? "N/A"}, Projects: ${(d as any).innovationPipeline.projects?.length || 0}`);
-    if ((d as any).exitReadiness) parts.push(`Exit Readiness: Score: ${(d as any).exitReadiness.overallScore ?? "N/A"}/100, Valuation range: ${(d as any).exitReadiness.valuationRange || "N/A"}`);
-    if ((d as any).cultureAssessment) parts.push(`Culture Assessment: Score: ${(d as any).cultureAssessment.overallScore ?? "N/A"}/100, Culture type: ${(d as any).cultureAssessment.cultureType || "N/A"}`);
-    if ((d as any).sustainabilityScore) parts.push(`Sustainability Score: Score: ${(d as any).sustainabilityScore.overallScore ?? "N/A"}/100, Grade: ${(d as any).sustainabilityScore.grade || "N/A"}`);
-    if ((d as any).acquisitionTargets) parts.push(`M&A Strategy: ${(d as any).acquisitionTargets.strategy || "N/A"}, Targets identified: ${(d as any).acquisitionTargets.targets?.length ?? 0}`);
-    if ((d as any).financialRatios) parts.push(`Financial Health: ${(d as any).financialRatios.overallHealth || "N/A"}`);
-    if ((d as any).channelMixModel) parts.push(`Top Channel: ${(d as any).channelMixModel.topPerformingChannel || "N/A"}`);
-    if ((d as any).supplyChainRisk) parts.push(`Supply Chain Risk: ${(d as any).supplyChainRisk.overallRiskScore ?? "N/A"}/100`);
-    if ((d as any).regulatoryLandscape) parts.push(`Compliance Score: ${(d as any).regulatoryLandscape.overallComplianceScore ?? "N/A"}/100`);
-    if ((d as any).crisisPlaybook) parts.push(`Crisis Scenarios: ${(d as any).crisisPlaybook.scenarios?.length ?? 0} prepared`);
-    if ((d as any).aiReadiness) parts.push(`AI Readiness: ${(d as any).aiReadiness.overallScore ?? "N/A"}/100`);
-    if ((d as any).networkEffects) parts.push(`Network Effects: ${(d as any).networkEffects.moatStrength || "N/A"} moat, Score: ${(d as any).networkEffects.overallScore ?? "N/A"}/100`);
-    if ((d as any).dataMonetization) parts.push(`Data Monetization: ${(d as any).dataMonetization.totalOpportunityValue || "N/A"} opportunity`);
-    if ((d as any).subscriptionMetrics) parts.push(`SaaS Health: ${(d as any).subscriptionMetrics.overallHealth || "N/A"}`);
-    if ((d as any).marketTiming) parts.push(`Market Timing: ${(d as any).marketTiming.overallTiming || "N/A"}`);
-    if ((d as any).scenarioStressTest) parts.push(`Stress Resilience: ${(d as any).scenarioStressTest.resilience || "N/A"}, Baseline Runway: ${(d as any).scenarioStressTest.baselineCashRunway || "N/A"}`);
-    if ((d as any).pricingStrategyMatrix) parts.push(`Pricing Strategy: ${(d as any).pricingStrategyMatrix.recommendedStrategy || "N/A"}`);
-    if ((d as any).customerHealthScore) parts.push(`Customer Portfolio Health: ${(d as any).customerHealthScore.overallPortfolioHealth ?? "N/A"}/100, At-risk: ${(d as any).customerHealthScore.atRiskCount ?? 0}`);
-    if ((d as any).revenueWaterfall) parts.push(`Net Revenue Retention: ${(d as any).revenueWaterfall.netRevenueRetention || "N/A"}`);
-    if ((d as any).techDebtAssessment) parts.push(`Tech Debt Score: ${(d as any).techDebtAssessment.overallScore ?? "N/A"}/100, Cost: ${(d as any).techDebtAssessment.totalEstimatedCost || "N/A"}`);
-    if ((d as any).teamPerformance) parts.push(`Team Performance: ${(d as any).teamPerformance.overallScore ?? "N/A"}/100`);
-    if ((d as any).marketEntryStrategy) parts.push(`Market Entry Readiness: ${(d as any).marketEntryStrategy.readinessScore ?? "N/A"}/100, Priority: ${(d as any).marketEntryStrategy.priorityMarket || "N/A"}`);
-    if ((d as any).competitiveIntelFeed) parts.push(`Competitive Threat Level: ${(d as any).competitiveIntelFeed.threatLevel || "N/A"}, Signals: ${(d as any).competitiveIntelFeed.signals?.length ?? 0}`);
-    if ((d as any).cashFlowSensitivity) parts.push(`Cash Sensitivity: Most sensitive to ${(d as any).cashFlowSensitivity.mostSensitiveVariable || "N/A"}`);
-    if ((d as any).digitalMaturity) parts.push(`Digital Maturity: ${(d as any).digitalMaturity.overallScore ?? "N/A"}/100`);
-    if ((d as any).acquisitionFunnel) parts.push(`Acquisition Funnel: ${(d as any).acquisitionFunnel.overallConversionRate || "N/A"} conversion, CPA: ${(d as any).acquisitionFunnel.costPerAcquisition || "N/A"}`);
-    if ((d as any).strategicAlignment) parts.push(`Strategic Alignment: ${(d as any).strategicAlignment.overallScore ?? "N/A"}/100`);
-    if ((d as any).budgetOptimizer) parts.push(`Budget: ${(d as any).budgetOptimizer.totalBudget || "N/A"}, Savings: ${(d as any).budgetOptimizer.savingsOpportunity || "N/A"}`);
-    if ((d as any).revenueDrivers) parts.push(`Revenue Drivers: Top driver: ${(d as any).revenueDrivers.topDriver || "N/A"}, Concentration risk: ${(d as any).revenueDrivers.concentrationRisk || "N/A"}`);
-    if ((d as any).marginOptimization) parts.push(`Margin Optimization: Gross margin: ${(d as any).marginOptimization.grossMargin || "N/A"}, Net margin: ${(d as any).marginOptimization.netMargin || "N/A"}`);
-    if ((d as any).demandForecasting) parts.push(`Demand Forecast: Trend: ${(d as any).demandForecasting.trendDirection || "N/A"}, Confidence: ${(d as any).demandForecasting.confidence || "N/A"}`);
-    if ((d as any).cohortAnalysis) parts.push(`Cohort Analysis: Retention rate: ${(d as any).cohortAnalysis.overallRetention || "N/A"}, Best cohort: ${(d as any).cohortAnalysis.bestCohort || "N/A"}`);
-    if ((d as any).winLossAnalysis) parts.push(`Win/Loss: Win rate: ${(d as any).winLossAnalysis.winRate || "N/A"}, Top loss reason: ${(d as any).winLossAnalysis.topLossReason || "N/A"}`);
-    if ((d as any).salesForecast) parts.push(`Sales Forecast: Pipeline value: ${(d as any).salesForecast.pipelineValue || "N/A"}, Forecast accuracy: ${(d as any).salesForecast.forecastAccuracy || "N/A"}`);
-    if ((d as any).processEfficiency) parts.push(`Process Efficiency: Score: ${(d as any).processEfficiency.overallScore ?? "N/A"}/100, Bottlenecks: ${(d as any).processEfficiency.bottlenecks?.length ?? 0}`);
-    if ((d as any).vendorRisk) parts.push(`Vendor Risk: Overall risk: ${(d as any).vendorRisk.overallRisk || "N/A"}, Critical vendors: ${(d as any).vendorRisk.criticalVendors?.length ?? 0}`);
-    if ((d as any).qualityMetrics) parts.push(`Quality Metrics: CSAT: ${(d as any).qualityMetrics.csat || "N/A"}, NPS: ${(d as any).qualityMetrics.nps ?? "N/A"}`);
-    if ((d as any).capacityPlanning) parts.push(`Capacity Planning: Utilization: ${(d as any).capacityPlanning.currentUtilization || "N/A"}, Scaling trigger: ${(d as any).capacityPlanning.scalingTrigger || "N/A"}`);
-    if ((d as any).knowledgeManagement) parts.push(`Knowledge Management: Documentation coverage: ${(d as any).knowledgeManagement.coverageScore ?? "N/A"}%, Tribal knowledge risks: ${(d as any).knowledgeManagement.tribalKnowledgeRisks?.length ?? 0}`);
-    if ((d as any).complianceScorecard) parts.push(`Compliance Scorecard: Score: ${(d as any).complianceScorecard.overallScore ?? "N/A"}/100, Gaps: ${(d as any).complianceScorecard.gaps?.length ?? 0}`);
-    if ((d as any).marketPenetration) parts.push(`Market Penetration: Current share: ${(d as any).marketPenetration.currentShare || "N/A"}, Penetration rate: ${(d as any).marketPenetration.penetrationRate || "N/A"}`);
-    if ((d as any).flywheelAnalysis) parts.push(`Flywheel Analysis: Momentum: ${(d as any).flywheelAnalysis.momentum || "N/A"}, Friction points: ${(d as any).flywheelAnalysis.frictionPoints?.length ?? 0}`);
-    if ((d as any).partnershipsStrategy) parts.push(`Partnerships Strategy: Partners identified: ${(d as any).partnershipsStrategy.partnerCandidates?.length ?? 0}, Ecosystem: ${(d as any).partnershipsStrategy.ecosystemStrategy || "N/A"}`);
-    if ((d as any).internationalExpansion) parts.push(`International Expansion: Priority market: ${(d as any).internationalExpansion.priorityMarket || "N/A"}, Readiness: ${(d as any).internationalExpansion.readinessScore ?? "N/A"}/100`);
-    if ((d as any).rdEffectiveness) parts.push(`R&D Effectiveness: ROI: ${(d as any).rdEffectiveness.rdRoi || "N/A"}, Success rate: ${(d as any).rdEffectiveness.projectSuccessRate || "N/A"}`);
-    if ((d as any).brandEquity) parts.push(`Brand Equity: Score: ${(d as any).brandEquity.overallScore ?? "N/A"}/100, Awareness: ${(d as any).brandEquity.awareness || "N/A"}`);
-    if ((d as any).workingCapital) parts.push(`Working Capital: Cash conversion cycle: ${(d as any).workingCapital.cashConversionCycle || "N/A"} days, DSO: ${(d as any).workingCapital.dso || "N/A"}`);
-    if ((d as any).debtStrategy) parts.push(`Debt Strategy: Total debt: ${(d as any).debtStrategy.totalDebt || "N/A"}, Capacity: ${(d as any).debtStrategy.debtCapacity || "N/A"}`);
-    if ((d as any).taxStrategy) parts.push(`Tax Strategy: Effective rate: ${(d as any).taxStrategy.effectiveRate || "N/A"}, Savings opportunities: ${(d as any).taxStrategy.savingsOpportunities?.length ?? 0}`);
-    if ((d as any).investorReadiness) parts.push(`Investor Readiness: Score: ${(d as any).investorReadiness.overallScore ?? "N/A"}/100, Gaps: ${(d as any).investorReadiness.gaps?.length ?? 0}`);
-    if ((d as any).maReadiness) parts.push(`M&A Readiness: Score: ${(d as any).maReadiness.overallScore ?? "N/A"}/100, Valuation: ${(d as any).maReadiness.estimatedValuation || "N/A"}`);
-    if ((d as any).strategicRoadmap) parts.push(`Strategic Roadmap: Pillars: ${(d as any).strategicRoadmap.strategicPillars?.length ?? 0}, Next milestone: ${(d as any).strategicRoadmap.nextMilestone || "N/A"}`);
-    if ((d as any).customerVoice) parts.push(`Customer Voice: Sentiment: ${(d as any).customerVoice.overallSentiment || "N/A"}, NPS: ${(d as any).customerVoice.nps ?? "N/A"}, Themes: ${(d as any).customerVoice.topThemes?.length ?? 0}`);
-    if ((d as any).referralEngine) parts.push(`Referral Engine: Viral coefficient: ${(d as any).referralEngine.viralCoefficient ?? "N/A"}, Referral rate: ${(d as any).referralEngine.referralRate || "N/A"}`);
-    if ((d as any).priceSensitivityIndex) parts.push(`Price Sensitivity: Index: ${(d as any).priceSensitivityIndex.overallIndex ?? "N/A"}, Most sensitive segment: ${(d as any).priceSensitivityIndex.mostSensitiveSegment || "N/A"}`);
-    if ((d as any).customerEffortScore) parts.push(`Customer Effort Score: Overall: ${(d as any).customerEffortScore.overallScore ?? "N/A"}, Highest friction: ${(d as any).customerEffortScore.highestFrictionPoint || "N/A"}`);
-    if ((d as any).accountExpansionMap) parts.push(`Account Expansion: Expansion potential: ${(d as any).accountExpansionMap.totalExpansionPotential || "N/A"}, Ready accounts: ${(d as any).accountExpansionMap.readyAccounts?.length ?? 0}`);
-    if ((d as any).loyaltyProgramDesign) parts.push(`Loyalty Program: Recommended model: ${(d as any).loyaltyProgramDesign.recommendedModel || "N/A"}, Retention impact: ${(d as any).loyaltyProgramDesign.projectedRetentionImpact || "N/A"}`);
-    if ((d as any).competitivePricingMatrix) parts.push(`Competitive Pricing: Position: ${(d as any).competitivePricingMatrix.pricePosition || "N/A"}, Gap: ${(d as any).competitivePricingMatrix.pricingGap || "N/A"}`);
-    if ((d as any).marketSentimentIndex) parts.push(`Market Sentiment: Score: ${(d as any).marketSentimentIndex.overallSentiment ?? "N/A"}/100, Trend: ${(d as any).marketSentimentIndex.trend || "N/A"}`);
-    if ((d as any).disruptionRadar) parts.push(`Disruption Radar: Threats: ${(d as any).disruptionRadar.threats?.length ?? 0}, Urgency: ${(d as any).disruptionRadar.highestUrgency || "N/A"}`);
-    if ((d as any).ecosystemMap) parts.push(`Ecosystem Map: Partners: ${(d as any).ecosystemMap.partners?.length ?? 0}, Platform opportunities: ${(d as any).ecosystemMap.platformOpportunities?.length ?? 0}`);
-    if ((d as any).categoryCreation) parts.push(`Category Creation: Feasibility: ${(d as any).categoryCreation.feasibilityScore ?? "N/A"}/100, Strategy: ${(d as any).categoryCreation.strategy || "N/A"}`);
-    if ((d as any).marketVelocity) parts.push(`Market Velocity: Growth rate: ${(d as any).marketVelocity.growthRate || "N/A"}, Momentum: ${(d as any).marketVelocity.momentum || "N/A"}`);
-    if ((d as any).okrCascade) parts.push(`OKR Cascade: Objectives: ${(d as any).okrCascade.objectives?.length ?? 0}, Alignment score: ${(d as any).okrCascade.alignmentScore ?? "N/A"}/100`);
-    if ((d as any).meetingEffectiveness) parts.push(`Meeting Effectiveness: Score: ${(d as any).meetingEffectiveness.overallScore ?? "N/A"}/100, Hours/week: ${(d as any).meetingEffectiveness.totalHoursPerWeek ?? "N/A"}`);
-    if ((d as any).communicationAudit) parts.push(`Communication Audit: Score: ${(d as any).communicationAudit.overallScore ?? "N/A"}/100, Gaps: ${(d as any).communicationAudit.gaps?.length ?? 0}`);
-    if ((d as any).decisionVelocity) parts.push(`Decision Velocity: Speed: ${(d as any).decisionVelocity.averageDecisionTime || "N/A"}, Bottlenecks: ${(d as any).decisionVelocity.bottlenecks?.length ?? 0}`);
-    if ((d as any).resourceOptimizer) parts.push(`Resource Optimizer: Utilization: ${(d as any).resourceOptimizer.overallUtilization || "N/A"}, Rebalancing opportunities: ${(d as any).resourceOptimizer.rebalancingOpportunities?.length ?? 0}`);
-    if ((d as any).changeManagement) parts.push(`Change Management: Readiness: ${(d as any).changeManagement.readinessScore ?? "N/A"}/100, Active changes: ${(d as any).changeManagement.activeChanges?.length ?? 0}`);
-    if ((d as any).cashReserveStrategy) parts.push(`Cash Reserve Strategy: Target reserve: ${(d as any).cashReserveStrategy.targetReserve || "N/A"}, Current reserve: ${(d as any).cashReserveStrategy.currentReserve || "N/A"}`);
-    if ((d as any).revenueQualityScore) parts.push(`Revenue Quality: Score: ${(d as any).revenueQualityScore.overallScore ?? "N/A"}/100, Recurring: ${(d as any).revenueQualityScore.recurringPercentage || "N/A"}`);
-    if ((d as any).costIntelligence) parts.push(`Cost Intelligence: Total costs: ${(d as any).costIntelligence.totalCosts || "N/A"}, Reduction opportunities: ${(d as any).costIntelligence.reductionOpportunities?.length ?? 0}`);
-    if ((d as any).financialModeling) parts.push(`Financial Modeling: Scenarios: ${(d as any).financialModeling.scenarios?.length ?? 0}, Base case: ${(d as any).financialModeling.baseCase || "N/A"}`);
-    if ((d as any).profitabilityMap) parts.push(`Profitability Map: Most profitable: ${(d as any).profitabilityMap.mostProfitable || "N/A"}, Least profitable: ${(d as any).profitabilityMap.leastProfitable || "N/A"}`);
-    if ((d as any).capitalAllocation) parts.push(`Capital Allocation: Total capital: ${(d as any).capitalAllocation.totalCapital || "N/A"}, Top priority: ${(d as any).capitalAllocation.topPriority || "N/A"}`);
-    if ((d as any).salesPipelineHealth) parts.push(`Sales Pipeline: Value: ${(d as any).salesPipelineHealth.totalPipelineValue || "N/A"}, Coverage: ${(d as any).salesPipelineHealth.coverage || "N/A"}`);
-    if ((d as any).dealVelocity) parts.push(`Deal Velocity: Avg cycle: ${(d as any).dealVelocity.avgDealCycle || "N/A"}, Fastest: ${(d as any).dealVelocity.fastestSegment || "N/A"}`);
-    if ((d as any).winRateOptimizer) parts.push(`Win Rate: Overall: ${(d as any).winRateOptimizer.overallWinRate || "N/A"}, Competitive: ${(d as any).winRateOptimizer.competitiveWinRate || "N/A"}`);
-    if ((d as any).salesEnablement) parts.push(`Sales Enablement: Readiness: ${(d as any).salesEnablement.readinessScore ?? "N/A"}/100, Gaps: ${(d as any).salesEnablement.trainingGaps?.length ?? 0}`);
-    if ((d as any).territoryPlanning) parts.push(`Territory Planning: Balance: ${(d as any).territoryPlanning.balanceScore ?? "N/A"}/100, Untapped: ${(d as any).territoryPlanning.untappedPotential || "N/A"}`);
-    if ((d as any).quotaIntelligence) parts.push(`Quota Intelligence: Attainment: ${(d as any).quotaIntelligence.overallAttainment || "N/A"}, Fit: ${(d as any).quotaIntelligence.quotaToTerritoryFit || "N/A"}`);
-    if ((d as any).featurePrioritization) parts.push(`Feature Priority: Top: ${(d as any).featurePrioritization.topPriority || "N/A"}, Quick wins: ${(d as any).featurePrioritization.quickWins?.length ?? 0}`);
-    if ((d as any).productUsageAnalytics) parts.push(`Product Usage: DAU: ${(d as any).productUsageAnalytics.dau || "N/A"}, MAU: ${(d as any).productUsageAnalytics.mau || "N/A"}`);
-    if ((d as any).techStackAudit) parts.push(`Tech Stack: Cost: ${(d as any).techStackAudit.totalCost || "N/A"}, Redundancies: ${(d as any).techStackAudit.redundancies?.length ?? 0}`);
-    if ((d as any).apiStrategy) parts.push(`API Strategy: APIs: ${(d as any).apiStrategy.apiCount ?? "N/A"}, Model: ${(d as any).apiStrategy.monetizationModel || "N/A"}`);
-    if ((d as any).platformScalability) parts.push(`Scalability: Score: ${(d as any).platformScalability.overallScore ?? "N/A"}/100, Headroom: ${(d as any).platformScalability.peakCapacity || "N/A"}`);
-    if ((d as any).userOnboarding) parts.push(`Onboarding: Completion: ${(d as any).userOnboarding.completionRate || "N/A"}, Time to value: ${(d as any).userOnboarding.timeToValue || "N/A"}`);
-    if ((d as any).employeeEngagement) parts.push(`Engagement: Score: ${(d as any).employeeEngagement.overallScore ?? "N/A"}/100, eNPS: ${(d as any).employeeEngagement.eNPS || "N/A"}`);
-    if ((d as any).talentAcquisitionFunnel) parts.push(`Talent Acquisition: Time to hire: ${(d as any).talentAcquisitionFunnel.overallTimeToHire || "N/A"}, Cost: ${(d as any).talentAcquisitionFunnel.costPerHire || "N/A"}`);
-    if ((d as any).compensationBenchmark) parts.push(`Compensation: Position: ${(d as any).compensationBenchmark.overallPosition || "N/A"}, Budget: ${(d as any).compensationBenchmark.totalCompBudget || "N/A"}`);
-    if ((d as any).successionPlanning) parts.push(`Succession: Critical roles: ${(d as any).successionPlanning.criticalRoles ?? "N/A"}, Bench: ${(d as any).successionPlanning.benchStrength || "N/A"}`);
-    if ((d as any).diversityMetrics) parts.push(`Diversity: Score: ${(d as any).diversityMetrics.overallScore ?? "N/A"}/100, Inclusion: ${(d as any).diversityMetrics.inclusionIndex || "N/A"}`);
-    if ((d as any).employerBrand) parts.push(`Employer Brand: Score: ${(d as any).employerBrand.overallScore ?? "N/A"}/100, Glassdoor: ${(d as any).employerBrand.glassdoorRating || "N/A"}`);
-    if ((d as any).dataGovernance) parts.push(`Data Governance: Maturity: ${(d as any).dataGovernance.maturityLevel || "N/A"}, Gaps: ${(d as any).dataGovernance.complianceGaps?.length ?? 0}`);
-    if ((d as any).analyticsMaturity) parts.push(`Analytics Maturity: Level: ${(d as any).analyticsMaturity.overallLevel ?? "N/A"}/5, Gaps: ${(d as any).analyticsMaturity.skillGaps?.length ?? 0}`);
-    if ((d as any).customerDataPlatform) parts.push(`CDP: Profiles: ${(d as any).customerDataPlatform.unifiedProfiles || "N/A"}, Completeness: ${(d as any).customerDataPlatform.dataCompleteness || "N/A"}`);
-    if ((d as any).predictiveModeling) parts.push(`Predictive: Models: ${(d as any).predictiveModeling.models?.length ?? 0}, ROI: ${(d as any).predictiveModeling.expectedROI || "N/A"}`);
-    if ((d as any).reportingFramework) parts.push(`Reporting: Reports: ${(d as any).reportingFramework.reports?.length ?? 0}, Self-service: ${(d as any).reportingFramework.selfServiceRate || "N/A"}`);
-    if ((d as any).dataQualityScore) parts.push(`Data Quality: Score: ${(d as any).dataQualityScore.overallScore ?? "N/A"}/100, Issues: ${(d as any).dataQualityScore.criticalIssues?.length ?? 0}`);
-    if ((d as any).supplyChainRisk) parts.push(`Supply Chain Risk Score: ${(d as any).supplyChainRisk.overallRiskScore}/100, Single-Source Dependencies: ${(d as any).supplyChainRisk.singleSourceDependencies}`);
-    if ((d as any).inventoryOptimization) parts.push(`Inventory: Carrying Cost ${(d as any).inventoryOptimization.totalCarryingCost}, Turnover ${(d as any).inventoryOptimization.turnoverRatio}x`);
-    if ((d as any).vendorScorecard) parts.push(`Vendors: ${(d as any).vendorScorecard.totalVendors} total, Top: ${(d as any).vendorScorecard.topPerformer}`);
-    if ((d as any).operationalEfficiency) parts.push(`Ops Efficiency Score: ${(d as any).operationalEfficiency.overallScore}/100, Waste: ${(d as any).operationalEfficiency.totalWaste}`);
-    if ((d as any).qualityManagement) parts.push(`Quality: Defect Rate ${(d as any).qualityManagement.overallDefectRate}, Six Sigma: ${(d as any).qualityManagement.sixSigmaLevel}`);
-    if ((d as any).capacityPlanning) parts.push(`Capacity: ${(d as any).capacityPlanning.overallUtilization} utilized, Headroom: ${(d as any).capacityPlanning.growthHeadroom}`);
-    if ((d as any).customerJourneyMap) parts.push(`Journey Satisfaction: ${(d as any).customerJourneyMap.overallSatisfaction}/100`);
-    if ((d as any).npsAnalysis) parts.push(`NPS: ${(d as any).npsAnalysis.overallNps}, Promoters: ${(d as any).npsAnalysis.promoterPercentage}`);
-    if ((d as any).supportTicketIntelligence) parts.push(`Support: ${(d as any).supportTicketIntelligence.totalTickets} tickets, Avg Resolution: ${(d as any).supportTicketIntelligence.avgResolutionTime}`);
-    if ((d as any).customerHealthScore) parts.push(`Customer Health: ${(d as any).customerHealthScore.overallScore}/100, At Risk: ${(d as any).customerHealthScore.atRiskPercentage}`);
-    if ((d as any).voiceOfCustomer) parts.push(`VoC Sentiment Trend: ${(d as any).voiceOfCustomer.sentimentTrend}`);
-    if ((d as any).customerSegmentation) parts.push(`Segments: High Value ${(d as any).customerSegmentation.highValuePercentage}, Growth: ${(d as any).customerSegmentation.growthSegment}`);
-    if ((d as any).innovationPipeline) parts.push(`Innovation: ${(d as any).innovationPipeline.totalIdeas} ideas, Kill Rate: ${(d as any).innovationPipeline.killRate}`);
-    if ((d as any).ipPortfolio) parts.push(`IP Assets: ${(d as any).ipPortfolio.totalAssets}`);
-    if ((d as any).rdEfficiency) parts.push(`R&D: ${(d as any).rdEfficiency.totalSpend}, Success Rate: ${(d as any).rdEfficiency.successRate}`);
-    if ((d as any).technologyReadiness) parts.push(`Tech Readiness: ${(d as any).technologyReadiness.overallReadiness}/100, Debt: ${(d as any).technologyReadiness.techDebtTotal}`);
-    if ((d as any).partnershipEcosystem) parts.push(`Partners: ${(d as any).partnershipEcosystem.totalPartners}, Revenue: ${(d as any).partnershipEcosystem.revenueFromPartners}`);
-    if ((d as any).mergersAcquisitions) parts.push(`M&A: Top Target: ${(d as any).mergersAcquisitions.topTarget}, Synergy: ${(d as any).mergersAcquisitions.totalSynergyPotential}`);
-    if ((d as any).esgScorecard) parts.push(`ESG Score: ${(d as any).esgScorecard.overallScore}/100, Rank: ${(d as any).esgScorecard.industryRank}`);
-    if ((d as any).carbonFootprint) parts.push(`Carbon: ${(d as any).carbonFootprint.totalEmissions}, Target: ${(d as any).carbonFootprint.reductionTarget}`);
-    if ((d as any).regulatoryCompliance) parts.push(`Compliance: ${(d as any).regulatoryCompliance.overallStatus}, Fine Exposure: ${(d as any).regulatoryCompliance.fineExposure}`);
-    if ((d as any).businessContinuity) parts.push(`BC Readiness: ${(d as any).businessContinuity.overallReadiness}`);
-    if ((d as any).ethicsFramework) parts.push(`Ethics Maturity: ${(d as any).ethicsFramework.overallMaturity}`);
-    if ((d as any).socialImpact) parts.push(`Social Impact: ${(d as any).socialImpact.overallScore}/100, Investment: ${(d as any).socialImpact.communityInvestment}`);
-    if ((d as any).dealPipeline) parts.push(`Deal Pipeline: ${JSON.stringify((d as any).dealPipeline).slice(0, 300)}`);
-    if ((d as any).salesForecasting) parts.push(`Sales Forecasting: ${JSON.stringify((d as any).salesForecasting).slice(0, 300)}`);
-    if ((d as any).accountBasedMarketing) parts.push(`Account Based Marketing: ${JSON.stringify((d as any).accountBasedMarketing).slice(0, 300)}`);
-    if ((d as any).salesEnablement) parts.push(`Sales Enablement: ${JSON.stringify((d as any).salesEnablement).slice(0, 300)}`);
-    if ((d as any).revenueAttribution) parts.push(`Revenue Attribution: ${JSON.stringify((d as any).revenueAttribution).slice(0, 300)}`);
-    if ((d as any).commissionOptimization) parts.push(`Commission Optimization: ${JSON.stringify((d as any).commissionOptimization).slice(0, 300)}`);
-    if ((d as any).productMarketFit) parts.push(`Product Market Fit: ${JSON.stringify((d as any).productMarketFit).slice(0, 300)}`);
-    if ((d as any).featurePrioritization) parts.push(`Feature Prioritization: ${JSON.stringify((d as any).featurePrioritization).slice(0, 300)}`);
-    if ((d as any).userOnboarding) parts.push(`User Onboarding: ${JSON.stringify((d as any).userOnboarding).slice(0, 300)}`);
-    if ((d as any).productAnalytics) parts.push(`Product Analytics: ${JSON.stringify((d as any).productAnalytics).slice(0, 300)}`);
-    if ((d as any).marketTiming) parts.push(`Market Timing: ${JSON.stringify((d as any).marketTiming).slice(0, 300)}`);
-    if ((d as any).competitiveResponse) parts.push(`Competitive Response: ${JSON.stringify((d as any).competitiveResponse).slice(0, 300)}`);
-    if ((d as any).scenarioPlanning) parts.push(`Scenario Planning: ${JSON.stringify((d as any).scenarioPlanning).slice(0, 300)}`);
-    if ((d as any).capitalStructure) parts.push(`Capital Structure: ${JSON.stringify((d as any).capitalStructure).slice(0, 300)}`);
-    if ((d as any).workingCapital) parts.push(`Working Capital: ${JSON.stringify((d as any).workingCapital).slice(0, 300)}`);
-    if ((d as any).taxStrategy) parts.push(`Tax Strategy: ${JSON.stringify((d as any).taxStrategy).slice(0, 300)}`);
-    if ((d as any).fundraisingReadiness) parts.push(`Fundraising Readiness: ${JSON.stringify((d as any).fundraisingReadiness).slice(0, 300)}`);
-    if ((d as any).exitStrategy) parts.push(`Exit Strategy: ${JSON.stringify((d as any).exitStrategy).slice(0, 300)}`);
-    if ((d as any).talentAcquisition) parts.push(`Talent Acquisition: ${JSON.stringify((d as any).talentAcquisition).slice(0, 300)}`);
-    if ((d as any).employeeEngagement) parts.push(`Employee Engagement: ${JSON.stringify((d as any).employeeEngagement).slice(0, 300)}`);
-    if ((d as any).compensationBenchmark) parts.push(`Compensation Benchmark: ${JSON.stringify((d as any).compensationBenchmark).slice(0, 300)}`);
-    if ((d as any).successionPlanning) parts.push(`Succession Planning: ${JSON.stringify((d as any).successionPlanning).slice(0, 300)}`);
-    if ((d as any).diversityInclusion) parts.push(`Diversity Inclusion: ${JSON.stringify((d as any).diversityInclusion).slice(0, 300)}`);
-    if ((d as any).cultureAssessment) parts.push(`Culture Assessment: ${JSON.stringify((d as any).cultureAssessment).slice(0, 300)}`);
-    if ((d as any).marketEntryPlaybook) parts.push(`Market Entry: ${JSON.stringify((d as any).marketEntryPlaybook).slice(0, 300)}`);
-    if ((d as any).partnerChannelStrategy) parts.push(`Partner Channels: ${JSON.stringify((d as any).partnerChannelStrategy).slice(0, 300)}`);
-    if ((d as any).acquisitionIntegration) parts.push(`Acquisition Integration: ${JSON.stringify((d as any).acquisitionIntegration).slice(0, 300)}`);
-    if ((d as any).internationalReadiness) parts.push(`International Readiness: ${JSON.stringify((d as any).internationalReadiness).slice(0, 300)}`);
-    if ((d as any).revenueModelAnalysis) parts.push(`Revenue Model: ${JSON.stringify((d as any).revenueModelAnalysis).slice(0, 300)}`);
-    if ((d as any).growthExperiments) parts.push(`Growth Experiments: ${JSON.stringify((d as any).growthExperiments).slice(0, 300)}`);
-    if ((d as any).customerAcquisitionCost) parts.push(`CAC Analysis: ${JSON.stringify((d as any).customerAcquisitionCost).slice(0, 300)}`);
-    if ((d as any).lifetimeValueOptimization) parts.push(`LTV Optimization: ${JSON.stringify((d as any).lifetimeValueOptimization).slice(0, 300)}`);
-    if ((d as any).churnPrediction) parts.push(`Churn Prediction: ${JSON.stringify((d as any).churnPrediction).slice(0, 300)}`);
-    if ((d as any).netRevenueRetention) parts.push(`Net Revenue Retention: ${JSON.stringify((d as any).netRevenueRetention).slice(0, 300)}`);
-    if ((d as any).customerAdvocacy) parts.push(`Customer Advocacy: ${JSON.stringify((d as any).customerAdvocacy).slice(0, 300)}`);
-    if ((d as any).feedbackLoop) parts.push(`Feedback Loop: ${JSON.stringify((d as any).feedbackLoop).slice(0, 300)}`);
-    if ((d as any).processAutomation) parts.push(`Process Automation: ${JSON.stringify((d as any).processAutomation).slice(0, 300)}`);
-    if ((d as any).costBenchmark) parts.push(`Cost Benchmark: ${JSON.stringify((d as any).costBenchmark).slice(0, 300)}`);
-    if ((d as any).vendorNegotiation) parts.push(`Vendor Negotiation: ${JSON.stringify((d as any).vendorNegotiation).slice(0, 300)}`);
-    if ((d as any).scalabilityAssessment) parts.push(`Scalability: ${JSON.stringify((d as any).scalabilityAssessment).slice(0, 300)}`);
-    if ((d as any).incidentReadiness) parts.push(`Incident Readiness: ${JSON.stringify((d as any).incidentReadiness).slice(0, 300)}`);
-    if ((d as any).operationalRisk) parts.push(`Operational Risk: ${JSON.stringify((d as any).operationalRisk).slice(0, 300)}`);
-    if ((d as any).dataStrategy) parts.push(`Data Strategy: ${JSON.stringify((d as any).dataStrategy).slice(0, 300)}`);
-    if ((d as any).aiUseCases) parts.push(`AI Use Cases: ${JSON.stringify((d as any).aiUseCases).slice(0, 300)}`);
-    if ((d as any).analyticsRoadmap) parts.push(`Analytics Roadmap: ${JSON.stringify((d as any).analyticsRoadmap).slice(0, 300)}`);
-    if ((d as any).dataPrivacy) parts.push(`Data Privacy: ${JSON.stringify((d as any).dataPrivacy).slice(0, 300)}`);
-    if ((d as any).mlOpsReadiness) parts.push(`MLOps Readiness: ${JSON.stringify((d as any).mlOpsReadiness).slice(0, 300)}`);
-    if ((d as any).digitalTransformation) parts.push(`Digital Transformation: ${JSON.stringify((d as any).digitalTransformation).slice(0, 300)}`);
-    if ((d as any).revenueOps) parts.push(`Revenue Ops: ${JSON.stringify((d as any).revenueOps).slice(0, 300)}`);
-    if ((d as any).billingOptimization) parts.push(`Billing Optimization: ${JSON.stringify((d as any).billingOptimization).slice(0, 300)}`);
-    if ((d as any).contractIntelligence) parts.push(`Contract Intelligence: ${JSON.stringify((d as any).contractIntelligence).slice(0, 300)}`);
-    if ((d as any).commissionTracking) parts.push(`Commission Tracking: ${JSON.stringify((d as any).commissionTracking).slice(0, 300)}`);
-    if ((d as any).revenueRecognition) parts.push(`Revenue Recognition: ${JSON.stringify((d as any).revenueRecognition).slice(0, 300)}`);
-    if ((d as any).subscriptionHealth) parts.push(`Subscription Health: ${JSON.stringify((d as any).subscriptionHealth).slice(0, 300)}`);
-    if ((d as any).productRoadmapHealth) parts.push(`Product Roadmap Health: ${JSON.stringify((d as any).productRoadmapHealth).slice(0, 300)}`);
-    if ((d as any).techDebtPrioritization) parts.push(`Tech Debt Prioritization: ${JSON.stringify((d as any).techDebtPrioritization).slice(0, 300)}`);
-    if ((d as any).releaseVelocity) parts.push(`Release Velocity: ${JSON.stringify((d as any).releaseVelocity).slice(0, 300)}`);
-    if ((d as any).bugTrendAnalysis) parts.push(`Bug Trend Analysis: ${JSON.stringify((d as any).bugTrendAnalysis).slice(0, 300)}`);
-    if ((d as any).apiPerformance) parts.push(`API Performance: ${JSON.stringify((d as any).apiPerformance).slice(0, 300)}`);
-    if ((d as any).userExperienceScore) parts.push(`User Experience Score: ${JSON.stringify((d as any).userExperienceScore).slice(0, 300)}`);
-    if ((d as any).workforcePlanning) parts.push(`Workforce Planning: ${JSON.stringify((d as any).workforcePlanning).slice(0, 300)}`);
-    if ((d as any).skillsGapAnalysis) parts.push(`Skills Gap Analysis: ${JSON.stringify((d as any).skillsGapAnalysis).slice(0, 300)}`);
-    if ((d as any).remoteWorkEffectiveness) parts.push(`Remote Work Effectiveness: ${JSON.stringify((d as any).remoteWorkEffectiveness).slice(0, 300)}`);
-    if ((d as any).teamVelocity) parts.push(`Team Velocity: ${JSON.stringify((d as any).teamVelocity).slice(0, 300)}`);
-    if ((d as any).burnoutRisk) parts.push(`Burnout Risk: ${JSON.stringify((d as any).burnoutRisk).slice(0, 300)}`);
-    if ((d as any).learningDevelopment) parts.push(`Learning Development: ${JSON.stringify((d as any).learningDevelopment).slice(0, 300)}`);
-    if ((d as any).regulatoryRisk) parts.push(`Regulatory Risk: ${JSON.stringify((d as any).regulatoryRisk).slice(0, 300)}`);
-    if ((d as any).contractManagement) parts.push(`Contract Management: ${JSON.stringify((d as any).contractManagement).slice(0, 300)}`);
-    if ((d as any).ipStrategy) parts.push(`IP Strategy: ${JSON.stringify((d as any).ipStrategy).slice(0, 300)}`);
-    if ((d as any).legalSpendAnalysis) parts.push(`Legal Spend Analysis: ${JSON.stringify((d as any).legalSpendAnalysis).slice(0, 300)}`);
-    if ((d as any).policyCompliance) parts.push(`Policy Compliance: ${JSON.stringify((d as any).policyCompliance).slice(0, 300)}`);
-    if ((d as any).auditReadiness) parts.push(`Audit Readiness: ${JSON.stringify((d as any).auditReadiness).slice(0, 300)}`);
-    if ((d as any).salesMethodology) parts.push(`Sales Methodology: ${JSON.stringify((d as any).salesMethodology).slice(0, 300)}`);
-    if ((d as any).pipelineVelocity) parts.push(`Pipeline Velocity: ${JSON.stringify((d as any).pipelineVelocity).slice(0, 300)}`);
-    if ((d as any).dealQualification) parts.push(`Deal Qualification: ${JSON.stringify((d as any).dealQualification).slice(0, 300)}`);
-    if ((d as any).salesCoaching) parts.push(`Sales Coaching: ${JSON.stringify((d as any).salesCoaching).slice(0, 300)}`);
-    if ((d as any).accountPlanning) parts.push(`Account Planning: ${JSON.stringify((d as any).accountPlanning).slice(0, 300)}`);
-    if ((d as any).competitiveBattlecards) parts.push(`Competitive Battlecards: ${JSON.stringify((d as any).competitiveBattlecards).slice(0, 300)}`);
-    if ((d as any).cashBurnAnalysis) parts.push(`Cash Burn Analysis: ${JSON.stringify((d as any).cashBurnAnalysis).slice(0, 300)}`);
-    if ((d as any).revenuePerEmployee) parts.push(`Revenue Per Employee: ${JSON.stringify((d as any).revenuePerEmployee).slice(0, 300)}`);
-    if ((d as any).financialBenchmarking) parts.push(`Financial Benchmarking: ${JSON.stringify((d as any).financialBenchmarking).slice(0, 300)}`);
-    if ((d as any).investmentPortfolio) parts.push(`Investment Portfolio: ${JSON.stringify((d as any).investmentPortfolio).slice(0, 300)}`);
-    if ((d as any).costAllocationModel) parts.push(`Cost Allocation Model: ${JSON.stringify((d as any).costAllocationModel).slice(0, 300)}`);
-    if ((d as any).marginWaterfall) parts.push(`Margin Waterfall: ${JSON.stringify((d as any).marginWaterfall).slice(0, 300)}`);
-    if ((d as any).customerOnboardingMetrics) parts.push(`Customer Onboarding Metrics: ${JSON.stringify((d as any).customerOnboardingMetrics).slice(0, 300)}`);
-    if ((d as any).healthScoreModel) parts.push(`Health Score Model: ${JSON.stringify((d as any).healthScoreModel).slice(0, 300)}`);
-    if ((d as any).csExpansionPlaybook) parts.push(`CS Expansion Playbook: ${JSON.stringify((d as any).csExpansionPlaybook).slice(0, 300)}`);
-    if ((d as any).renewalForecasting) parts.push(`Renewal Forecasting: ${JSON.stringify((d as any).renewalForecasting).slice(0, 300)}`);
-    if ((d as any).csOperations) parts.push(`CS Operations: ${JSON.stringify((d as any).csOperations).slice(0, 300)}`);
-    if ((d as any).customerMilestones) parts.push(`Customer Milestones: ${JSON.stringify((d as any).customerMilestones).slice(0, 300)}`);
-    if ((d as any).okrFramework) parts.push(`OKR Framework: ${JSON.stringify((d as any).okrFramework).slice(0, 300)}`);
-    if ((d as any).strategicPillars) parts.push(`Strategic Pillars: ${JSON.stringify((d as any).strategicPillars).slice(0, 300)}`);
-    if ((d as any).competitivePositioning) parts.push(`Competitive Positioning: ${JSON.stringify((d as any).competitivePositioning).slice(0, 300)}`);
-    if ((d as any).marketShareAnalysis) parts.push(`Market Share Analysis: ${JSON.stringify((d as any).marketShareAnalysis).slice(0, 300)}`);
-    if ((d as any).growthCorridors) parts.push(`Growth Corridors: ${JSON.stringify((d as any).growthCorridors).slice(0, 300)}`);
-    if ((d as any).valuePropCanvas) parts.push(`Value Prop Canvas: ${JSON.stringify((d as any).valuePropCanvas).slice(0, 300)}`);
-    if ((d as any).competitiveMonitoring) parts.push(`Competitive Monitoring: ${(d as any).competitiveMonitoring.summary}`);
-    if ((d as any).marketTrendRadar) parts.push(`Market Trend Radar: ${(d as any).marketTrendRadar.summary}`);
-    if ((d as any).industryBenchmarkIndex) parts.push(`Industry Benchmark Index: ${(d as any).industryBenchmarkIndex.summary}`);
-    if ((d as any).customerIntelPlatform) parts.push(`Customer Intel Platform: ${(d as any).customerIntelPlatform.summary}`);
-    if ((d as any).priceSensitivityModel) parts.push(`Price Sensitivity Model: ${(d as any).priceSensitivityModel.summary}`);
-    if ((d as any).demandSignalAnalysis) parts.push(`Demand Signal Analysis: ${(d as any).demandSignalAnalysis.summary}`);
-    if ((d as any).digitalMaturityIndex) parts.push(`Digital Maturity Index: ${(d as any).digitalMaturityIndex.summary}`);
-    if ((d as any).cloudMigrationReadiness) parts.push(`Cloud Migration Readiness: ${(d as any).cloudMigrationReadiness.summary}`);
-    if ((d as any).automationRoi) parts.push(`Automation ROI: ${(d as any).automationRoi.summary}`);
-    if ((d as any).digitalWorkplace) parts.push(`Digital Workplace: ${(d as any).digitalWorkplace.summary}`);
-    if ((d as any).cybersecurityPosture) parts.push(`Cybersecurity Posture: ${(d as any).cybersecurityPosture.summary}`);
-    if ((d as any).techVendorConsolidation) parts.push(`Tech Vendor Consolidation: ${(d as any).techVendorConsolidation.summary}`);
-    if ((d as any).revenueSourceMapping) parts.push(`Revenue Source Mapping: ${(d as any).revenueSourceMapping.summary}`);
-    if ((d as any).channelMixOptimization) parts.push(`Channel Mix Optimization: ${(d as any).channelMixOptimization.summary}`);
-    if ((d as any).crossSellEngine) parts.push(`Cross-Sell Engine: ${(d as any).crossSellEngine.summary}`);
-    if ((d as any).priceOptimizationModel) parts.push(`Price Optimization Model: ${(d as any).priceOptimizationModel.summary}`);
-    if ((d as any).promotionEffectiveness) parts.push(`Promotion Effectiveness: ${(d as any).promotionEffectiveness.summary}`);
-    if ((d as any).revenueHealthIndex) parts.push(`Revenue Health Index: ${(d as any).revenueHealthIndex.summary}`);
-    if ((d as any).organizationalNetwork) parts.push(`Organizational Network: ${(d as any).organizationalNetwork.summary}`);
-    if ((d as any).decisionEfficiency) parts.push(`Decision Efficiency: ${(d as any).decisionEfficiency.summary}`);
-    if ((d as any).meetingEfficiency) parts.push(`Meeting Efficiency: ${(d as any).meetingEfficiency.summary}`);
-    if ((d as any).knowledgeCapital) parts.push(`Knowledge Capital: ${(d as any).knowledgeCapital.summary}`);
-    if ((d as any).changeManagementScore) parts.push(`Change Management Score: ${(d as any).changeManagementScore.summary}`);
-    if ((d as any).cultureAlignment) parts.push(`Culture Alignment: ${(d as any).cultureAlignment.summary}`);
-    if ((d as any).partnerPerformance) parts.push(`Partner Performance: ${(d as any).partnerPerformance.summary}`);
-    if ((d as any).ecosystemMapping) parts.push(`Ecosystem Mapping: ${(d as any).ecosystemMapping.summary}`);
-    if ((d as any).allianceStrategy) parts.push(`Alliance Strategy: ${(d as any).allianceStrategy.summary}`);
-    if ((d as any).channelPartnerHealth) parts.push(`Channel Partner Health: ${(d as any).channelPartnerHealth.summary}`);
-    if ((d as any).coSellingPipeline) parts.push(`Co-Selling Pipeline: ${(d as any).coSellingPipeline.summary}`);
-    if ((d as any).integrationMarketplace) parts.push(`Integration Marketplace: ${(d as any).integrationMarketplace.summary}`);
-    if ((d as any).brandEquityIndex) parts.push(`Brand Equity Index: ${(d as any).brandEquityIndex.summary}`);
-    if ((d as any).sentimentDashboard) parts.push(`Sentiment Dashboard: ${(d as any).sentimentDashboard.summary}`);
-    if ((d as any).mediaShareOfVoice) parts.push(`Media Share of Voice: ${(d as any).mediaShareOfVoice.summary}`);
-    if ((d as any).crisisCommsReadiness) parts.push(`Crisis Comms Readiness: ${(d as any).crisisCommsReadiness.summary}`);
-    if ((d as any).thoughtLeadership) parts.push(`Thought Leadership: ${(d as any).thoughtLeadership.summary}`);
-    if ((d as any).brandConsistency) parts.push(`Brand Consistency: ${(d as any).brandConsistency.summary}`);
-    if ((d as any).monetizationModel) parts.push(`Monetization Model: ${(d as any).monetizationModel.summary}`);
-    if ((d as any).freeTrialConversion) parts.push(`Free Trial Conversion: ${(d as any).freeTrialConversion.summary}`);
-    if ((d as any).usageBasedPricing) parts.push(`Usage-Based Pricing: ${(d as any).usageBasedPricing.summary}`);
-    if ((d as any).bundleOptimization) parts.push(`Bundle Optimization: ${(d as any).bundleOptimization.summary}`);
-    if ((d as any).discountDiscipline) parts.push(`Discount Discipline: ${(d as any).discountDiscipline.summary}`);
-    if ((d as any).revenueLeakageDetection) parts.push(`Revenue Leakage Detection: ${(d as any).revenueLeakageDetection.summary}`);
-    if ((d as any).customerAcademy) parts.push(`Customer Academy: ${(d as any).customerAcademy.summary}`);
-    if ((d as any).contentEngagement) parts.push(`Content Engagement: ${(d as any).contentEngagement.summary}`);
-    if ((d as any).communityHealth) parts.push(`Community Health: ${(d as any).communityHealth.summary}`);
-    if ((d as any).certificationProgram) parts.push(`Certification Program: ${(d as any).certificationProgram.summary}`);
-    if ((d as any).selfServiceAdoption) parts.push(`Self-Service Adoption: ${(d as any).selfServiceAdoption.summary}`);
-    if ((d as any).supportDeflection) parts.push(`Support Deflection: ${(d as any).supportDeflection.summary}`);
-    if ((d as any).investorDeck) parts.push(`Investor Deck: ${(d as any).investorDeck.summary}`);
-    if ((d as any).fundingTimeline) parts.push(`Funding Timeline: ${(d as any).fundingTimeline.summary}`);
-    if ((d as any).valuationModel) parts.push(`Valuation Model: ${(d as any).valuationModel.summary}`);
-    if ((d as any).capTableManagement) parts.push(`Cap Table Management: ${(d as any).capTableManagement.summary}`);
-    if ((d as any).investorCommunication) parts.push(`Investor Communication: ${(d as any).investorCommunication.summary}`);
-    if ((d as any).boardReporting) parts.push(`Board Reporting: ${(d as any).boardReporting.summary}`);
-    if ((d as any).geoExpansionStrategy) parts.push(`Geo Expansion Strategy: ${(d as any).geoExpansionStrategy.summary}`);
-    if ((d as any).localMarketEntry) parts.push(`Local Market Entry: ${(d as any).localMarketEntry.summary}`);
-    if ((d as any).marketRegulations) parts.push(`Market Regulations: ${(d as any).marketRegulations.summary}`);
-    if ((d as any).partnerLocalization) parts.push(`Partner Localization: ${(d as any).partnerLocalization.summary}`);
-    if ((d as any).culturalAdaptation) parts.push(`Cultural Adaptation: ${(d as any).culturalAdaptation.summary}`);
-    if ((d as any).expansionRoi) parts.push(`Expansion ROI: ${(d as any).expansionRoi.summary}`);
-    if ((d as any).productLedMetrics) parts.push(`PLG Metrics: ${(d as any).productLedMetrics.summary}`);
-    if ((d as any).activationFunnel) parts.push(`Activation Funnel: ${(d as any).activationFunnel.summary}`);
-    if ((d as any).featureAdoption) parts.push(`Feature Adoption: ${(d as any).featureAdoption.summary}`);
-    if ((d as any).virality) parts.push(`Virality: ${(d as any).virality.summary}`);
-    if ((d as any).productQualifiedLeads) parts.push(`Product Qualified Leads: ${(d as any).productQualifiedLeads.summary}`);
-    if ((d as any).timeToValue) parts.push(`Time-to-Value: ${(d as any).timeToValue.summary}`);
-    if ((d as any).aiReadinessScore) parts.push(`AI Readiness Score: ${(d as any).aiReadinessScore.summary}`);
-    if ((d as any).mlUseCasePriority) parts.push(`ML Use Case Priority: ${(d as any).mlUseCasePriority.summary}`);
-    if ((d as any).dataInfrastructure) parts.push(`Data Infrastructure: ${(d as any).dataInfrastructure.summary}`);
-    if ((d as any).aiTalentGap) parts.push(`AI Talent Gap: ${(d as any).aiTalentGap.summary}`);
-    if ((d as any).ethicalAiFramework) parts.push(`Ethical AI Framework: ${(d as any).ethicalAiFramework.summary}`);
-    if ((d as any).aiRoiProjection) parts.push(`AI ROI Projection: ${(d as any).aiRoiProjection.summary}`);
-    if ((d as any).advocacyProgram) parts.push(`Advocacy Program: ${(d as any).advocacyProgram.summary}`);
-    if ((d as any).referralMechanism) parts.push(`Referral Mechanism: ${(d as any).referralMechanism.summary}`);
-    if ((d as any).testimonialPipeline) parts.push(`Testimonial Pipeline: ${(d as any).testimonialPipeline.summary}`);
-    if ((d as any).caseStudyFactory) parts.push(`Case Study Factory: ${(d as any).caseStudyFactory.summary}`);
-    if ((d as any).customerAdvisoryBoard) parts.push(`Customer Advisory Board: ${(d as any).customerAdvisoryBoard.summary}`);
-    if ((d as any).npsActionPlan) parts.push(`NPS Action Plan: ${(d as any).npsActionPlan.summary}`);
-    if ((d as any).procurementEfficiency) parts.push(`Procurement Efficiency: ${(d as any).procurementEfficiency.summary}`);
-    if ((d as any).expenseManagement) parts.push(`Expense Management: ${(d as any).expenseManagement.summary}`);
-    if ((d as any).invoiceAutomation) parts.push(`Invoice Automation: ${(d as any).invoiceAutomation.summary}`);
-    if ((d as any).paymentOptimization) parts.push(`Payment Optimization: ${(d as any).paymentOptimization.summary}`);
-    if ((d as any).financialControls) parts.push(`Financial Controls: ${(d as any).financialControls.summary}`);
-    if ((d as any).treasuryManagement) parts.push(`Treasury Management: ${(d as any).treasuryManagement.summary}`);
-    if ((d as any).demandGenEngine) parts.push(`Demand Gen Engine: ${(d as any).demandGenEngine.summary}`);
-    if ((d as any).contentMarketingRoi) parts.push(`Content Marketing ROI: ${(d as any).contentMarketingRoi.summary}`);
-    if ((d as any).seoStrategy) parts.push(`SEO Strategy: ${(d as any).seoStrategy.summary}`);
-    if ((d as any).paidMediaOptimization) parts.push(`Paid Media Optimization: ${(d as any).paidMediaOptimization.summary}`);
-    if ((d as any).eventRoi) parts.push(`Event ROI: ${(d as any).eventRoi.summary}`);
-    if ((d as any).influencerStrategy) parts.push(`Influencer Strategy: ${(d as any).influencerStrategy.summary}`);
-    if ((d as any).platformEconomics) parts.push(`Platform Economics: ${(d as any).platformEconomics.summary}`);
-    if ((d as any).developerExperience) parts.push(`Developer Experience: ${(d as any).developerExperience.summary}`);
-    if ((d as any).apiMonetization) parts.push(`API Monetization: ${(d as any).apiMonetization.summary}`);
-    if ((d as any).marketplaceStrategy) parts.push(`Marketplace Strategy: ${(d as any).marketplaceStrategy.summary}`);
-    if ((d as any).platformGovernance) parts.push(`Platform Governance: ${(d as any).platformGovernance.summary}`);
-    if ((d as any).platformNetworkDynamics) parts.push(`Platform Network Dynamics: ${(d as any).platformNetworkDynamics.summary}`);
-    if ((d as any).contractLifecycle) parts.push(`Contract Lifecycle: ${(d as any).contractLifecycle.summary}`);
-    if ((d as any).complianceAutomation) parts.push(`Compliance Automation: ${(d as any).complianceAutomation.summary}`);
-    if ((d as any).legalRiskRegister) parts.push(`Legal Risk Register: ${(d as any).legalRiskRegister.summary}`);
-    if ((d as any).intellectualPropertyAudit) parts.push(`IP Audit: ${(d as any).intellectualPropertyAudit.summary}`);
-    if ((d as any).regulatoryCalendar) parts.push(`Regulatory Calendar: ${(d as any).regulatoryCalendar.summary}`);
-    if ((d as any).privacyCompliance) parts.push(`Privacy Compliance: ${(d as any).privacyCompliance.summary}`);
-    if ((d as any).dataWarehouseStrategy) parts.push(`Data Warehouse Strategy: ${(d as any).dataWarehouseStrategy.summary}`);
-    if ((d as any).biDashboardDesign) parts.push(`BI Dashboard Design: ${(d as any).biDashboardDesign.summary}`);
-    if ((d as any).predictiveModelCatalog) parts.push(`Predictive Model Catalog: ${(d as any).predictiveModelCatalog.summary}`);
-    if ((d as any).dataLineageMap) parts.push(`Data Lineage Map: ${(d as any).dataLineageMap.summary}`);
-    if ((d as any).metricsDictionary) parts.push(`Metrics Dictionary: ${(d as any).metricsDictionary.summary}`);
-    if ((d as any).analyticsGovernance) parts.push(`Analytics Governance: ${(d as any).analyticsGovernance.summary}`);
-    if ((d as any).employeeJourney) parts.push(`Employee Journey: ${(d as any).employeeJourney.summary}`);
-    if ((d as any).workplaceWellness) parts.push(`Workplace Wellness: ${(d as any).workplaceWellness.summary}`);
-    if ((d as any).learningPathways) parts.push(`Learning Pathways: ${(d as any).learningPathways.summary}`);
-    if ((d as any).performanceFramework) parts.push(`Performance Framework: ${(d as any).performanceFramework.summary}`);
-    if ((d as any).payEquityAnalysis) parts.push(`Pay Equity Analysis: ${(d as any).payEquityAnalysis.summary}`);
-    if ((d as any).deiBenchmark) parts.push(`DEI Benchmark: ${(d as any).deiBenchmark.summary}`);
-    if ((d as any).businessModelCanvas) parts.push(`Business Model Canvas: ${(d as any).businessModelCanvas.summary}`);
-    if ((d as any).revenueModelDesign) parts.push(`Revenue Model Design: ${(d as any).revenueModelDesign.summary}`);
-    if ((d as any).valueChainOptimization) parts.push(`Value Chain Optimization: ${(d as any).valueChainOptimization.summary}`);
-    if ((d as any).costStructureAnalysis) parts.push(`Cost Structure Analysis: ${(d as any).costStructureAnalysis.summary}`);
-    if ((d as any).partnershipModel) parts.push(`Partnership Model: ${(d as any).partnershipModel.summary}`);
-    if ((d as any).growthLeverAssessment) parts.push(`Growth Lever Assessment: ${(d as any).growthLeverAssessment.summary}`);
-    if ((d as any).vendorManagement) parts.push(`Vendor Management: ${(d as any).vendorManagement.summary}`);
-    if ((d as any).supplyChainVisibility) parts.push(`Supply Chain Visibility: ${(d as any).supplyChainVisibility.summary}`);
-    if ((d as any).sustainableSourcing) parts.push(`Sustainable Sourcing: ${(d as any).sustainableSourcing.summary}`);
-    if ((d as any).facilityOptimization) parts.push(`Facility Optimization: ${(d as any).facilityOptimization.summary}`);
-    if ((d as any).fleetManagement) parts.push(`Fleet Management: ${(d as any).fleetManagement.summary}`);
-    if ((d as any).customerSuccess) parts.push(`Customer Success: ${(d as any).customerSuccess.summary}`);
-    if ((d as any).crisisManagement) parts.push(`Crisis Management: ${(d as any).crisisManagement.summary}`);
-    if ((d as any).operationalResilience) parts.push(`Operational Resilience: ${(d as any).operationalResilience.summary}`);
-    if ((d as any).stakeholderMapping) parts.push(`Stakeholder Mapping: ${(d as any).stakeholderMapping.summary}`);
-    if ((d as any).digitalPresence) parts.push(`Digital Presence: ${(d as any).digitalPresence.summary}`);
-    if ((d as any).channelStrategy) parts.push(`Channel Strategy: ${(d as any).channelStrategy.summary}`);
-    if ((d as any).accountManagement) parts.push(`Account Management: ${(d as any).accountManagement.summary}`);
-    if ((d as any).fundraisingStrategy) parts.push(`Fundraising Strategy: ${(d as any).fundraisingStrategy.summary}`);
-    if ((d as any).captableManagement) parts.push(`Cap Table Management: ${(d as any).captableManagement.summary}`);
-    if ((d as any).exitPlanning) parts.push(`Exit Planning: ${(d as any).exitPlanning.summary}`);
-    if ((d as any).boardGovernance) parts.push(`Board Governance: ${(d as any).boardGovernance.summary}`);
-    if ((d as any).recruitmentFunnel) parts.push(`Recruitment Funnel: ${(d as any).recruitmentFunnel.summary}`);
-    if ((d as any).employerBranding) parts.push(`Employer Branding: ${(d as any).employerBranding.summary}`);
-    if ((d as any).teamTopology) parts.push(`Team Topology: ${(d as any).teamTopology.summary}`);
-    if ((d as any).onboardingOptimization) parts.push(`Onboarding Optimization: ${(d as any).onboardingOptimization.summary}`);
-    if ((d as any).meetingCulture) parts.push(`Meeting Culture: ${(d as any).meetingCulture.summary}`);
-    if ((d as any).documentManagement) parts.push(`Document Management: ${(d as any).documentManagement.summary}`);
-    if ((d as any).workflowAutomation) parts.push(`Workflow Automation: ${(d as any).workflowAutomation.summary}`);
-    if ((d as any).qualityAssurance) parts.push(`Quality Assurance: ${(d as any).qualityAssurance.summary}`);
-    if ((d as any).incidentResponse) parts.push(`Incident Response: ${(d as any).incidentResponse.summary}`);
-    if ((d as any).accessControl) parts.push(`Access Control: ${(d as any).accessControl.summary}`);
-    if ((d as any).auditTrail) parts.push(`Audit Trail: ${(d as any).auditTrail.summary}`);
-    if ((d as any).penetrationTesting) parts.push(`Penetration Testing: ${(d as any).penetrationTesting.summary}`);
-    if ((d as any).securityAwareness) parts.push(`Security Awareness: ${(d as any).securityAwareness.summary}`);
-    if ((d as any).dataClassification) parts.push(`Data Classification: ${(d as any).dataClassification.summary}`);
-    if ((d as any).apiDesign) parts.push(`API Design: ${(d as any).apiDesign.summary}`);
-    if ((d as any).microservicesArchitecture) parts.push(`Microservices Architecture: ${(d as any).microservicesArchitecture.summary}`);
-    if ((d as any).cloudOptimization) parts.push(`Cloud Optimization: ${(d as any).cloudOptimization.summary}`);
-    if ((d as any).devopsMaturity) parts.push(`DevOps Maturity: ${(d as any).devopsMaturity.summary}`);
-    if ((d as any).systemMonitoring) parts.push(`System Monitoring: ${(d as any).systemMonitoring.summary}`);
-    if ((d as any).codeQuality) parts.push(`Code Quality: ${(d as any).codeQuality.summary}`);
-    if ((d as any).customerLifetimeValue) parts.push(`Customer Lifetime Value: ${(d as any).customerLifetimeValue.summary}`);
-    if ((d as any).sentimentAnalysis) parts.push(`Sentiment Analysis: ${(d as any).sentimentAnalysis.summary}`);
-    if ((d as any).supportTicketAnalysis) parts.push(`Support Ticket Analysis: ${(d as any).supportTicketAnalysis.summary}`);
-    if ((d as any).segmentProfitability) parts.push(`Segment Profitability: ${(d as any).segmentProfitability.summary}`);
-    if ((d as any).referralAnalytics) parts.push(`Referral Analytics: ${(d as any).referralAnalytics.summary}`);
-    if ((d as any).customerHealthDashboard) parts.push(`Customer Health Dashboard: ${(d as any).customerHealthDashboard.summary}`);
-    if ((d as any).innovationPortfolio) parts.push(`Innovation Portfolio: ${(d as any).innovationPortfolio.summary}`);
-    if ((d as any).contingencyPlanning) parts.push(`Contingency Planning: ${(d as any).contingencyPlanning.summary}`);
-    if ((d as any).operatingRhythm) parts.push(`Operating Rhythm: ${(d as any).operatingRhythm.summary}`);
-    if ((d as any).crossFunctionalSync) parts.push(`Cross-Functional Sync: ${(d as any).crossFunctionalSync.summary}`);
-    if ((d as any).wardRoomStrategy) parts.push(`War Room Strategy: ${(d as any).wardRoomStrategy.summary}`);
-    if ((d as any).revenueIntelligence) parts.push(`Revenue Intelligence: ${(d as any).revenueIntelligence.summary}`);
-    if ((d as any).marketResearch) parts.push(`Market Research: ${(d as any).marketResearch.summary}`);
-    if ((d as any).competitorTracking) parts.push(`Competitor Tracking: ${(d as any).competitorTracking.summary}`);
-    if ((d as any).industryTrends) parts.push(`Industry Trends: ${(d as any).industryTrends.summary}`);
-    if ((d as any).socialListening) parts.push(`Social Listening: ${(d as any).socialListening.summary}`);
-    if ((d as any).uxResearch) parts.push(`UX Research: ${(d as any).uxResearch.summary}`);
-    if ((d as any).webAnalytics) parts.push(`Web Analytics: ${(d as any).webAnalytics.summary}`);
-    if ((d as any).emailMarketing) parts.push(`Email Marketing: ${(d as any).emailMarketing.summary}`);
-    if ((d as any).conversionOptimization) parts.push(`Conversion Optimization: ${(d as any).conversionOptimization.summary}`);
-    if ((d as any).abTestingFramework) parts.push(`A/B Testing Framework: ${(d as any).abTestingFramework.summary}`);
-    if ((d as any).marketingAttribution) parts.push(`Marketing Attribution: ${(d as any).marketingAttribution.summary}`);
-    if ((d as any).contentCalendar) parts.push(`Content Calendar: ${(d as any).contentCalendar.summary}`);
-    if ((d as any).socialMediaCalendar) parts.push(`Social Media Calendar: ${(d as any).socialMediaCalendar.summary}`);
-    if ((d as any).budgetPlanning) parts.push(`Budget Planning: ${(d as any).budgetPlanning.summary}`);
-    if ((d as any).revenueForecasting) parts.push(`Revenue Forecasting: ${(d as any).revenueForecasting.summary}`);
-    if ((d as any).cashManagement) parts.push(`Cash Management: ${(d as any).cashManagement.summary}`);
-    if ((d as any).creditManagement) parts.push(`Credit Management: ${(d as any).creditManagement.summary}`);
-    if ((d as any).debtStructure) parts.push(`Debt Structure: ${(d as any).debtStructure.summary}`);
-    if ((d as any).financialReporting) parts.push(`Financial Reporting: ${(d as any).financialReporting.summary}`);
-    if ((d as any).carbonReduction) parts.push(`Carbon Reduction: ${(d as any).carbonReduction.summary}`);
-    if ((d as any).circularEconomy) parts.push(`Circular Economy: ${(d as any).circularEconomy.summary}`);
-    if ((d as any).communityImpact) parts.push(`Community Impact: ${(d as any).communityImpact.summary}`);
-    if ((d as any).waterManagement) parts.push(`Water Management: ${(d as any).waterManagement.summary}`);
-    if ((d as any).wasteReduction) parts.push(`Waste Reduction: ${(d as any).wasteReduction.summary}`);
-    if ((d as any).sustainableInnovation) parts.push(`Sustainable Innovation: ${(d as any).sustainableInnovation.summary}`);
-    if ((d as any).talentPipeline) parts.push(`Talent Pipeline: ${(d as any).talentPipeline.summary}`);
-    if ((d as any).leadershipDevelopment) parts.push(`Leadership Development: ${(d as any).leadershipDevelopment.summary}`);
-    if ((d as any).successionReadiness) parts.push(`Succession Readiness: ${(d as any).successionReadiness.summary}`);
-    if ((d as any).compensationStrategy) parts.push(`Compensation Strategy: ${(d as any).compensationStrategy.summary}`);
-    if ((d as any).workforceAnalytics) parts.push(`Workforce Analytics: ${(d as any).workforceAnalytics.summary}`);
-    if ((d as any).orgEffectiveness) parts.push(`Org Effectiveness: ${(d as any).orgEffectiveness.summary}`);
-    if ((d as any).salesMotionDesign) parts.push(`Sales Motion Design: ${(d as any).salesMotionDesign.summary}`);
-    if ((d as any).dealAnalytics) parts.push(`Deal Analytics: ${(d as any).dealAnalytics.summary}`);
-    if ((d as any).territoryOptimization) parts.push(`Territory Optimization: ${(d as any).territoryOptimization.summary}`);
-    if ((d as any).salesCompensation) parts.push(`Sales Compensation: ${(d as any).salesCompensation.summary}`);
-    if ((d as any).revenuePrediction) parts.push(`Revenue Prediction: ${(d as any).revenuePrediction.summary}`);
-    if ((d as any).accountPenetration) parts.push(`Account Penetration: ${(d as any).accountPenetration.summary}`);
-    if ((d as any).productVision) parts.push(`Product Vision: ${(d as any).productVision.summary}`);
-    if ((d as any).featureRoadmap) parts.push(`Feature Roadmap: ${(d as any).featureRoadmap.summary}`);
-    if ((d as any).pmfAssessment) parts.push(`PMF Assessment: ${(d as any).pmfAssessment.summary}`);
-    if ((d as any).userActivation) parts.push(`User Activation: ${(d as any).userActivation.summary}`);
-    if ((d as any).productInsights) parts.push(`Product Insights: ${(d as any).productInsights.summary}`);
-    if ((d as any).releaseStrategy) parts.push(`Release Strategy: ${(d as any).releaseStrategy.summary}`);
-    if ((d as any).brandPositionMap) parts.push(`Brand Position Map: ${(d as any).brandPositionMap.summary}`);
-    if ((d as any).brandValuation) parts.push(`Brand Valuation: ${(d as any).brandValuation.summary}`);
-    if ((d as any).brandHierarchy) parts.push(`Brand Hierarchy: ${(d as any).brandHierarchy.summary}`);
-    if ((d as any).reputationAnalysis) parts.push(`Reputation Analysis: ${(d as any).reputationAnalysis.summary}`);
-    if ((d as any).messagingFramework) parts.push(`Messaging Framework: ${(d as any).messagingFramework.summary}`);
-    if ((d as any).visualBranding) parts.push(`Visual Branding: ${(d as any).visualBranding.summary}`);
-    // Wave 101: AI & ML Readiness
-    if ((d as any).aiAdoptionPotential) parts.push(`AI Adoption Potential: ${(d as any).aiAdoptionPotential.summary}`);
-    if ((d as any).mlUseCaseIdentification) parts.push(`ML Use Cases: ${(d as any).mlUseCaseIdentification.summary}`);
-    if ((d as any).dataInfrastructureGapAnalysis) parts.push(`Data Infrastructure Gaps: ${(d as any).dataInfrastructureGapAnalysis.summary}`);
-    if ((d as any).automationROIModeling) parts.push(`Automation ROI: ${(d as any).automationROIModeling.summary}`);
-    if ((d as any).aiTalentNeedsAssessment) parts.push(`AI Talent Needs: ${(d as any).aiTalentNeedsAssessment.summary}`);
-    if ((d as any).ethicalAIFramework) parts.push(`Ethical AI Framework: ${(d as any).ethicalAIFramework.summary}`);
-    // Wave 102: Geographic Expansion
-    if ((d as any).marketEntryScoring) parts.push(`Market Entry Scoring: ${(d as any).marketEntryScoring.summary}`);
-    if ((d as any).regulatoryLandscapeMapping) parts.push(`Regulatory Landscape: ${(d as any).regulatoryLandscapeMapping.summary}`);
-    if ((d as any).culturalAdaptationStrategy) parts.push(`Cultural Adaptation: ${(d as any).culturalAdaptationStrategy.summary}`);
-    if ((d as any).logisticsExpansionAnalysis) parts.push(`Logistics Expansion: ${(d as any).logisticsExpansionAnalysis.summary}`);
-    if ((d as any).localPartnershipStrategy) parts.push(`Local Partnerships: ${(d as any).localPartnershipStrategy.summary}`);
-    if ((d as any).internationalPricingOptimization) parts.push(`Intl Pricing: ${(d as any).internationalPricingOptimization.summary}`);
-    // Wave 103: Customer Lifecycle
-    if ((d as any).acquisitionFunnelIntelligence) parts.push(`Acquisition Funnel: ${(d as any).acquisitionFunnelIntelligence.summary}`);
-    if ((d as any).onboardingEffectivenessScore) parts.push(`Onboarding Score: ${(d as any).onboardingEffectivenessScore.summary}`);
-    if ((d as any).engagementScoringModel) parts.push(`Engagement Scoring: ${(d as any).engagementScoringModel.summary}`);
-    if ((d as any).expansionRevenueOpportunities) parts.push(`Expansion Revenue: ${(d as any).expansionRevenueOpportunities.summary}`);
-    if ((d as any).advocacyProgramDesign) parts.push(`Advocacy Program: ${(d as any).advocacyProgramDesign.summary}`);
-    if ((d as any).lifetimeValueModeling) parts.push(`Lifetime Value: ${(d as any).lifetimeValueModeling.summary}`);
-    // Wave 104: Platform & API Economy
-    if ((d as any).apiMonetizationStrategy) parts.push(`API Monetization: ${(d as any).apiMonetizationStrategy.summary}`);
-    if ((d as any).platformEcosystemHealth) parts.push(`Platform Ecosystem: ${(d as any).platformEcosystemHealth.summary}`);
-    if ((d as any).developerExperienceOptimization) parts.push(`Developer Experience: ${(d as any).developerExperienceOptimization.summary}`);
-    if ((d as any).integrationMarketplaceAnalytics) parts.push(`Integration Marketplace: ${(d as any).integrationMarketplaceAnalytics.summary}`);
-    if ((d as any).partnerEnablementProgram) parts.push(`Partner Enablement: ${(d as any).partnerEnablementProgram.summary}`);
-    if ((d as any).platformGovernanceFramework) parts.push(`Platform Governance: ${(d as any).platformGovernanceFramework.summary}`);
-    // Wave 105: Predictive Analytics
-    if ((d as any).demandForecastingEngine) parts.push(`Demand Forecasting: ${(d as any).demandForecastingEngine.summary}`);
-    if ((d as any).predictiveMaintenanceModeling) parts.push(`Predictive Maintenance: ${(d as any).predictiveMaintenanceModeling.summary}`);
-    if ((d as any).churnPredictionModel) parts.push(`Churn Prediction: ${(d as any).churnPredictionModel.summary}`);
-    if ((d as any).leadScoringAI) parts.push(`Lead Scoring AI: ${(d as any).leadScoringAI.summary}`);
-    if ((d as any).inventoryOptimizationAI) parts.push(`Inventory Optimization: ${(d as any).inventoryOptimizationAI.summary}`);
-    if ((d as any).revenuePredictionModeling) parts.push(`Revenue Prediction: ${(d as any).revenuePredictionModeling.summary}`);
-    // Wave 106: Organizational Design
-    if ((d as any).orgStructureAnalysis) parts.push(`Org Structure: ${(d as any).orgStructureAnalysis.summary}`);
-    if ((d as any).spanOfControlOptimization) parts.push(`Span of Control: ${(d as any).spanOfControlOptimization.summary}`);
-    if ((d as any).decisionRightsMapping) parts.push(`Decision Rights: ${(d as any).decisionRightsMapping.summary}`);
-    if ((d as any).collaborationNetworkMapping) parts.push(`Collaboration Network: ${(d as any).collaborationNetworkMapping.summary}`);
-    if ((d as any).roleOptimizationAnalysis) parts.push(`Role Optimization: ${(d as any).roleOptimizationAnalysis.summary}`);
-    if ((d as any).successionPlanningFramework) parts.push(`Succession Planning: ${(d as any).successionPlanningFramework.summary}`);
-    // Wave 107: Social Impact & ESG
-    if ((d as any).impactMeasurementDashboard) parts.push(`Impact Measurement: ${(d as any).impactMeasurementDashboard.summary}`);
-    if ((d as any).esgReportingCompliance) parts.push(`ESG Compliance: ${(d as any).esgReportingCompliance.summary}`);
-    if ((d as any).stakeholderEngagementAnalytics) parts.push(`Stakeholder Engagement: ${(d as any).stakeholderEngagementAnalytics.summary}`);
-    if ((d as any).communityInvestmentStrategy) parts.push(`Community Investment: ${(d as any).communityInvestmentStrategy.summary}`);
-    if ((d as any).diversityMetricsAnalytics) parts.push(`Diversity Metrics: ${(d as any).diversityMetricsAnalytics.summary}`);
-    if ((d as any).greenOperationsOptimization) parts.push(`Green Operations: ${(d as any).greenOperationsOptimization.summary}`);
-    // Wave 108: Knowledge Management
-    if ((d as any).knowledgeAuditAssessment) parts.push(`Knowledge Audit: ${(d as any).knowledgeAuditAssessment.summary}`);
-    if ((d as any).expertiseMappingSystem) parts.push(`Expertise Mapping: ${(d as any).expertiseMappingSystem.summary}`);
-    if ((d as any).documentationStrategyFramework) parts.push(`Documentation Strategy: ${(d as any).documentationStrategyFramework.summary}`);
-    if ((d as any).learningPathwaysDesign) parts.push(`Learning Pathways: ${(d as any).learningPathwaysDesign.summary}`);
-    if ((d as any).institutionalMemoryProtection) parts.push(`Institutional Memory: ${(d as any).institutionalMemoryProtection.summary}`);
-    if ((d as any).knowledgeTransferOptimization) parts.push(`Knowledge Transfer: ${(d as any).knowledgeTransferOptimization.summary}`);
-    if ((d as any).toolsAutomationPlan) parts.push(`Tools & Automation: ${(d as any).toolsAutomationPlan.tools?.length ?? 0} tools recommended, Monthly cost: $${(d as any).toolsAutomationPlan.totalMonthlyCost ?? "N/A"}, Monthly savings: $${(d as any).toolsAutomationPlan.totalMonthlySavings ?? "N/A"}, ROI: ${(d as any).toolsAutomationPlan.roiMonths ?? "N/A"} months, Tech Stack Grade: ${(d as any).toolsAutomationPlan.techStackGrade || "N/A"}`);
-    reportContext = `\n\nBUSINESS CONTEXT:\n${parts.join("\n")}`;
+    reportContext = `\n\nBUSINESS CONTEXT:\n${buildBusinessContext(d)}`;
+    const triggers = getBusinessTriggers(d);
+    if (triggers) triggerContext = `\n\n${triggers}`;
   }
+
+  // Situational awareness (BetterBot-style)
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const dayStr = now.toLocaleDateString("en-US", { weekday: "long" });
+  const situationalAwareness = `\n\n--- Situational Awareness ---\n${timeStr}, ${dayStr}, ${dateStr}\nConversation: ${messages.length} messages so far`;
 
   const roleContext =
     memberRole === "owner"
@@ -1623,7 +1296,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
         ? `\nThe user is ${memberName}, an EMPLOYEE. Coach them on their personal performance and daily priorities.`
         : "";
 
-  const systemPrompt = COACH_SYSTEM_PROMPT + reportContext + roleContext;
+  const systemPrompt = COACH_SYSTEM_PROMPT_HEADER + reportContext + triggerContext + situationalAwareness + roleContext;
 
   // Build conversation history for Gemini
   const trimmedHistory = messages.slice(-16);
@@ -1642,6 +1315,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
         systemInstruction: systemPrompt,
         temperature: 0.4,
         maxOutputTokens: 1500,
+        thinkingConfig: { thinkingBudget: 0 },
         tools: [{ functionDeclarations: TOOLS }],
         toolConfig: { functionCallingMode: "AUTO" },
       } as Record<string, unknown>,
@@ -1682,6 +1356,7 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
           systemInstruction: systemPrompt,
           temperature: 0.4,
           maxOutputTokens: 1500,
+          thinkingConfig: { thinkingBudget: 0 },
         } as Record<string, unknown>,
       });
 
