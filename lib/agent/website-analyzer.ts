@@ -15,7 +15,7 @@ import type { WebsiteAnalysis } from "@/lib/types";
 import path from "path";
 import { mkdir, writeFile } from "fs/promises";
 
-const LITE_MODEL = "gemini-3-flash-preview";
+const LITE_MODEL = "gemini-2.5-flash";
 
 interface WebsiteBrowseResult {
   text: string;

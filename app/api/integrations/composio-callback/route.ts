@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = req.nextUrl;
-    const connectedAccountId = searchParams.get('connected_account_id');
+    const connectedAccountId = searchParams.get('connected_account_id')
+      ?? searchParams.get('connectedAccountId');
     const status = searchParams.get('status');
     // orgId and provider are embedded in the callback URL by the connect route
     const orgId = searchParams.get('orgId') ?? '';

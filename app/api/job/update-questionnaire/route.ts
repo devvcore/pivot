@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    await updateJob(runId, { questionnaire });
+    await updateJob(runId, { questionnaire: { ...job.questionnaire, ...questionnaire } });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[update-questionnaire]", e);

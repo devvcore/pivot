@@ -14,7 +14,7 @@ import { GoogleGenAI } from "@google/genai";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { MVPDeliverables, AgentMemory, WebsiteAnalysis } from "@/lib/types";
 
-const LITE_MODEL = "gemini-3-flash-preview";
+const LITE_MODEL = "gemini-2.5-flash";
 const supabase = createAdminClient();
 
 export async function buildAgentMemory(

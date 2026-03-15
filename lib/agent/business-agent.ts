@@ -24,7 +24,7 @@ import { collectIntegrationContext, formatIntegrationContextAsText } from "@/lib
 import { LoopGuard, closestToolName, smartTruncate } from "./agent-guardrails";
 import type { ChatMessage, AgentMemory, MVPDeliverables } from "@/lib/types";
 
-const FLASH_MODEL = "gemini-3-flash-preview";
+const FLASH_MODEL = "gemini-2.5-flash";
 const MAX_HISTORY_MESSAGES = 16;
 const AVAILABLE_TOOL_NAMES = ["search_web", "get_report_section", "analyze_website", "generate_projection", "navigate_to_page", "get_integration_data"];
 
@@ -840,18 +840,25 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
         },
       ];
 
-      const resp2 = await genai.models.generateContent({
-        model: FLASH_MODEL,
-        contents: contentsWithTools,
-        config: {
-          systemInstruction: buildSystemPrompt(memory),
-          temperature: 0.4,
-          maxOutputTokens: 2000,
-        } as Record<string, unknown>,
-      });
+      // Retry up to 2 times if Gemini returns null/empty text
+      let resp2Text: string | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const resp2 = await genai.models.generateContent({
+          model: FLASH_MODEL,
+          contents: contentsWithTools,
+          config: {
+            systemInstruction: buildSystemPrompt(memory),
+            temperature: 0.4,
+            maxOutputTokens: 2000,
+          } as Record<string, unknown>,
+        });
+        resp2Text = resp2.text ?? null;
+        if (resp2Text?.trim()) break;
+        if (attempt < 2) console.warn(`[Pivvy] Empty response (attempt ${attempt + 1}/3), retrying...`);
+      }
 
       // Append extracted markers to the response so the UI can parse them
-      let finalMessage = sanitize(resp2.text ?? "I encountered an issue generating a response. Please try again.");
+      let finalMessage = sanitize(resp2Text || "I encountered an issue generating a response. Please try again.");
       if (embeddedMarkers.length > 0) {
         finalMessage = finalMessage + "\n\n" + embeddedMarkers.join("\n");
       }
@@ -860,6 +867,27 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
         message: finalMessage,
         toolsUsed,
       };
+    }
+
+    // Retry if Gemini returned empty/null on the direct (no-tool) path
+    if (!resp.text?.trim()) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        console.warn(`[Pivvy] Empty direct response (attempt ${attempt + 2}/3), retrying...`);
+        const retry = await genai.models.generateContent({
+          model: FLASH_MODEL,
+          contents,
+          config: {
+            systemInstruction: buildSystemPrompt(memory),
+            temperature: 0.4,
+            maxOutputTokens: 2000,
+            tools: [{ functionDeclarations: TOOLS }],
+            toolConfig: { functionCallingMode: "AUTO" },
+          } as Record<string, unknown>,
+        });
+        if (retry.text?.trim()) {
+          return { message: sanitize(retry.text), toolsUsed };
+        }
+      }
     }
 
     return {

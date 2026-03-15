@@ -749,6 +749,30 @@ function isRateLimit(error: unknown): boolean {
   return str.includes("429") || str.includes("RESOURCE_EXHAUSTED");
 }
 
+/** Attempt to repair common Gemini JSON output issues */
+function repairJson(text: string): string {
+  let s = text.trim();
+  // Strip markdown code fences
+  if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+  }
+  // Fix trailing commas before } or ]
+  s = s.replace(/,\s*([}\]])/g, "$1");
+  // If JSON was truncated (no closing brace), try to close it
+  if (s.startsWith("{") && !s.endsWith("}")) {
+    // Count open/close braces
+    let depth = 0;
+    for (const ch of s) { if (ch === "{") depth++; else if (ch === "}") depth--; }
+    while (depth > 0) { s += "}"; depth--; }
+  }
+  if (s.startsWith("[") && !s.endsWith("]")) {
+    let depth = 0;
+    for (const ch of s) { if (ch === "[") depth++; else if (ch === "]") depth--; }
+    while (depth > 0) { s += "]"; depth--; }
+  }
+  return s;
+}
+
 async function callWithRetry<T>(fn: () => Promise<T>, attempt = 0): Promise<T> {
   try {
     return await fn();
@@ -766,31 +790,50 @@ async function callWithRetry<T>(fn: () => Promise<T>, attempt = 0): Promise<T> {
 async function callJson(
   genai: GoogleGenAI,
   prompt: string,
-  model = "gemini-3-flash-preview",
+  model = "gemini-2.5-flash",
   sectionKey?: string
 ): Promise<Record<string, unknown>> {
-  return callWithRetry(async () => {
-    const resp = await genai.models.generateContent({
-      model,
-      contents: sectionKey ? prompt + buildSectionGuardrails(sectionKey) : prompt,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        responseMimeType: "application/json",
-        temperature: 0.3,
-        maxOutputTokens: 4096,
-        thinkingConfig: { thinkingBudget: 0 },
-      } as Record<string, unknown>,
-    });
-    const text = resp.text ?? "{}";
-    return JSON.parse(text) as Record<string, unknown>;
-  });
+  const JSON_RETRIES = 2;
+  for (let attempt = 0; attempt <= JSON_RETRIES; attempt++) {
+    try {
+      const resp = await callWithRetry(async () => {
+        return genai.models.generateContent({
+          model,
+          contents: sectionKey ? prompt + buildSectionGuardrails(sectionKey) : prompt,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            responseMimeType: "application/json",
+            temperature: 0.3,
+            maxOutputTokens: 8192,
+            thinkingConfig: { thinkingBudget: 0 },
+          } as Record<string, unknown>,
+        });
+      });
+      const text = resp.text ?? "{}";
+      try {
+        return JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        // Try repairing the JSON
+        const repaired = repairJson(text);
+        return JSON.parse(repaired) as Record<string, unknown>;
+      }
+    } catch (e) {
+      if (attempt < JSON_RETRIES) {
+        console.warn(`[Pivot] JSON parse failed (attempt ${attempt + 1}/${JSON_RETRIES + 1}), retrying...`);
+        await sleep(2000);
+        continue;
+      }
+      throw e;
+    }
+  }
+  return {};
 }
 
 async function callText(
   genai: GoogleGenAI,
   prompt: string,
   useSearch = false,
-  model = "gemini-3-flash-preview"
+  model = "gemini-2.5-flash"
 ): Promise<string> {
   return callWithRetry(async () => {
     const config: Record<string, unknown> = {
@@ -827,54 +870,42 @@ export async function synthesizeDeliverables(
   // Cap at 60K chars to stay within model context limits
   const kg = formatPacketAsContext(packet).slice(0, 60_000);
 
-  try {
-    console.log("[Pivot] Generating Health Score…");
-    const health = await genHealthScore(genai, kg);
+  // Each core synthesis is independent — wrap individually so one failure doesn't kill all
+  const safeCall = async <T>(label: string, fn: () => Promise<T>): Promise<T | undefined> => {
+    try {
+      console.log(`[Pivot] ${label}…`);
+      return await fn();
+    } catch (e) {
+      console.warn(`[Pivot] ${label} failed (continuing):`, e instanceof Error ? e.message : e);
+      return undefined;
+    }
+  };
 
-    console.log("[Pivot] Generating Cash Intelligence…");
-    const cash = await genCashIntelligence(genai, kg);
+  const health = await safeCall("Generating Health Score", () => genHealthScore(genai, kg));
+  const cash = await safeCall("Generating Cash Intelligence", () => genCashIntelligence(genai, kg));
+  const leaks = await safeCall("Identifying Revenue Leaks", () => genRevenueLeaks(genai, kg));
+  const issues = await safeCall("Compiling Issues Register", () => genIssuesRegister(genai, kg));
+  const customers = await safeCall("Analysing At-Risk Customers", () => genAtRiskCustomers(genai, kg));
+  const brief = await safeCall("Drafting Decision Brief", () => genDecisionBrief(genai, kg, questionnaire));
+  const actionPlan = await safeCall("Building Action Plan", () => genActionPlan(genai, kg, questionnaire));
+  const researchCtx = await safeCall("Researching external market context", () => researchExternalContext(genai, kg, packet));
+  const marketIntel = await safeCall("Building Growth Intelligence", () => genMarketIntelligence(genai, kg, researchCtx ?? ""));
 
-    console.log("[Pivot] Identifying Revenue Leaks…");
-    const leaks = await genRevenueLeaks(genai, kg);
+  const deliverables = normalizeDeliverables({
+    ...(health ? { healthScore: health } : {}),
+    ...(cash ? { cashIntelligence: cash } : {}),
+    ...(leaks ? { revenueLeakAnalysis: leaks } : {}),
+    ...(issues ? { issuesRegister: issues } : {}),
+    ...(customers ? { atRiskCustomers: customers } : {}),
+    ...(brief ? { decisionBrief: brief } : {}),
+    ...(actionPlan ? { actionPlan } : {}),
+    ...(marketIntel ? { marketIntelligence: marketIntel } : {}),
+  });
 
-    console.log("[Pivot] Compiling Issues Register…");
-    const issues = await genIssuesRegister(genai, kg);
+  // Attach data provenance (anti-hallucination metadata)
+  deliverables.dataProvenance = buildDataProvenance(packet);
 
-    console.log("[Pivot] Analysing At-Risk Customers…");
-    const customers = await genAtRiskCustomers(genai, kg);
-
-    console.log("[Pivot] Drafting Decision Brief…");
-    const brief = await genDecisionBrief(genai, kg, questionnaire);
-
-    console.log("[Pivot] Building Action Plan…");
-    const actionPlan = await genActionPlan(genai, kg, questionnaire);
-
-    console.log("[Pivot] Researching external market context…");
-    const researchCtx = await researchExternalContext(genai, kg, packet);
-
-    console.log("[Pivot] Building Growth Intelligence…");
-    const marketIntel = await genMarketIntelligence(genai, kg, researchCtx);
-
-    const deliverables = normalizeDeliverables({
-      healthScore: health,
-      cashIntelligence: cash,
-      revenueLeakAnalysis: leaks,
-      issuesRegister: issues,
-      atRiskCustomers: customers,
-      decisionBrief: brief,
-      actionPlan,
-      marketIntelligence: marketIntel,
-    });
-
-    // Attach data provenance (anti-hallucination metadata)
-    deliverables.dataProvenance = buildDataProvenance(packet);
-
-    return deliverables;
-  } catch (e) {
-    console.warn("[Pivot] Synthesis failed:", e);
-    const errorMsg = e instanceof Error ? e.message : String(e);
-    return getFallbackDeliverables(questionnaire, `Synthesis error: ${errorMsg}`);
-  }
+  return deliverables;
 }
 
 // ── Individual deliverable generators ─────────────────────────────────────────
@@ -45148,7 +45179,7 @@ Return JSON:
 Be specific to THIS business. Reference their actual numbers where available.`;
 
   try {
-    const raw = await callJson(genai, prompt, "gemini-3-flash-preview", sectionKey);
+    const raw = await callJson(genai, prompt, "gemini-2.5-flash", sectionKey);
     return {
       summary: (raw.summary as string) || "",
       relevanceNote: (raw.relevanceNote as string) || "",

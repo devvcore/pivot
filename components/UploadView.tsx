@@ -524,6 +524,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
     setSubmitting(true);
     try {
       const questionnaire: Questionnaire = {
+        orgId,
         organizationName: orgName,
         industry: extracted.industry ?? "",
         revenueRange: extracted.revenueRange ?? "$0 - $10M",

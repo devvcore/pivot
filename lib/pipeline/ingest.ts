@@ -12,8 +12,8 @@ import type { ParsedFile } from "./parse";
 import type { Questionnaire, BusinessPacket, FinancialFact, CompanyIdentity, IntegrationContext } from "@/lib/types";
 import { formatIntegrationContextAsText } from "@/lib/integrations/collect";
 
-const MICRO_MODEL = process.env.MICRO_AGENT_MODEL || "gemini-3-flash-preview";
-const ORCHESTRATOR_MODEL = process.env.ORCHESTRATOR_MODEL || "gemini-3-flash-preview";
+const MICRO_MODEL = process.env.MICRO_AGENT_MODEL || "gemini-2.5-flash";
+const ORCHESTRATOR_MODEL = process.env.ORCHESTRATOR_MODEL || "gemini-2.5-flash";
 const MICRO_PARALLELISM = Number(process.env.MICRO_AGENT_PARALLELISM || "4");
 
 const SCHEMA_CATEGORIES = [

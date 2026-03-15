@@ -21,7 +21,7 @@ import type {
   BusinessPacket,
 } from "@/lib/types";
 
-const FLASH_MODEL = "gemini-3-flash-preview";
+const FLASH_MODEL = "gemini-2.5-flash";
 
 // ── URL verification (anti-hallucination) ───────────────────────────────────
 

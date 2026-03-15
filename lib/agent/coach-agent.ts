@@ -1425,19 +1425,26 @@ export async function chatWithCoach(params: CoachRequest): Promise<CoachResponse
         },
       ];
 
-      const resp2 = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: contentsWithTools,
-        config: {
-          systemInstruction: systemPrompt,
-          temperature: 0.4,
-          maxOutputTokens: 1500,
-          thinkingConfig: { thinkingBudget: 0 },
-        } as Record<string, unknown>,
-      });
+      // Retry up to 2 times if Gemini returns null/empty text
+      let resp2Text: string | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const resp2 = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: contentsWithTools,
+          config: {
+            systemInstruction: systemPrompt,
+            temperature: 0.4,
+            maxOutputTokens: 1500,
+            thinkingConfig: { thinkingBudget: 0 },
+          } as Record<string, unknown>,
+        });
+        resp2Text = resp2.text ?? null;
+        if (resp2Text?.trim()) break;
+        if (attempt < 2) console.warn(`[Coach] Empty response (attempt ${attempt + 1}/3), retrying...`);
+      }
 
       return {
-        message: sanitize(resp2.text ?? "I couldn't generate a response. Please try again."),
+        message: sanitize(resp2Text || "I couldn't generate a response. Please try again."),
         toolsUsed,
       };
     }

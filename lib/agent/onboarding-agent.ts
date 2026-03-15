@@ -9,7 +9,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { ChatMessage, Questionnaire } from "@/lib/types";
 
-const FLASH_MODEL = "gemini-3-flash-preview";
+const FLASH_MODEL = "gemini-2.5-flash";
 
 export interface OnboardingTurn {
   message: string;
