@@ -28,26 +28,44 @@ interface UserProfile {
   organizationName?: string;
 }
 
+// Read localStorage synchronously to avoid auth flicker on refresh
+function getInitialUser(): UserProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem("pivot_user");
+    return stored ? JSON.parse(stored) : null;
+  } catch { return null; }
+}
+
+function getInitialRunId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(RUN_ID_KEY);
+  } catch { return null; }
+}
+
+function getInitialView(): AppView {
+  if (typeof window === "undefined") return "dashboard";
+  try {
+    // Restore view after OAuth redirect (e.g. integration connect)
+    const returnView = localStorage.getItem("pivot_returnView");
+    if (returnView) {
+      localStorage.removeItem("pivot_returnView");
+      return returnView as AppView;
+    }
+  } catch {}
+  return "dashboard";
+}
+
 export default function Home() {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [view, setView] = useState<AppView>("dashboard");
-  const [runId, setRunId] = useState<string | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(getInitialUser);
+  const [view, setView] = useState<AppView>(getInitialView);
+  const [runId, setRunId] = useState<string | null>(getInitialRunId);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
 
-  // On mount: hydrate from localStorage for instant UI, then verify with Supabase session
+  // Verify session with Supabase on mount (localStorage already hydrated synchronously above)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(RUN_ID_KEY);
-      if (stored) setRunId(stored);
-
-      const storedUser = localStorage.getItem("pivot_user");
-      if (storedUser) setUser(JSON.parse(storedUser));
-    } catch {
-      // ignore
-    }
-
-    // Verify session with Supabase client directly
     const sb = createClient();
     sb.auth.getUser().then(async ({ data: { user: authUser } }) => {
       if (!authUser) {
@@ -140,6 +158,16 @@ export default function Home() {
     setUser(null);
     localStorage.removeItem("pivot_user");
   };
+
+  // Show nothing while verifying session (user was hydrated from localStorage,
+  // but if localStorage is empty we wait for Supabase check before showing auth)
+  if (!user && !sessionChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
+        <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) {
     return <AuthView onLogin={(u: any) => setUser(u)} />;

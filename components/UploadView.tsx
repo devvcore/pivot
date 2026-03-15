@@ -393,7 +393,8 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
         // Direct connection (API key / IMAP) — no redirect needed
         setConnectedProviders((prev) => new Set([...prev, providerKey]));
       } else if (data.redirectUrl) {
-        // OAuth flow — redirect to provider consent screen
+        // Save current view so we return here after OAuth
+        try { localStorage.setItem("pivot_returnView", "upload"); } catch {}
         window.location.href = data.redirectUrl;
       }
     } catch (err: any) {
