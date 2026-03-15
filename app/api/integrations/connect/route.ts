@@ -62,7 +62,8 @@ export async function POST(req: Request) {
         const { isComposioProvider, initiateConnection } = await import('@/lib/integrations/composio');
         if (isComposioProvider(typedProvider)) {
           const origin = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
-          const callbackUrl = `${origin}/api/integrations/composio-callback`;
+          // Embed orgId and provider in callback URL so we don't rely on SDK response fields
+          const callbackUrl = `${origin}/api/integrations/composio-callback?orgId=${encodeURIComponent(orgId)}&provider=${encodeURIComponent(typedProvider)}`;
           const { redirectUrl } = await initiateConnection(typedProvider, orgId, callbackUrl);
 
           if (redirectUrl) {

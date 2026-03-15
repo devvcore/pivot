@@ -75,7 +75,7 @@ export async function initiateConnection(
   const result = await composio.connectedAccounts.initiate(
     orgId, // use orgId as the Composio userId
     authConfigId,
-    { callbackUrl },
+    { callbackUrl, allowMultiple: true },
   );
   return {
     redirectUrl: result.redirectUrl ?? '',
@@ -83,10 +83,33 @@ export async function initiateConnection(
   };
 }
 
-/** Verify a connection is active */
+/** Convert UUID to nanoid if needed (Composio v3 rejects UUIDs) */
+async function toNanoId(id: string): Promise<string> {
+  // Already a nanoid (ca_ prefix)
+  if (id.startsWith('ca_')) return id;
+  // UUID format — call migration endpoint
+  const apiKey = process.env.COMPOSIO_API_KEY;
+  if (!apiKey) return id;
+  try {
+    const res = await fetch(
+      `https://backend.composio.dev/api/v3/migration/get-nanoid?uuid=${encodeURIComponent(id)}&type=CONNECTED_ACCOUNT`,
+      { headers: { 'x-api-key': apiKey }, signal: AbortSignal.timeout(5000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.nanoid) return data.nanoid;
+    }
+  } catch (e) {
+    console.warn('[composio] UUID→nanoid migration failed:', e);
+  }
+  return id;
+}
+
+/** Verify a connection is active — handles UUID→nanoid conversion */
 export async function verifyConnection(connectedAccountId: string) {
   const composio = getComposio();
-  return composio.connectedAccounts.get(connectedAccountId);
+  const nanoId = await toNanoId(connectedAccountId);
+  return composio.connectedAccounts.get(nanoId);
 }
 
 /** Delete a connected account */
