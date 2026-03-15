@@ -28,44 +28,33 @@ interface UserProfile {
   organizationName?: string;
 }
 
-// Read localStorage synchronously to avoid auth flicker on refresh
-function getInitialUser(): UserProfile | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const stored = localStorage.getItem("pivot_user");
-    return stored ? JSON.parse(stored) : null;
-  } catch { return null; }
-}
-
-function getInitialRunId(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(RUN_ID_KEY);
-  } catch { return null; }
-}
-
-function getInitialView(): AppView {
-  if (typeof window === "undefined") return "dashboard";
-  try {
-    // Restore view after OAuth redirect (e.g. integration connect)
-    const returnView = localStorage.getItem("pivot_returnView");
-    if (returnView) {
-      localStorage.removeItem("pivot_returnView");
-      return returnView as AppView;
-    }
-  } catch {}
-  return "dashboard";
-}
-
 export default function Home() {
-  const [user, setUser] = useState<UserProfile | null>(getInitialUser);
-  const [view, setView] = useState<AppView>(getInitialView);
-  const [runId, setRunId] = useState<string | null>(getInitialRunId);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [view, setView] = useState<AppView>("dashboard");
+  const [runId, setRunId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
 
-  // Verify session with Supabase on mount (localStorage already hydrated synchronously above)
+  // Hydrate from localStorage + verify Supabase session on mount
   useEffect(() => {
+    // Restore state from localStorage (instant, no flicker)
+    try {
+      const storedUser = localStorage.getItem("pivot_user");
+      if (storedUser) setUser(JSON.parse(storedUser));
+
+      const storedRunId = localStorage.getItem(RUN_ID_KEY);
+      if (storedRunId) setRunId(storedRunId);
+
+      const returnView = localStorage.getItem("pivot_returnView");
+      if (returnView) {
+        localStorage.removeItem("pivot_returnView");
+        setView(returnView as AppView);
+      }
+    } catch {}
+    setHydrated(true);
+
+    // Verify session with Supabase
     const sb = createClient();
     sb.auth.getUser().then(async ({ data: { user: authUser } }) => {
       if (!authUser) {
@@ -73,14 +62,12 @@ export default function Home() {
         localStorage.removeItem("pivot_user");
         return;
       }
-      // Fetch profile for org info and username
       const { data: profile } = await sb
         .from("profiles")
         .select("name, username, organization_id")
         .eq("id", authUser.id)
         .single();
 
-      // Fetch org name
       let organizationName = "";
       if (profile?.organization_id) {
         const { data: org } = await sb
@@ -159,8 +146,12 @@ export default function Home() {
     localStorage.removeItem("pivot_user");
   };
 
-  // Show nothing while verifying session (user was hydrated from localStorage,
-  // but if localStorage is empty we wait for Supabase check before showing auth)
+  // Before hydration, render empty shell (must match server output to avoid hydration mismatch)
+  if (!hydrated) {
+    return <div className="min-h-screen" />;
+  }
+
+  // After hydration but before session check completes, show spinner if no cached user
   if (!user && !sessionChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">

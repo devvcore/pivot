@@ -56,14 +56,14 @@ const SOCIAL_PLATFORMS = [
 
 const OAUTH_PROVIDERS = [
   // Communication
-  { key: "slack", name: "Slack", description: "Team communication patterns", logo: "https://cdn.simpleicons.org/slack" },
+  { key: "slack", name: "Slack", description: "Team communication patterns", logo: "https://a.slack-edge.com/80588/marketing/img/icons/icon_slack_hash_colored.png" },
   { key: "gmail", name: "Gmail", description: "Email engagement analysis", logo: "https://cdn.simpleicons.org/gmail" },
-  { key: "microsoft_teams", name: "MS Teams", description: "Team collaboration data", logo: "https://cdn.simpleicons.org/microsoftteams" },
+  { key: "microsoft_teams", name: "MS Teams", description: "Team collaboration data", logo: "https://statics.teams.cdn.office.net/evergreen-assets/icons/microsoft_teams_logo_refresh_v2025.ico" },
   // Finance
   { key: "quickbooks", name: "QuickBooks", description: "Live financial data", logo: "https://cdn.simpleicons.org/quickbooks" },
   { key: "stripe", name: "Stripe", description: "Revenue & subscriptions", logo: "https://cdn.simpleicons.org/stripe" },
   // CRM & Sales
-  { key: "salesforce", name: "Salesforce", description: "Pipeline & deals", logo: "https://cdn.simpleicons.org/salesforce" },
+  { key: "salesforce", name: "Salesforce", description: "Pipeline & deals", logo: "https://www.salesforce.com/etc/designs/sfdc-www/en_us/favicon.ico" },
   { key: "hubspot", name: "HubSpot", description: "Marketing & contacts", logo: "https://cdn.simpleicons.org/hubspot" },
   // Project Management
   { key: "jira", name: "Jira", description: "Issue tracking & sprints", logo: "https://cdn.simpleicons.org/jira" },
@@ -80,7 +80,7 @@ const OAUTH_PROVIDERS = [
   { key: "google_calendar", name: "Calendar", description: "Meeting & time analysis", logo: "https://cdn.simpleicons.org/googlecalendar" },
   // HR & Payroll
   { key: "adp", name: "ADP", description: "Payroll & HR data", logo: "https://cdn.simpleicons.org/adp" },
-  { key: "workday", name: "Workday", description: "HR & workforce analytics", logo: "https://cdn.simpleicons.org/workday" },
+  { key: "workday", name: "Workday", description: "HR & workforce analytics", logo: "https://www.workday.com/favicon.ico" },
 ] as const;
 
 interface StagedFile {

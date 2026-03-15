@@ -17,12 +17,12 @@ interface ProviderInfo {
 }
 
 const PROVIDERS: ProviderInfo[] = [
-  { provider: "slack",             name: "Slack",            description: "Team communication analytics",              category: "Communication",      logo: "https://cdn.simpleicons.org/slack",              color: "#4A154B" },
+  { provider: "slack",             name: "Slack",            description: "Team communication analytics",              category: "Communication",      logo: "https://a.slack-edge.com/80588/marketing/img/icons/icon_slack_hash_colored.png",              color: "#4A154B" },
   { provider: "gmail",             name: "Gmail",            description: "Email patterns and response tracking",      category: "Communication",      logo: "https://cdn.simpleicons.org/gmail",              color: "#EA4335" },
-  { provider: "microsoft_teams",   name: "Microsoft Teams",  description: "Enterprise chat and meeting data",          category: "Communication",      logo: "https://cdn.simpleicons.org/microsoftteams",     color: "#5059C9" },
+  { provider: "microsoft_teams",   name: "Microsoft Teams",  description: "Enterprise chat and meeting data",          category: "Communication",      logo: "https://statics.teams.cdn.office.net/evergreen-assets/icons/microsoft_teams_logo_refresh_v2025.ico",     color: "#5059C9" },
   { provider: "quickbooks",        name: "QuickBooks",       description: "Invoices, expenses, P&L, cash flow",        category: "Finance",            logo: "https://cdn.simpleicons.org/quickbooks",         color: "#2CA01C" },
   { provider: "stripe",            name: "Stripe",           description: "Revenue, subscriptions, churn, LTV",        category: "Payments",           logo: "https://cdn.simpleicons.org/stripe",             color: "#635BFF" },
-  { provider: "salesforce",        name: "Salesforce",       description: "Pipeline, deals, customer health",          category: "CRM",                logo: "https://cdn.simpleicons.org/salesforce",         color: "#00A1E0" },
+  { provider: "salesforce",        name: "Salesforce",       description: "Pipeline, deals, customer health",          category: "CRM",                logo: "https://www.salesforce.com/etc/designs/sfdc-www/en_us/favicon.ico",         color: "#00A1E0" },
   { provider: "hubspot",           name: "HubSpot",          description: "Contacts, deals, campaigns",                category: "CRM",                logo: "https://cdn.simpleicons.org/hubspot",            color: "#FF7A59" },
   { provider: "jira",              name: "Jira",             description: "Sprint velocity, bugs, capacity",           category: "Project Management", logo: "https://cdn.simpleicons.org/jira",               color: "#0052CC" },
   { provider: "github",            name: "GitHub",           description: "Commits, PRs, CI health, code quality",     category: "Project Management", logo: "https://cdn.simpleicons.org/github",             color: "#24292F" },
@@ -34,7 +34,7 @@ const PROVIDERS: ProviderInfo[] = [
   { provider: "google_calendar",   name: "Google Calendar",  description: "Meeting patterns, focus time analysis",     category: "Productivity",       logo: "https://cdn.simpleicons.org/googlecalendar",     color: "#4285F4" },
   { provider: "airtable",          name: "Airtable",         description: "Custom databases and workflow data",        category: "Productivity",       logo: "https://cdn.simpleicons.org/airtable",           color: "#18BFFF" },
   { provider: "adp",               name: "ADP",              description: "Payroll, benefits, workforce data",         category: "HR",                 logo: "https://cdn.simpleicons.org/adp",                color: "#D0271D" },
-  { provider: "workday",           name: "Workday",          description: "HR data, compensation, org structure",      category: "HR",                 logo: "https://cdn.simpleicons.org/workday",            color: "#F68D2E" },
+  { provider: "workday",           name: "Workday",          description: "HR data, compensation, org structure",      category: "HR",                 logo: "https://www.workday.com/favicon.ico",            color: "#F68D2E" },
 ];
 
 // ── Types ────────────────────────────────────────────────────────────────────
