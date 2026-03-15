@@ -30,6 +30,15 @@ const PROVIDER_DOMAINS: Record<string, string> = {
   workday: "workday.com",
 };
 
+// Known-good logos for providers OpenBrand can't extract (Google subdomains, etc.)
+const KNOWN_LOGOS: Record<string, string> = {
+  gmail: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico",
+  quickbooks: "https://quickbooks.intuit.com/oidc/intuit-icon-green.svg",
+  google_analytics: "https://www.gstatic.com/analytics-suite/header/suite/v2/ic_analytics.svg",
+  google_sheets: "https://ssl.gstatic.com/docs/spreadsheets/favicon3.ico",
+  google_calendar: "https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png",
+};
+
 // In-memory cache
 let logoCache: Record<string, string> | null = null;
 let cacheTimestamp = 0;
@@ -61,8 +70,8 @@ function pickBestLogo(
     }
   }
 
-  // Fallback to first HTTP logo
-  return httpLogos[0]?.url ?? logos[0]?.url ?? null;
+  // Fallback to first HTTP logo (never return data URIs)
+  return httpLogos[0]?.url ?? null;
 }
 
 async function fetchLogo(provider: string, domain: string): Promise<string | null> {
@@ -112,6 +121,13 @@ export async function GET() {
         results[provider] = result.value;
       }
     });
+  }
+
+  // Fill in known logos for providers OpenBrand missed
+  for (const [provider, url] of Object.entries(KNOWN_LOGOS)) {
+    if (!results[provider]) {
+      results[provider] = url;
+    }
   }
 
   // Cache results
