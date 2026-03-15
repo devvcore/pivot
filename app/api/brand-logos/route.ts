@@ -33,10 +33,10 @@ const PROVIDER_DOMAINS: Record<string, string> = {
 // Known-good logos for providers OpenBrand can't extract (Google subdomains, etc.)
 const KNOWN_LOGOS: Record<string, string> = {
   gmail: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico",
-  quickbooks: "https://quickbooks.intuit.com/oidc/intuit-icon-green.svg",
   google_analytics: "https://www.gstatic.com/analytics-suite/header/suite/v2/ic_analytics.svg",
   google_sheets: "https://ssl.gstatic.com/docs/spreadsheets/favicon3.ico",
   google_calendar: "https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png",
+  workday: "https://www.workday.com/favicon.ico",
 };
 
 // In-memory cache
