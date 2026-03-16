@@ -47,6 +47,7 @@ async function exec(
     const result = await composio.tools.execute(toolName, {
       userId: orgId,
       arguments: args,
+      dangerouslySkipVersionCheck: true,
     } as Record<string, unknown>);
     return result;
   } catch (error) {
