@@ -495,6 +495,13 @@ export function ExecutionDashboard({
 
       try {
         const res = await fetch(`/api/execution/tasks/${taskId}`);
+        if (res.status === 401) {
+          // Session expired — stop polling to avoid spamming
+          clearInterval(interval);
+          pollIntervals.current.delete(interval);
+          setActiveAgents(prev => { const s = new Set(prev); s.delete(agentId); return s; });
+          return;
+        }
         if (!res.ok) return;
         const { task, events: dbEvents } = await res.json();
 
