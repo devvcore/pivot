@@ -473,6 +473,74 @@ const createHubSpotContact: Tool = {
   },
 };
 
+const createCalendarEvent: Tool = {
+  name: 'create_calendar_event',
+  description: 'Create a new Google Calendar event. Use to schedule meetings, reminders, deadlines, follow-ups, or any time-based action item. Requires Google Calendar connected via Composio.',
+  parameters: {
+    title: {
+      type: 'string',
+      description: 'Event title/summary.',
+    },
+    start_time: {
+      type: 'string',
+      description: 'Event start time in ISO 8601 format (e.g., "2026-03-20T10:00:00-05:00").',
+    },
+    end_time: {
+      type: 'string',
+      description: 'Event end time in ISO 8601 format (e.g., "2026-03-20T11:00:00-05:00").',
+    },
+    description: {
+      type: 'string',
+      description: 'Optional event description with agenda, notes, or links.',
+    },
+    attendees: {
+      type: 'string',
+      description: 'Optional comma-separated email addresses of attendees.',
+    },
+  },
+  required: ['title', 'start_time', 'end_time'],
+  category: 'system',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const title = String(args.title ?? '');
+    const startTime = String(args.start_time ?? '');
+    const endTime = String(args.end_time ?? '');
+    const description = args.description ? String(args.description) : undefined;
+    const attendeesStr = args.attendees ? String(args.attendees) : undefined;
+
+    if (!title || !startTime || !endTime) {
+      return { success: false, output: 'Required fields: title, start_time, end_time.' };
+    }
+
+    const connected = await checkConnection(context.orgId, 'google_calendar');
+    if (!connected) {
+      return {
+        success: true,
+        output: `Calendar event drafted (Google Calendar not connected):\n\nTitle: ${title}\nStart: ${startTime}\nEnd: ${endTime}${description ? `\nDescription: ${description}` : ''}${attendeesStr ? `\nAttendees: ${attendeesStr}` : ''}\n\nConnect Google Calendar via Settings → Integrations to create events automatically.`,
+        cost: 0,
+      };
+    }
+
+    try {
+      const { createCalendarEvent: composioCreate } = await import('@/lib/integrations/composio-tools');
+      const attendees = attendeesStr ? attendeesStr.split(',').map(e => e.trim()).filter(Boolean) : undefined;
+      const result = await composioCreate(context.orgId, title, startTime, endTime, description, attendees);
+
+      if (result) {
+        return {
+          success: true,
+          output: `✅ Calendar event created!\n\nTitle: ${title}\nStart: ${startTime}\nEnd: ${endTime}${attendeesStr ? `\nAttendees: ${attendeesStr}` : ''}`,
+          cost: 0,
+        };
+      }
+      return { success: false, output: 'Failed to create calendar event.' };
+    } catch (err) {
+      return { success: false, output: `Calendar event creation failed: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  },
+};
+
 // ── Register ──────────────────────────────────────────────────────────────────
 
 export const productivityTools: Tool[] = [
@@ -480,6 +548,7 @@ export const productivityTools: Tool[] = [
   writeToGoogleSheets,
   readFromGoogleSheets,
   listCalendarEvents,
+  createCalendarEvent,
   searchNotionPages,
   createJiraTicket,
   createHubSpotContact,

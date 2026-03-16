@@ -437,6 +437,24 @@ export async function getCalendars(orgId: string): Promise<any> {
   return exec('GOOGLECALENDAR_LIST_CALENDARS', orgId, {});
 }
 
+/** Create a Google Calendar event. */
+export async function createCalendarEvent(
+  orgId: string,
+  summary: string,
+  startTime: string,
+  endTime: string,
+  description?: string,
+  attendees?: string[],
+): Promise<any> {
+  return exec('GOOGLECALENDAR_CREATE_EVENT', orgId, {
+    summary,
+    start_time: startTime,
+    end_time: endTime,
+    ...(description !== undefined && { description }),
+    ...(attendees !== undefined && { attendees: attendees.map(e => ({ email: e })) }),
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Microsoft Teams
 // ═══════════════════════════════════════════════════════════════

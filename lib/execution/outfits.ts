@@ -50,6 +50,9 @@ export const OUTFITS: Record<string, Outfit> = {
       'post_to_twitter',
       'check_connection',
       'create_slide_deck',
+      'read_emails',
+      'reply_to_email',
+      'create_calendar_event',
     ],
     systemPromptExtension: `You are operating in MARKETING mode. Your focus is on:
 - Creating high-converting marketing content
@@ -111,6 +114,8 @@ Email Benchmarks:
       'send_email',
       'check_connection',
       'create_slide_deck',
+      'read_emails',
+      'reply_to_email',
     ],
     systemPromptExtension: `You are operating in FINANCE mode. Your focus is on:
 - Accurate financial analysis and modeling
@@ -172,6 +177,9 @@ Pricing Strategy Frameworks:
       'check_connection',
       'create_jira_ticket',
       'create_slide_deck',
+      'read_emails',
+      'reply_to_email',
+      'create_calendar_event',
     ],
     systemPromptExtension: `You are operating in HR mode. Your focus is on:
 - Talent acquisition and job posting creation
@@ -238,6 +246,10 @@ Onboarding Milestones:
       'check_connection',
       'write_to_google_sheets',
       'create_slide_deck',
+      'read_emails',
+      'reply_to_email',
+      'search_emails',
+      'create_calendar_event',
     ],
     systemPromptExtension: `You are operating in OPERATIONS mode. Your focus is on:
 - Business process documentation and optimization
@@ -417,6 +429,8 @@ Growth Benchmarks (SaaS):
       'search_notion',
       'create_slide_deck',
       'write_to_google_sheets',
+      'read_emails',
+      'search_emails',
     ],
     systemPromptExtension: `You are operating in RESEARCH mode. Your focus is on:
 - Deep web research and information gathering
@@ -490,6 +504,8 @@ Trend Analysis:
       'send_slack_message',
       'create_jira_ticket',
       'create_slide_deck',
+      'read_emails',
+      'reply_to_email',
     ],
     systemPromptExtension: `You are operating in CODEBOT mode. Your focus is on:
 - GitHub repository management and code quality

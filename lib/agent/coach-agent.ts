@@ -22,7 +22,7 @@ import { collectIntegrationContext } from "@/lib/integrations/collect";
 import { LoopGuard, closestToolName, smartTruncate } from "./agent-guardrails";
 import type { MVPDeliverables } from "@/lib/types";
 
-const COACH_TOOL_NAMES = ["get_report_section", "get_team_data", "generate_action_items", "navigate_to_page", "get_integration_data"];
+const COACH_TOOL_NAMES = ["get_report_section", "get_team_data", "generate_action_items", "navigate_to_page", "get_integration_data", "check_inbox", "check_calendar", "draft_and_send_email", "create_event"];
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" });
 
@@ -71,6 +71,17 @@ FOR EMPLOYEES:
 - Any dimension scoring below 30/100: call it out as a critical gap
 - NPS < 0 or churn rate spiking: customer satisfaction crisis
 - Burn rate exceeding revenue by > 2x: existential financial risk
+
+--- PROACTIVE INBOX & CALENDAR AWARENESS ---
+- When the user starts a conversation or says "what's going on", use check_inbox and check_calendar to surface what needs attention
+- Surface urgent items: "You have an unread email from [sender] about [subject] - want me to draft a reply?"
+- Connect the dots: if an email asks for a document the user hasn't sent, offer to create and send it. Example: "Sarah emailed you about Q4 docs 2 days ago - want me to put them together and send them over?"
+- If there's a meeting coming up, suggest prep: "You have a meeting with [person] in 2 hours about [topic] - want me to pull together talking points?"
+- After creating content (budgets, reports, posts), proactively offer: "Want me to email this to someone? Or put a review meeting on your calendar?"
+- When the user mentions following up, offer to draft the email or schedule a call
+- ALWAYS ask before sending - never send emails or create events without explicit user approval
+- Use draft_and_send_email when the user says "yes, send it" or "go ahead"
+- Use create_event when the user wants to schedule something
 
 --- FORMAT RULES ---
 - No em dashes, en dashes, or double dashes. Use ":" or plain hyphens
@@ -949,6 +960,91 @@ const TOOLS = [
       required: [],
     },
   },
+  {
+    name: "check_inbox",
+    description:
+      "Check the user's recent emails from Gmail. Use proactively to surface actionable items, pending requests, unanswered emails, or things that need the user's attention. Call this when starting a conversation to see what's going on.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "Optional Gmail search query (e.g., 'is:unread', 'from:john', 'subject:Q4'). Defaults to recent unread emails.",
+        },
+        max_results: {
+          type: "number",
+          description: "Maximum number of emails to return (default 5).",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "check_calendar",
+    description:
+      "Check the user's upcoming Google Calendar events. Use proactively to surface meetings, deadlines, and help the user prepare. Call this to see what's coming up today or this week.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        time_range: {
+          type: "string",
+          enum: ["today", "tomorrow", "this_week"],
+          description: "Time range to check (default: today).",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "draft_and_send_email",
+    description:
+      "Draft and send an email on behalf of the user via Gmail. Use when the user agrees to send something - a reply, a document, a follow-up, or any email. ALWAYS confirm with the user before calling this.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        to: {
+          type: "string",
+          description: "Recipient email address.",
+        },
+        subject: {
+          type: "string",
+          description: "Email subject line.",
+        },
+        body: {
+          type: "string",
+          description: "Email body content (plain text).",
+        },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "create_event",
+    description:
+      "Create a Google Calendar event for the user. Use when scheduling follow-ups, meetings, reminders, or deadlines. ALWAYS confirm with the user before calling this.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        title: {
+          type: "string",
+          description: "Event title/summary.",
+        },
+        start_time: {
+          type: "string",
+          description: "Start time in ISO 8601 format (e.g., '2026-03-20T10:00:00').",
+        },
+        end_time: {
+          type: "string",
+          description: "End time in ISO 8601 format (e.g., '2026-03-20T11:00:00').",
+        },
+        description: {
+          type: "string",
+          description: "Optional event description or agenda.",
+        },
+      },
+      required: ["title", "start_time", "end_time"],
+    },
+  },
 ];
 
 // ── Tool execution ────────────────────────────────────────────────────────────
@@ -1124,6 +1220,179 @@ async function executeTool(
       return `[Integration Data — ${filtered.length} records]\n${JSON.stringify(result, null, 2)}`;
     } catch (e) {
       return `Failed to retrieve integration data: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "check_inbox") {
+    const query = (args.query as string) ?? "is:unread";
+    const maxResults = Number(args.max_results) || 5;
+
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("status")
+        .eq("org_id", orgId)
+        .eq("provider", "gmail")
+        .eq("status", "connected")
+        .maybeSingle();
+
+      if (!integration) {
+        return "Gmail is not connected. Suggest the user connect Gmail via Settings - Integrations for inbox awareness.";
+      }
+
+      const { getEmails } = await import("@/lib/integrations/composio-tools");
+      const result = await getEmails(orgId, query, maxResults);
+
+      if (!result || (Array.isArray(result) && result.length === 0)) {
+        return query === "is:unread" ? "No unread emails - inbox is clear!" : `No emails matching "${query}".`;
+      }
+
+      const emails = Array.isArray(result) ? result : (result?.messages ?? result?.data ?? [result]);
+      const formatted = emails.slice(0, maxResults).map((e: any, i: number) => {
+        const from = e.sender || e.from || e.headers?.from || "Unknown";
+        const subject = e.subject || e.headers?.subject || "(no subject)";
+        const snippet = e.snippet || e.preview || e.body?.slice(0, 100) || "";
+        const date = e.date || e.internalDate || e.receivedAt || "";
+        return `${i + 1}. From: ${from}\n   Subject: ${subject}\n   Preview: ${snippet}\n   Date: ${date}`;
+      }).join("\n\n");
+
+      return `[Inbox - ${emails.length} email(s)${query !== "is:unread" ? ` matching "${query}"` : " unread"}]\n\n${formatted}`;
+    } catch (e) {
+      return `Could not check inbox: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "check_calendar") {
+    const timeRange = (args.time_range as string) ?? "today";
+
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("status")
+        .eq("org_id", orgId)
+        .eq("provider", "google_calendar")
+        .eq("status", "connected")
+        .maybeSingle();
+
+      if (!integration) {
+        return "Google Calendar is not connected. Suggest the user connect it via Settings - Integrations for calendar awareness.";
+      }
+
+      const { getCalendarEvents } = await import("@/lib/integrations/composio-tools");
+      const now = new Date();
+      let timeMin = now.toISOString();
+      let timeMax: string;
+
+      if (timeRange === "tomorrow") {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        timeMin = tomorrow.toISOString();
+        const endOfTomorrow = new Date(tomorrow);
+        endOfTomorrow.setHours(23, 59, 59, 999);
+        timeMax = endOfTomorrow.toISOString();
+      } else if (timeRange === "this_week") {
+        const endOfWeek = new Date(now);
+        endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+        endOfWeek.setHours(23, 59, 59, 999);
+        timeMax = endOfWeek.toISOString();
+      } else {
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+        timeMax = endOfDay.toISOString();
+      }
+
+      const result = await getCalendarEvents(orgId, "primary", timeMin, timeMax);
+      const events = Array.isArray(result) ? result : (result?.items ?? result?.data ?? []);
+
+      if (events.length === 0) {
+        return `No events ${timeRange === "today" ? "for the rest of today" : timeRange === "tomorrow" ? "tomorrow" : "this week"}.`;
+      }
+
+      const formatted = (events as any[]).slice(0, 15).map((e: any, i: number) => {
+        const start = e.start?.dateTime ?? e.start?.date ?? "TBD";
+        const attendees = e.attendees?.map((a: any) => a.email || a.displayName).join(", ") ?? "";
+        return `${i + 1}. ${e.summary ?? "Untitled"}\n   Time: ${start}\n   ${attendees ? `Attendees: ${attendees}` : ""}`;
+      }).join("\n\n");
+
+      return `[Calendar - ${timeRange}]\n\n${formatted}`;
+    } catch (e) {
+      return `Could not check calendar: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "draft_and_send_email") {
+    const to = args.to as string;
+    const subject = args.subject as string;
+    const body = args.body as string;
+
+    if (!to || !subject || !body) {
+      return "Missing required fields: to, subject, body.";
+    }
+
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("status")
+        .eq("org_id", orgId)
+        .eq("provider", "gmail")
+        .eq("status", "connected")
+        .maybeSingle();
+
+      if (!integration) {
+        return `Email drafted but Gmail is not connected:\n\nTo: ${to}\nSubject: ${subject}\n\n${body}\n\nConnect Gmail via Settings - Integrations to send emails.`;
+      }
+
+      const { sendEmail } = await import("@/lib/integrations/composio-tools");
+      const result = await sendEmail(orgId, to, subject, body);
+      if (result) {
+        return `Email sent successfully!\n\nTo: ${to}\nSubject: ${subject}`;
+      }
+      return "Failed to send email via Gmail.";
+    } catch (e) {
+      return `Could not send email: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "create_event") {
+    const title = args.title as string;
+    const startTime = args.start_time as string;
+    const endTime = args.end_time as string;
+    const description = args.description as string | undefined;
+
+    if (!title || !startTime || !endTime) {
+      return "Missing required fields: title, start_time, end_time.";
+    }
+
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("status")
+        .eq("org_id", orgId)
+        .eq("provider", "google_calendar")
+        .eq("status", "connected")
+        .maybeSingle();
+
+      if (!integration) {
+        return `Event drafted but Google Calendar is not connected:\n\nTitle: ${title}\nStart: ${startTime}\nEnd: ${endTime}${description ? `\nDescription: ${description}` : ""}\n\nConnect Google Calendar via Settings - Integrations to create events.`;
+      }
+
+      const { createCalendarEvent } = await import("@/lib/integrations/composio-tools");
+      const result = await createCalendarEvent(orgId, title, startTime, endTime, description);
+      if (result) {
+        return `Calendar event created!\n\nTitle: ${title}\nStart: ${startTime}\nEnd: ${endTime}`;
+      }
+      return "Failed to create calendar event.";
+    } catch (e) {
+      return `Could not create event: ${String(e)}`;
     }
   }
 

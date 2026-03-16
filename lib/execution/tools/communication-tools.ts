@@ -284,7 +284,209 @@ const createSpreadsheet: Tool = {
   },
 };
 
+const readEmails: Tool = {
+  name: 'read_emails',
+  description: 'Read recent emails from the user\'s Gmail inbox. Use to check for unread messages, find specific emails, or gather context before replying. Returns sender, subject, snippet, and date for each email.',
+  parameters: {
+    query: {
+      type: 'string',
+      description: 'Optional Gmail search query (e.g., "is:unread", "from:john", "subject:Q4 report"). Defaults to recent emails.',
+    },
+    max_results: {
+      type: 'number',
+      description: 'Maximum number of emails to return (default 5, max 20).',
+    },
+  },
+  required: [],
+  category: 'communication',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const query = args.query ? String(args.query) : undefined;
+    const maxResults = Math.min(Number(args.max_results) || 5, 20);
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('status')
+        .eq('org_id', context.orgId)
+        .eq('provider', 'gmail')
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (!integration) {
+        return {
+          success: false,
+          output: 'Gmail is not connected. The user needs to connect Gmail via Settings → Integrations to read emails.',
+        };
+      }
+
+      const { getEmails } = await import('@/lib/integrations/composio-tools');
+      const result = await getEmails(context.orgId, query, maxResults);
+
+      if (!result || (Array.isArray(result) && result.length === 0)) {
+        return { success: true, output: query ? `No emails found matching "${query}".` : 'Inbox is empty or no recent emails found.', cost: 0 };
+      }
+
+      const emails = Array.isArray(result) ? result : (result?.messages ?? result?.data ?? [result]);
+      const formatted = emails.slice(0, maxResults).map((e: any, i: number) => {
+        const from = e.sender || e.from || e.headers?.from || 'Unknown';
+        const subject = e.subject || e.headers?.subject || '(no subject)';
+        const snippet = e.snippet || e.preview || e.body?.slice(0, 120) || '';
+        const date = e.date || e.internalDate || e.receivedAt || '';
+        return `${i + 1}. From: ${from}\n   Subject: ${subject}\n   Preview: ${snippet}\n   Date: ${date}`;
+      }).join('\n\n');
+
+      return {
+        success: true,
+        output: `Found ${emails.length} email(s)${query ? ` matching "${query}"` : ''}:\n\n${formatted}`,
+        cost: 0,
+      };
+    } catch (err) {
+      return { success: false, output: `Failed to read emails: ${err instanceof Error ? err.message : 'Unknown error'}` };
+    }
+  },
+};
+
+const replyToEmail: Tool = {
+  name: 'reply_to_email',
+  description: 'Reply to an email. Composes and sends a reply via Gmail. Use after reading emails to respond to a specific message.',
+  parameters: {
+    to: {
+      type: 'string',
+      description: 'Recipient email address (the person you\'re replying to).',
+    },
+    subject: {
+      type: 'string',
+      description: 'Email subject (should start with "Re: " followed by the original subject).',
+    },
+    body: {
+      type: 'string',
+      description: 'Reply body content (plain text).',
+    },
+    original_subject: {
+      type: 'string',
+      description: 'The original email subject for context tracking.',
+    },
+  },
+  required: ['to', 'subject', 'body'],
+  category: 'communication',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const to = String(args.to ?? '');
+    const subject = String(args.subject ?? '');
+    const body = String(args.body ?? '');
+
+    if (!to || !subject || !body) {
+      return { success: false, output: 'Required fields: to, subject, body.' };
+    }
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('status')
+        .eq('org_id', context.orgId)
+        .eq('provider', 'gmail')
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (!integration) {
+        return {
+          success: true,
+          output: `Reply drafted (Gmail not connected).\n\nTo: ${to}\nSubject: ${subject}\n\n${body}\n\nConnect Gmail via Settings → Integrations to send replies automatically.`,
+          artifacts: [{ type: 'email', name: `reply-to-${to.split('@')[0]}.txt`, content: formatEmailBody(subject, body, to) }],
+          cost: 0,
+        };
+      }
+
+      const { sendEmail: composioSendEmail } = await import('@/lib/integrations/composio-tools');
+      const result = await composioSendEmail(context.orgId, to, subject, body);
+      if (result) {
+        return { success: true, output: `✅ Reply sent to ${to}!\nSubject: ${subject}`, cost: 0 };
+      }
+      return { success: false, output: 'Failed to send reply via Gmail.' };
+    } catch (err) {
+      return { success: false, output: `Failed to send reply: ${err instanceof Error ? err.message : 'Unknown error'}` };
+    }
+  },
+};
+
+const searchEmails: Tool = {
+  name: 'search_emails',
+  description: 'Search emails using Gmail search syntax. More targeted than read_emails — use when you need to find specific messages by sender, subject, date, labels, etc.',
+  parameters: {
+    query: {
+      type: 'string',
+      description: 'Gmail search query (e.g., "from:jane subject:Q4 docs", "is:unread after:2026/03/01", "has:attachment from:accounting"). Required.',
+    },
+    max_results: {
+      type: 'number',
+      description: 'Maximum number of results (default 10, max 20).',
+    },
+  },
+  required: ['query'],
+  category: 'communication',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const query = String(args.query ?? '');
+    const maxResults = Math.min(Number(args.max_results) || 10, 20);
+
+    if (!query) {
+      return { success: false, output: 'Search query is required. Use Gmail search syntax (e.g., "from:john subject:budget").' };
+    }
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('status')
+        .eq('org_id', context.orgId)
+        .eq('provider', 'gmail')
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (!integration) {
+        return {
+          success: false,
+          output: 'Gmail is not connected. Connect Gmail via Settings → Integrations to search emails.',
+        };
+      }
+
+      const { getEmails } = await import('@/lib/integrations/composio-tools');
+      const result = await getEmails(context.orgId, query, maxResults);
+
+      if (!result || (Array.isArray(result) && result.length === 0)) {
+        return { success: true, output: `No emails found matching "${query}".`, cost: 0 };
+      }
+
+      const emails = Array.isArray(result) ? result : (result?.messages ?? result?.data ?? [result]);
+      const formatted = emails.slice(0, maxResults).map((e: any, i: number) => {
+        const from = e.sender || e.from || e.headers?.from || 'Unknown';
+        const subject = e.subject || e.headers?.subject || '(no subject)';
+        const snippet = e.snippet || e.preview || e.body?.slice(0, 120) || '';
+        const date = e.date || e.internalDate || e.receivedAt || '';
+        return `${i + 1}. From: ${from}\n   Subject: ${subject}\n   Preview: ${snippet}\n   Date: ${date}`;
+      }).join('\n\n');
+
+      return {
+        success: true,
+        output: `Found ${emails.length} email(s) matching "${query}":\n\n${formatted}`,
+        cost: 0,
+      };
+    } catch (err) {
+      return { success: false, output: `Failed to search emails: ${err instanceof Error ? err.message : 'Unknown error'}` };
+    }
+  },
+};
+
 // ── Register ──────────────────────────────────────────────────────────────────
 
-export const communicationTools: Tool[] = [sendEmail, sendSlackMessage, createDocument, createSpreadsheet];
+export const communicationTools: Tool[] = [sendEmail, sendSlackMessage, createDocument, createSpreadsheet, readEmails, replyToEmail, searchEmails];
 registerTools(communicationTools);
