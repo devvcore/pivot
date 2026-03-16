@@ -9,6 +9,8 @@ interface UserProfile {
   id: string;
   email: string;
   name: string;
+  firstName: string;
+  lastName: string;
   username: string;
   organizationId: string;
   organizationName?: string;
@@ -20,7 +22,8 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [organizationName, setOrganizationName] = useState("");
@@ -79,7 +82,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       if (mode === "forgot") {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(
           email.trim().toLowerCase(),
-          { redirectTo: `${window.location.origin}/auth/reset` }
+          { redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset` }
         );
         if (resetError) throw new Error(resetError.message);
         setResetSent(true);
@@ -87,9 +90,10 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       }
 
       if (mode === "signup") {
-        if (!name || !organizationName) {
-          throw new Error("Name and company are required");
+        if (!firstName || !lastName || !organizationName) {
+          throw new Error("First name, last name, and company are required");
         }
+        const fullName = `${firstName.trim()} ${lastName.trim()}`;
         if (!username || !USERNAME_REGEX.test(username)) {
           throw new Error("Username must be 3-20 characters, alphanumeric and underscores only");
         }
@@ -102,7 +106,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
           email: email.trim().toLowerCase(),
           password,
           options: {
-            data: { name, username: username.toLowerCase(), organizationName },
+            data: { name: fullName, firstName: firstName.trim(), lastName: lastName.trim(), username: username.toLowerCase(), organizationName },
           },
         });
 
@@ -116,7 +120,8 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
           body: JSON.stringify({
             userId: signUpData.user.id,
             email: email.trim().toLowerCase(),
-            name,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
             username: username.toLowerCase(),
             organizationName,
           }),
@@ -132,7 +137,9 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         onLogin({
           id: signUpData.user.id,
           email: signUpData.user.email ?? email,
-          name,
+          name: fullName,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           username: username.toLowerCase(),
           organizationId: setupData.organizationId ?? "",
           organizationName,
@@ -156,7 +163,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
       // Fetch profile for org info and username
       const { data: profile } = await supabase
         .from("profiles")
-        .select("name, username, organization_id")
+        .select("name, first_name, last_name, username, organization_id")
         .eq("id", data.user.id)
         .single();
 
@@ -171,10 +178,13 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
         orgName = org?.name ?? "";
       }
 
+      const profileName = data.user.user_metadata?.name ?? profile?.name ?? email.split("@")[0];
       onLogin({
         id: data.user.id,
         email: data.user.email ?? email,
-        name: data.user.user_metadata?.name ?? profile?.name ?? email.split("@")[0],
+        name: profileName,
+        firstName: profile?.first_name ?? data.user.user_metadata?.firstName ?? profileName.split(" ")[0] ?? "",
+        lastName: profile?.last_name ?? data.user.user_metadata?.lastName ?? profileName.split(" ").slice(1).join(" ") ?? "",
         username: profile?.username ?? data.user.user_metadata?.username ?? "",
         organizationId: profile?.organization_id ?? data.user.user_metadata?.organizationId ?? "",
         organizationName: orgName,
@@ -245,16 +255,29 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-5"
                     >
-                      <div>
-                        <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Full Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={name}
-                          onChange={e => setName(e.target.value)}
-                          className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
-                          placeholder="Your full name"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">First Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={firstName}
+                            onChange={e => setFirstName(e.target.value)}
+                            className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
+                            placeholder="First"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Last Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={lastName}
+                            onChange={e => setLastName(e.target.value)}
+                            className="block w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 px-4 text-sm focus:border-zinc-900 focus:bg-white focus:outline-none transition-all"
+                            placeholder="Last"
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-widest">Username</label>

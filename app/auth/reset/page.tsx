@@ -19,39 +19,19 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     async function handleRecovery() {
-      // PKCE flow: Supabase sends ?code= query param that must be exchanged
+      // Check for error flag from callback route
       const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
-          setSessionReady(true);
-        } else {
-          setError("This reset link is invalid or has already been used.");
-        }
+      if (params.get("error") === "invalid") {
         setChecking(false);
-        return;
+        return; // sessionReady stays false → shows "invalid link" state
       }
 
-      // Implicit flow fallback: token in URL hash
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (event) => {
-          if (event === "PASSWORD_RECOVERY") {
-            setSessionReady(true);
-            setChecking(false);
-          }
-        }
-      );
-
-      // Check if there's already an active session
+      // Session was established by /auth/callback server route — just verify it exists
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setSessionReady(true);
       }
       setChecking(false);
-
-      return () => subscription.unsubscribe();
     }
 
     handleRecovery();
