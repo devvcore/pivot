@@ -284,6 +284,39 @@ export default function ConnectionPrompt({
 
   const connectedCount = services.filter((s) => s.connected).length;
 
+  // Single-service inline mode — fits inside chat bubbles
+  if (filterServices?.length === 1 && compact) {
+    const service = services[0];
+    if (!service) return null;
+    if (service.connected) {
+      return (
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <CheckCircle2 size={14} />
+          <span>{service.name} connected</span>
+        </div>
+      );
+    }
+    return (
+      <button
+        onClick={() => handleConnect(service.provider)}
+        disabled={connecting === service.provider}
+        className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 hover:border-indigo-300 transition-all active:scale-95"
+      >
+        {connecting === service.provider ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : (
+          <ServiceIcon service={service} size={16} />
+        )}
+        <span>
+          {connecting === service.provider
+            ? "Connecting..."
+            : `Connect ${service.name}`}
+        </span>
+        {connecting !== service.provider && <ExternalLink size={10} />}
+      </button>
+    );
+  }
+
   if (compact && !expanded) {
     return (
       <button

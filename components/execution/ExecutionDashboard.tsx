@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
+import ConnectionPrompt from "./ConnectionPrompt";
 
 /* ── Agent name map ── */
 const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; color: string }> = {
@@ -52,6 +53,27 @@ const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; c
   researcher: { name: "Lens", emoji: "L", role: "Research & Intel", color: "bg-cyan-500" },
   codebot: { name: "CodeBot", emoji: "C", role: "Engineering & Code", color: "bg-orange-500" },
 };
+
+/* ── Detect "not connected" messages and extract the provider ── */
+function extractDisconnectedProvider(content: string): string | null {
+  if (!/not connected|Connect.*via Settings|Connect.*Integrations/i.test(content)) return null;
+  const map: [RegExp, string][] = [
+    [/gmail/i, "gmail"],
+    [/google calendar/i, "google_calendar"],
+    [/google sheets/i, "google_sheets"],
+    [/slack/i, "slack"],
+    [/linkedin/i, "linkedin"],
+    [/twitter/i, "twitter"],
+    [/github/i, "github"],
+    [/notion/i, "notion"],
+    [/jira/i, "jira"],
+    [/hubspot/i, "hubspot"],
+  ];
+  for (const [re, provider] of map) {
+    if (re.test(content)) return provider;
+  }
+  return null;
+}
 
 /* ── Chat message types ── */
 interface ChatMessage {
@@ -1296,44 +1318,60 @@ export function ExecutionDashboard({
               const agentId = msg.agentId ?? "strategist";
               const initial = AGENT_NAMES[agentId]?.emoji ?? "A";
               const agentColor = AGENT_NAMES[agentId]?.color ?? "bg-emerald-500";
+              const disconnectedProvider = extractDisconnectedProvider(msg.content);
               return (
-                <div key={msg.id} className="flex items-start gap-2">
-                  <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-white`}>
-                    {initial}
-                  </div>
-                  <div className="max-w-[85%] min-w-0">
-                    <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
-                    <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                      <div className="prose prose-sm prose-zinc max-w-none
-                        prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
-                        prose-h2:text-base prose-h3:text-sm
-                        prose-p:text-sm prose-p:text-zinc-700 prose-p:leading-relaxed prose-p:my-1.5
-                        prose-li:text-sm prose-li:text-zinc-700 prose-li:my-0.5
-                        prose-strong:text-zinc-900 prose-strong:font-semibold
-                        prose-blockquote:border-l-indigo-400 prose-blockquote:bg-indigo-50/50 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-zinc-700
-                        prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
-                        prose-table:text-sm prose-th:text-left prose-th:text-zinc-600 prose-th:font-medium prose-th:pb-1 prose-td:py-1
-                        prose-hr:my-3 prose-hr:border-zinc-200
-                        prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-                      ">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <div key={msg.id} className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-white`}>
+                      {initial}
+                    </div>
+                    <div className="max-w-[85%] min-w-0">
+                      <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
+                      <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                        <div className="prose prose-sm prose-zinc max-w-none
+                          prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
+                          prose-h2:text-base prose-h3:text-sm
+                          prose-p:text-sm prose-p:text-zinc-700 prose-p:leading-relaxed prose-p:my-1.5
+                          prose-li:text-sm prose-li:text-zinc-700 prose-li:my-0.5
+                          prose-strong:text-zinc-900 prose-strong:font-semibold
+                          prose-blockquote:border-l-indigo-400 prose-blockquote:bg-indigo-50/50 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-zinc-700
+                          prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
+                          prose-table:text-sm prose-th:text-left prose-th:text-zinc-600 prose-th:font-medium prose-th:pb-1 prose-td:py-1
+                          prose-hr:my-3 prose-hr:border-zinc-200
+                          prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
+                        ">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  {disconnectedProvider && (
+                    <div className="pl-9">
+                      <ConnectionPrompt orgId={orgId} filterServices={[disconnectedProvider]} compact={true} />
+                    </div>
+                  )}
                 </div>
               );
             }
 
             /* ── Error ── */
             if (msg.type === "error") {
+              const disconnectedProvider = extractDisconnectedProvider(msg.content);
               return (
-                <div key={msg.id} className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                    <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                <div key={msg.id} className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                    </div>
+                    <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%]">
+                      <p className="text-sm text-red-700">{msg.content}</p>
+                    </div>
                   </div>
-                  <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%]">
-                    <p className="text-sm text-red-700">{msg.content}</p>
-                  </div>
+                  {disconnectedProvider && (
+                    <div className="pl-9">
+                      <ConnectionPrompt orgId={orgId} filterServices={[disconnectedProvider]} compact={true} />
+                    </div>
+                  )}
                 </div>
               );
             }

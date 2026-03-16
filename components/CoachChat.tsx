@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { GraduationCap, Send, Loader2, X, MessageCircle, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { NavigateAction } from "./AgentChat";
+import ConnectionPrompt from "./execution/ConnectionPrompt";
 
 interface CoachChatProps {
   orgId: string;
@@ -36,6 +37,26 @@ function extractNavigation(content: string): { text: string; navigation: Navigat
   } catch {
     return { text: content, navigation: null };
   }
+}
+
+function extractDisconnectedProvider(content: string): string | null {
+  if (!/not connected|Connect.*via Settings|Connect.*Integrations/i.test(content)) return null;
+  const map: [RegExp, string][] = [
+    [/gmail/i, "gmail"],
+    [/google calendar/i, "google_calendar"],
+    [/google sheets/i, "google_sheets"],
+    [/slack/i, "slack"],
+    [/linkedin/i, "linkedin"],
+    [/twitter/i, "twitter"],
+    [/github/i, "github"],
+    [/notion/i, "notion"],
+    [/jira/i, "jira"],
+    [/hubspot/i, "hubspot"],
+  ];
+  for (const [re, provider] of map) {
+    if (re.test(content)) return provider;
+  }
+  return null;
 }
 
 const OWNER_PROMPTS = [
@@ -204,6 +225,15 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
                           Go to {navAction.label}
                         </button>
                       )}
+                      {msg.role === "assistant" && (() => {
+                        const provider = extractDisconnectedProvider(msg.content);
+                        if (!provider) return null;
+                        return (
+                          <div className="mt-2">
+                            <ConnectionPrompt orgId={orgId} filterServices={[provider]} compact={true} />
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );

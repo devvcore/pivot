@@ -11,18 +11,21 @@ import { ExecutionDashboard } from "@/components/execution";
 import { EmployeeDashboard } from "@/components/EmployeeDashboard";
 import { LeanDashboard } from "@/components/LeanDashboard";
 import { MissionControl } from "@/components/MissionControl";
+import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const RUN_ID_KEY = "pivot_runId";
 
-type AppView = "dashboard" | "upload" | "processing" | "results" | "team" | "execution" | "employees" | "lean" | "mission-control";
+type AppView = "dashboard" | "upload" | "processing" | "results" | "team" | "execution" | "employees" | "lean" | "mission-control" | "integrations";
 
 interface UserProfile {
   id: string;
   email: string;
   name: string;
+  firstName: string;
+  lastName: string;
   username: string;
   organizationId: string;
   organizationName?: string;
@@ -69,7 +72,7 @@ export default function Home() {
       }
       const { data: profile } = await sb
         .from("profiles")
-        .select("name, username, organization_id")
+        .select("name, first_name, last_name, username, organization_id")
         .eq("id", authUser.id)
         .single();
 
@@ -83,10 +86,13 @@ export default function Home() {
         organizationName = org?.name ?? "";
       }
 
+      const fullName = authUser.user_metadata?.name ?? profile?.name ?? "";
       const u: UserProfile = {
         id: authUser.id,
         email: authUser.email ?? "",
-        name: authUser.user_metadata?.name ?? profile?.name ?? "",
+        name: fullName,
+        firstName: profile?.first_name ?? authUser.user_metadata?.firstName ?? fullName.split(" ")[0] ?? "",
+        lastName: profile?.last_name ?? authUser.user_metadata?.lastName ?? fullName.split(" ").slice(1).join(" ") ?? "",
         username: profile?.username ?? authUser.user_metadata?.username ?? "",
         organizationId: profile?.organization_id ?? "",
         organizationName,
@@ -193,6 +199,7 @@ export default function Home() {
             onEmployees={() => setView("employees")}
             onLean={() => setView("lean")}
             onMissionControl={() => setView("mission-control")}
+            onIntegrations={() => setView("integrations")}
             userName={user?.name}
             username={user?.username}
             orgLogoUrl={orgLogoUrl}
@@ -264,6 +271,13 @@ export default function Home() {
 
         {view === "mission-control" && (
           <MissionControl
+            onBack={() => setView("dashboard")}
+          />
+        )}
+
+        {view === "integrations" && user && (
+          <IntegrationsPanel
+            orgId={user.organizationId}
             onBack={() => setView("dashboard")}
           />
         )}
