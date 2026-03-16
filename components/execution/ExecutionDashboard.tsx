@@ -30,6 +30,14 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeft,
+  GitPullRequest,
+  Share2,
+  Calendar,
+  ClipboardList,
+  Target,
+  TrendingUp,
+  Mail,
+  type LucideIcon,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
@@ -69,6 +77,140 @@ const QUICK_ACTIONS = [
   { label: "Write a job posting", icon: FileText },
   { label: "Research our market", icon: Sparkles },
 ];
+
+/* ── Context-aware action pills ── */
+interface ActionPill {
+  label: string;
+  icon: LucideIcon;
+  prompt: string;
+}
+
+const AGENT_PILLS: Record<string, ActionPill[]> = {
+  marketer: [
+    { label: "Post to LinkedIn", icon: Share2, prompt: "Post this content to LinkedIn" },
+    { label: "Post to Twitter", icon: Share2, prompt: "Post this content to Twitter" },
+    { label: "Create ad copy", icon: FileText, prompt: "Create ad copy based on this content" },
+    { label: "Build email campaign", icon: Mail, prompt: "Build an email campaign from this" },
+  ],
+  analyst: [
+    { label: "Export to Sheets", icon: BarChart3, prompt: "Export this data to Google Sheets" },
+    { label: "Create slide deck", icon: FileText, prompt: "Create a slide deck from this analysis" },
+    { label: "Run scenario analysis", icon: TrendingUp, prompt: "Run a scenario analysis on this" },
+  ],
+  recruiter: [
+    { label: "Post job to LinkedIn", icon: Share2, prompt: "Post this job listing to LinkedIn" },
+    { label: "Create interview guide", icon: ClipboardList, prompt: "Create an interview guide for this role" },
+    { label: "Build onboarding plan", icon: Target, prompt: "Build an onboarding plan for this hire" },
+  ],
+  operator: [
+    { label: "Create Jira tickets", icon: ClipboardList, prompt: "Create Jira tickets for this SOP" },
+    { label: "Export to Notion", icon: FileText, prompt: "Export this process documentation to Notion" },
+    { label: "Set up reminders", icon: Calendar, prompt: "Set up calendar reminders for these action items" },
+  ],
+  researcher: [
+    { label: "Create strategy from this", icon: Target, prompt: "Create a strategy from this research" },
+    { label: "Turn into LinkedIn posts", icon: Share2, prompt: "Turn these research findings into LinkedIn posts" },
+    { label: "Build battle cards", icon: ClipboardList, prompt: "Build competitive battle cards from this research" },
+  ],
+  strategist: [
+    { label: "Break into tasks", icon: ClipboardList, prompt: "Break this strategy into individual tasks for the team" },
+    { label: "Create timeline", icon: Calendar, prompt: "Create a project timeline for this plan" },
+    { label: "Research the market", icon: Globe, prompt: "Research the market for this strategy" },
+  ],
+  codebot: [
+    { label: "Push to GitHub", icon: GitPullRequest, prompt: "Push these changes to GitHub" },
+    { label: "Create a PR", icon: GitPullRequest, prompt: "Create a pull request for these changes" },
+    { label: "Create GitHub issue", icon: Code, prompt: "Create a GitHub issue to track this" },
+  ],
+};
+
+const TOOL_PILLS: Record<string, ActionPill[]> = {
+  create_social_post: [
+    { label: "Post to LinkedIn", icon: Share2, prompt: "Post this content to LinkedIn" },
+    { label: "Post to Twitter", icon: Share2, prompt: "Post this content to Twitter" },
+  ],
+  post_to_linkedin: [
+    { label: "Create follow-up posts", icon: Share2, prompt: "Create follow-up posts for LinkedIn" },
+  ],
+  post_to_twitter: [
+    { label: "Create follow-up posts", icon: Share2, prompt: "Create follow-up posts for Twitter" },
+  ],
+  web_search: [
+    { label: "Dig deeper", icon: Globe, prompt: "Dig deeper into this research" },
+    { label: "Create report", icon: FileText, prompt: "Create a report from these findings" },
+  ],
+  scrape_website: [
+    { label: "Create report", icon: FileText, prompt: "Create a report from these findings" },
+  ],
+  create_document: [
+    { label: "Export to Sheets", icon: BarChart3, prompt: "Export this to Google Sheets" },
+  ],
+  create_spreadsheet: [
+    { label: "Create slide deck", icon: FileText, prompt: "Create a slide deck from this data" },
+  ],
+  financial_projection: [
+    { label: "Export to Sheets", icon: BarChart3, prompt: "Export this projection to Google Sheets" },
+    { label: "Create investor deck", icon: FileText, prompt: "Create an investor deck from this projection" },
+  ],
+  create_budget: [
+    { label: "Export to Sheets", icon: BarChart3, prompt: "Export this budget to Google Sheets" },
+  ],
+  create_job_posting: [
+    { label: "Post to LinkedIn", icon: Share2, prompt: "Post this job listing to LinkedIn" },
+    { label: "Create interview questions", icon: ClipboardList, prompt: "Create interview questions for this role" },
+  ],
+  github_create_pr: [
+    { label: "List open issues", icon: Code, prompt: "List open GitHub issues" },
+  ],
+  github_create_issue: [
+    { label: "Review PR status", icon: GitPullRequest, prompt: "Review open pull request status" },
+  ],
+};
+
+const KEYWORD_PILLS: [RegExp, ActionPill][] = [
+  [/\b(code|implementation|commit|push|deploy)\b/i, { label: "Push to GitHub", icon: GitPullRequest, prompt: "Push these changes to GitHub" }],
+  [/\b(pull request|PR|merge)\b/i, { label: "Create a PR", icon: GitPullRequest, prompt: "Create a pull request for these changes" }],
+  [/\b(linkedin|social media|social post)\b/i, { label: "Post to LinkedIn", icon: Share2, prompt: "Post this content to LinkedIn" }],
+  [/\b(twitter|tweet|x\.com)\b/i, { label: "Post to Twitter", icon: Share2, prompt: "Post this content to Twitter" }],
+  [/\b(budget|forecast|projection|revenue|financial)\b/i, { label: "Export to Sheets", icon: BarChart3, prompt: "Export this to Google Sheets" }],
+  [/\b(job posting|job listing|hire|candidate|recruiting)\b/i, { label: "Post job to LinkedIn", icon: Share2, prompt: "Post this job listing to LinkedIn" }],
+  [/\b(SOP|standard operating|process|workflow|checklist)\b/i, { label: "Create Jira tickets", icon: ClipboardList, prompt: "Create Jira tickets for these steps" }],
+  [/\b(competitor|market research|competitive|landscape)\b/i, { label: "Build strategy from this", icon: Target, prompt: "Build a strategy from this research" }],
+  [/\b(email|campaign|newsletter)\b/i, { label: "Send via Gmail", icon: Mail, prompt: "Send this via email" }],
+  [/\b(next steps|action items|to.?do|follow.?up)\b/i, { label: "Create Jira tickets", icon: ClipboardList, prompt: "Create Jira tickets for these action items" }],
+];
+
+function generateContextPills(agentId: string, toolsUsed: string[], outputContent: string): ActionPill[] {
+  const seen = new Set<string>();
+  const pills: ActionPill[] = [];
+
+  const add = (pill: ActionPill) => {
+    if (!seen.has(pill.prompt) && pills.length < 6) {
+      seen.add(pill.prompt);
+      pills.push(pill);
+    }
+  };
+
+  // Signal 2 first — tools used are highest signal (most specific)
+  for (const tool of toolsUsed) {
+    const toolKey = Object.keys(TOOL_PILLS).find(k => tool.includes(k) || k.includes(tool));
+    if (toolKey) {
+      for (const p of TOOL_PILLS[toolKey]) add(p);
+    }
+  }
+
+  // Signal 3 — keyword matches from output
+  const lowerOutput = outputContent.toLowerCase();
+  for (const [regex, pill] of KEYWORD_PILLS) {
+    if (regex.test(lowerOutput)) add(pill);
+  }
+
+  // Signal 1 — agent defaults (fill remaining slots)
+  const agentDefaults = AGENT_PILLS[agentId] ?? AGENT_PILLS.strategist;
+  for (const p of agentDefaults) add(p);
+
+  return pills.slice(0, 4);
+}
 
 /* ── Conversation type ── */
 interface Conversation {
@@ -1210,20 +1352,42 @@ export function ExecutionDashboard({
             return null;
           })}
 
-          {/* Follow-up pills after completed task */}
-          {hasMessages && !sending && !activeAgents.size && (
-            <div className="flex flex-wrap gap-1.5 pl-9 pt-2">
-              {["Create social posts about this", "Build an email campaign", "Research competitors"].map((pill) => (
-                <button
-                  key={pill}
-                  onClick={() => handleSend(pill)}
-                  className="text-[11px] text-zinc-600 bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:bg-zinc-50 hover:border-zinc-300 transition-all"
-                >
-                  {pill}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Context-aware follow-up pills after completed task */}
+          {hasMessages && !sending && !activeAgents.size && (() => {
+            const lastOutput = [...messages].reverse().find(m => m.type === "output" && m.agentId);
+            if (!lastOutput) return null;
+
+            const taskId = lastOutput.taskId;
+            const toolsUsed = messages
+              .filter(m => m.taskId === taskId && m.type === "tool_use" && m.toolName)
+              .map(m => m.toolName!);
+
+            const pills = generateContextPills(
+              lastOutput.agentId ?? "strategist",
+              toolsUsed,
+              lastOutput.content
+            );
+
+            if (pills.length === 0) return null;
+
+            return (
+              <div className="flex flex-wrap gap-1.5 pl-9 pt-2">
+                {pills.map((pill) => {
+                  const Icon = pill.icon;
+                  return (
+                    <button
+                      key={pill.prompt}
+                      onClick={() => handleSend(pill.prompt)}
+                      className="flex items-center gap-1.5 text-[11px] text-zinc-600 bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:bg-zinc-50 hover:border-zinc-300 transition-all"
+                    >
+                      <Icon className="w-3 h-3 text-zinc-400" />
+                      {pill.label}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           <div ref={bottomRef} />
         </div>
