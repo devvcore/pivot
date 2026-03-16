@@ -8,7 +8,7 @@ export type IntegrationProvider =
   | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira' | 'github'
   | 'google_analytics' | 'google_sheets' | 'notion' | 'linear'
   | 'asana' | 'google_calendar' | 'microsoft_teams' | 'airtable'
-  | 'linkedin' | 'twitter';
+  | 'linkedin' | 'twitter' | 'instagram' | 'facebook' | 'youtube';
 
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing';
 
@@ -456,5 +456,59 @@ export const PROVIDER_CAPABILITIES: ProviderCapability[] = [
     ],
     requiredScopes: ['tweet.read', 'tweet.write', 'users.read'],
     docsUrl: 'https://developer.x.com/en/docs',
+  },
+  {
+    provider: 'instagram',
+    name: 'Instagram',
+    description: 'Post photos, reels, and carousels. View analytics, comments, and DMs on your Business/Creator account',
+    category: 'communication',
+    icon: 'Camera',
+    color: 'pink',
+    features: [
+      'Create photo/video posts',
+      'Carousel posts',
+      'Reels publishing',
+      'Post analytics & insights',
+      'Comment management',
+      'DM conversations',
+    ],
+    requiredScopes: ['instagram_basic', 'instagram_content_publish'],
+    docsUrl: 'https://developers.facebook.com/docs/instagram-api/',
+  },
+  {
+    provider: 'facebook',
+    name: 'Facebook',
+    description: 'Post to Pages, manage comments, view insights, and engage with your Facebook audience',
+    category: 'communication',
+    icon: 'Facebook',
+    color: 'blue',
+    features: [
+      'Create page posts',
+      'Photo & video posts',
+      'Page insights & analytics',
+      'Comment management',
+      'Messenger conversations',
+      'Scheduled posts',
+    ],
+    requiredScopes: ['pages_manage_posts', 'pages_read_engagement'],
+    docsUrl: 'https://developers.facebook.com/docs/graph-api/',
+  },
+  {
+    provider: 'youtube',
+    name: 'YouTube',
+    description: 'Upload videos, manage playlists, view analytics, and engage with your YouTube channel',
+    category: 'communication',
+    icon: 'Youtube',
+    color: 'red',
+    features: [
+      'Upload videos',
+      'Playlist management',
+      'Channel analytics',
+      'Comment management',
+      'Search videos',
+      'Subscription tracking',
+    ],
+    requiredScopes: ['https://www.googleapis.com/auth/youtube'],
+    docsUrl: 'https://developers.google.com/youtube/v3',
   },
 ];

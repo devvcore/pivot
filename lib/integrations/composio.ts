@@ -46,6 +46,9 @@ function buildAuthConfigs(): Partial<Record<IntegrationProvider, string>> {
     ['airtable', process.env.COMPOSIO_AUTH_AIRTABLE],
     ['linkedin', process.env.COMPOSIO_AUTH_LINKEDIN],
     ['twitter', process.env.COMPOSIO_AUTH_TWITTER],
+    ['instagram', process.env.COMPOSIO_AUTH_INSTAGRAM],
+    ['facebook', process.env.COMPOSIO_AUTH_FACEBOOK],
+    ['youtube', process.env.COMPOSIO_AUTH_YOUTUBE],
   ];
   for (const [provider, val] of entries) {
     if (val) map[provider] = val; // only include if env var is set

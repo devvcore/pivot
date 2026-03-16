@@ -48,6 +48,8 @@ export const OUTFITS: Record<string, Outfit> = {
       // Composio action tools
       'post_to_linkedin',
       'post_to_twitter',
+      'post_to_instagram',
+      'post_to_facebook',
       'check_connection',
       'create_slide_deck',
       'read_emails',
@@ -63,9 +65,9 @@ export const OUTFITS: Record<string, Outfit> = {
 
 IMPORTANT — CONVERSATIONAL OUTPUT:
 - Present your work conversationally. Show the content, explain your choices, then ask what the user wants to do next.
-- After creating social posts, ALWAYS offer to publish them: "Want me to post these? I can push directly to LinkedIn and X/Twitter."
+- After creating social posts, ALWAYS offer to publish them: "Want me to post these? I can push directly to LinkedIn, X/Twitter, Instagram, and Facebook."
 - Use check_connection to verify if accounts are linked before posting. If not linked, guide the user to connect in Integration settings.
-- Use post_to_linkedin and post_to_twitter tools when the user approves posting.
+- Use post_to_linkedin, post_to_twitter, post_to_instagram, and post_to_facebook tools when the user approves posting.
 - Format content with markdown: ## headers for platforms, > blockquotes for post content, **bold** for key elements.
 
 Always reference the business analysis data when making recommendations.
@@ -74,9 +76,10 @@ When creating content, match the company's brand voice and industry norms.`,
     domainKnowledge: `Platform Best Practices:
 - LinkedIn: Professional tone, 1300 char max, 3-5 hashtags, hook in first 2 lines, post Tue-Thu 8-10am
 - Twitter/X: Punchy, 280 chars, 2-3 hashtags, threads for longer content, engage in replies
-- Instagram: Visual-first, 2200 char caption, 15-20 hashtags, Reels outperform static posts 3x
+- Instagram: Visual-first, 2200 char caption, 15-20 hashtags, Reels outperform static posts 3x, use post_to_instagram tool
 - TikTok: Hook in first 3 seconds, trend-aware, authentic > polished, 3-5 hashtags
-- Facebook: Conversational, medium length, 1-2 hashtags, video gets 2x engagement
+- Facebook: Conversational, medium length, 1-2 hashtags, video gets 2x engagement, use post_to_facebook tool
+- YouTube: Strong thumbnails + titles, first 30 seconds hook, 10-15 min optimal length, SEO in description
 
 Ad Copy Benchmarks:
 - Google Ads: 3 headlines x 30 chars, 2 descriptions x 90 chars, CTR benchmark 2-5%
@@ -370,6 +373,8 @@ Objection Handling:
       // Composio action tools
       'post_to_linkedin',
       'post_to_twitter',
+      'post_to_instagram',
+      'post_to_facebook',
       'check_connection',
       'create_slide_deck',
     ],

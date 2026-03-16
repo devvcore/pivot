@@ -33,6 +33,9 @@ export const COMPOSIO_TOOLKIT_MAP: Record<IntegrationProvider, string> = {
   adp: 'ADP',
   linkedin: 'LINKEDIN',
   twitter: 'TWITTER',
+  instagram: 'INSTAGRAM',
+  facebook: 'FACEBOOK',
+  youtube: 'YOUTUBE',
 };
 
 // ─── Internal Execute Wrapper ────────────────────────────────────────────────
@@ -643,4 +646,128 @@ export async function getGitHubCommits(
   repo: string,
 ): Promise<any> {
   return exec('GITHUB_LIST_COMMITS', orgId, { owner, repo });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Instagram
+// ═══════════════════════════════════════════════════════════════
+
+/** Create a photo post on Instagram (Business/Creator account). */
+export async function createInstagramPost(
+  orgId: string,
+  imageUrl: string,
+  caption: string,
+): Promise<any> {
+  return exec('INSTAGRAM_CREATE_PHOTO_POST', orgId, {
+    image_url: imageUrl,
+    caption,
+  });
+}
+
+/** Create a carousel post on Instagram. */
+export async function createInstagramCarousel(
+  orgId: string,
+  mediaUrls: string[],
+  caption: string,
+): Promise<any> {
+  return exec('INSTAGRAM_CREATE_CAROUSEL_POST', orgId, {
+    media_urls: mediaUrls,
+    caption,
+  });
+}
+
+/** Get Instagram user profile info. */
+export async function getInstagramProfile(orgId: string): Promise<any> {
+  return exec('INSTAGRAM_GET_USER_PROFILE', orgId, {});
+}
+
+/** Get recent Instagram media for the user. */
+export async function getInstagramMedia(orgId: string, limit = 25): Promise<any> {
+  return exec('INSTAGRAM_GET_USER_MEDIA', orgId, { limit });
+}
+
+/** Get insights/analytics for an Instagram media object. */
+export async function getInstagramInsights(orgId: string, mediaId: string): Promise<any> {
+  return exec('INSTAGRAM_GET_MEDIA_INSIGHTS', orgId, { media_id: mediaId });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Facebook
+// ═══════════════════════════════════════════════════════════════
+
+/** Create a text post on a Facebook Page. */
+export async function createFacebookPost(
+  orgId: string,
+  pageId: string,
+  message: string,
+): Promise<any> {
+  return exec('FACEBOOK_CREATE_PAGE_POST', orgId, {
+    page_id: pageId,
+    message,
+  });
+}
+
+/** Create a photo post on a Facebook Page. */
+export async function createFacebookPhotoPost(
+  orgId: string,
+  pageId: string,
+  photoUrl: string,
+  caption: string,
+): Promise<any> {
+  return exec('FACEBOOK_CREATE_PAGE_PHOTO', orgId, {
+    page_id: pageId,
+    url: photoUrl,
+    caption,
+  });
+}
+
+/** Get Facebook Pages managed by the user. */
+export async function getFacebookPages(orgId: string): Promise<any> {
+  return exec('FACEBOOK_GET_PAGES', orgId, {});
+}
+
+/** Get insights/analytics for a Facebook Page. */
+export async function getFacebookPageInsights(
+  orgId: string,
+  pageId: string,
+): Promise<any> {
+  return exec('FACEBOOK_GET_PAGE_INSIGHTS', orgId, { page_id: pageId });
+}
+
+/** Get posts from a Facebook Page. */
+export async function getFacebookPagePosts(
+  orgId: string,
+  pageId: string,
+  limit = 25,
+): Promise<any> {
+  return exec('FACEBOOK_GET_PAGE_POSTS', orgId, { page_id: pageId, limit });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// YouTube
+// ═══════════════════════════════════════════════════════════════
+
+/** Get the authenticated user's YouTube channel info. */
+export async function getYouTubeChannel(orgId: string): Promise<any> {
+  return exec('YOUTUBE_GET_CHANNEL', orgId, { mine: true });
+}
+
+/** List videos on the user's YouTube channel. */
+export async function getYouTubeVideos(orgId: string, maxResults = 25): Promise<any> {
+  return exec('YOUTUBE_LIST_CHANNEL_VIDEOS', orgId, { max_results: maxResults });
+}
+
+/** Get analytics for a YouTube video. */
+export async function getYouTubeVideoAnalytics(orgId: string, videoId: string): Promise<any> {
+  return exec('YOUTUBE_GET_VIDEO_DETAILS', orgId, { video_id: videoId });
+}
+
+/** Search YouTube for videos by query. */
+export async function searchYouTube(orgId: string, query: string, maxResults = 10): Promise<any> {
+  return exec('YOUTUBE_SEARCH_VIDEOS', orgId, { query, max_results: maxResults });
+}
+
+/** List playlists on the user's YouTube channel. */
+export async function getYouTubePlaylists(orgId: string): Promise<any> {
+  return exec('YOUTUBE_LIST_PLAYLISTS', orgId, { mine: true });
 }

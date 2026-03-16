@@ -166,14 +166,138 @@ const postToTwitter: Tool = {
   },
 };
 
+const postToInstagram: Tool = {
+  name: 'post_to_instagram',
+  description: 'Post a photo to the user\'s Instagram Business/Creator account. Requires Instagram to be connected via Composio. Creates a real Instagram post visible to the user\'s followers.',
+  parameters: {
+    image_url: {
+      type: 'string',
+      description: 'Public URL of the image to post. Must be a publicly accessible JPEG or PNG URL.',
+    },
+    caption: {
+      type: 'string',
+      description: 'The caption for the post. Instagram supports up to 2200 characters. Use hashtags for reach.',
+    },
+  },
+  required: ['image_url', 'caption'],
+  category: 'marketing',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const imageUrl = String(args.image_url ?? '');
+    const caption = String(args.caption ?? '');
+
+    if (!imageUrl || !caption) {
+      return { success: false, output: 'Both image_url and caption are required.' };
+    }
+
+    const connected = await checkConnection(context.orgId, 'instagram');
+    if (!connected) {
+      return connectionRequiredResult('instagram', 'Instagram');
+    }
+
+    try {
+      const { createInstagramPost } = await import('@/lib/integrations/composio-tools');
+      const result = await createInstagramPost(context.orgId, imageUrl, caption);
+
+      if (result) {
+        return {
+          success: true,
+          output: `✅ Instagram post published successfully!\n\nCaption:\n"${caption.slice(0, 200)}${caption.length > 200 ? '...' : ''}"\n\nImage: ${imageUrl}`,
+          cost: 0,
+        };
+      } else {
+        return {
+          success: false,
+          output: 'Instagram post failed. The Composio API returned no result. The user may need to reconnect their Instagram account.',
+        };
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, output: `Instagram post failed: ${message}` };
+    }
+  },
+};
+
+const postToFacebook: Tool = {
+  name: 'post_to_facebook',
+  description: 'Post content to the user\'s Facebook Page. Requires Facebook to be connected via Composio. Creates a real Facebook post visible to the Page\'s audience.',
+  parameters: {
+    message: {
+      type: 'string',
+      description: 'The post text content.',
+    },
+    page_id: {
+      type: 'string',
+      description: 'Optional Facebook Page ID. If not provided, posts to the first available page.',
+    },
+  },
+  required: ['message'],
+  category: 'marketing',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const message = String(args.message ?? '');
+    const pageId = args.page_id ? String(args.page_id) : undefined;
+
+    if (!message) {
+      return { success: false, output: 'Post message is required.' };
+    }
+
+    const connected = await checkConnection(context.orgId, 'facebook');
+    if (!connected) {
+      return connectionRequiredResult('facebook', 'Facebook');
+    }
+
+    try {
+      const { createFacebookPost, getFacebookPages } = await import('@/lib/integrations/composio-tools');
+
+      let targetPageId: string | undefined = pageId;
+      if (!targetPageId) {
+        const pages = await getFacebookPages(context.orgId);
+        if (pages && Array.isArray(pages) && pages.length > 0) {
+          targetPageId = pages[0].id;
+        } else {
+          return {
+            success: false,
+            output: 'No Facebook Pages found. The user needs a Facebook Page to post content.',
+          };
+        }
+      }
+
+      if (!targetPageId) {
+        return { success: false, output: 'Could not determine Facebook Page ID.' };
+      }
+
+      const result = await createFacebookPost(context.orgId, targetPageId, message);
+
+      if (result) {
+        return {
+          success: true,
+          output: `✅ Facebook post published successfully!\n\nPost:\n"${message.slice(0, 200)}${message.length > 200 ? '...' : ''}"\n\nPage ID: ${targetPageId}`,
+          cost: 0,
+        };
+      } else {
+        return {
+          success: false,
+          output: 'Facebook post failed. The Composio API returned no result. The user may need to reconnect their Facebook account.',
+        };
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, output: `Facebook post failed: ${msg}` };
+    }
+  },
+};
+
 const checkServiceConnection: Tool = {
   name: 'check_connection',
-  description: 'Check if a specific service (LinkedIn, Twitter, GitHub, Gmail, Slack, etc.) is connected for this organization. Use this before attempting to post or take actions on external services.',
+  description: 'Check if a specific service (LinkedIn, Twitter, Instagram, Facebook, YouTube, GitHub, Gmail, Slack, etc.) is connected for this organization. Use this before attempting to post or take actions on external services.',
   parameters: {
     service: {
       type: 'string',
       description: 'The service to check.',
-      enum: ['linkedin', 'twitter', 'github', 'gmail', 'slack', 'hubspot', 'jira', 'notion', 'google_sheets'],
+      enum: ['linkedin', 'twitter', 'instagram', 'facebook', 'youtube', 'github', 'gmail', 'slack', 'hubspot', 'jira', 'notion', 'google_sheets'],
     },
   },
   required: ['service'],
@@ -206,5 +330,5 @@ const checkServiceConnection: Tool = {
 
 // ── Register ──────────────────────────────────────────────────────────────────
 
-export const socialTools: Tool[] = [postToLinkedIn, postToTwitter, checkServiceConnection];
+export const socialTools: Tool[] = [postToLinkedIn, postToTwitter, postToInstagram, postToFacebook, checkServiceConnection];
 registerTools(socialTools);

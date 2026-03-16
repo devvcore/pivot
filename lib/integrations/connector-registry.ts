@@ -54,6 +54,9 @@ const PROVIDER_ENV_KEYS: Record<IntegrationProvider, string[]> = {
   airtable: ['COMPOSIO_AUTH_AIRTABLE'],
   linkedin: ['COMPOSIO_AUTH_LINKEDIN'],
   twitter: ['COMPOSIO_AUTH_TWITTER'],
+  instagram: ['COMPOSIO_AUTH_INSTAGRAM'],
+  facebook: ['COMPOSIO_AUTH_FACEBOOK'],
+  youtube: ['COMPOSIO_AUTH_YOUTUBE'],
 };
 
 // ─── Token Refresh ───────────────────────────────────────────────────────────

@@ -23,6 +23,9 @@ import {
   getTwitterUser,
   getTeamsChannels,
   getAirtableBases,
+  getInstagramProfile, getInstagramMedia,
+  getFacebookPages, getFacebookPagePosts,
+  getYouTubeChannel, getYouTubeVideos,
 } from './composio-tools';
 
 /**
@@ -137,6 +140,9 @@ export async function pullFreshIntegrationData(orgId: string): Promise<void> {
   if (connected.has('airtable'))         tasks.push(pullAirtable(orgId));
   if (connected.has('linkedin'))         tasks.push(pullLinkedIn(orgId));
   if (connected.has('twitter'))          tasks.push(pullTwitter(orgId));
+  if (connected.has('instagram'))        tasks.push(pullInstagram(orgId));
+  if (connected.has('facebook'))         tasks.push(pullFacebook(orgId));
+  if (connected.has('youtube'))          tasks.push(pullYouTube(orgId));
 
   const results = await Promise.allSettled(tasks);
   const succeeded = results.filter(r => r.status === 'fulfilled').length;
@@ -381,6 +387,46 @@ async function pullTwitter(orgId: string): Promise<void> {
   console.log('[Pivot] Twitter pull done');
 }
 
+async function pullInstagram(orgId: string): Promise<void> {
+  const [profile, media] = await Promise.all([
+    getInstagramProfile(orgId),
+    getInstagramMedia(orgId, 25),
+  ]);
+  await upsertIntegrationData(orgId, 'instagram', [
+    { recordType: 'profile', data: profile },
+    { recordType: 'media', data: media },
+  ]);
+  console.log('[Pivot] Instagram pull done');
+}
+
+async function pullFacebook(orgId: string): Promise<void> {
+  const pages = await getFacebookPages(orgId);
+  let posts: unknown = null;
+
+  if (pages && Array.isArray(pages) && pages.length > 0) {
+    // Pull posts from the first page
+    posts = await getFacebookPagePosts(orgId, pages[0].id, 25).catch(() => null);
+  }
+
+  await upsertIntegrationData(orgId, 'facebook', [
+    { recordType: 'pages', data: pages },
+    { recordType: 'posts', data: posts },
+  ]);
+  console.log('[Pivot] Facebook pull done');
+}
+
+async function pullYouTube(orgId: string): Promise<void> {
+  const [channel, videos] = await Promise.all([
+    getYouTubeChannel(orgId),
+    getYouTubeVideos(orgId, 25),
+  ]);
+  await upsertIntegrationData(orgId, 'youtube', [
+    { recordType: 'channel', data: channel },
+    { recordType: 'videos', data: videos },
+  ]);
+  console.log('[Pivot] YouTube pull done');
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function safeParseJson(str: string): any {
@@ -396,6 +442,8 @@ function providerLabel(provider: string): string {
     asana: 'Asana', google_calendar: 'Google Calendar',
     microsoft_teams: 'Microsoft Teams', airtable: 'Airtable',
     adp: 'ADP', workday: 'Workday',
+    linkedin: 'LinkedIn', twitter: 'X (Twitter)',
+    instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube',
   };
   return labels[provider] ?? provider;
 }
