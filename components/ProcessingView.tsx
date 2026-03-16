@@ -240,8 +240,11 @@ export function ProcessingView({ runId, onComplete, onError }: ProcessingViewPro
     const elapsed = Date.now() - realProgress.startedAt;
     const perItem = elapsed / realProgress.completed;
     const remaining = perItem * (realProgress.total - realProgress.completed);
+    const remainingMins = Math.ceil(remaining / 60000);
+    // Cap estimate at 30 min — anything higher means progress has stalled
+    if (remainingMins > 30) return "Crunching data...";
     if (remaining < 60000) return "< 1 min remaining";
-    return `~${Math.ceil(remaining / 60000)} min remaining`;
+    return `~${remainingMins} min remaining`;
   }, [realProgress]);
 
   // ── Derive display values when real progress is available during synthesis ──
