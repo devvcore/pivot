@@ -24,17 +24,20 @@ async function generateWithGemini(prompt: string): Promise<string> {
 }
 
 function getOpsContext(context: ToolContext): string {
-  if (!context.deliverables) return 'No analysis data available.';
+  if (!context.deliverables) {
+    return `No pre-existing operations analysis data is available.
+IMPORTANT: You MUST still produce specific, professional operational documents. Use the process name, department, subject, industry, and any other parameters provided. Apply industry-standard frameworks (ISO, Six Sigma, HIPAA, SOC 2 as relevant). Include concrete examples relevant to the specified context. Do NOT produce generic templates — make every section specific to the described scenario.`;
+  }
   const d = context.deliverables;
   const parts: string[] = [];
 
-  if (d.riskRegister) parts.push(`Risk Register: ${JSON.stringify(d.riskRegister).slice(0, 1000)}`);
+  if (d.riskRegister) parts.push(`Risk Register: ${JSON.stringify(d.riskRegister).slice(0, 1500)}`);
   if (d.processEfficiency) parts.push(`Process Efficiency: ${JSON.stringify(d.processEfficiency).slice(0, 1000)}`);
-  if (d.healthChecklist) parts.push(`Health Checklist: ${JSON.stringify(d.healthChecklist).slice(0, 800)}`);
+  if (d.healthChecklist) parts.push(`Health Checklist: ${JSON.stringify(d.healthChecklist).slice(0, 1000)}`);
   if (d.strategicInitiatives) parts.push(`Strategic Initiatives: ${JSON.stringify(d.strategicInitiatives).slice(0, 800)}`);
-  if (d.complianceChecklist) parts.push(`Compliance: ${JSON.stringify(d.complianceChecklist).slice(0, 500)}`);
+  if (d.complianceChecklist) parts.push(`Compliance: ${JSON.stringify(d.complianceChecklist).slice(0, 800)}`);
 
-  return parts.length > 0 ? parts.join('\n\n') : 'Limited operations data available.';
+  return parts.length > 0 ? parts.join('\n\n') : 'Limited operations data available. Focus on the task specifics to produce detailed deliverables.';
 }
 
 // ── Tool Definitions ─────────────────────────────────────────────────────────
@@ -132,11 +135,6 @@ Create a comprehensive process document:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `process-${processName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -249,11 +247,6 @@ Create a formal SOP document with:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `sop-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -350,11 +343,6 @@ Conduct a comprehensive risk assessment:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `risk-assessment-${subject.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -461,11 +449,6 @@ Output the timeline data as a CSV at the end for Gantt chart import.`;
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `project-plan-${projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -567,11 +550,6 @@ Create a comprehensive vendor comparison:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `vendor-comparison-${categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },

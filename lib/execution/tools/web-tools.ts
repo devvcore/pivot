@@ -1,7 +1,8 @@
 /**
  * Web Tools — Search, scrape, and domain lookup
  *
- * Uses Perplexity API for web search (key in .env as PERPLEXITY_API_KEY).
+ * Uses OpenRouter API (proxying Perplexity sonar) for web search.
+ * Key in .env as OPENROUTER_API_KEY.
  * Scraping uses fetch + basic HTML extraction.
  * Domain availability via WHOIS lookup.
  */
@@ -11,38 +12,52 @@ import { registerTools } from './index';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-async function perplexitySearch(query: string): Promise<{ answer: string; citations: string[] }> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
+async function webSearchViaOpenRouter(query: string): Promise<{ answer: string; citations: string[] }> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return { answer: `[Perplexity API not configured] Search query: "${query}" — configure PERPLEXITY_API_KEY to enable live search.`, citations: [] };
+    return { answer: `[Web search not configured] Search query: "${query}" — configure OPENROUTER_API_KEY to enable live search.`, citations: [] };
   }
 
-  const response = await fetch('https://api.perplexity.ai/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'sonar',
-      messages: [
-        { role: 'system', content: 'You are a research assistant. Provide concise, factual answers with sources.' },
-        { role: 'user', content: query },
-      ],
-      max_tokens: 1500,
-    }),
-  });
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://pivotcommandcenter.com',
+        'X-Title': 'Pivot Command Center',
+      },
+      body: JSON.stringify({
+        model: 'perplexity/sonar',
+        messages: [
+          { role: 'system', content: 'You are a research assistant. Provide concise, factual answers with sources.' },
+          { role: 'user', content: query },
+        ],
+        max_tokens: 1500,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
 
-  if (!response.ok) {
-    const errText = await response.text().catch(() => 'Unknown error');
-    throw new Error(`Perplexity API error ${response.status}: ${errText}`);
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown error');
+      return {
+        answer: `[Web search unavailable — API returned ${response.status}] Could not search for: "${query}". Use the scrape_website tool to visit specific URLs instead, or use query_analysis to check existing business data.`,
+        citations: [],
+      };
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content ?? 'No results found.';
+    const citations: string[] = data.citations ?? [];
+
+    return { answer: content, citations };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      answer: `[Web search failed: ${message}] Could not search for: "${query}". Use the scrape_website tool to visit specific URLs instead, or use query_analysis to check existing business data.`,
+      citations: [],
+    };
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content ?? 'No results found.';
-  const citations: string[] = data.citations ?? [];
-
-  return { answer: content, citations };
 }
 
 function extractTextFromHTML(html: string): string {
@@ -83,7 +98,7 @@ const webSearch: Tool = {
       return { success: false, output: 'Search query is required.' };
     }
 
-    const { answer, citations } = await perplexitySearch(query);
+    const { answer, citations } = await webSearchViaOpenRouter(query);
     const citationsText = citations.length > 0
       ? '\n\nSources:\n' + citations.map((c, i) => `${i + 1}. ${c}`).join('\n')
       : '';

@@ -24,18 +24,22 @@ async function generateWithGemini(prompt: string): Promise<string> {
 }
 
 function getFinanceContext(context: ToolContext): string {
-  if (!context.deliverables) return 'No analysis data available.';
+  if (!context.deliverables) {
+    return `No pre-existing financial analysis data is available.
+IMPORTANT: You MUST still produce specific, actionable financial deliverables. Use the parameters provided (budget amounts, revenue figures, expense data, time periods, team size) as your primary inputs. Make reasonable industry-standard assumptions where needed, and LABEL every assumption explicitly. Do NOT return vague or generic financial content. Every number should be justified.`;
+  }
   const d = context.deliverables;
   const parts: string[] = [];
 
-  if (d.cashIntelligence) parts.push(`Cash Intelligence: ${JSON.stringify(d.cashIntelligence).slice(0, 1500)}`);
-  if (d.unitEconomics) parts.push(`Unit Economics: ${JSON.stringify(d.unitEconomics).slice(0, 1000)}`);
+  if (d.cashIntelligence) parts.push(`Cash Intelligence: ${JSON.stringify(d.cashIntelligence).slice(0, 2000)}`);
+  if (d.unitEconomics) parts.push(`Unit Economics: ${JSON.stringify(d.unitEconomics).slice(0, 1500)}`);
   if (d.revenueForecast) parts.push(`Revenue Forecast: ${JSON.stringify(d.revenueForecast).slice(0, 1000)}`);
   if (d.revenueLeakAnalysis) parts.push(`Revenue Leaks: ${JSON.stringify(d.revenueLeakAnalysis).slice(0, 800)}`);
   if (d.healthScore) parts.push(`Health Score: ${JSON.stringify(d.healthScore).slice(0, 500)}`);
-  if (d.pricingIntelligence) parts.push(`Pricing: ${JSON.stringify(d.pricingIntelligence).slice(0, 500)}`);
+  if (d.pricingIntelligence) parts.push(`Pricing: ${JSON.stringify(d.pricingIntelligence).slice(0, 800)}`);
+  if (d.financialRatios) parts.push(`Financial Ratios: ${JSON.stringify(d.financialRatios).slice(0, 800)}`);
 
-  return parts.length > 0 ? parts.join('\n\n') : 'Limited financial data available.';
+  return parts.length > 0 ? parts.join('\n\n') : 'Limited financial data available. Focus on the task parameters to produce specific deliverables.';
 }
 
 // ── Tool Definitions ─────────────────────────────────────────────────────────
@@ -237,7 +241,6 @@ Also output the monthly data as a CSV table at the end.`;
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `budget-${period.replace(/\s+/g, '-').toLowerCase()}.md`, content }],
       cost: 0.01,
     };
   },
@@ -325,7 +328,6 @@ Use realistic numbers grounded in the business data provided.`;
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `financial-projection-${months}mo.md`, content }],
       cost: 0.01,
     };
   },
@@ -413,7 +415,6 @@ Provide:
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `expense-analysis-${period.replace(/\s+/g, '-').toLowerCase()}.md`, content }],
       cost: 0.01,
     };
   },
@@ -506,7 +507,6 @@ Provide a comprehensive pricing optimization analysis:
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `pricing-optimization-${productType}.md`, content }],
       cost: 0.01,
     };
   },

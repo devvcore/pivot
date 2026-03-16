@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    let { orgId, title, agentId, description, priority, costCeiling, deliverables } = body;
+    let { orgId, title, agentId, description, priority, costCeiling, deliverables, conversationId } = body;
 
     if (!orgId || !title || !agentId) {
       return NextResponse.json(
@@ -165,6 +165,15 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Log session_start with user's original message (for state hydration)
+    await supabase.from("execution_events").insert({
+      task_id: task.id,
+      agent_id: agentId,
+      org_id: orgId,
+      event_type: "session_start",
+      data: { userMessage: title, source: "chat", conversationId: conversationId || undefined },
+    });
 
     // Log creation event
     await supabase.from("execution_events").insert({

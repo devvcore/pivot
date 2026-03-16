@@ -44,6 +44,8 @@ function buildAuthConfigs(): Partial<Record<IntegrationProvider, string>> {
     ['google_calendar', process.env.COMPOSIO_AUTH_GOOGLE_CALENDAR],
     ['microsoft_teams', process.env.COMPOSIO_AUTH_MICROSOFT_TEAMS],
     ['airtable', process.env.COMPOSIO_AUTH_AIRTABLE],
+    ['linkedin', process.env.COMPOSIO_AUTH_LINKEDIN],
+    ['twitter', process.env.COMPOSIO_AUTH_TWITTER],
   ];
   for (const [provider, val] of entries) {
     if (val) map[provider] = val; // only include if env var is set

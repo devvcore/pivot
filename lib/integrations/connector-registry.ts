@@ -52,6 +52,8 @@ const PROVIDER_ENV_KEYS: Record<IntegrationProvider, string[]> = {
   google_calendar: ['COMPOSIO_AUTH_GOOGLE_CALENDAR'],
   microsoft_teams: ['COMPOSIO_AUTH_MICROSOFT_TEAMS'],
   airtable: ['COMPOSIO_AUTH_AIRTABLE'],
+  linkedin: ['COMPOSIO_AUTH_LINKEDIN'],
+  twitter: ['COMPOSIO_AUTH_TWITTER'],
 };
 
 // ─── Token Refresh ───────────────────────────────────────────────────────────

@@ -29,6 +29,9 @@ import './tools/finance-tools';
 import './tools/hr-tools';
 import './tools/operations-tools';
 import './tools/data-tools';
+import './tools/social-tools';
+import './tools/github-action-tools';
+import './tools/productivity-tools';
 
 const FLASH_MODEL = 'gemini-2.5-flash';
 
@@ -756,6 +759,7 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
         });
 
         await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+          content: result,
           resultLength: result.length,
           artifactCount: artifacts.length,
           triageLevel,
@@ -789,6 +793,7 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
           });
 
           await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+            content: result,
             resultLength: result.length,
             artifactCount: (task.artifacts ?? []).length,
             verdict: 'accept',
@@ -807,6 +812,7 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
           });
 
           await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+            content: `Task failed: ${feedback}`,
             verdict: 'fail',
             feedback,
             reviewAttempt: attempt + 1,
@@ -852,6 +858,7 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
       });
 
       await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
+        content: result,
         resultLength: result.length,
         artifactCount: (task.artifacts ?? []).length,
         verdict: 'accepted_after_max_revisions',
@@ -883,39 +890,163 @@ FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain wh
 
   // ── Private Helpers ──────────────────────────────────────────────────────────
 
+  /**
+   * Build system prompt using BetterBot architecture:
+   * Identity → Situational Awareness → Context → Domain Knowledge → Rules
+   */
   private buildSystemPrompt(agent: AgentDefinition, task: ExecutionTask): string {
+    const outfit = OUTFITS[agent.defaultOutfit];
     const outfitPrompt = getOutfitSystemPrompt(agent.defaultOutfit);
+    const hasDeliverables = !!this.deliverables && Object.keys(this.deliverables).length > 0;
+    const now = new Date();
+    const parts: string[] = [];
 
-    return `${agent.systemPrompt}
+    // ═══ 1. IDENTITY ═══
+    parts.push(agent.systemPrompt);
 
-${outfitPrompt}
+    // ═══ 2. SITUATIONAL AWARENESS ═══
+    parts.push(`--- Situational Awareness ---
+Time: ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}, ${now.toLocaleDateString('en-US', { weekday: 'long' })}, ${now.toISOString().split('T')[0]}
+Agent: ${agent.name} (${agent.id}) | Outfit: ${agent.defaultOutfit}
+Task Priority: ${task.priority} | Budget: $${task.costCeiling.toFixed(2)} remaining
+Attempt: ${task.attempts + 1}/${task.maxAttempts}`);
 
-CURRENT TASK:
+    // ═══ 3. CURRENT TASK CONTEXT ═══
+    parts.push(`--- Current Task ---
 Title: ${task.title}
 Description: ${task.description}
-Priority: ${task.priority}
-Budget: $${task.costCeiling.toFixed(2)} remaining
 
-ACCEPTANCE CRITERIA:
-${task.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+Acceptance Criteria:
+${task.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}`);
 
-INSTRUCTIONS:
-- Use the available tools to complete this task thoroughly.
-- Reference the business analysis data (query_analysis tool) to ground your work in real data.
-- Produce a complete, polished deliverable — not a draft or outline.
-- If you cannot complete a step, explain why and what you did instead.
-- End with a clear, formatted final response that includes all deliverables.`;
+    // ═══ 4. DOMAIN KNOWLEDGE (outfit-specific) ═══
+    parts.push(`--- Domain Knowledge ---\n${outfitPrompt}`);
+
+    // ═══ 5. DATA STRATEGY ═══
+    if (hasDeliverables) {
+      parts.push(`--- Data Access ---
+You have business analysis data available via the query_analysis tool.
+1. FIRST: Call query_analysis(section: "list_sections") to discover what data exists.
+2. Use query_analysis(section: "search", query: "...") to find relevant data.
+3. Ground ALL content in the company's actual data. Reference specific numbers and insights.
+4. If web_search fails, adapt: use scrape_website or query_analysis instead.`);
+    } else {
+      parts.push(`--- Data Access ---
+No business analysis data is loaded. This means:
+1. The task title and description are your PRIMARY context. Extract every detail: company, industry, product, audience.
+2. Do NOT call query_analysis - there is no data to query. Go straight to your domain tools.
+3. Use web_search to gather real market data if needed.
+4. NEVER produce generic placeholder content. Be specific with the information given.`);
+    }
+
+    // ═══ 6. BEHAVIORAL RULES (BetterBot-style) ═══
+    parts.push(`--- Rules ---
+
+JUST DO IT:
+- When given a task, EXECUTE IT. Don't ask "would you like me to..." before starting. Start working immediately.
+- Lead with your output. Show the work first, then explain your choices.
+- If a tool fails, don't announce the failure - just try a different approach silently.
+- Never repeat a failed tool call. Adapt and use alternative tools.
+- One strong deliverable is better than multiple weak ones.
+
+CONVERSATIONAL OUTPUT:
+- You are talking to a REAL PERSON in a chat interface. Write like a talented colleague presenting their work.
+- Lead with a brief 1-2 sentence summary of what you did.
+- Present your work using clean markdown: ## headers, **bold**, > blockquotes for featured content, tables for data.
+- After presenting, ALWAYS offer 2-3 concrete next steps: "Would you like me to..."
+- If you can take action via integrations (post to social, push to sheets, create issues), offer to do so.
+- Be confident. You are an expert. Present your work with conviction.
+- NEVER dump raw content without context. Always introduce it, present it clearly, then offer to do more.
+
+QUALITY BAR:
+- Your output must be ready to use immediately - not a draft or template.
+- Be specific to the company, industry, and audience. No generic filler.
+- Use real data, real examples, and specific recommendations.
+- End every response with a clear "Next Steps" section.
+
+ANTI-HALLUCINATION:
+- NEVER invent statistics, case studies, testimonials, or quotes that don't exist.
+- NEVER make up company names, product features, or customer stories.
+- If you use numbers (market size, growth rates), use well-known industry benchmarks or label them as estimates.
+- If you don't know something, say so and offer to research it.
+- Clearly distinguish between facts and recommendations.`);
+
+    // ═══ 7. PROACTIVE TRIGGERS ═══
+    const triggers = this.getProactiveTriggers(agent, task);
+    if (triggers.length > 0) {
+      parts.push(`--- Proactive Triggers ---\n${triggers.join('\n')}`);
+    }
+
+    return parts.join('\n\n');
+  }
+
+  /**
+   * BetterBot-style proactive triggers — auto-detect patterns and inject coaching.
+   */
+  private getProactiveTriggers(agent: AgentDefinition, task: ExecutionTask): string[] {
+    const triggers: string[] = [];
+    const lower = task.title.toLowerCase() + ' ' + (task.description ?? '').toLowerCase();
+
+    // Marketing: auto-offer posting
+    if (agent.id === 'marketer') {
+      if (lower.includes('post') || lower.includes('social') || lower.includes('linkedin') || lower.includes('twitter') || lower.includes('content')) {
+        triggers.push('SOCIAL POSTING: After creating content, offer to post directly. Call check_connection for linkedin/twitter first. If connected, ask "Want me to post this now?" If not, guide them to connect accounts.');
+      }
+      if (lower.includes('email') || lower.includes('campaign')) {
+        triggers.push('EMAIL: After creating email content, offer to send via Gmail if connected. Call check_connection for gmail.');
+      }
+    }
+
+    // Analyst: auto-offer sheets export
+    if (agent.id === 'analyst') {
+      if (lower.includes('budget') || lower.includes('forecast') || lower.includes('projection') || lower.includes('financial')) {
+        triggers.push('SPREADSHEET: After creating financial data, offer to export to Google Sheets. Call check_connection for google_sheets. If connected, offer "Want me to push this to your Google Sheets?"');
+      }
+    }
+
+    // Recruiter: auto-offer LinkedIn posting
+    if (agent.id === 'recruiter') {
+      if (lower.includes('job') || lower.includes('posting') || lower.includes('hire')) {
+        triggers.push('JOB POSTING: After creating a job posting, offer to publish it on LinkedIn. Call check_connection for linkedin.');
+      }
+    }
+
+    // Operator: auto-offer Jira/project tools
+    if (agent.id === 'operator') {
+      if (lower.includes('project') || lower.includes('plan') || lower.includes('task') || lower.includes('milestone')) {
+        triggers.push('PROJECT MANAGEMENT: After creating a plan, offer to create Jira tickets for the milestones. Call check_connection for jira.');
+      }
+    }
+
+    // CodeBot: auto-offer GitHub actions
+    if (agent.id === 'codebot') {
+      if (lower.includes('issue') || lower.includes('bug') || lower.includes('feature')) {
+        triggers.push('GITHUB: Offer to create a GitHub issue with the findings. Call check_connection for github first.');
+      }
+    }
+
+    // Universal: revision context
+    if (task.reviewFeedback) {
+      triggers.push(`REVISION NEEDED: Previous attempt had issues: ${task.reviewFeedback}. Address ALL feedback and produce an improved version.`);
+    }
+
+    return triggers;
   }
 
   private buildTaskPrompt(task: ExecutionTask): string {
-    let prompt = `Please complete this task:\n\n**${task.title}**\n\n${task.description}`;
+    // BetterBot-style: direct, action-oriented, no hedging
+    let prompt = `Execute this now: **${task.title}**`;
+
+    if (task.description) {
+      prompt += `\n\n${task.description}`;
+    }
 
     if (task.acceptanceCriteria.length > 0) {
-      prompt += `\n\nYour output must meet these criteria:\n`;
+      prompt += `\n\nSuccess criteria:\n`;
       prompt += task.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n');
     }
 
-    prompt += `\n\nUse the available tools to research, create content, and produce deliverables. Provide a comprehensive, finished result.`;
+    prompt += `\n\nUse your tools, produce the deliverable, and present it conversationally with next steps.`;
 
     return prompt;
   }

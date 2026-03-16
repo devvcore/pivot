@@ -27,25 +27,15 @@ async function generateWithGemini(prompt: string): Promise<string> {
 
 const queryAnalysis: Tool = {
   name: 'query_analysis',
-  description: 'Query the existing Pivot business analysis data (MVPDeliverables). Retrieves specific sections like health score, revenue analysis, competitors, marketing strategy, etc. Use this to ground responses in actual analysis data.',
+  description: 'Query the existing Pivot business analysis data (MVPDeliverables). Retrieves specific sections or searches across all data. Use "list_sections" as the section to see all available sections. Use this to ground responses in actual analysis data.',
   parameters: {
     section: {
       type: 'string',
-      description: 'Which analysis section to query.',
-      enum: [
-        'healthScore', 'cashIntelligence', 'revenueLeakAnalysis', 'issuesRegister',
-        'atRiskCustomers', 'decisionBrief', 'actionPlan', 'marketIntelligence',
-        'websiteAnalysis', 'competitorAnalysis', 'techOptimization', 'pricingIntelligence',
-        'marketingStrategy', 'terminology', 'kpiReport', 'roadmap', 'healthChecklist',
-        'swotAnalysis', 'unitEconomics', 'competitiveWinLoss', 'investorOnePager',
-        'hiringPlan', 'revenueForecast', 'churnPlaybook', 'salesPlaybook', 'goalTracker',
-        'benchmarkScore', 'executiveSummary', 'milestoneTracker', 'riskRegister',
-        'partnershipOpportunities', 'fundingReadiness', 'marketSizing', 'scenarioPlanner',
-      ],
+      description: 'Which analysis section to query (e.g., "roadmap", "kpiReport", "actionPlan"). Use "list_sections" to see all available sections. Use "search" to search across all sections for relevant data.',
     },
     query: {
       type: 'string',
-      description: 'Specific question about this section (e.g., "what is the biggest revenue leak?" or "list at-risk customers").',
+      description: 'Specific question about this section (e.g., "what is the biggest revenue leak?" or "list at-risk customers"). Required when section is "search".',
     },
   },
   required: ['section'],
@@ -60,12 +50,69 @@ const queryAnalysis: Tool = {
       return { success: false, output: 'No analysis data available. Run a Pivot analysis first.' };
     }
 
-    const sectionData = (context.deliverables as Record<string, unknown>)[section];
+    const deliverables = context.deliverables as Record<string, unknown>;
+    const availableSections = Object.keys(deliverables).filter(k => deliverables[k] != null);
+
+    // List all available sections
+    if (section === 'list_sections') {
+      return {
+        success: true,
+        output: `Available analysis sections (${availableSections.length}):\n${availableSections.map(s => `  - ${s}`).join('\n')}\n\nUse any of these section names with the query_analysis tool to retrieve data.`,
+        cost: 0,
+      };
+    }
+
+    // Search across all sections
+    if (section === 'search') {
+      if (!query) {
+        return { success: false, output: 'A query is required when using section "search". Example: query_analysis(section: "search", query: "competitor information")' };
+      }
+
+      // Gather summaries from all sections for Gemini to search through
+      const sectionSummaries: string[] = [];
+      for (const key of availableSections) {
+        const data = deliverables[key];
+        const serialized = JSON.stringify(data);
+        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 500)}`);
+      }
+
+      const answer = await generateWithGemini(
+        `You have access to a business analysis with these sections:\n\n${sectionSummaries.join('\n\n')}\n\nAnswer this question using the most relevant data: ${query}\n\nBe specific and cite which sections the data comes from.`
+      );
+
+      return {
+        success: true,
+        output: answer,
+        cost: 0.001,
+      };
+    }
+
+    // Try exact match first, then case-insensitive match
+    let sectionData = deliverables[section];
 
     if (!sectionData) {
+      // Try case-insensitive match
+      const lowerSection = section.toLowerCase();
+      const matchedKey = availableSections.find(k => k.toLowerCase() === lowerSection);
+      if (matchedKey) {
+        sectionData = deliverables[matchedKey];
+      }
+    }
+
+    if (!sectionData) {
+      // Suggest closest matches
+      const lowerSection = section.toLowerCase();
+      const suggestions = availableSections
+        .filter(k => k.toLowerCase().includes(lowerSection) || lowerSection.includes(k.toLowerCase()))
+        .slice(0, 5);
+
+      const suggestionText = suggestions.length > 0
+        ? `\n\nDid you mean: ${suggestions.join(', ')}?`
+        : '';
+
       return {
         success: false,
-        output: `Section "${section}" not found in analysis data. Available sections: ${Object.keys(context.deliverables).filter(k => (context.deliverables as Record<string, unknown>)[k] != null).join(', ')}`,
+        output: `Section "${section}" not found in analysis data. Available sections (${availableSections.length}): ${availableSections.join(', ')}${suggestionText}\n\nTip: Use section "search" with a query to find data across all sections, or "list_sections" to see everything available.`,
       };
     }
 

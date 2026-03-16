@@ -28,16 +28,21 @@ async function generateWithGemini(prompt: string): Promise<string> {
 }
 
 function getDeliverableContext(context: ToolContext): string {
-  if (!context.deliverables) return 'No analysis data available.';
+  if (!context.deliverables) {
+    return `No pre-existing business analysis data is available.
+IMPORTANT: You MUST still produce specific, high-quality, ready-to-use content. Use the task requirements, topic, target audience, and every detail provided in the tool arguments as your primary context. Do NOT produce generic filler content. If a specific company, product, or industry is mentioned, tailor the output entirely to that. Ask yourself: "Would a real business owner find this useful and ready to deploy immediately?"`;
+  }
   const d = context.deliverables;
   const parts: string[] = [];
 
-  if (d.marketingStrategy) parts.push(`Marketing Strategy: ${JSON.stringify(d.marketingStrategy).slice(0, 1500)}`);
-  if (d.competitorAnalysis) parts.push(`Competitor Analysis: ${JSON.stringify(d.competitorAnalysis).slice(0, 1000)}`);
-  if (d.websiteAnalysis) parts.push(`Website Analysis: ${JSON.stringify(d.websiteAnalysis).slice(0, 800)}`);
-  if (d.pricingIntelligence) parts.push(`Pricing: ${JSON.stringify(d.pricingIntelligence).slice(0, 500)}`);
+  if (d.marketingStrategy) parts.push(`Marketing Strategy: ${JSON.stringify(d.marketingStrategy).slice(0, 2000)}`);
+  if (d.competitorAnalysis) parts.push(`Competitor Analysis: ${JSON.stringify(d.competitorAnalysis).slice(0, 1500)}`);
+  if (d.websiteAnalysis) parts.push(`Website Analysis: ${JSON.stringify(d.websiteAnalysis).slice(0, 1000)}`);
+  if (d.pricingIntelligence) parts.push(`Pricing: ${JSON.stringify(d.pricingIntelligence).slice(0, 800)}`);
+  if (d.salesPlaybook) parts.push(`Sales Playbook: ${JSON.stringify(d.salesPlaybook).slice(0, 800)}`);
+  if (d.brandHealth) parts.push(`Brand Health: ${JSON.stringify(d.brandHealth).slice(0, 800)}`);
 
-  return parts.length > 0 ? parts.join('\n\n') : 'Limited analysis data available.';
+  return parts.length > 0 ? parts.join('\n\n') : 'Limited analysis data available. Focus on the task details and requirements to produce specific content.';
 }
 
 // ── Tool Definitions ─────────────────────────────────────────────────────────
@@ -108,7 +113,6 @@ Output each platform's content under a clear header. Include the CTA naturally.`
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `social-posts-${topic.slice(0, 30).replace(/[^a-z0-9]/gi, '-')}.md`, content }],
       cost: 0.01,
     };
   },
@@ -187,7 +191,6 @@ For each platform requested, provide:
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `ad-copy-${platform}.md`, content }],
       cost: 0.01,
     };
   },
@@ -361,7 +364,6 @@ Provide a structured analysis with:
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: 'competitor-analysis.md', content }],
       cost: 0.05,
     };
   },
@@ -439,7 +441,6 @@ After all emails, include:
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `email-campaign-${goal.slice(0, 30).replace(/[^a-z0-9]/gi, '-')}.md`, content }],
       cost: 0.01,
     };
   },
@@ -568,7 +569,6 @@ Provide a structured SEO audit with:
     return {
       success: true,
       output: content,
-      artifacts: [{ type: 'document', name: `seo-audit-${new URL(url.startsWith('http') ? url : `https://${url}`).hostname}.md`, content }],
       cost: 0.01,
     };
   },

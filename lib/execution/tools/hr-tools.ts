@@ -24,16 +24,19 @@ async function generateWithGemini(prompt: string): Promise<string> {
 }
 
 function getHRContext(context: ToolContext): string {
-  if (!context.deliverables) return 'No analysis data available.';
+  if (!context.deliverables) {
+    return `No pre-existing HR analysis data is available.
+IMPORTANT: You MUST still produce specific, professional HR deliverables. Use the role title, department, seniority level, location, salary range, and any other details provided in the tool arguments. Base salary estimates on publicly available market data for the specified role and location. Do NOT produce generic job descriptions — tailor every section to the specific role, company type, and industry mentioned.`;
+  }
   const d = context.deliverables;
   const parts: string[] = [];
 
-  if (d.hiringPlan) parts.push(`Hiring Plan: ${JSON.stringify(d.hiringPlan).slice(0, 1500)}`);
+  if (d.hiringPlan) parts.push(`Hiring Plan: ${JSON.stringify(d.hiringPlan).slice(0, 2000)}`);
   if (d.talentGapAnalysis) parts.push(`Talent Gaps: ${JSON.stringify(d.talentGapAnalysis).slice(0, 1000)}`);
   if (d.cultureAssessment) parts.push(`Culture: ${JSON.stringify(d.cultureAssessment).slice(0, 800)}`);
-  if (d.teamPerformance) parts.push(`Team Performance: ${JSON.stringify(d.teamPerformance).slice(0, 500)}`);
+  if (d.teamPerformance) parts.push(`Team Performance: ${JSON.stringify(d.teamPerformance).slice(0, 800)}`);
 
-  return parts.length > 0 ? parts.join('\n\n') : 'Limited HR data available.';
+  return parts.length > 0 ? parts.join('\n\n') : 'Limited HR data available. Focus on the role details and requirements provided to create specific deliverables.';
 }
 
 // ── Tool Definitions ─────────────────────────────────────────────────────────
@@ -130,11 +133,6 @@ Writing guidelines:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `job-posting-${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -207,11 +205,6 @@ Also include:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `interview-guide-${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -290,11 +283,6 @@ Note: These are AI-generated estimates based on publicly available data patterns
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `salary-benchmark-${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -396,11 +384,6 @@ Also include a 30-60-90 day review template.`;
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `onboarding-plan-${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },
@@ -490,11 +473,6 @@ Create a comprehensive performance review framework:
     return {
       success: true,
       output: content,
-      artifacts: [{
-        type: 'document',
-        name: `performance-review-${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`,
-        content,
-      }],
       cost: 0.01,
     };
   },

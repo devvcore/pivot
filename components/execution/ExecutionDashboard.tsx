@@ -26,7 +26,12 @@ import {
   Download,
   Activity,
   CircleDot,
+  Plus,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
 
 /* ── Agent name map ── */
@@ -65,6 +70,14 @@ const QUICK_ACTIONS = [
   { label: "Research our market", icon: Sparkles },
 ];
 
+/* ── Conversation type ── */
+interface Conversation {
+  id: string;
+  title: string;
+  timestamp: number;
+  taskIds: string[];
+}
+
 /* ── Props ── */
 export interface ExecutionDashboardProps {
   orgName: string;
@@ -84,6 +97,38 @@ function formatTime(ts: number): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+/* ── Multi-task detection heuristic ── */
+function detectMultiTask(text: string): boolean {
+  // Numbered list: "1. ...\n2. ..."
+  if (/\d+\.\s+.+\n\d+\.\s+/.test(text)) return true;
+  // Bullet list: "- ...\n- ..."
+  if (/^[-*]\s+.+\n[-*]\s+/m.test(text)) return true;
+  // Semicolon-separated (each part > 10 chars)
+  const semiParts = text.split(";").filter(p => p.trim().length > 10);
+  if (semiParts.length >= 2) return true;
+  return false;
+}
+
+/* ── Conversational pre-filter ── */
+const GREETING_PATTERNS = /^(hi|hey|hello|yo|sup|what'?s up|howdy|hola|whats good|gm|good morning|good evening|good afternoon|thanks|thank you|thx|ok|okay|cool|nice|lol|haha|wow|hmm|yep|yea|yeah|nah|no|yes|sure)\b/i;
+const CONVERSATIONAL_RESPONSES: Record<string, string> = {
+  greeting: "Hey! I'm your execution team — 7 AI agents ready to work. Tell me what you need done: marketing content, financial analysis, hiring materials, research, strategy, or operations. What's on your plate?",
+  too_short: "I need a bit more to work with! Try something like:\n- \"Create LinkedIn posts about our product launch\"\n- \"Build a Q2 budget forecast\"\n- \"Research our top 5 competitors\"\n\nWhat would you like me to do?",
+  thanks: "You're welcome! Need anything else done? I've got marketing, finance, HR, research, strategy, and operations agents ready to go.",
+};
+
+function getConversationalResponse(text: string): string | null {
+  const trimmed = text.trim();
+  // Too short to be a real task (< 5 chars)
+  if (trimmed.length < 5) return CONVERSATIONAL_RESPONSES.too_short;
+  // Pure greeting
+  if (GREETING_PATTERNS.test(trimmed) && trimmed.split(/\s+/).length <= 4) {
+    if (/^(thanks|thank|thx)/i.test(trimmed)) return CONVERSATIONAL_RESPONSES.thanks;
+    return CONVERSATIONAL_RESPONSES.greeting;
+  }
+  return null;
 }
 
 /* ── Tool use card (collapsible) ── */
@@ -170,6 +215,10 @@ export function ExecutionDashboard({
   const [activeAgents, setActiveAgents] = useState<Set<string>>(new Set());
   const [agentTasks, setAgentTasks] = useState<Record<string, { task: string; status: string; costCents: number }>>({});
   const [showMissionControl, setShowMissionControl] = useState(false);
+  const [hydrating, setHydrating] = useState(true);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConvoId, setCurrentConvoId] = useState<string>(() => `convo-${Date.now()}`);
+  const [showSidebar, setShowSidebar] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollIntervals = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -268,7 +317,7 @@ export function ExecutionDashboard({
     return msgs;
   }
 
-  /* ── Poll a task ── */
+  /* ── Poll a task (concurrent-safe: only touches its own taskId) ── */
   function pollTask(taskId: string, agentId: string, userMsgId: string) {
     let pollCount = 0;
     const interval = setInterval(async () => {
@@ -292,9 +341,12 @@ export function ExecutionDashboard({
           task.agent_id ?? agentId
         );
 
-        // Update cost
+        // Update cost (accumulate across all tasks)
         if (task.cost_spent) {
-          setTotalCostCents(prev => Math.max(prev, Math.round(task.cost_spent * 100)));
+          setTotalCostCents(prev => {
+            // We track per-task cost in agentTasks, so just recalculate
+            return prev; // Will be recalculated from agentTasks
+          });
         }
 
         // Track agent task for mission control
@@ -308,13 +360,13 @@ export function ExecutionDashboard({
           },
         }));
 
-        // Update messages: keep everything before userMsgId, then user msg, then routing, then agent msgs
+        // Update messages: only replace messages for THIS taskId, leave everything else
         setMessages(prev => {
-          const userMsgIdx = prev.findIndex(m => m.id === userMsgId);
-          if (userMsgIdx === -1) return prev;
+          // Remove old messages for this task (keep user messages and non-task messages)
+          const withoutThisTask = prev.filter(m => m.taskId !== taskId);
 
-          // Keep messages before this conversation
-          const before = prev.slice(0, userMsgIdx + 1);
+          // Find the user message that triggered this task
+          const userMsgIdx = withoutThisTask.findIndex(m => m.id === userMsgId);
 
           // Build the routing message
           const agentInfo = AGENT_NAMES[task.agent_id ?? agentId] ?? { name: agentId, emoji: "?" };
@@ -359,10 +411,26 @@ export function ExecutionDashboard({
             });
           }
 
-          // Get messages from other conversations (after userMsgIdx)
-          const otherConversations = prev.slice(userMsgIdx + 1).filter(m => m.taskId !== taskId);
+          // Insert this task's messages right after the user message (or at end if no user msg found)
+          if (userMsgIdx === -1) {
+            return [...withoutThisTask, routingMsg, ...taskMsgs];
+          }
 
-          return [...before, routingMsg, ...taskMsgs, ...otherConversations];
+          const before = withoutThisTask.slice(0, userMsgIdx + 1);
+          // Find where to insert: after user msg and any batch routing messages
+          const after = withoutThisTask.slice(userMsgIdx + 1);
+
+          // Find the first message after userMsg that belongs to a different conversation
+          // (i.e. another user message), so we insert before it
+          const nextUserIdx = after.findIndex(m => m.type === "user");
+          if (nextUserIdx === -1) {
+            // No more user messages after, append at end
+            return [...before, ...after, routingMsg, ...taskMsgs];
+          } else {
+            const middleSection = after.slice(0, nextUserIdx);
+            const restSection = after.slice(nextUserIdx);
+            return [...before, ...middleSection, routingMsg, ...taskMsgs, ...restSection];
+          }
         });
 
         if (isTerminalStatus(task.status)) {
@@ -378,7 +446,287 @@ export function ExecutionDashboard({
     pollIntervals.current.add(interval);
   }
 
-  /* ── Send message ── */
+  /* ── Hydrate state from Supabase on mount ── */
+  useEffect(() => {
+    async function hydrateFromDb() {
+      try {
+        const res = await fetch(`/api/execution/tasks?orgId=${orgId}&limit=20`);
+        if (!res.ok) { setHydrating(false); return; }
+        const { tasks } = await res.json();
+
+        if (!tasks || tasks.length === 0) { setHydrating(false); return; }
+
+        const restoredMessages: ChatMessage[] = [];
+        const restoredActiveAgents = new Set<string>();
+        const restoredAgentTasks: Record<string, { task: string; status: string; costCents: number }> = {};
+        let restoredCostCents = 0;
+        const seenBatchIds = new Set<string>();
+
+        // Process oldest first for chronological ordering
+        const chronologicalTasks = [...tasks].reverse();
+
+        for (const task of chronologicalTasks) {
+          // Fetch full details + events
+          const detailRes = await fetch(`/api/execution/tasks/${task.id}`);
+          if (!detailRes.ok) continue;
+          const { task: fullTask, events: dbEvents } = await detailRes.json();
+
+          // Find session_start event for user message and batch context
+          const sessionStartEvent = (dbEvents ?? []).find(
+            (e: any) => e.event_type === "session_start"
+          );
+          const userMessage = sessionStartEvent?.data?.userMessage ?? fullTask.title;
+          const batchId = sessionStartEvent?.data?.batchId;
+
+          // For batch tasks, only show one user message per batch
+          const shouldShowUserMsg = !batchId || !seenBatchIds.has(batchId);
+          if (batchId) seenBatchIds.add(batchId);
+
+          const userMsgId = batchId ? `user-restored-batch-${batchId}` : `user-restored-${fullTask.id}`;
+
+          if (shouldShowUserMsg) {
+            restoredMessages.push({
+              id: userMsgId,
+              timestamp: new Date(fullTask.created_at).getTime(),
+              type: "user",
+              content: userMessage,
+            });
+          }
+
+          // Add routing message
+          const agentId = fullTask.agent_id ?? "strategist";
+          const agentInfo = AGENT_NAMES[agentId] ?? { name: agentId, emoji: "?" };
+          restoredMessages.push({
+            id: `route-${fullTask.id}`,
+            timestamp: new Date(fullTask.created_at).getTime() + 1,
+            type: "routing",
+            content: `Routed to ${agentInfo.name}`,
+            agentName: agentInfo.name,
+            agentId,
+            taskId: fullTask.id,
+          });
+
+          // Map DB events to chat messages (events come DESC, reverse to chronological)
+          const agentMsgs = mapEventsToMessages(
+            (dbEvents ?? []).reverse(),
+            fullTask.id,
+            agentId
+          );
+          restoredMessages.push(...agentMsgs);
+
+          // Add final result if terminal and not already in events
+          if (isTerminalStatus(fullTask.status) && fullTask.result) {
+            const hasOutput = agentMsgs.some(m => m.type === "output");
+            if (!hasOutput) {
+              restoredMessages.push({
+                id: `result-${fullTask.id}`,
+                timestamp: new Date(fullTask.completed_at ?? fullTask.updated_at).getTime(),
+                type: fullTask.status === "completed" ? "output" : "error",
+                content: fullTask.result,
+                agentName: agentInfo.name,
+                agentId,
+                taskId: fullTask.id,
+              });
+            }
+          }
+
+          // Add artifacts
+          if (fullTask.artifacts?.length > 0) {
+            restoredMessages.push({
+              id: `artifacts-${fullTask.id}`,
+              timestamp: new Date(fullTask.updated_at).getTime(),
+              type: "artifact",
+              content: `${fullTask.artifacts.length} artifact(s) created`,
+              agentName: agentInfo.name,
+              agentId,
+              artifacts: fullTask.artifacts,
+              taskId: fullTask.id,
+            });
+          }
+
+          // Track agent task
+          restoredAgentTasks[agentId] = {
+            task: fullTask.title,
+            status: fullTask.status,
+            costCents: Math.round((fullTask.cost_spent ?? 0) * 100),
+          };
+
+          restoredCostCents += Math.round((fullTask.cost_spent ?? 0) * 100);
+
+          // Resume polling for in-progress tasks
+          if (!isTerminalStatus(fullTask.status)) {
+            restoredActiveAgents.add(agentId);
+            // Use setTimeout to avoid calling pollTask during render
+            setTimeout(() => pollTask(fullTask.id, agentId, userMsgId), 100);
+          }
+        }
+
+        // Build conversation list from hydrated tasks
+        const convoMap = new Map<string, Conversation>();
+        for (const task of chronologicalTasks) {
+          const detailRes2 = await fetch(`/api/execution/tasks/${task.id}`).catch(() => null);
+          const sessionEvt = (await detailRes2?.json().catch(() => null))?.events?.find(
+            (e: any) => e.event_type === "session_start"
+          );
+          const convoId = sessionEvt?.data?.conversationId || `legacy-${task.id}`;
+          if (!convoMap.has(convoId)) {
+            convoMap.set(convoId, {
+              id: convoId,
+              title: (sessionEvt?.data?.userMessage ?? task.title ?? "").slice(0, 60),
+              timestamp: new Date(task.created_at).getTime(),
+              taskIds: [],
+            });
+          }
+          convoMap.get(convoId)!.taskIds.push(task.id);
+        }
+        // Set the most recent conversation as current, rest as history
+        const allConvos = [...convoMap.values()].sort((a, b) => b.timestamp - a.timestamp);
+        if (allConvos.length > 0) {
+          setCurrentConvoId(allConvos[0].id);
+          setConversations(allConvos.slice(1));
+        }
+
+        setMessages(restoredMessages);
+        setActiveAgents(restoredActiveAgents);
+        setAgentTasks(restoredAgentTasks);
+        setTotalCostCents(restoredCostCents);
+      } catch (err) {
+        console.error("[ExecutionDashboard] Hydration error:", err);
+      } finally {
+        setHydrating(false);
+      }
+    }
+
+    hydrateFromDb();
+  }, [orgId]);
+
+  /* ── New conversation ── */
+  const handleNewChat = useCallback(() => {
+    // Save current conversation if it has messages
+    if (messages.length > 0) {
+      const firstUserMsg = messages.find(m => m.type === "user");
+      const title = firstUserMsg?.content?.slice(0, 60) || "Untitled";
+      setConversations(prev => {
+        const existing = prev.find(c => c.id === currentConvoId);
+        if (existing) return prev;
+        return [{
+          id: currentConvoId,
+          title,
+          timestamp: messages[0]?.timestamp || Date.now(),
+          taskIds: [...new Set(messages.filter(m => m.taskId).map(m => m.taskId!))],
+        }, ...prev];
+      });
+    }
+
+    // Clear state and create new conversation
+    pollIntervals.current.forEach(clearInterval);
+    pollIntervals.current.clear();
+    setMessages([]);
+    setActiveAgents(new Set());
+    setAgentTasks({});
+    setTotalCostCents(0);
+    setCurrentConvoId(`convo-${Date.now()}`);
+    setShowSidebar(false);
+  }, [messages, currentConvoId]);
+
+  /* ── Load a past conversation ── */
+  const loadConversation = useCallback(async (convo: Conversation) => {
+    // Save current conversation first
+    if (messages.length > 0) {
+      const firstUserMsg = messages.find(m => m.type === "user");
+      const title = firstUserMsg?.content?.slice(0, 60) || "Untitled";
+      setConversations(prev => {
+        const existing = prev.find(c => c.id === currentConvoId);
+        if (existing) return prev;
+        return [{
+          id: currentConvoId,
+          title,
+          timestamp: messages[0]?.timestamp || Date.now(),
+          taskIds: [...new Set(messages.filter(m => m.taskId).map(m => m.taskId!))],
+        }, ...prev];
+      });
+    }
+
+    // Clear current state
+    pollIntervals.current.forEach(clearInterval);
+    pollIntervals.current.clear();
+    setActiveAgents(new Set());
+    setAgentTasks({});
+    setTotalCostCents(0);
+    setCurrentConvoId(convo.id);
+    setShowSidebar(false);
+
+    // Load the conversation's messages from task IDs
+    const restoredMessages: ChatMessage[] = [];
+    let restoredCostCents = 0;
+
+    for (const taskId of convo.taskIds) {
+      try {
+        const detailRes = await fetch(`/api/execution/tasks/${taskId}`);
+        if (!detailRes.ok) continue;
+        const { task: fullTask, events: dbEvents } = await detailRes.json();
+
+        const sessionStartEvent = (dbEvents ?? []).find(
+          (e: any) => e.event_type === "session_start"
+        );
+        const userMessage = sessionStartEvent?.data?.userMessage ?? fullTask.title;
+        const userMsgId = `user-restored-${fullTask.id}`;
+
+        // Only add user message if not already added (for batch tasks)
+        if (!restoredMessages.some(m => m.type === "user" && m.content === userMessage)) {
+          restoredMessages.push({
+            id: userMsgId,
+            timestamp: new Date(fullTask.created_at).getTime(),
+            type: "user",
+            content: userMessage,
+          });
+        }
+
+        const agentId = fullTask.agent_id ?? "strategist";
+        const agentInfo = AGENT_NAMES[agentId] ?? { name: agentId, emoji: "?" };
+        restoredMessages.push({
+          id: `route-${fullTask.id}`,
+          timestamp: new Date(fullTask.created_at).getTime() + 1,
+          type: "routing",
+          content: `Routed to ${agentInfo.name}`,
+          agentName: agentInfo.name,
+          agentId,
+          taskId: fullTask.id,
+        });
+
+        const agentMsgs = mapEventsToMessages(
+          (dbEvents ?? []).reverse(),
+          fullTask.id,
+          agentId
+        );
+        restoredMessages.push(...agentMsgs);
+
+        if (isTerminalStatus(fullTask.status) && fullTask.result) {
+          const hasOutput = agentMsgs.some(m => m.type === "output");
+          if (!hasOutput) {
+            restoredMessages.push({
+              id: `result-${fullTask.id}`,
+              timestamp: new Date(fullTask.completed_at ?? fullTask.updated_at).getTime(),
+              type: fullTask.status === "completed" ? "output" : "error",
+              content: fullTask.result,
+              agentName: agentInfo.name,
+              agentId,
+              taskId: fullTask.id,
+            });
+          }
+        }
+
+        restoredCostCents += Math.round((fullTask.cost_spent ?? 0) * 100);
+      } catch {
+        // Skip failed tasks
+      }
+    }
+
+    setMessages(restoredMessages);
+    setTotalCostCents(restoredCostCents);
+  }, [messages, currentConvoId]);
+
+  /* ── Send message (single or batch) ── */
   const handleSend = useCallback(async (text: string) => {
     const msg = text.trim();
     if (!msg || sending) return;
@@ -395,47 +743,106 @@ export function ExecutionDashboard({
     };
     setMessages(prev => [...prev, userMsg]);
 
-    try {
-      const res = await fetch("/api/execution/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orgId,
-          title: msg,
-          agentId: "auto",
-          priority: "medium",
-          costCeiling: 0.50,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to create task");
-      const { task } = await res.json();
-      const resolvedAgent = task.agent_id ?? "strategist";
-
-      setActiveAgents(prev => new Set(prev).add(resolvedAgent));
-
-      // Add initial routing message
-      const agentInfo = AGENT_NAMES[resolvedAgent] ?? { name: resolvedAgent, emoji: "?" };
+    // ── Conversational pre-filter: handle greetings/short messages without creating a task ──
+    const conversationalReply = getConversationalResponse(msg);
+    if (conversationalReply) {
       setMessages(prev => [...prev, {
-        id: `route-${task.id}`,
+        id: `reply-${Date.now()}`,
         timestamp: Date.now(),
-        type: "routing",
-        content: `Routed to ${agentInfo.name}`,
-        agentName: agentInfo.name,
-        agentId: resolvedAgent,
-        taskId: task.id,
-      }, {
-        id: `thinking-${task.id}`,
-        timestamp: Date.now(),
-        type: "thinking",
-        content: `${agentInfo.name} is working on this...`,
-        agentName: agentInfo.name,
-        agentId: resolvedAgent,
-        taskId: task.id,
+        type: "output",
+        content: conversationalReply,
+        agentName: "Pivot",
+        agentId: "system",
       }]);
+      setSending(false);
+      return;
+    }
 
-      // Start polling
-      pollTask(task.id, resolvedAgent, userMsgId);
+    try {
+      const isMultiTask = detectMultiTask(msg);
+
+      if (isMultiTask) {
+        // ── Batch path: split into multiple tasks ──
+        const res = await fetch("/api/execution/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orgId, message: msg, costCeiling: 0.50, conversationId: currentConvoId }),
+        });
+
+        if (!res.ok) throw new Error("Failed to create batch tasks");
+        const { tasks } = await res.json();
+
+        if (!tasks || tasks.length === 0) throw new Error("No tasks created");
+
+        // Add batch routing message
+        const agentList = tasks.map((t: any) => AGENT_NAMES[t.agentId]?.name ?? t.agentId).join(", ");
+        setMessages(prev => [...prev, {
+          id: `batch-route-${Date.now()}`,
+          timestamp: Date.now(),
+          type: "routing",
+          content: `Splitting into ${tasks.length} tasks: ${agentList}`,
+        }]);
+
+        // Activate agents and start polling for each task
+        for (const task of tasks) {
+          const resolvedAgent = task.agentId ?? "strategist";
+          setActiveAgents(prev => new Set(prev).add(resolvedAgent));
+
+          const agentInfo = AGENT_NAMES[resolvedAgent] ?? { name: resolvedAgent, emoji: "?" };
+          setMessages(prev => [...prev, {
+            id: `thinking-${task.id}`,
+            timestamp: Date.now(),
+            type: "thinking",
+            content: `${agentInfo.name} is working on: ${task.title}`,
+            agentName: agentInfo.name,
+            agentId: resolvedAgent,
+            taskId: task.id,
+          }]);
+
+          pollTask(task.id, resolvedAgent, userMsgId);
+        }
+      } else {
+        // ── Single task path (existing logic) ──
+        const res = await fetch("/api/execution/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orgId,
+            title: msg,
+            agentId: "auto",
+            priority: "medium",
+            costCeiling: 0.50,
+            conversationId: currentConvoId,
+          }),
+        });
+
+        if (!res.ok) throw new Error("Failed to create task");
+        const { task } = await res.json();
+        const resolvedAgent = task.agent_id ?? "strategist";
+
+        setActiveAgents(prev => new Set(prev).add(resolvedAgent));
+
+        const agentInfo = AGENT_NAMES[resolvedAgent] ?? { name: resolvedAgent, emoji: "?" };
+        setMessages(prev => [...prev, {
+          id: `route-${task.id}`,
+          timestamp: Date.now(),
+          type: "routing",
+          content: `Routed to ${agentInfo.name}`,
+          agentName: agentInfo.name,
+          agentId: resolvedAgent,
+          taskId: task.id,
+        }, {
+          id: `thinking-${task.id}`,
+          timestamp: Date.now(),
+          type: "thinking",
+          content: `${agentInfo.name} is working on this...`,
+          agentName: agentInfo.name,
+          agentId: resolvedAgent,
+          taskId: task.id,
+        }]);
+
+        pollTask(task.id, resolvedAgent, userMsgId);
+      }
     } catch (e) {
       setMessages(prev => [...prev, {
         id: `err-${Date.now()}`,
@@ -446,19 +853,83 @@ export function ExecutionDashboard({
     } finally {
       setSending(false);
     }
-  }, [orgId, sending]);
+  }, [orgId, sending, currentConvoId]);
 
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 font-sans flex">
+      {/* ── Sidebar (conversation history) ── */}
+      {showSidebar && (
+        <div className="w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-50 shadow-lg">
+          <div className="p-3 border-b border-zinc-100">
+            <button
+              onClick={handleNewChat}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-all"
+            >
+              <Plus className="w-4 h-4" /> New Chat
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+            {/* Current conversation */}
+            {messages.length > 0 && (
+              <div className="px-3 py-2 bg-zinc-100 rounded-lg">
+                <div className="text-xs font-medium text-zinc-900 truncate">
+                  {messages.find(m => m.type === "user")?.content?.slice(0, 50) || "Current chat"}
+                </div>
+                <div className="text-[9px] text-zinc-400 mt-0.5">Now</div>
+              </div>
+            )}
+            {/* Past conversations */}
+            {conversations.map((convo) => (
+              <button
+                key={convo.id}
+                onClick={() => loadConversation(convo)}
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-50 transition-colors group"
+              >
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-zinc-400 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xs text-zinc-700 truncate group-hover:text-zinc-900">{convo.title}</div>
+                    <div className="text-[9px] text-zinc-400">
+                      {new Date(convo.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {" "}· {convo.taskIds.length} task{convo.taskIds.length !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+            {conversations.length === 0 && messages.length === 0 && (
+              <div className="text-center py-8">
+                <MessageSquare className="w-6 h-6 text-zinc-300 mx-auto mb-2" />
+                <p className="text-[10px] text-zinc-400">No conversations yet</p>
+              </div>
+            )}
+          </div>
+          <div className="p-2 border-t border-zinc-100">
+            <button
+              onClick={() => setShowSidebar(false)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-zinc-400 hover:text-zinc-600 transition-colors"
+            >
+              <PanelLeftClose className="w-3.5 h-3.5" /> Close sidebar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col min-h-screen">
       {/* ── Header ── */}
       <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center justify-between px-4 lg:px-6 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-zinc-900 flex items-center justify-center rounded-lg shadow-lg shadow-zinc-900/10">
-              <div className="w-3 h-3 bg-white rounded-sm rotate-45" />
-            </div>
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-200 hover:bg-zinc-50 transition-all"
+              title="Toggle sidebar"
+            >
+              <PanelLeft className="w-4 h-4 text-zinc-500" />
+            </button>
             <div className="hidden sm:block">
               <div className="text-sm font-bold text-zinc-900 tracking-tight leading-none">{orgName}</div>
               <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-0.5">Command Center</div>
@@ -584,8 +1055,16 @@ export function ExecutionDashboard({
       {/* ── Chat Area ── */}
       <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full">
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
+          {/* Loading state during hydration */}
+          {hydrating && !hasMessages && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <Loader2 className="w-6 h-6 animate-spin text-zinc-400 mb-3" />
+              <p className="text-sm text-zinc-400">Loading your session...</p>
+            </div>
+          )}
+
           {/* Empty state with recommendation pills */}
-          {!hasMessages && (
+          {!hydrating && !hasMessages && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
               <div className="w-16 h-16 bg-zinc-900 flex items-center justify-center rounded-2xl shadow-xl shadow-zinc-900/10 mb-6">
                 <Bot className="w-7 h-7 text-white" />
@@ -621,7 +1100,7 @@ export function ExecutionDashboard({
                 <div key={msg.id} className="flex justify-end">
                   <div className="flex items-start gap-2 max-w-[80%]">
                     <div className="bg-zinc-900 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm">
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                     </div>
                     <div className="w-7 h-7 bg-zinc-200 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                       <User className="w-3.5 h-3.5 text-zinc-600" />
@@ -674,15 +1153,29 @@ export function ExecutionDashboard({
             if (msg.type === "output") {
               const agentId = msg.agentId ?? "strategist";
               const initial = AGENT_NAMES[agentId]?.emoji ?? "A";
+              const agentColor = AGENT_NAMES[agentId]?.color ?? "bg-emerald-500";
               return (
                 <div key={msg.id} className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-emerald-700">
+                  <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-white`}>
                     {initial}
                   </div>
-                  <div className="max-w-[85%]">
+                  <div className="max-w-[85%] min-w-0">
                     <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
                     <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                      <div className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                      <div className="prose prose-sm prose-zinc max-w-none
+                        prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
+                        prose-h2:text-base prose-h3:text-sm
+                        prose-p:text-sm prose-p:text-zinc-700 prose-p:leading-relaxed prose-p:my-1.5
+                        prose-li:text-sm prose-li:text-zinc-700 prose-li:my-0.5
+                        prose-strong:text-zinc-900 prose-strong:font-semibold
+                        prose-blockquote:border-l-indigo-400 prose-blockquote:bg-indigo-50/50 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-3 prose-blockquote:not-italic prose-blockquote:text-zinc-700
+                        prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
+                        prose-table:text-sm prose-th:text-left prose-th:text-zinc-600 prose-th:font-medium prose-th:pb-1 prose-td:py-1
+                        prose-hr:my-3 prose-hr:border-zinc-200
+                        prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
+                      ">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -735,22 +1228,34 @@ export function ExecutionDashboard({
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Input ── */}
+        {/* ── Input (textarea for multiline support) ── */}
         <div className="sticky bottom-0 bg-gradient-to-t from-[#F8F9FA] via-[#F8F9FA] to-transparent pt-6 pb-4 px-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend(input);
             }}
-            className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/5 px-4 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
+            className="flex items-end gap-2 bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/5 px-4 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
           >
-            <input
-              type="text"
+            <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="What do you want to get done?"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(input);
+                }
+              }}
+              placeholder="What do you want to get done? (Shift+Enter for list)"
               disabled={sending}
-              className="flex-1 text-sm bg-transparent placeholder:text-zinc-400 focus:outline-none disabled:opacity-50"
+              rows={1}
+              className="flex-1 text-sm bg-transparent placeholder:text-zinc-400 focus:outline-none disabled:opacity-50 resize-none max-h-32 overflow-y-auto leading-relaxed"
+              style={{ minHeight: "1.5rem" }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = Math.min(target.scrollHeight, 128) + "px";
+              }}
             />
             <button
               type="submit"
@@ -771,6 +1276,7 @@ export function ExecutionDashboard({
           </div>
         </div>
       </div>
+      </div>{/* close main content */}
     </div>
   );
 }

@@ -56,7 +56,7 @@ const sendEmail: Tool = {
   category: 'communication',
   costTier: 'free',
 
-  async execute(args: Record<string, unknown>, _context: ToolContext): Promise<ToolResult> {
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
     const to = String(args.to ?? '');
     const subject = String(args.subject ?? '');
     const body = String(args.body ?? '');
@@ -66,36 +66,41 @@ const sendEmail: Tool = {
       return { success: false, output: 'Required fields: to, subject, body.' };
     }
 
-    const gmailEmail = process.env.GMAIL_EMAIL;
-    const gmailPassword = process.env.GMAIL_APP_PASSWORD;
-
-    if (!gmailEmail || !gmailPassword) {
-      // Generate as draft artifact
-      const draft = formatEmailBody(subject, body, to);
-      return {
-        success: true,
-        output: `Email drafted (Gmail not configured for sending).\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}\n\n---\n${body}`,
-        artifacts: [{ type: 'email', name: `email-to-${to.split('@')[0]}.txt`, content: draft }],
-        cost: 0,
-      };
-    }
-
-    // Actually send via Gmail SMTP using nodemailer-style approach via fetch
-    // We use Gmail's SMTP relay via undici or native fetch to googleapis
+    // Try Composio Gmail first (user's connected OAuth account)
     try {
-      // Use Gmail API via OAuth or SMTP — for simplicity, generate the draft
-      // and note that actual sending requires nodemailer (not in deps yet)
-      const draft = formatEmailBody(subject, body, to);
-      return {
-        success: true,
-        output: `Email prepared for sending.\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}\nFrom: ${gmailEmail}\n\nNote: Email content generated. To enable automated sending, integrate nodemailer or Gmail API. The email content is available as an artifact.\n\n---\n${body}`,
-        artifacts: [{ type: 'email', name: `email-to-${to.split('@')[0]}.txt`, content: draft }],
-        cost: 0,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, output: `Email send failed: ${message}` };
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('status')
+        .eq('org_id', context.orgId)
+        .eq('provider', 'gmail')
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (integration) {
+        const { sendEmail: composioSendEmail } = await import('@/lib/integrations/composio-tools');
+        const result = await composioSendEmail(context.orgId, to, subject, body);
+        if (result) {
+          return {
+            success: true,
+            output: `✅ Email sent successfully via Gmail!\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}`,
+            cost: 0,
+          };
+        }
+      }
+    } catch {
+      // Fall through to draft mode
     }
+
+    // Fallback: generate as draft artifact
+    const draft = formatEmailBody(subject, body, to);
+    return {
+      success: true,
+      output: `Email drafted (Gmail not connected via Composio).\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}\n\nConnect Gmail via Settings → Integrations to send emails automatically.\n\n---\n${body}`,
+      artifacts: [{ type: 'email', name: `email-to-${to.split('@')[0]}.txt`, content: draft }],
+      cost: 0,
+    };
   },
 };
 
@@ -120,7 +125,7 @@ const sendSlackMessage: Tool = {
   category: 'communication',
   costTier: 'free',
 
-  async execute(args: Record<string, unknown>, _context: ToolContext): Promise<ToolResult> {
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
     const channel = String(args.channel ?? '');
     const message = String(args.message ?? '');
 
@@ -128,56 +133,63 @@ const sendSlackMessage: Tool = {
       return { success: false, output: 'Required fields: channel, message.' };
     }
 
-    const slackToken = process.env.SLACK_APP_TOKEN;
-
-    if (!slackToken) {
-      return {
-        success: true,
-        output: `Slack message drafted (Slack not configured).\n\nChannel: ${channel}\nMessage:\n${message}`,
-        artifacts: [{ type: 'document', name: `slack-${channel.replace('#', '')}.txt`, content: `Channel: ${channel}\n\n${message}` }],
-        cost: 0,
-      };
-    }
-
+    // Try Composio Slack first (user's connected OAuth account)
     try {
-      const response = await fetch('https://slack.com/api/chat.postMessage', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${slackToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          channel: channel.replace('#', ''),
-          text: message,
-          ...(args.thread_ts ? { thread_ts: String(args.thread_ts) } : {}),
-        }),
-      });
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('status')
+        .eq('org_id', context.orgId)
+        .eq('provider', 'slack')
+        .eq('status', 'connected')
+        .maybeSingle();
 
-      const data = await response.json();
-
-      if (data.ok) {
-        return {
-          success: true,
-          output: `Message sent to ${channel} successfully.`,
-          cost: 0,
-        };
-      } else {
-        return {
-          success: true,
-          output: `Slack API returned error: ${data.error}. Message drafted as artifact instead.\n\nChannel: ${channel}\nMessage:\n${message}`,
-          artifacts: [{ type: 'document', name: `slack-${channel.replace('#', '')}.txt`, content: message }],
-          cost: 0,
-        };
+      if (integration) {
+        const { sendSlackMessage: composioSlack } = await import('@/lib/integrations/composio-tools');
+        const result = await composioSlack(context.orgId, channel.replace('#', ''), message);
+        if (result) {
+          return {
+            success: true,
+            output: `✅ Message sent to ${channel} via Slack successfully.`,
+            cost: 0,
+          };
+        }
       }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      return {
-        success: true,
-        output: `Slack send failed (${errorMsg}). Message saved as artifact.\n\nChannel: ${channel}\nMessage:\n${message}`,
-        artifacts: [{ type: 'document', name: `slack-${channel.replace('#', '')}.txt`, content: message }],
-        cost: 0,
-      };
+    } catch {
+      // Fall through to direct API or draft
     }
+
+    // Try direct Slack API token
+    const slackToken = process.env.SLACK_APP_TOKEN;
+    if (slackToken) {
+      try {
+        const response = await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${slackToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channel: channel.replace('#', ''),
+            text: message,
+            ...(args.thread_ts ? { thread_ts: String(args.thread_ts) } : {}),
+          }),
+        });
+        const data = await response.json();
+        if (data.ok) {
+          return { success: true, output: `✅ Message sent to ${channel} successfully.`, cost: 0 };
+        }
+      } catch { /* fall through to draft */ }
+    }
+
+    // Fallback: draft artifact
+    return {
+      success: true,
+      output: `Slack message drafted (Slack not connected).\n\nChannel: ${channel}\nMessage:\n${message}\n\nConnect Slack via Settings → Integrations to send messages automatically.`,
+      artifacts: [{ type: 'document', name: `slack-${channel.replace('#', '')}.txt`, content: `Channel: ${channel}\n\n${message}` }],
+      cost: 0,
+    };
   },
 };
 

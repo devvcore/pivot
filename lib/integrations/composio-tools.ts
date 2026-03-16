@@ -31,6 +31,8 @@ export const COMPOSIO_TOOLKIT_MAP: Record<IntegrationProvider, string> = {
   microsoft_teams: 'MICROSOFT_TEAMS',
   airtable: 'AIRTABLE',
   adp: 'ADP',
+  linkedin: 'LINKEDIN',
+  twitter: 'TWITTER',
 };
 
 // ─── Internal Execute Wrapper ────────────────────────────────────────────────
@@ -478,4 +480,148 @@ export async function getAirtableRecords(
     base_id: baseId,
     table_id: tableId,
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LinkedIn
+// ═══════════════════════════════════════════════════════════════
+
+/** Create a text post on LinkedIn. */
+export async function createLinkedInPost(
+  orgId: string,
+  text: string,
+  visibility?: 'PUBLIC' | 'CONNECTIONS',
+): Promise<any> {
+  return exec('LINKEDIN_CREATE_LINKED_IN_POST', orgId, {
+    text,
+    visibility: visibility ?? 'PUBLIC',
+  });
+}
+
+/** Create a LinkedIn post with a link/article share. */
+export async function createLinkedInSharePost(
+  orgId: string,
+  text: string,
+  url: string,
+  title?: string,
+): Promise<any> {
+  return exec('LINKEDIN_CREATE_POST_WITH_SHARE', orgId, {
+    text,
+    url,
+    ...(title !== undefined && { title }),
+  });
+}
+
+/** Get the authenticated LinkedIn user's profile. */
+export async function getLinkedInProfile(orgId: string): Promise<any> {
+  return exec('LINKEDIN_GET_USER_PROFILE', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Twitter / X
+// ═══════════════════════════════════════════════════════════════
+
+/** Post a tweet. */
+export async function createTweet(
+  orgId: string,
+  text: string,
+): Promise<any> {
+  return exec('TWITTER_CREATION_OF_A_POST', orgId, { text });
+}
+
+/** Reply to an existing tweet. */
+export async function replyToTweet(
+  orgId: string,
+  text: string,
+  replyToTweetId: string,
+): Promise<any> {
+  return exec('TWITTER_CREATION_OF_A_POST', orgId, {
+    text,
+    reply: { in_reply_to_tweet_id: replyToTweetId },
+  });
+}
+
+/** Like a tweet. */
+export async function likeTweet(
+  orgId: string,
+  tweetId: string,
+): Promise<any> {
+  return exec('TWITTER_LIKE_A_POST', orgId, { tweet_id: tweetId });
+}
+
+/** Retweet a tweet. */
+export async function retweet(
+  orgId: string,
+  tweetId: string,
+): Promise<any> {
+  return exec('TWITTER_REPOST_A_POST', orgId, { tweet_id: tweetId });
+}
+
+/** Search recent tweets. */
+export async function searchTweets(
+  orgId: string,
+  query: string,
+  maxResults?: number,
+): Promise<any> {
+  return exec('TWITTER_SEARCH_TWEETS', orgId, {
+    query,
+    ...(maxResults !== undefined && { max_results: maxResults }),
+  });
+}
+
+/** Get the authenticated Twitter user's info. */
+export async function getTwitterUser(orgId: string): Promise<any> {
+  return exec('TWITTER_GET_AUTHENTICATED_USER', orgId, {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GitHub — Extended Actions
+// ═══════════════════════════════════════════════════════════════
+
+/** Create a pull request. */
+export async function createGitHubPR(
+  orgId: string,
+  owner: string,
+  repo: string,
+  title: string,
+  body: string,
+  head: string,
+  base: string,
+): Promise<any> {
+  return exec('GITHUB_CREATE_A_PULL_REQUEST', orgId, {
+    owner, repo, title, body, head, base,
+  });
+}
+
+/** Star a GitHub repository. */
+export async function starGitHubRepo(
+  orgId: string,
+  owner: string,
+  repo: string,
+): Promise<any> {
+  return exec('GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER', orgId, {
+    owner, repo,
+  });
+}
+
+/** Create a comment on a GitHub issue or PR. */
+export async function createGitHubComment(
+  orgId: string,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  body: string,
+): Promise<any> {
+  return exec('GITHUB_CREATE_A_COMMENT', orgId, {
+    owner, repo, issue_number: issueNumber, body,
+  });
+}
+
+/** List commits for a GitHub repository. */
+export async function getGitHubCommits(
+  orgId: string,
+  owner: string,
+  repo: string,
+): Promise<any> {
+  return exec('GITHUB_LIST_COMMITS', orgId, { owner, repo });
 }

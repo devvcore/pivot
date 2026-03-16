@@ -7,7 +7,8 @@ export type IntegrationProvider =
   | 'slack' | 'gmail' | 'adp' | 'workday'
   | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira' | 'github'
   | 'google_analytics' | 'google_sheets' | 'notion' | 'linear'
-  | 'asana' | 'google_calendar' | 'microsoft_teams' | 'airtable';
+  | 'asana' | 'google_calendar' | 'microsoft_teams' | 'airtable'
+  | 'linkedin' | 'twitter';
 
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing';
 
@@ -421,5 +422,39 @@ export const PROVIDER_CAPABILITIES: ProviderCapability[] = [
     ],
     requiredScopes: ['data.records:read', 'schema.bases:read'],
     docsUrl: 'https://airtable.com/developers/web/api',
+  },
+  {
+    provider: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Post content, share updates, and manage your professional presence on LinkedIn',
+    category: 'communication',
+    icon: 'Linkedin',
+    color: 'blue',
+    features: [
+      'Create text posts',
+      'Share articles & links',
+      'Post on company pages',
+      'Engagement analytics',
+      'Profile management',
+    ],
+    requiredScopes: ['w_member_social', 'r_liteprofile'],
+    docsUrl: 'https://learn.microsoft.com/en-us/linkedin/marketing/',
+  },
+  {
+    provider: 'twitter',
+    name: 'X (Twitter)',
+    description: 'Post tweets, engage with followers, and manage your X/Twitter presence',
+    category: 'communication',
+    icon: 'Twitter',
+    color: 'zinc',
+    features: [
+      'Post tweets',
+      'Reply to threads',
+      'Like & retweet',
+      'Search tweets',
+      'Engagement analytics',
+    ],
+    requiredScopes: ['tweet.read', 'tweet.write', 'users.read'],
+    docsUrl: 'https://developer.x.com/en/docs',
   },
 ];
