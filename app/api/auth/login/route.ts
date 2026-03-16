@@ -60,10 +60,13 @@ export async function POST(req: Request) {
       organizationName = org?.name || "";
     }
 
+    const fullName = data.user.user_metadata?.name || profile?.name || email.split("@")[0];
     const response = NextResponse.json({
       id: data.user.id,
       email: data.user.email,
-      name: data.user.user_metadata?.name || profile?.name || email.split("@")[0],
+      name: fullName,
+      firstName: profile?.first_name || data.user.user_metadata?.firstName || fullName.split(" ")[0] || "",
+      lastName: profile?.last_name || data.user.user_metadata?.lastName || fullName.split(" ").slice(1).join(" ") || "",
       username: profile?.username || data.user.user_metadata?.username || "",
       organizationId: profile?.organization_id || data.user.user_metadata?.organizationId || "",
       organizationName,

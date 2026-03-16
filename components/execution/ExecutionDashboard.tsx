@@ -30,6 +30,9 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeft,
+  Paperclip,
+  X,
+  Image as ImageIcon,
   GitPullRequest,
   Share2,
   Calendar,
@@ -47,6 +50,7 @@ import ConnectionPrompt from "./ConnectionPrompt";
 /**
  * Authenticated fetch: retries once after refreshing the Supabase session on 401.
  * This handles the common case where the JWT expires mid-session.
+ * If refresh fails, redirects to login.
  */
 async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const res = await fetch(input, init);
@@ -57,6 +61,10 @@ async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
     if (!error) {
       // Retry the request with the refreshed session cookies
       return fetch(input, init);
+    }
+    // Refresh failed — session is truly expired. Redirect to login.
+    if (typeof window !== 'undefined') {
+      window.location.href = '/?expired=1';
     }
   }
   return res;
@@ -107,6 +115,7 @@ interface ChatMessage {
   toolResult?: string;
   artifacts?: { name: string; type: string; content: string }[];
   taskId?: string;
+  attachments?: { name: string; url: string; type: string }[];
 }
 
 /* ── Recommendation pills ── */
@@ -402,6 +411,9 @@ export function ExecutionDashboard({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConvoId, setCurrentConvoId] = useState<string>(() => `convo-${Date.now()}`);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [stagedFiles, setStagedFiles] = useState<{ id: string; file: File; preview?: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollIntervals = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -916,39 +928,109 @@ export function ExecutionDashboard({
     setTotalCostCents(restoredCostCents);
   }, [messages, currentConvoId]);
 
+  /* ── File handling ── */
+  const addFiles = useCallback((fileList: FileList | null) => {
+    if (!fileList) return;
+    const newFiles = Array.from(fileList).map(file => {
+      const entry: { id: string; file: File; preview?: string } = {
+        id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        file,
+      };
+      if (file.type.startsWith('image/')) {
+        entry.preview = URL.createObjectURL(file);
+      }
+      return entry;
+    });
+    setStagedFiles(prev => [...prev, ...newFiles]);
+  }, []);
+
+  const removeFile = useCallback((id: string) => {
+    setStagedFiles(prev => {
+      const removed = prev.find(f => f.id === id);
+      if (removed?.preview) URL.revokeObjectURL(removed.preview);
+      return prev.filter(f => f.id !== id);
+    });
+  }, []);
+
+  const uploadFiles = useCallback(async (files: { id: string; file: File }[]): Promise<{ name: string; url: string; type: string; size: number }[]> => {
+    if (files.length === 0) return [];
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set('orgId', orgId);
+      for (const f of files) {
+        formData.append('files', f.file);
+      }
+      const res = await authFetch('/api/execution/upload', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Upload failed');
+      const { uploaded } = await res.json();
+      return uploaded ?? [];
+    } catch (err) {
+      console.error('File upload failed:', err);
+      return [];
+    } finally {
+      setUploading(false);
+    }
+  }, [orgId]);
+
   /* ── Send message (single or batch) ── */
   const handleSend = useCallback(async (text: string) => {
     const msg = text.trim();
-    if (!msg || sending) return;
+    if (!msg && stagedFiles.length === 0) return;
+    if (sending) return;
 
     setSending(true);
     setInput("");
+
+    // Capture and clear staged files
+    const filesToUpload = [...stagedFiles];
+    setStagedFiles([]);
 
     const userMsgId = `user-${Date.now()}`;
     const userMsg: ChatMessage = {
       id: userMsgId,
       timestamp: Date.now(),
       type: "user",
-      content: msg,
+      content: msg || `[${filesToUpload.length} file(s) attached]`,
     };
     setMessages(prev => [...prev, userMsg]);
 
     // ── Conversational pre-filter: handle greetings/short messages without creating a task ──
-    const conversationalReply = getConversationalResponse(msg);
-    if (conversationalReply) {
-      setMessages(prev => [...prev, {
-        id: `reply-${Date.now()}`,
-        timestamp: Date.now(),
-        type: "output",
-        content: conversationalReply,
-        agentName: "Pivot",
-        agentId: "system",
-      }]);
-      setSending(false);
-      return;
+    if (filesToUpload.length === 0) {
+      const conversationalReply = getConversationalResponse(msg);
+      if (conversationalReply) {
+        setMessages(prev => [...prev, {
+          id: `reply-${Date.now()}`,
+          timestamp: Date.now(),
+          type: "output",
+          content: conversationalReply,
+          agentName: "Pivot",
+          agentId: "system",
+        }]);
+        setSending(false);
+        return;
+      }
     }
 
     try {
+      // Upload files if any
+      let attachments: { name: string; url: string; type: string; size: number }[] = [];
+      if (filesToUpload.length > 0) {
+        attachments = await uploadFiles(filesToUpload);
+        if (attachments.length > 0) {
+          // Update user message with attachment previews
+          setMessages(prev => prev.map(m =>
+            m.id === userMsgId
+              ? { ...m, attachments: attachments.map(a => ({ name: a.name, url: a.url, type: a.type })) }
+              : m
+          ));
+        }
+        // Clean up previews
+        for (const f of filesToUpload) {
+          if (f.preview) URL.revokeObjectURL(f.preview);
+        }
+      }
+
       const isMultiTask = detectMultiTask(msg);
 
       if (isMultiTask) {
@@ -956,10 +1038,13 @@ export function ExecutionDashboard({
         const res = await authFetch("/api/execution/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orgId, message: msg, costCeiling: 0.50, conversationId: currentConvoId }),
+          body: JSON.stringify({ orgId, message: msg, costCeiling: 0.50, conversationId: currentConvoId, ...(attachments.length > 0 && { attachments }) }),
         });
 
-        if (!res.ok) throw new Error("Failed to create batch tasks");
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => null);
+          throw new Error(res.status === 401 ? "Session expired. Please refresh the page or sign in again." : errBody?.error || "Failed to create batch tasks");
+        }
         const { tasks } = await res.json();
 
         if (!tasks || tasks.length === 0) throw new Error("No tasks created");
@@ -998,15 +1083,19 @@ export function ExecutionDashboard({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             orgId,
-            title: msg,
+            title: msg || `Post uploaded image${attachments.length > 1 ? 's' : ''}`,
             agentId: "auto",
             priority: "medium",
             costCeiling: 0.50,
             conversationId: currentConvoId,
+            ...(attachments.length > 0 && { attachments }),
           }),
         });
 
-        if (!res.ok) throw new Error("Failed to create task");
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => null);
+          throw new Error(res.status === 401 ? "Session expired. Please refresh the page or sign in again." : errBody?.error || "Failed to create task");
+        }
         const { task } = await res.json();
         const resolvedAgent = task.agent_id ?? "strategist";
 
@@ -1043,7 +1132,7 @@ export function ExecutionDashboard({
     } finally {
       setSending(false);
     }
-  }, [orgId, sending, currentConvoId]);
+  }, [orgId, sending, currentConvoId, stagedFiles, uploadFiles]);
 
   const hasMessages = messages.length > 0;
 
@@ -1289,8 +1378,24 @@ export function ExecutionDashboard({
               return (
                 <div key={msg.id} className="flex justify-end">
                   <div className="flex items-start gap-2 max-w-[80%]">
-                    <div className="bg-zinc-900 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm">
+                    <div className="bg-zinc-900 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm max-w-[85%]">
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {msg.attachments.map((att, i) => (
+                            att.type.startsWith('image/') ? (
+                              <a key={i} href={att.url} target="_blank" rel="noopener noreferrer">
+                                <img src={att.url} alt={att.name} className="w-20 h-20 object-cover rounded-lg border border-zinc-700 hover:opacity-80 transition-opacity" />
+                              </a>
+                            ) : (
+                              <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2.5 py-1.5 text-xs hover:bg-zinc-700 transition-colors">
+                                <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                                <span className="truncate max-w-[120px]">{att.name}</span>
+                              </a>
+                            )
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="w-7 h-7 bg-zinc-200 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                       <User className="w-3.5 h-3.5 text-zinc-600" />
@@ -1458,13 +1563,73 @@ export function ExecutionDashboard({
 
         {/* ── Input (textarea for multiline support) ── */}
         <div className="sticky bottom-0 bg-gradient-to-t from-[#F8F9FA] via-[#F8F9FA] to-transparent pt-6 pb-4 px-4">
+          {/* File previews */}
+          {stagedFiles.length > 0 && (
+            <div className="flex gap-2 mb-2 flex-wrap px-1">
+              {stagedFiles.map(sf => (
+                <div key={sf.id} className="relative group">
+                  {sf.preview ? (
+                    <img
+                      src={sf.preview}
+                      alt={sf.file.name}
+                      className="w-16 h-16 object-cover rounded-lg border border-zinc-200 shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-zinc-100 border border-zinc-200 rounded-lg flex items-center justify-center shadow-sm">
+                      <FileText className="w-5 h-5 text-zinc-400" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => removeFile(sf.id)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="text-[9px] text-zinc-500 truncate w-16 mt-0.5 text-center">{sf.file.name}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend(input);
             }}
-            className="flex items-end gap-2 bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/5 px-4 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addFiles(e.dataTransfer.files);
+            }}
+            className="flex items-end gap-2 bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/5 px-3 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
           >
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+              className="hidden"
+              onChange={(e) => {
+                addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            {/* Paperclip button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || uploading}
+              className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg disabled:opacity-30 transition-all shrink-0"
+              title="Attach files (images, documents)"
+            >
+              {uploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Paperclip className="w-4 h-4" />
+              )}
+            </button>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -1474,7 +1639,24 @@ export function ExecutionDashboard({
                   handleSend(input);
                 }
               }}
-              placeholder="What do you want to get done? (Shift+Enter for list)"
+              onPaste={(e) => {
+                const items = e.clipboardData?.items;
+                if (items) {
+                  const imageFiles: File[] = [];
+                  for (const item of Array.from(items)) {
+                    if (item.type.startsWith('image/')) {
+                      const file = item.getAsFile();
+                      if (file) imageFiles.push(file);
+                    }
+                  }
+                  if (imageFiles.length > 0) {
+                    const dt = new DataTransfer();
+                    imageFiles.forEach(f => dt.items.add(f));
+                    addFiles(dt.files);
+                  }
+                }
+              }}
+              placeholder={stagedFiles.length > 0 ? "Add a message with your files..." : "What do you want to get done? (Shift+Enter for list)"}
               disabled={sending}
               rows={1}
               className="flex-1 text-sm bg-transparent placeholder:text-zinc-400 focus:outline-none disabled:opacity-50 resize-none max-h-32 overflow-y-auto leading-relaxed"
@@ -1487,10 +1669,10 @@ export function ExecutionDashboard({
             />
             <button
               type="submit"
-              disabled={sending || !input.trim()}
+              disabled={sending || uploading || (!input.trim() && stagedFiles.length === 0)}
               className="w-8 h-8 flex items-center justify-center bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
             >
-              {sending ? (
+              {sending || uploading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
@@ -1499,7 +1681,7 @@ export function ExecutionDashboard({
           </form>
           <div className="flex items-center justify-center gap-3 mt-2">
             <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">
-              7 agents · 49 tools · auto-routed
+              7 agents · 49 tools · auto-routed · drop files to attach
             </span>
           </div>
         </div>

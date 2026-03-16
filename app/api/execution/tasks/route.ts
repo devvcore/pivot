@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateRequest } from "@/lib/supabase/auth-api";
 import { createOrchestrator } from "@/lib/execution/orchestrator";
+import { collectIntegrationContext, formatIntegrationContextAsText } from "@/lib/integrations/collect";
 import { getAgentForCategory } from "@/lib/execution/agents";
 
 /* ── Auto-route: pick best agent from user message ── */
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    let { orgId, title, agentId, description, priority, costCeiling, deliverables, conversationId } = body;
+    let { orgId, title, agentId, description, priority, costCeiling, deliverables, conversationId, attachments } = body;
 
     if (!orgId || !title || !agentId) {
       return NextResponse.json(
@@ -123,24 +124,43 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Load deliverables from latest completed analysis if not provided
+    // Load deliverables from latest completed analysis for THIS org if not provided
     if (!deliverables) {
-      try {
-        const { data: latestJob } = await supabase
-          .from("jobs")
-          .select("results_json")
-          .eq("status", "completed")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
+      const { data: latestJob, error: jobError } = await supabase
+        .from("jobs")
+        .select("results_json")
+        .eq("organization_id", orgId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
 
-        if (latestJob?.results_json) {
-          deliverables = latestJob.results_json;
-          console.log(`[POST /api/execution/tasks] Loaded deliverables from latest analysis`);
-        }
-      } catch {
-        // No analysis data available — agents will work without context
+      if (jobError) {
+        console.log(`[POST /api/execution/tasks] No completed analysis for org ${orgId}: ${jobError.message}`);
+      } else if (latestJob?.results_json) {
+        deliverables = latestJob.results_json;
+        console.log(`[POST /api/execution/tasks] Loaded deliverables (${Object.keys(deliverables as Record<string, unknown>).length} sections)`);
       }
+    }
+
+    // Load integration data (Stripe, Salesforce, GitHub, etc.)
+    const integrationCtx = await collectIntegrationContext(orgId);
+    const integrationText = formatIntegrationContextAsText(integrationCtx);
+    if (integrationCtx.providers.length > 0) {
+      console.log(`[POST /api/execution/tasks] Loaded integration data from: ${integrationCtx.providers.join(", ")}`);
+      if (!deliverables) deliverables = {};
+      (deliverables as Record<string, unknown>).__integrationData = integrationText;
+      (deliverables as Record<string, unknown>).__integrationProviders = integrationCtx.providers;
+    }
+
+    // Build description with attachment info for agent context
+    let taskDescription = description || '';
+    if (attachments?.length > 0) {
+      const attachmentLines = attachments.map(
+        (a: { name: string; url: string; type: string }) =>
+          `- [${a.name}](${a.url}) (${a.type})`
+      );
+      taskDescription += `${taskDescription ? '\n\n' : ''}USER ATTACHMENTS (files uploaded by the user — use these URLs directly):\n${attachmentLines.join('\n')}`;
     }
 
     // Create the task record
@@ -149,7 +169,7 @@ export async function POST(request: NextRequest) {
       .insert({
         org_id: orgId,
         title,
-        description: description || null,
+        description: taskDescription || null,
         agent_id: agentId,
         priority: priority || "medium",
         cost_ceiling: costCeiling || 1.0,
@@ -172,7 +192,12 @@ export async function POST(request: NextRequest) {
       agent_id: agentId,
       org_id: orgId,
       event_type: "session_start",
-      data: { userMessage: title, source: "chat", conversationId: conversationId || undefined },
+      data: {
+        userMessage: title,
+        source: "chat",
+        conversationId: conversationId || undefined,
+        ...(attachments?.length > 0 && { attachments }),
+      },
     });
 
     // Log creation event

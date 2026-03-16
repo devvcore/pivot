@@ -4,10 +4,11 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   try {
-    const { userId, email, name, username, organizationName } = await req.json();
-    if (!userId || !email || !name || !organizationName) {
+    const { userId, email, firstName, lastName, username, organizationName } = await req.json();
+    if (!userId || !email || !firstName || !lastName || !organizationName) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
+    const name = `${firstName.trim()} ${lastName.trim()}`;
 
     const supabase = createAdminClient();
 
@@ -61,6 +62,8 @@ export async function POST(req: Request) {
       id: userId,
       email: email.trim().toLowerCase(),
       name,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       username: sanitizedUsername || null,
       display_name: name,
       organization_id: orgId,

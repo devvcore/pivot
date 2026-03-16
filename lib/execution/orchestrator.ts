@@ -176,7 +176,7 @@ async function quickGenerate(prompt: string): Promise<string> {
   const response = await ai.models.generateContent({
     model: FLASH_MODEL,
     contents: prompt,
-    config: { temperature: 0.2, maxOutputTokens: 2000 },
+    config: { temperature: 0.0, maxOutputTokens: 4000 },
   });
   return response.text ?? '';
 }
@@ -467,8 +467,10 @@ Output ONLY a JSON array of strings, no other text. Example:
     return [
       'The output is complete and addresses all aspects of the task description.',
       'The output is well-structured with clear sections and formatting.',
-      'The content is specific to the business (not generic filler).',
-      'Any data or numbers referenced are plausible and internally consistent.',
+      'The content is specific to this company — references actual business details, not generic placeholders.',
+      'All statistics, metrics, and numbers are either sourced from analysis data, labeled as estimates, or cited from known benchmarks.',
+      'No fabricated company names, case studies, testimonials, or quotes appear in the output.',
+      'The output ends with concrete, actionable next steps.',
     ];
   }
 
@@ -535,8 +537,8 @@ Output ONLY a JSON array of strings, no other text. Example:
         model: FLASH_MODEL,
         contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
         config: {
-          temperature: 0.4,
-          maxOutputTokens: 4000,
+          temperature: 0.1,
+          maxOutputTokens: 8192,
           systemInstruction: systemPrompt,
           tools: functionDeclarations.length > 0
             ? [{ functionDeclarations }]
@@ -638,7 +640,7 @@ Output ONLY a JSON array of strings, no other text. Example:
           functionResponse: {
             name,
             response: {
-              output: toolResult.output.slice(0, 8000), // Truncate to keep context manageable
+              output: toolResult.output.slice(0, 24000),
             },
           },
         });
@@ -673,7 +675,7 @@ Output ONLY a JSON array of strings, no other text. Example:
   ): Promise<{ verdict: 'accept' | 'revise' | 'fail'; feedback: string }> {
     const criteria = task.acceptanceCriteria;
 
-    const prompt = `You are a quality reviewer. Evaluate this task output against the acceptance criteria.
+    const prompt = `You are a strict quality reviewer. Evaluate this task output against the acceptance criteria AND check for hallucinations.
 
 TASK: "${task.title}"
 DESCRIPTION: "${task.description}"
@@ -682,14 +684,27 @@ ACCEPTANCE CRITERIA:
 ${criteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
 OUTPUT TO REVIEW:
-${output.slice(0, 6000)}
+${output.slice(0, 16000)}
 
-For each criterion, determine if it is MET or NOT MET with a brief explanation.
+EVALUATION STEPS:
+
+1. For each acceptance criterion, determine if it is MET or NOT MET with a brief explanation.
+
+2. HALLUCINATION CHECK (critical):
+   - Does the output contain invented statistics without "estimated" labels?
+   - Does it reference fake company names, case studies, or testimonials?
+   - Does it quote people who weren't mentioned in the task?
+   - Does it present made-up data as factual?
+   - If ANY hallucination is found, verdict must be REVISE with specific callouts.
+
+3. GROUNDING CHECK:
+   - Is the output specific to THIS company, or could it apply to any business?
+   - Are recommendations backed by data from the analysis or clearly labeled as general advice?
 
 Then provide your VERDICT:
-- ACCEPT: All criteria met or the output is clearly high quality despite minor gaps.
-- REVISE: Some criteria not met, but fixable. Provide specific feedback.
-- FAIL: Fundamentally inadequate output that cannot be fixed with revision.
+- ACCEPT: All criteria met, no hallucinations, output is grounded and specific.
+- REVISE: Some criteria not met OR hallucinations detected. Provide specific feedback on what to fix.
+- FAIL: Fundamentally inadequate, generic, or heavily hallucinated.
 
 Output format:
 CRITERIA EVALUATION:
@@ -697,9 +712,11 @@ CRITERIA EVALUATION:
 2. [MET/NOT MET] - [explanation]
 ...
 
+HALLUCINATION CHECK: [CLEAN/ISSUES FOUND] - [details]
+
 VERDICT: [ACCEPT/REVISE/FAIL]
 
-FEEDBACK: [If REVISE, specific instructions for improvement. If FAIL, explain why.]`;
+FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each one.]`;
 
     const result = await quickGenerate(prompt);
 
@@ -923,20 +940,32 @@ ${task.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}`);
     parts.push(`--- Domain Knowledge ---\n${outfitPrompt}`);
 
     // ═══ 5. DATA STRATEGY ═══
+    const hasIntegrationData = !!this.deliverables?.['__integrationData'];
+    const integrationProviders = (this.deliverables?.['__integrationProviders'] as string[]) ?? [];
+
     if (hasDeliverables) {
-      parts.push(`--- Data Access ---
+      let dataPrompt = `--- Data Access ---
 You have business analysis data available via the query_analysis tool.
 1. FIRST: Call query_analysis(section: "list_sections") to discover what data exists.
-2. Use query_analysis(section: "search", query: "...") to find relevant data.
+2. Use query_analysis(section: "search", query: "...") to find relevant data across all sections.
 3. Ground ALL content in the company's actual data. Reference specific numbers and insights.
-4. If web_search fails, adapt: use scrape_website or query_analysis instead.`);
+4. If web_search fails, adapt: use scrape_website or query_analysis instead.`;
+
+      if (hasIntegrationData) {
+        dataPrompt += `\n\nLIVE INTEGRATION DATA AVAILABLE from: ${integrationProviders.join(', ')}
+- Call query_analysis(section: "search", query: "integration data for [topic]") to access real metrics.
+- PREFER real integration data over estimates. Cite sources: "[from Stripe]", "[from GitHub]", etc.
+- This is LIVE data from the user's connected accounts — treat it as ground truth.`;
+      }
+      parts.push(dataPrompt);
     } else {
       parts.push(`--- Data Access ---
 No business analysis data is loaded. This means:
 1. The task title and description are your PRIMARY context. Extract every detail: company, industry, product, audience.
 2. Do NOT call query_analysis - there is no data to query. Go straight to your domain tools.
 3. Use web_search to gather real market data if needed.
-4. NEVER produce generic placeholder content. Be specific with the information given.`);
+4. NEVER produce generic placeholder content. Be specific with the information given.
+5. If web_search also fails, work ONLY with the information from the task. Label all estimates clearly as "estimated" and DO NOT present them as facts.`);
     }
 
     // ═══ 6. BEHAVIORAL RULES (BetterBot-style) ═══
@@ -989,8 +1018,14 @@ ANTI-HALLUCINATION:
 
     // Marketing: auto-offer posting
     if (agent.id === 'marketer') {
-      if (lower.includes('post') || lower.includes('social') || lower.includes('linkedin') || lower.includes('twitter') || lower.includes('content')) {
-        triggers.push('SOCIAL POSTING: After creating content, offer to post directly. Call check_connection for linkedin/twitter first. If connected, ask "Want me to post this now?" If not, guide them to connect accounts.');
+      if (lower.includes('post') || lower.includes('social') || lower.includes('linkedin') || lower.includes('twitter') || lower.includes('instagram') || lower.includes('facebook') || lower.includes('content')) {
+        triggers.push('SOCIAL POSTING: After creating content, offer to post directly. Call check_connection for linkedin/twitter/instagram/facebook. If connected, ask "Want me to post this now?" If not, guide them to connect accounts.');
+      }
+      if (lower.includes('instagram') || lower.includes('ig') || lower.includes('insta')) {
+        triggers.push('INSTAGRAM: If the user uploaded an image, use the uploaded image URL with post_to_instagram. Do NOT ask the user for an image URL — use the attachment URL from the task description.');
+      }
+      if (lower.includes('facebook') || lower.includes('fb')) {
+        triggers.push('FACEBOOK: Use post_to_facebook to publish. If the user uploaded a photo, use the attachment URL.');
       }
       if (lower.includes('email') || lower.includes('campaign')) {
         triggers.push('EMAIL: After creating email content, offer to send via Gmail if connected. Call check_connection for gmail.');
@@ -1044,6 +1079,15 @@ ANTI-HALLUCINATION:
     if (task.acceptanceCriteria.length > 0) {
       prompt += `\n\nSuccess criteria:\n`;
       prompt += task.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n');
+    }
+
+    // Check for user-uploaded attachments in the description
+    if (task.description?.includes('USER ATTACHMENTS')) {
+      prompt += `\n\nIMPORTANT: The user has uploaded files. The URLs above are PUBLIC and ready to use.
+- For Instagram posting: pass the image URL directly to post_to_instagram as image_url
+- For Facebook posting: pass it to post_to_facebook
+- For email attachments: reference the URLs in the email body
+- Use the files as the user intends — don't ask for files again, you already have them.`;
     }
 
     prompt += `\n\nUse your tools, produce the deliverable, and present it conversationally with next steps.`;

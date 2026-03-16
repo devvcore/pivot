@@ -44,11 +44,14 @@ export async function GET() {
     organizationName = org?.name || "";
   }
 
+  const fullName = user.user_metadata?.name || profile?.name || "";
   return NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
-      name: user.user_metadata?.name || profile?.name || "",
+      name: fullName,
+      firstName: profile?.first_name || user.user_metadata?.firstName || fullName.split(" ")[0] || "",
+      lastName: profile?.last_name || user.user_metadata?.lastName || fullName.split(" ").slice(1).join(" ") || "",
       username: profile?.username || user.user_metadata?.username || "",
       organizationId: profile?.organization_id || "",
       organizationName,

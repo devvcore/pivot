@@ -954,7 +954,7 @@ const TOOLS = [
         },
         recordType: {
           type: "string",
-          description: "Filter by record type (e.g. 'channels', 'financial_summary', 'revenue'). Leave empty for all types.",
+          description: "Filter by record type. Known types — stripe: payments, customers, charges_overview, customers_overview; slack: channel_list, team_overview; gmail: emails, recent_activity, profile. Leave empty to get all records for a provider (RECOMMENDED when unsure).",
         },
       },
       required: [],
@@ -1209,7 +1209,13 @@ async function executeTool(
 
       let filtered = ctx.records;
       if (provider) filtered = filtered.filter((r) => r.provider === provider);
-      if (recordType) filtered = filtered.filter((r) => r.recordType === recordType);
+      if (recordType) {
+        const exact = filtered.filter((r) => r.recordType === recordType);
+        if (exact.length > 0) {
+          filtered = exact;
+        }
+        // If no exact match, keep all records for the provider so the LLM still gets data
+      }
 
       if (filtered.length === 0) {
         return `No data found for ${provider ? `provider "${provider}"` : ""}${recordType ? ` record type "${recordType}"` : ""}. Connected providers: ${ctx.providers.join(", ")}`;

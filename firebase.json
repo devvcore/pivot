@@ -5,12 +5,14 @@
     "ignore": [
       "firebase.json",
       "**/.*",
+      "!.env.production",
       "**/node_modules/**"
     ],
     "frameworksBackend": {
       "region": "us-central1",
       "maxInstances": 10,
-      "memory": "1GiB"
+      "memory": "1GiB",
+      "timeoutSeconds": 300
     }
   }
 }
