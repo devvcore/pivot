@@ -41,7 +41,26 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import ConnectionPrompt from "./ConnectionPrompt";
+
+/**
+ * Authenticated fetch: retries once after refreshing the Supabase session on 401.
+ * This handles the common case where the JWT expires mid-session.
+ */
+async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status === 401) {
+    // Try refreshing the session
+    const sb = createClient();
+    const { error } = await sb.auth.refreshSession();
+    if (!error) {
+      // Retry the request with the refreshed session cookies
+      return fetch(input, init);
+    }
+  }
+  return res;
+}
 
 /* ── Agent name map ── */
 const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; color: string }> = {
@@ -494,9 +513,9 @@ export function ExecutionDashboard({
       }
 
       try {
-        const res = await fetch(`/api/execution/tasks/${taskId}`);
+        const res = await authFetch(`/api/execution/tasks/${taskId}`);
         if (res.status === 401) {
-          // Session expired — stop polling to avoid spamming
+          // Session expired even after refresh — stop polling
           clearInterval(interval);
           pollIntervals.current.delete(interval);
           setActiveAgents(prev => { const s = new Set(prev); s.delete(agentId); return s; });
@@ -621,7 +640,7 @@ export function ExecutionDashboard({
   useEffect(() => {
     async function hydrateFromDb() {
       try {
-        const res = await fetch(`/api/execution/tasks?orgId=${orgId}&limit=20`);
+        const res = await authFetch(`/api/execution/tasks?orgId=${orgId}&limit=20`);
         if (!res.ok) { setHydrating(false); return; }
         const { tasks } = await res.json();
 
@@ -638,7 +657,7 @@ export function ExecutionDashboard({
 
         for (const task of chronologicalTasks) {
           // Fetch full details + events
-          const detailRes = await fetch(`/api/execution/tasks/${task.id}`);
+          const detailRes = await authFetch(`/api/execution/tasks/${task.id}`);
           if (!detailRes.ok) continue;
           const { task: fullTask, events: dbEvents } = await detailRes.json();
 
@@ -735,7 +754,7 @@ export function ExecutionDashboard({
         // Build conversation list from hydrated tasks
         const convoMap = new Map<string, Conversation>();
         for (const task of chronologicalTasks) {
-          const detailRes2 = await fetch(`/api/execution/tasks/${task.id}`).catch(() => null);
+          const detailRes2 = await authFetch(`/api/execution/tasks/${task.id}`).catch(() => null);
           const sessionEvt = (await detailRes2?.json().catch(() => null))?.events?.find(
             (e: any) => e.event_type === "session_start"
           );
@@ -833,7 +852,7 @@ export function ExecutionDashboard({
 
     for (const taskId of convo.taskIds) {
       try {
-        const detailRes = await fetch(`/api/execution/tasks/${taskId}`);
+        const detailRes = await authFetch(`/api/execution/tasks/${taskId}`);
         if (!detailRes.ok) continue;
         const { task: fullTask, events: dbEvents } = await detailRes.json();
 
@@ -934,7 +953,7 @@ export function ExecutionDashboard({
 
       if (isMultiTask) {
         // ── Batch path: split into multiple tasks ──
-        const res = await fetch("/api/execution/batch", {
+        const res = await authFetch("/api/execution/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orgId, message: msg, costCeiling: 0.50, conversationId: currentConvoId }),
@@ -974,7 +993,7 @@ export function ExecutionDashboard({
         }
       } else {
         // ── Single task path (existing logic) ──
-        const res = await fetch("/api/execution/tasks", {
+        const res = await authFetch("/api/execution/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

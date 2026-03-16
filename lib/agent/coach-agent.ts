@@ -18,7 +18,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { getJob, listJobs } from "@/lib/job-store";
 import { findRoute, findRouteById } from "./page-routes";
-import { collectIntegrationContext } from "@/lib/integrations/collect";
+import { collectIntegrationContext, pullFreshIntegrationData } from "@/lib/integrations/collect";
 import { LoopGuard, closestToolName, smartTruncate } from "./agent-guardrails";
 import type { MVPDeliverables } from "@/lib/types";
 
@@ -92,7 +92,7 @@ FOR EMPLOYEES:
 
 You have access to the business report via the get_report_section tool. Use it to ground your advice in real data.
 You also have a navigate_to_page tool. Use it when the user asks to see, view, or go to a specific section of their analysis (e.g. "show me the action plan", "take me to issues", "where is my health score").
-You have a get_integration_data tool to access live data from connected business tools (Slack, QuickBooks, Stripe, Salesforce, etc.). Use it when you need real metrics to back up coaching advice — prefer real data over estimates whenever possible.
+You have a get_integration_data tool to pull LIVE data from connected business tools (Stripe, Gmail, Slack, QuickBooks, Salesforce, HubSpot, GitHub, etc.). ALWAYS use this tool when the user asks about cash flow, revenue, payments, customers, emails, messages, or any data that could come from a connected integration. This tool pulls fresh data directly from the APIs — never tell the user data is unavailable without calling this tool first. Prefer real integration data over report estimates.
 
 KEY SECTIONS FOR COACHING:
 - hiringPlan: team gaps, recommended hires, role priorities, and timeline
@@ -1197,9 +1197,14 @@ async function executeTool(
     const recordType = args.recordType as string | undefined;
 
     try {
+      // Pull fresh data from Composio before reading from DB
+      await pullFreshIntegrationData(orgId).catch((e: unknown) =>
+        console.warn("[Coach] Fresh integration pull failed (non-fatal):", e)
+      );
+
       const ctx = await collectIntegrationContext(orgId);
       if (ctx.records.length === 0) {
-        return "No integration data available. Suggest connecting business tools (Slack, QuickBooks, Stripe, etc.) from the Upload page for data-driven coaching.";
+        return "No integration data available. Suggest connecting business tools (Slack, QuickBooks, Stripe, etc.) from the Integrations page for data-driven coaching.";
       }
 
       let filtered = ctx.records;
@@ -1214,10 +1219,10 @@ async function executeTool(
         provider: r.provider,
         type: r.recordType,
         syncedAt: r.syncedAt,
-        data: typeof r.data === 'string' ? r.data.slice(0, 1500) : JSON.stringify(r.data).slice(0, 1500),
+        data: typeof r.data === 'string' ? r.data.slice(0, 2000) : JSON.stringify(r.data).slice(0, 2000),
       }));
 
-      return `[Integration Data — ${filtered.length} records]\n${JSON.stringify(result, null, 2)}`;
+      return `[Integration Data — ${filtered.length} records, freshly pulled]\n${JSON.stringify(result, null, 2)}`;
     } catch (e) {
       return `Failed to retrieve integration data: ${String(e)}`;
     }
