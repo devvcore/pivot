@@ -280,23 +280,17 @@ function detectMultiTask(text: string): boolean {
   return false;
 }
 
-/* ── Conversational pre-filter ── */
-const GREETING_PATTERNS = /^(hi|hey|hello|yo|sup|what'?s up|howdy|hola|whats good|gm|good morning|good evening|good afternoon|thanks|thank you|thx|ok|okay|cool|nice|lol|haha|wow|hmm|yep|yea|yeah|nah|no|yes|sure)\b/i;
-const CONVERSATIONAL_RESPONSES: Record<string, string> = {
-  greeting: "Hey! I'm your execution team — 7 AI agents ready to work. Tell me what you need done: marketing content, financial analysis, hiring materials, research, strategy, or operations. What's on your plate?",
-  too_short: "I need a bit more to work with! Try something like:\n- \"Create LinkedIn posts about our product launch\"\n- \"Build a Q2 budget forecast\"\n- \"Research our top 5 competitors\"\n\nWhat would you like me to do?",
-  thanks: "You're welcome! Need anything else done? I've got marketing, finance, HR, research, strategy, and operations agents ready to go.",
-};
+/* ── Conversational pre-filter — only catch true non-tasks ── */
+const THANKS_PATTERN = /^(thanks|thank you|thx|ty|cheers)\b/i;
 
 function getConversationalResponse(text: string): string | null {
   const trimmed = text.trim();
-  // Too short to be a real task (< 5 chars)
-  if (trimmed.length < 5) return CONVERSATIONAL_RESPONSES.too_short;
-  // Pure greeting
-  if (GREETING_PATTERNS.test(trimmed) && trimmed.split(/\s+/).length <= 4) {
-    if (/^(thanks|thank|thx)/i.test(trimmed)) return CONVERSATIONAL_RESPONSES.thanks;
-    return CONVERSATIONAL_RESPONSES.greeting;
+  // Only filter pure thanks — everything else goes to the agent
+  if (THANKS_PATTERN.test(trimmed) && trimmed.split(/\s+/).length <= 3) {
+    return "Anytime! What's next?";
   }
+  // Let EVERYTHING else through — even "hi", "hey", short messages
+  // The agent should handle greetings conversationally
   return null;
 }
 
@@ -987,20 +981,44 @@ export function ExecutionDashboard({
     };
     setMessages(prev => [...prev, userMsg]);
 
-    // ── Conversational pre-filter: handle greetings/short messages without creating a task ──
+    // ── Fast path: conversational messages go to Pivvy (instant), tasks go to orchestrator ──
     if (filesToUpload.length === 0) {
       const conversationalReply = getConversationalResponse(msg);
       if (conversationalReply) {
         setMessages(prev => [...prev, {
-          id: `reply-${Date.now()}`,
-          timestamp: Date.now(),
-          type: "output",
-          content: conversationalReply,
-          agentName: "Pivot",
-          agentId: "system",
+          id: `reply-${Date.now()}`, timestamp: Date.now(), type: "output",
+          content: conversationalReply, agentName: "Pivvy", agentId: "system",
         }]);
         setSending(false);
         return;
+      }
+
+      // Short messages or conversational → route to Pivvy chat for fast, direct response
+      const isConversational = msg.trim().length < 20 || /^(hi|hey|hello|yo|sup|what|how|who|why|when|where|can you|do you|tell me|show me|help)/i.test(msg.trim());
+      if (isConversational) {
+        try {
+          const recentCtx = messages
+            .filter(m => m.type === "user" || m.type === "output")
+            .slice(-6)
+            .map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content?.slice(0, 1500) ?? "" }));
+
+          const pivvyRes = await authFetch("/api/coach/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orgId, message: msg, messages: recentCtx }),
+          });
+
+          if (pivvyRes.ok) {
+            const data = await pivvyRes.json();
+            const reply = data.message ?? data.response ?? "I'm here! What would you like me to do?";
+            setMessages(prev => [...prev, {
+              id: `pivvy-${Date.now()}`, timestamp: Date.now(), type: "output",
+              content: reply, agentName: "Pivvy", agentId: "pivvy",
+            }]);
+            setSending(false);
+            return;
+          }
+        } catch { /* fall through to task creation */ }
       }
     }
 
@@ -1666,7 +1684,7 @@ export function ExecutionDashboard({
                   }
                 }
               }}
-              placeholder={stagedFiles.length > 0 ? "Add a message with your files..." : "What do you want to get done? (Shift+Enter for list)"}
+              placeholder={stagedFiles.length > 0 ? "Add a message with your files..." : "Ask me anything or give me a task..."}
               disabled={sending}
               rows={1}
               className="flex-1 text-sm bg-transparent placeholder:text-zinc-400 focus:outline-none disabled:opacity-50 resize-none max-h-32 overflow-y-auto leading-relaxed"
