@@ -1002,7 +1002,7 @@ export function ExecutionDashboard({
             .slice(-6)
             .map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content?.slice(0, 1500) ?? "" }));
 
-          const pivvyRes = await authFetch("/api/coach/chat", {
+          const pivvyRes = await authFetch("/api/agent/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orgId, message: msg, messages: recentCtx }),
