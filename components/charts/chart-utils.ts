@@ -32,7 +32,7 @@ export const PIE_PALETTE = [
   "#f97316", "#6366f1", "#14b8a6", "#e11d48",
 ];
 
-export function parseDollarString(s: string): number {
+export function parseDollarString(s: string | null | undefined): number {
   if (!s) return 0;
   const cleaned = s.replace(/[^0-9.KMkm]/g, "");
   const num = parseFloat(cleaned);

@@ -36,6 +36,8 @@ const EFFORT_FILLS: Record<string, string> = {
 };
 
 export function TechSavingsChart({ recommendations, overlay, onDismissOverlay }: Props) {
+  if (!recommendations || !recommendations.length) return null;
+
   const data = recommendations
     .filter((r) => r.estimatedSaving)
     .map((r) => ({

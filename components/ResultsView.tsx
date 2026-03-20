@@ -63,7 +63,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 function fmt(n: number) {
-  if (!n) return "$0";
+  if (!n || isNaN(n)) return "$0";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
