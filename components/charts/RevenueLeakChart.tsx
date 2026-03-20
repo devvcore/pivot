@@ -31,7 +31,7 @@ interface Props {
 }
 
 export function RevenueLeakChart({ items, overlay, onDismissOverlay }: Props) {
-  if (!items.length) return null;
+  if (!items || !items.length) return null;
 
   const barData = items
     .slice(0, 8)

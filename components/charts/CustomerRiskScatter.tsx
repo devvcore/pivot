@@ -28,6 +28,8 @@ interface Props {
 }
 
 export function CustomerRiskScatter({ customers, overlay, onDismissOverlay }: Props) {
+  if (!customers || !customers.length) return null;
+
   const data = customers
     .filter((c) => c.riskScore != null && c.revenueAtRisk != null)
     .map((c) => ({
@@ -80,12 +82,15 @@ export function CustomerRiskScatter({ customers, overlay, onDismissOverlay }: Pr
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
-        <div className="flex gap-4 mt-2 justify-center">
-          {data.map((d, i) => (
-            <span key={i} className="text-[10px] text-zinc-500">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center">
+          {data.slice(0, 5).map((d, i) => (
+            <span key={i} className="text-[10px] text-zinc-500 whitespace-nowrap">
               {d.name}: {d.risk}% risk, {formatDollar(d.revenue)}
             </span>
           ))}
+          {data.length > 5 && (
+            <span className="text-[10px] text-zinc-400">+{data.length - 5} more</span>
+          )}
         </div>
       </div>
 

@@ -39,6 +39,7 @@ interface Props {
 }
 
 export function RevenueForecastChart({ forecast }: Props) {
+  if (!forecast) return null;
   const scenarios = forecast.scenarios ?? [];
 
   // Track which scenarios are visible
@@ -240,11 +241,11 @@ export function RevenueForecastChart({ forecast }: Props) {
                   </div>
                 )}
               </div>
-              {s.assumptions.length > 0 && (
+              {(s.assumptions?.length ?? 0) > 0 && (
                 <div className="mt-2 pt-2 border-t border-zinc-100">
                   <p className="text-[9px] text-zinc-400 mb-1">Key Assumptions</p>
                   <ul className="text-[10px] text-zinc-600 space-y-0.5">
-                    {s.assumptions.slice(0, 3).map((a, j) => (
+                    {(s.assumptions ?? []).slice(0, 3).map((a, j) => (
                       <li key={j} className="leading-tight">
                         &bull; {a}
                       </li>
@@ -258,9 +259,9 @@ export function RevenueForecastChart({ forecast }: Props) {
       </div>
 
       {/* Key Drivers & Risks */}
-      {(forecast.keyDrivers?.length > 0 || forecast.risks?.length > 0) && (
+      {((forecast.keyDrivers?.length ?? 0) > 0 || (forecast.risks?.length ?? 0) > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {forecast.keyDrivers?.length > 0 && (
+          {(forecast.keyDrivers?.length ?? 0) > 0 && (
             <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
               <h4 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-3">
                 Key Revenue Drivers
@@ -287,7 +288,7 @@ export function RevenueForecastChart({ forecast }: Props) {
             </div>
           )}
 
-          {forecast.risks?.length > 0 && (
+          {(forecast.risks?.length ?? 0) > 0 && (
             <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm">
               <h4 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-3">
                 Revenue Risks

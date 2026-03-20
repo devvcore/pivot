@@ -8,15 +8,106 @@
 
 import type { Tool, ToolContext, ToolResult } from './index';
 import { registerTools } from './index';
+import { GoogleGenAI } from '@google/genai';
 
 const AD_GENERATOR_URL = process.env.AD_GENERATOR_URL ?? 'http://localhost:3001';
 const OPENBRAND_API_KEY = process.env.OPENBRAND_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// ── Gemini Imagen Helper ────────────────────────────────────────────────────
+
+/**
+ * Generate an image using Gemini Imagen (gemini-2.0-flash-preview-image-generation).
+ * Returns { base64, mimeType, dataUrl } on success.
+ */
+async function generateImageWithGemini(prompt: string): Promise<{
+  base64: string;
+  mimeType: string;
+  dataUrl: string;
+}> {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not set');
+  }
+
+  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash-preview-image-generation',
+    contents: prompt,
+    config: {
+      responseModalities: ['IMAGE'],
+    },
+  });
+
+  // Extract image data from the response
+  const candidates = response.candidates;
+  if (!candidates || candidates.length === 0) {
+    throw new Error('Gemini Imagen returned no candidates');
+  }
+
+  const parts = candidates[0].content?.parts;
+  if (!parts || parts.length === 0) {
+    throw new Error('Gemini Imagen returned no parts in response');
+  }
+
+  // Find the part with inline image data
+  const imagePart = parts.find((p) => p.inlineData?.data);
+  if (!imagePart || !imagePart.inlineData?.data) {
+    // Check if there's a text-only response (e.g. safety refusal)
+    const textPart = parts.find((p) => p.text);
+    const reason = textPart?.text ?? 'no image data in response';
+    throw new Error(`Gemini Imagen did not return image data: ${reason}`);
+  }
+
+  const base64 = imagePart.inlineData.data;
+  const mimeType = imagePart.inlineData.mimeType ?? 'image/png';
+  const dataUrl = `data:${mimeType};base64,${base64}`;
+
+  return { base64, mimeType, dataUrl };
+}
+
+/**
+ * Build a detailed image generation prompt from business context.
+ */
+function buildImagePrompt(args: {
+  headline: string;
+  description: string;
+  targetAudience: string;
+  brandColor: string;
+  tone: string;
+}): string {
+  const toneGuide: Record<string, string> = {
+    professional: 'clean corporate design with structured layout, subtle gradients',
+    casual: 'friendly warm design with rounded shapes and approachable feel',
+    bold: 'high-contrast dramatic design with strong typography and vivid colors',
+    playful: 'colorful energetic design with dynamic shapes and fun elements',
+    minimal: 'minimalist design with lots of whitespace and simple geometric elements',
+  };
+
+  return [
+    `Create a professional social media post image (1080x1080px square format).`,
+    ``,
+    `Headline text on the image: "${args.headline}"`,
+    `Topic/context: ${args.description}`,
+    `Target audience: ${args.targetAudience}`,
+    `Primary brand color: ${args.brandColor}`,
+    `Design style: ${toneGuide[args.tone] ?? toneGuide.professional}`,
+    ``,
+    `Requirements:`,
+    `- Modern, high-quality social media graphic`,
+    `- The headline text must be clearly readable and prominent`,
+    `- Use the brand color as the primary accent color`,
+    `- Include subtle design elements that relate to the topic`,
+    `- No stock photo look — make it feel designed and intentional`,
+    `- Suitable for Instagram, LinkedIn, and Facebook posts`,
+  ].join('\n');
+}
 
 // ── Generate Social Media Image/Video ────────────────────────────────────────
 
 const generateMedia: Tool = {
   name: 'generate_media',
-  description: 'Generate a branded image or video ad for social media. Creates professional content based on the business brand, product, and target audience. Use this when the user wants to create visual content for Instagram, LinkedIn, Facebook, etc. Returns a URL to the generated media that can be passed to posting tools.',
+  description: 'Generate a branded image or video ad for social media. For images, uses Gemini Imagen AI to create professional visuals. For videos, uses Remotion-based ad generator. Creates content based on the business brand, product, and target audience. Use this when the user wants to create visual content for Instagram, LinkedIn, Facebook, etc. Returns a data URL (image) or URL (video) that can be passed to posting tools.',
   parameters: {
     type: {
       type: 'string',
@@ -124,43 +215,68 @@ const generateMedia: Tool = {
         };
       }
 
-      // Static image generation via OpenBrand API (if available)
-      if (type === 'social_image' && OPENBRAND_API_KEY) {
-        try {
-          const obRes = await fetch('https://api.openbrand.ai/v1/generate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${OPENBRAND_API_KEY}`,
-            },
-            body: JSON.stringify({
-              prompt: `Create a professional social media post image. Headline: "${headline}". Description: "${description}". Brand color: ${brandColor}. Tone: ${tone}. For: ${targetAudience}.`,
-              width: 1080,
-              height: 1080,
-            }),
-            signal: AbortSignal.timeout(30000),
-          });
-
-          if (obRes.ok) {
-            const obResult = await obRes.json();
-            const imageUrl = obResult.url ?? obResult.image_url ?? obResult.data?.url;
-            if (imageUrl) {
-              return {
-                success: true,
-                output: `Social media image generated!\n\nImage URL: ${imageUrl}\n\nHeadline: ${headline}\nDescription: ${description}\n\nUse this image URL with post_to_instagram(image_url, caption) or post_to_facebook to publish.`,
-                cost: 0.01,
-              };
-            }
+      // Static image generation — try Gemini Imagen first, then OpenBrand fallback
+      if (type === 'social_image') {
+        // 1. Try Gemini Imagen (preferred)
+        if (GEMINI_API_KEY) {
+          try {
+            const imagePrompt = buildImagePrompt({
+              headline,
+              description,
+              targetAudience,
+              brandColor,
+              tone,
+            });
+            const { dataUrl, mimeType } = await generateImageWithGemini(imagePrompt);
+            return {
+              success: true,
+              output: `Social media image generated with Gemini Imagen!\n\nImage Data URL: ${dataUrl}\nFormat: ${mimeType}\n\nHeadline: ${headline}\nDescription: ${description}\n\nUse this data URL with post_to_instagram(image_url, caption) or post_to_facebook to publish.`,
+              cost: 0.02,
+            };
+          } catch (err) {
+            console.warn('[generate_media] Gemini Imagen failed:', err instanceof Error ? err.message : err);
+            // Fall through to OpenBrand
           }
-        } catch (err) {
-          console.warn('[generate_media] OpenBrand failed:', err instanceof Error ? err.message : err);
+        }
+
+        // 2. Fallback: OpenBrand API
+        if (OPENBRAND_API_KEY) {
+          try {
+            const obRes = await fetch('https://api.openbrand.ai/v1/generate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENBRAND_API_KEY}`,
+              },
+              body: JSON.stringify({
+                prompt: `Create a professional social media post image. Headline: "${headline}". Description: "${description}". Brand color: ${brandColor}. Tone: ${tone}. For: ${targetAudience}.`,
+                width: 1080,
+                height: 1080,
+              }),
+              signal: AbortSignal.timeout(30000),
+            });
+
+            if (obRes.ok) {
+              const obResult = await obRes.json();
+              const imageUrl = obResult.url ?? obResult.image_url ?? obResult.data?.url;
+              if (imageUrl) {
+                return {
+                  success: true,
+                  output: `Social media image generated!\n\nImage URL: ${imageUrl}\n\nHeadline: ${headline}\nDescription: ${description}\n\nUse this image URL with post_to_instagram(image_url, caption) or post_to_facebook to publish.`,
+                  cost: 0.01,
+                };
+              }
+            }
+          } catch (err) {
+            console.warn('[generate_media] OpenBrand failed:', err instanceof Error ? err.message : err);
+          }
         }
       }
 
       // Fallback: return content plan without generated media
       return {
         success: true,
-        output: `Media content plan created (media server not available for live rendering):\n\nHeadline: ${headline}\nDescription: ${description}\nTarget: ${targetAudience}\nTone: ${tone}\nBrand Color: ${brandColor}\n\nTo generate the actual video/image, ensure the ad-generator service is running on ${AD_GENERATOR_URL}.\n\nCaption ready to use with posting tools once media is generated.`,
+        output: `Media content plan created (no image generation service available):\n\nHeadline: ${headline}\nDescription: ${description}\nTarget: ${targetAudience}\nTone: ${tone}\nBrand Color: ${brandColor}\n\nTo generate images, ensure GEMINI_API_KEY is set (preferred) or OPENBRAND_API_KEY.\nFor video ads, ensure the ad-generator service is running on ${AD_GENERATOR_URL}.\n\nCaption ready to use with posting tools once media is generated.`,
         cost: 0,
       };
     } catch (err) {

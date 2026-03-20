@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, Download, AlertCircle, TrendingUp, DollarSign, Users, Target,
-  ShieldAlert, Sparkles, ChevronRight, BarChart3, Check, Share2,
+  ShieldAlert, Sparkles, ChevronRight, BarChart3, Check, Share2, Zap, ExternalLink, Loader2,
 } from "lucide-react";
+import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
@@ -142,6 +143,54 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
       try { localStorage.setItem(`pivot_tasks_${runId}`, JSON.stringify([...next])); } catch {}
       return next;
     });
+  };
+
+  // Agent dispatch state for action plan items
+  const [dispatchingTasks, setDispatchingTasks] = useState<Set<string>>(new Set());
+  const [dispatchedTasks, setDispatchedTasks] = useState<Record<string, string>>({}); // taskKey → taskId
+
+  const isActionable = (desc: string): boolean => {
+    const lower = desc.toLowerCase();
+    // Actionable: things an agent can actually do (send, create, reach out, draft, post, schedule, etc.)
+    const actionVerbs = [
+      "send ", "create ", "draft ", "post ", "reach out", "contact ", "email ",
+      "schedule ", "write ", "prepare ", "build ", "set up", "setup ", "launch ",
+      "publish ", "generate ", "compile ", "design ", "develop ", "implement ",
+      "configure ", "update ", "submit ", "file ", "register ", "negotiate ",
+      "onboard ", "hire ", "recruit ", "list ", "analyze ", "calculate ",
+    ];
+    return actionVerbs.some(v => lower.startsWith(v) || lower.includes(v));
+  };
+
+  const dispatchTask = async (taskKey: string, description: string, dayTitle: string) => {
+    const orgId = job?.questionnaire?.orgId;
+    if (!orgId) return;
+
+    setDispatchingTasks(prev => new Set(prev).add(taskKey));
+    try {
+      const res = await authFetch("/api/execution/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId,
+          title: description,
+          description: `From action plan (${dayTitle}): ${description}`,
+          agentId: "auto",
+          priority: "medium",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to dispatch task");
+      const data = await res.json();
+      setDispatchedTasks(prev => ({ ...prev, [taskKey]: data.task?.id ?? data.id ?? "" }));
+    } catch (err) {
+      console.error("Failed to dispatch action item:", err);
+    } finally {
+      setDispatchingTasks(prev => {
+        const next = new Set(prev);
+        next.delete(taskKey);
+        return next;
+      });
+    }
   };
 
   // Issues register expand/collapse
@@ -964,6 +1013,9 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                             {day.tasks.map((task, j) => {
                               const taskKey = `${i}-${j}`;
                               const isChecked = completedTasks.has(taskKey);
+                              const actionable = isActionable(task.description);
+                              const isDispatching = dispatchingTasks.has(taskKey);
+                              const dispatched = dispatchedTasks[taskKey];
                               return (
                                 <div
                                   key={j}
@@ -977,6 +1029,27 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                                     <div className={`text-sm leading-snug break-words ${isChecked ? "line-through text-zinc-400" : "text-zinc-800"}`}>{task.description}</div>
                                     <div className="flex items-center gap-2 mt-2">
                                       <span className="text-[9px] font-mono text-zinc-400 uppercase">{task.owner}</span>
+                                      {actionable && !dispatched && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); dispatchTask(taskKey, task.description, day.title); }}
+                                          disabled={isDispatching}
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 transition-all disabled:opacity-50"
+                                        >
+                                          {isDispatching ? (
+                                            <><Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending...</>
+                                          ) : (
+                                            <><Zap className="w-2.5 h-2.5" /> Have agent do it</>
+                                          )}
+                                        </button>
+                                      )}
+                                      {dispatched && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); onExecute?.(); }}
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-all"
+                                        >
+                                          <ExternalLink className="w-2.5 h-2.5" /> View in Execution
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

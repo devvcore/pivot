@@ -30,7 +30,7 @@ interface Props {
 }
 
 export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props) {
-  if (!issues.length) return null;
+  if (!issues || !issues.length) return null;
 
   // Group by severity
   const severityCounts: Record<string, number> = {};
