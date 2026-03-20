@@ -352,7 +352,7 @@ function PivvyChatOverlay({
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      className="fixed bottom-24 right-6 w-96 max-h-[480px] bg-white rounded-2xl shadow-2xl border border-zinc-200 z-50 flex flex-col overflow-hidden"
+      className="fixed bottom-24 right-6 w-96 max-h-[480px] bg-white rounded-xl shadow-lg border border-zinc-200 z-50 flex flex-col overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
@@ -655,7 +655,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
         <p className="text-sm text-zinc-500 mb-8">{job.error || "An unexpected error occurred during the synthesis phase."}</p>
         <div className="flex gap-4">
           <button onClick={onBack} className="px-6 py-2 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-wider hover:bg-zinc-50 transition-all rounded-lg">Dashboard</button>
-          <button onClick={onNewRun} className="px-6 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-800 transition-all shadow-lg rounded-lg">New Analysis</button>
+          <button onClick={onNewRun} className="px-6 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-wider hover:bg-zinc-800 transition-colors rounded-lg">New Analysis</button>
         </div>
       </div>
     );

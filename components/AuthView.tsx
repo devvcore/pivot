@@ -205,7 +205,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3 mb-12"
           >
-            <div className="w-10 h-10 bg-zinc-900 flex items-center justify-center rounded-xl shadow-lg shadow-zinc-900/10">
+            <div className="w-10 h-10 bg-zinc-900 flex items-center justify-center rounded-lg">
               <div className="w-4 h-4 bg-white rounded-sm rotate-45" />
             </div>
             <div>
@@ -378,7 +378,7 @@ export function AuthView({ onLogin }: { onLogin: (user: UserProfile) => void }) 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full justify-center items-center gap-2 rounded-xl bg-zinc-900 py-3 px-4 text-sm font-bold text-white shadow-xl shadow-zinc-900/10 hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="flex w-full justify-center items-center gap-2 rounded-lg bg-zinc-900 py-3 px-4 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-50 transition-colors active:scale-[0.98]"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                     <>

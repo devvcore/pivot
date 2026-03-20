@@ -17,6 +17,7 @@ import { PMBoard } from "@/components/PMBoard";
 import { AppShell } from "@/components/AppShell";
 import { motion, AnimatePresence } from "motion/react";
 import PivvyFloatingChat from "@/components/PivvyFloatingChat";
+import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { createClient } from "@/lib/supabase/client";
 
 const RUN_ID_KEY = "pivot_runId";
@@ -41,6 +42,7 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Hydrate from localStorage + verify Supabase session on mount
   useEffect(() => {
@@ -124,6 +126,25 @@ export default function Home() {
       localStorage.removeItem("pivot_user");
     }
   }, [user]);
+
+  // Check if onboarding wizard should show
+  useEffect(() => {
+    if (!user || !sessionChecked) return;
+    try {
+      if (localStorage.getItem("pivot_onboarded")) return;
+    } catch {
+      return;
+    }
+    // Check if user has any completed analyses
+    fetch("/api/job/list")
+      .then((res) => res.ok ? res.json() : [])
+      .then((jobs: any[]) => {
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          setShowOnboarding(true);
+        }
+      })
+      .catch(() => {});
+  }, [user, sessionChecked]);
 
   // Fetch org logo when user is available
   useEffect(() => {

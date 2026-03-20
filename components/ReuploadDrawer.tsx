@@ -75,7 +75,7 @@ export function ReuploadDrawer({ runId, onReprocess }: ReuploadDrawerProps) {
       {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 bg-zinc-900 text-white px-4 py-2.5 rounded-full shadow-lg hover:bg-zinc-800 transition-all group"
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 bg-zinc-900 text-white px-4 py-2.5 rounded-full shadow-sm hover:bg-zinc-800 transition-colors group"
         title="Add more documents"
       >
         <Plus className="w-4 h-4" />

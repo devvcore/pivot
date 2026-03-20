@@ -15,6 +15,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 
 type AppView =
   | "dashboard"
@@ -147,11 +148,16 @@ export function AppShell({
               </div>
             </div>
           )}
+          {!collapsed && (
+            <div className="ml-auto">
+              <NotificationBell />
+            </div>
+          )}
           {/* Mobile close */}
           {mobileOpen && (
             <button
               onClick={() => setMobileOpen(false)}
-              className="ml-auto md:hidden p-1 text-zinc-400 hover:text-zinc-600"
+              className="md:hidden p-1 text-zinc-400 hover:text-zinc-600"
             >
               <X className="w-4 h-4" />
             </button>

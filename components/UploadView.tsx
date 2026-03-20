@@ -645,7 +645,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
                   whileHover={{ scale: 1.005 }}
                   whileTap={{ scale: 0.995 }}
                   className={`border border-dashed p-10 rounded-2xl text-center flex flex-col items-center justify-center cursor-pointer group transition-all ${
-                    dragActive ? "border-zinc-900 bg-zinc-50 ring-4 ring-zinc-900/5" : "border-zinc-200 bg-white hover:border-zinc-400 hover:shadow-lg"
+                    dragActive ? "border-zinc-900 bg-zinc-50 ring-4 ring-zinc-900/5" : "border-zinc-200 bg-white hover:border-zinc-400"
                   }`}
                   onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                   onDragLeave={() => setDragActive(false)}
@@ -906,7 +906,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
           >
             <div className="max-w-2xl mx-auto space-y-8">
               <div className="text-center">
-                <div className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <div className="w-14 h-14 bg-zinc-900 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <Sparkles className="w-7 h-7 text-white" />
                 </div>
                 <h2 className="text-2xl font-light tracking-tight text-zinc-900 mb-2">
@@ -1102,7 +1102,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
               )}
               <button
                 onClick={() => { setError(null); setPhase("analyze"); }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-900/80 border border-zinc-700 text-zinc-300 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-all rounded-xl backdrop-blur-sm shadow-lg"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-900/80 border border-zinc-700 text-zinc-300 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-colors rounded-lg backdrop-blur-sm"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back to Review

@@ -331,7 +331,7 @@ export function ShareModal({ runId, orgId, open, onClose }: ShareModalProps) {
                 <button
                   onClick={handleGenerate}
                   disabled={generating}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-xl shadow-lg shadow-zinc-900/10"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-lg"
                 >
                   {generating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -451,7 +451,7 @@ export function LeanDashboard({
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <div className="w-9 h-9 bg-zinc-900 flex items-center justify-center rounded-xl shadow-lg shadow-zinc-900/10">
+          <div className="w-9 h-9 bg-zinc-900 flex items-center justify-center rounded-lg">
             <Layers className="w-4 h-4 text-white" />
           </div>
           <div>

@@ -176,7 +176,7 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
       {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-6 z-40 w-12 h-12 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-500 transition-all flex items-center justify-center hover:scale-105 active:scale-95"
+        className="fixed bottom-24 right-6 z-40 w-12 h-12 bg-zinc-900 text-white rounded-full shadow-sm hover:bg-zinc-800 transition-colors flex items-center justify-center"
         title="Talk to Coach"
       >
         <GraduationCap className="w-5 h-5" />
@@ -189,7 +189,7 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-[380px] h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-24 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-[380px] h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-xl shadow-lg flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="bg-emerald-600 text-white px-4 py-3 flex items-center justify-between shrink-0">

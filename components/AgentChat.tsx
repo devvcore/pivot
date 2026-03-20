@@ -346,8 +346,6 @@ export function AgentChatButton({ orgId, orgName, onNavigate }: { orgId: string;
       {/* Floating button */}
       <motion.button
         onClick={() => setOpen(true)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-zinc-900 text-white px-4 py-3 rounded-xl shadow-sm hover:bg-zinc-800 transition-colors"
       >
         <Bot className="w-4 h-4" />

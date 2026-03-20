@@ -99,7 +99,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
         className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-zinc-900 rounded-full shadow-sm flex items-center justify-center text-white hover:bg-zinc-800 transition-colors group"
         title="Ask Pivvy anything"
       >
-        <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+        <MessageCircle className="w-6 h-6" />
         <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" />
       </button>
     );
