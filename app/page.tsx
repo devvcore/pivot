@@ -14,8 +14,8 @@ import MissionControl from "@/components/MissionControl";
 import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 import { CRMDashboard } from "@/components/CRMDashboard";
 import { PMBoard } from "@/components/PMBoard";
+import { AppShell } from "@/components/AppShell";
 import { motion, AnimatePresence } from "motion/react";
-import { Building2 } from "lucide-react";
 import PivvyFloatingChat from "@/components/PivvyFloatingChat";
 import { createClient } from "@/lib/supabase/client";
 
@@ -179,133 +179,134 @@ export default function Home() {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={view + (runId || "") + user.id}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="min-h-screen"
-      >
-        {view === "dashboard" && (
-          <DashboardView
-            onStartNew={() => {
-              setRunId(null);
-              setView("upload");
-            }}
-            onViewRun={(id: string) => {
-              setRunId(id);
-              setView("results");
-            }}
-            onTeam={() => setView("team")}
-            onEmployees={() => setView("employees")}
-            onLean={() => setView("lean")}
-            onMissionControl={() => setView("mission-control")}
-            onIntegrations={() => setView("integrations")}
-            onCRM={() => setView("crm")}
-            onPM={() => setView("pm")}
-            userName={user?.name}
-            username={user?.username}
-            orgLogoUrl={orgLogoUrl}
-            orgId={user?.organizationId}
-          />
-        )}
+    <AppShell
+      currentView={view}
+      onNavigate={(v) => setView(v)}
+      onLogout={handleLogout}
+      orgName={user?.organizationName || "Pivot"}
+      orgLogoUrl={orgLogoUrl}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={view + (runId || "") + user.id}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="min-h-screen"
+        >
+          {view === "dashboard" && (
+            <DashboardView
+              onStartNew={() => {
+                setRunId(null);
+                setView("upload");
+              }}
+              onViewRun={(id: string) => {
+                setRunId(id);
+                setView("results");
+              }}
+              userName={user?.name}
+              username={user?.username}
+              orgLogoUrl={orgLogoUrl}
+              orgId={user?.organizationId}
+            />
+          )}
 
-        {view === "team" && user && (
-          <TeamView
-            orgId={user.organizationId}
-            onBack={() => setView("dashboard")}
-          />
-        )}
+          {view === "team" && user && (
+            <TeamView
+              orgId={user.organizationId}
+              onBack={() => setView("dashboard")}
+            />
+          )}
 
-        {view === "upload" && (
-          <UploadView
-            onBack={() => setView("dashboard")}
-            onUploadComplete={(id: string) => {
-              setRunId(id);
-              setView("processing");
-            }}
-            orgId={user?.organizationId}
-          />
-        )}
+          {view === "upload" && (
+            <UploadView
+              onBack={() => setView("dashboard")}
+              onUploadComplete={(id: string) => {
+                setRunId(id);
+                setView("processing");
+              }}
+              orgId={user?.organizationId}
+            />
+          )}
 
-        {view === "processing" && runId && (
-          <ProcessingView
-            runId={runId}
-            onComplete={() => setView("results")}
-            onError={() => { }}
-          />
-        )}
+          {view === "processing" && runId && (
+            <ProcessingView
+              runId={runId}
+              onComplete={() => setView("results")}
+              onError={() => { }}
+            />
+          )}
 
-        {view === "results" && runId && (
-          <ResultsView
-            runId={runId}
-            onBack={() => setView("dashboard")}
-            onNewRun={() => {
-              setRunId(null);
-              setView("upload");
-            }}
-            onReprocess={() => setView("processing")}
-            onExecute={() => setView("execution")}
-          />
-        )}
+          {view === "results" && runId && (
+            <ResultsView
+              runId={runId}
+              onBack={() => setView("dashboard")}
+              onNewRun={() => {
+                setRunId(null);
+                setView("upload");
+              }}
+              onReprocess={() => setView("processing")}
+              onExecute={() => setView("execution")}
+            />
+          )}
 
-        {view === "execution" && user && (
-          <ExecutionDashboard
-            orgName="Pivot"
-            runId={runId ?? ""}
-            orgId={user.organizationId}
-            onSwitchToAnalysis={() => setView("results")}
-          />
-        )}
+          {view === "execution" && user && (
+            <ExecutionDashboard
+              orgName="Pivot"
+              runId={runId ?? ""}
+              orgId={user.organizationId}
+              onSwitchToAnalysis={() => setView("results")}
+            />
+          )}
 
-        {view === "employees" && user && (
-          <EmployeeDashboard
-            orgId={user.organizationId}
-            onBack={() => setView("dashboard")}
-          />
-        )}
+          {view === "employees" && user && (
+            <EmployeeDashboard
+              orgId={user.organizationId}
+              onBack={() => setView("dashboard")}
+            />
+          )}
 
-        {view === "lean" && user && (
-          <LeanDashboard
-            orgId={user.organizationId}
-            onBack={() => setView("dashboard")}
-          />
-        )}
+          {view === "lean" && user && (
+            <LeanDashboard
+              orgId={user.organizationId}
+              onBack={() => setView("dashboard")}
+            />
+          )}
 
-        {view === "mission-control" && (
-          <MissionControl
-            orgId={user?.organizationId ?? ""}
-            onBack={() => setView("dashboard")}
-          />
-        )}
+          {view === "mission-control" && (
+            <MissionControl
+              orgId={user?.organizationId ?? ""}
+              onBack={() => setView("dashboard")}
+            />
+          )}
 
-        {view === "integrations" && user && (
-          <IntegrationsPanel
-            orgId={user.organizationId}
-            onBack={() => setView("dashboard")}
-          />
-        )}
+          {view === "integrations" && user && (
+            <IntegrationsPanel
+              orgId={user.organizationId}
+              onBack={() => setView("dashboard")}
+            />
+          )}
 
-        {view === "crm" && user && (
-          <CRMDashboard
-            orgId={user.organizationId}
-            onBack={() => setView("dashboard")}
-            onExecute={() => setView("execution")}
-          />
-        )}
+          {view === "crm" && user && (
+            <CRMDashboard
+              orgId={user.organizationId}
+              onBack={() => setView("dashboard")}
+              onExecute={() => setView("execution")}
+            />
+          )}
 
-        {view === "pm" && user && (
-          <PMBoard
-            orgId={user.organizationId}
-            onBack={() => setView("dashboard")}
-          />
-        )}
+          {view === "pm" && user && (
+            <PMBoard
+              orgId={user.organizationId}
+              onBack={() => setView("dashboard")}
+            />
+          )}
 
-        {/* Floating Pivvy Chat — available on every page */}
-        <PivvyFloatingChat orgId={user?.organizationId ?? ""} onNavigate={(section) => { setView("results"); }} />
-      </motion.div>
-    </AnimatePresence>
+          {/* Floating Pivvy Chat — available on every page */}
+          <PivvyFloatingChat orgId={user?.organizationId ?? ""} onNavigate={(section) => { setView("results"); }} />
+        </motion.div>
+      </AnimatePresence>
+    </AppShell>
   );
 }

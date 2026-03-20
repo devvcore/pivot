@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User, Trophy, Crown, Link2, ClipboardList } from "lucide-react";
+import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, Sparkles, FileText, RefreshCw, User, Users, Trophy, Crown, Activity, Gauge, Cpu, Link2, ClipboardList } from "lucide-react";
 import { ROITracker } from "./ROITracker";
 import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
@@ -27,13 +27,6 @@ interface LeaderboardEntry {
 interface DashboardViewProps {
   onStartNew: () => void;
   onViewRun: (runId: string) => void;
-  onTeam?: () => void;
-  onEmployees?: () => void;
-  onLean?: () => void;
-  onMissionControl?: () => void;
-  onIntegrations?: () => void;
-  onCRM?: () => void;
-  onPM?: () => void;
   userName?: string;
   username?: string;
   orgLogoUrl?: string | null;
@@ -78,7 +71,7 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, onIntegrations, onCRM, onPM, userName, username, orgLogoUrl, orgId }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, userName, username, orgLogoUrl, orgId }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -133,21 +126,10 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-zinc-100 rounded-full blur-[100px] -mr-64 -mt-64 opacity-50 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-zinc-100 rounded-full blur-[80px] -ml-40 -mb-40 opacity-50 pointer-events-none" />
 
-      <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 p-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-3">
-          {orgLogoUrl ? (
-            <div className="w-9 h-9 rounded-xl overflow-hidden bg-white border border-zinc-200 flex items-center justify-center shadow-sm">
-              <img src={orgLogoUrl} alt="" className="w-6 h-6 object-contain" />
-            </div>
-          ) : (
-            <div className="w-9 h-9 bg-zinc-900 flex items-center justify-center rounded-xl shadow-lg shadow-zinc-900/10">
-              <div className="w-3.5 h-3.5 bg-white rounded-sm rotate-45" />
-            </div>
-          )}
-          <div>
-            <div className="font-bold tracking-tight text-xl text-zinc-900 leading-none">Pivot</div>
-            <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-1">Enterprise Intelligence</div>
-          </div>
+      <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center gap-3 pl-10 md:pl-0">
+          <h1 className="font-bold tracking-tight text-xl text-zinc-900 leading-none">Dashboard</h1>
+          <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-0.5 hidden sm:block">Enterprise Intelligence</div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -169,62 +151,6 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
           >
             <RefreshCw className="w-4 h-4" />
           </button>
-          {onTeam && (
-            <button
-              onClick={onTeam}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <Users className="w-4 h-4" /> Team
-            </button>
-          )}
-          {onEmployees && (
-            <button
-              onClick={onEmployees}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <Activity className="w-4 h-4" /> Value Engine
-            </button>
-          )}
-          {onLean && (
-            <button
-              onClick={onLean}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <Gauge className="w-4 h-4" /> Lean
-            </button>
-          )}
-          {onMissionControl && (
-            <button
-              onClick={onMissionControl}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <Cpu className="w-4 h-4" /> Mission Control
-            </button>
-          )}
-          {onIntegrations && (
-            <button
-              onClick={onIntegrations}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <Link2 className="w-4 h-4" /> Integrations
-            </button>
-          )}
-          {onCRM && (
-            <button
-              onClick={onCRM}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <Users className="w-4 h-4" /> CRM
-            </button>
-          )}
-          {onPM && (
-            <button
-              onClick={onPM}
-              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
-            >
-              <ClipboardList className="w-4 h-4" /> Projects
-            </button>
-          )}
           <button
             onClick={onStartNew}
             className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group font-bold rounded-xl"
@@ -313,14 +239,9 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
               <h2 className="text-xs font-mono text-zinc-900 uppercase tracking-[0.3em] flex items-center gap-3">
                 <Trophy className="w-4 h-4 text-amber-500" /> Top Performers
               </h2>
-              {onEmployees && (
-                <button
-                  onClick={onEmployees}
-                  className="text-[10px] font-mono text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors flex items-center gap-1"
-                >
-                  View All <ChevronRight className="w-3 h-3" />
-                </button>
-              )}
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
+                Top 5
+              </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
               {leaderboard.map((entry, i) => (

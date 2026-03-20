@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -18,6 +18,8 @@ import {
   Zap,
   Filter,
   Plus,
+  Users,
+  AlertTriangle,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -64,34 +66,6 @@ const STAGES: { key: PipelineStage; label: string; color: string; bg: string; bo
 
 const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.key, s])) as Record<PipelineStage, (typeof STAGES)[number]>;
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────
-
-function makeDemoContacts(): Contact[] {
-  return [
-    { id: "c1", name: "Sarah Chen", company: "Acme Corp", email: "sarah@acme.com", dealValue: 45000, stage: "lead", lastActivity: "Visited pricing page", lastActivityDate: "2026-03-18", nextFollowup: "2026-03-22", tags: ["inbound", "enterprise"] },
-    { id: "c2", name: "James Miller", company: "TechStart Inc", email: "james@techstart.io", dealValue: 12000, stage: "lead", lastActivity: "Downloaded whitepaper", lastActivityDate: "2026-03-17", nextFollowup: "2026-03-21", tags: ["content-lead"] },
-    { id: "c3", name: "Maria Rodriguez", company: "GlobalFin", email: "maria@globalfin.com", dealValue: 120000, stage: "prospect", lastActivity: "Intro call completed", lastActivityDate: "2026-03-16", nextFollowup: "2026-03-20", tags: ["enterprise", "finance"] },
-    { id: "c4", name: "David Park", company: "NovaTech", email: "david@novatech.co", dealValue: 35000, stage: "qualified", lastActivity: "Demo scheduled", lastActivityDate: "2026-03-15", nextFollowup: "2026-03-19", tags: ["mid-market"] },
-    { id: "c5", name: "Emily Watson", company: "RetailMax", email: "emily@retailmax.com", dealValue: 85000, stage: "proposal", lastActivity: "Proposal sent", lastActivityDate: "2026-03-14", nextFollowup: "2026-03-18", tags: ["retail", "enterprise"] },
-    { id: "c6", name: "Alex Kim", company: "DataFlow", email: "alex@dataflow.ai", dealValue: 60000, stage: "negotiation", lastActivity: "Contract review", lastActivityDate: "2026-03-13", nextFollowup: "2026-03-17", tags: ["tech", "priority"] },
-    { id: "c7", name: "Lisa Thompson", company: "MedGroup", email: "lisa@medgroup.org", dealValue: 150000, stage: "won", lastActivity: "Contract signed", lastActivityDate: "2026-03-10", nextFollowup: null, tags: ["healthcare", "enterprise"] },
-    { id: "c8", name: "Tom Harris", company: "SmallBiz LLC", email: "tom@smallbiz.com", dealValue: 8000, stage: "lost", lastActivity: "Chose competitor", lastActivityDate: "2026-03-08", nextFollowup: null, tags: ["smb"] },
-    { id: "c9", name: "Rachel Green", company: "EcoVentures", email: "rachel@ecoventures.com", dealValue: 72000, stage: "qualified", lastActivity: "Requirements gathering", lastActivityDate: "2026-03-19", nextFollowup: "2026-03-23", tags: ["sustainability"] },
-    { id: "c10", name: "Kevin Brown", company: "FinServe", email: "kevin@finserve.com", dealValue: 200000, stage: "negotiation", lastActivity: "Legal review in progress", lastActivityDate: "2026-03-19", nextFollowup: "2026-03-21", tags: ["finance", "enterprise", "priority"] },
-  ];
-}
-
-function makeDemoTimeline(contactId: string): TimelineEntry[] {
-  return [
-    { id: "t1", type: "email", summary: "Initial outreach email sent", date: "2026-03-10" },
-    { id: "t2", type: "call", summary: "Discovery call — discussed pain points and budget", date: "2026-03-12" },
-    { id: "t3", type: "agent", summary: "Researcher agent pulled company financials and competitive landscape", date: "2026-03-13", agent: "researcher" },
-    { id: "t4", type: "note", summary: "Decision maker is VP of Ops, budget approved for Q2", date: "2026-03-14" },
-    { id: "t5", type: "email", summary: "Follow-up with custom proposal deck", date: "2026-03-16" },
-    { id: "t6", type: "agent", summary: "Strategist drafted competitive positioning brief", date: "2026-03-17", agent: "strategist" },
-  ];
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatCurrency(v: number): string {
@@ -111,6 +85,109 @@ const TIMELINE_ICONS: Record<string, typeof Mail> = {
   agent: Zap,
 };
 
+// ─── Loading Skeleton ───────────────────────────────────────────────────────
+
+function CRMLoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Stage chips skeleton */}
+      <div className="flex flex-wrap gap-3">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="h-8 w-24 bg-zinc-200 rounded-full animate-pulse" />
+        ))}
+      </div>
+      {/* Kanban columns skeleton */}
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {Array.from({ length: 5 }).map((_, ci) => (
+          <div key={ci} className="flex-shrink-0 w-72">
+            <div className="h-10 bg-zinc-200 rounded-t-xl animate-pulse" />
+            <div className="space-y-2 min-h-[200px] bg-zinc-50/50 border border-t-0 border-zinc-200 rounded-b-xl p-2">
+              {Array.from({ length: 2 }).map((_, ti) => (
+                <div key={ti} className="bg-white border border-zinc-200 rounded-xl p-3 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 w-28 bg-zinc-200 rounded animate-pulse" />
+                      <div className="h-3 w-20 bg-zinc-100 rounded animate-pulse" />
+                    </div>
+                    <div className="h-4 w-12 bg-zinc-200 rounded animate-pulse" />
+                  </div>
+                  <div className="h-3 w-32 bg-zinc-100 rounded animate-pulse" />
+                  <div className="flex gap-1">
+                    <div className="h-4 w-14 bg-zinc-100 rounded animate-pulse" />
+                    <div className="h-4 w-14 bg-zinc-100 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty State ────────────────────────────────────────────────────────────
+
+function CRMEmptyState({ onSync, onAddContact }: { onSync: (provider: string) => void; onAddContact: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6">
+      <div className="w-16 h-16 rounded-2xl bg-zinc-100 flex items-center justify-center mb-6">
+        <Users className="w-8 h-8 text-zinc-300" />
+      </div>
+      <h2 className="text-lg font-semibold text-zinc-900 mb-2">Your pipeline is empty</h2>
+      <p className="text-sm text-zinc-500 text-center max-w-md mb-8">
+        Connect Stripe to auto-import customers, sync Gmail contacts, or add your first contact manually.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={() => onSync("stripe")}
+          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all rounded-xl"
+        >
+          <DollarSign className="w-4 h-4" />
+          Sync from Stripe
+        </button>
+        <button
+          onClick={() => onSync("gmail")}
+          className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all rounded-xl"
+        >
+          <Mail className="w-4 h-4" />
+          Sync from Gmail
+        </button>
+        <button
+          onClick={onAddContact}
+          className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all rounded-xl"
+        >
+          <Plus className="w-4 h-4" />
+          Add Contact
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Error State ────────────────────────────────────────────────────────────
+
+function CRMErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6">
+      <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-6">
+        <AlertTriangle className="w-8 h-8 text-red-300" />
+      </div>
+      <h2 className="text-lg font-semibold text-zinc-900 mb-2">Failed to load pipeline</h2>
+      <p className="text-sm text-zinc-500 text-center max-w-md mb-6">
+        Something went wrong while fetching your contacts. Please try again.
+      </p>
+      <button
+        onClick={onRetry}
+        className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all rounded-xl"
+      >
+        <RefreshCw className="w-4 h-4" />
+        Retry
+      </button>
+    </div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 interface CRMDashboardProps {
@@ -122,55 +199,68 @@ interface CRMDashboardProps {
 export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<PipelineStage | "all">("all");
   const [selectedContact, setSelectedContact] = useState<ContactDetail | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  // Fetch contacts — try API first, fall back to demo data
-  const fetchContacts = async () => {
+  // Fetch contacts — API only, no demo fallback
+  const fetchContacts = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const res = await fetch(`/api/crm/pipeline?orgId=${encodeURIComponent(orgId)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setContacts(data);
-          setLoading(false);
-          return;
-        }
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setContacts(Array.isArray(data) ? data : []);
     } catch {
-      // fall through to demo
+      setError(true);
+      setContacts([]);
     }
-    setContacts(makeDemoContacts());
     setLoading(false);
-  };
+  }, [orgId]);
 
-  useEffect(() => { fetchContacts(); }, [orgId]);
+  useEffect(() => { fetchContacts(); }, [fetchContacts]);
 
-  const handleSync = async () => {
+  const handleSync = async (provider?: string) => {
     setSyncing(true);
     try {
-      await fetch(`/api/crm/pipeline?orgId=${encodeURIComponent(orgId)}&sync=1`, { method: "POST" });
+      const params = new URLSearchParams({ orgId });
+      if (provider) params.set("provider", provider);
+      await fetch(`/api/crm/pipeline?${params.toString()}&sync=1`, { method: "POST" });
       await fetchContacts();
     } catch {
-      // ignore
+      // sync failed — fetchContacts will handle error state
     }
     setSyncing(false);
   };
 
-  const handleSelectContact = (c: Contact) => {
-    // Try API, fall back to demo timeline
+  const handleSelectContact = async (c: Contact) => {
+    // Fetch real timeline from API
+    let timeline: TimelineEntry[] = [];
+    try {
+      const res = await fetch(`/api/crm/timeline?orgId=${encodeURIComponent(orgId)}&contactId=${encodeURIComponent(c.id)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) timeline = data;
+      }
+    } catch {
+      // Timeline fetch failed — show empty timeline
+    }
     setSelectedContact({
       ...c,
-      timeline: makeDemoTimeline(c.id),
+      timeline,
       notes: "",
     });
   };
 
   const handleFollowUp = (contact: Contact) => {
     if (onExecute) onExecute();
+  };
+
+  const handleAddContact = () => {
+    // Placeholder — would open a contact creation form or modal
   };
 
   // Filtering
@@ -229,11 +319,13 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
 
           <div className="flex items-center gap-3">
             {/* Pipeline Value */}
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <DollarSign className="w-4 h-4 text-emerald-600" />
-              <span className="text-sm font-semibold text-emerald-700">{formatCurrency(totalPipelineValue)}</span>
-              <span className="text-[10px] font-mono text-emerald-500 uppercase">Pipeline</span>
-            </div>
+            {contacts.length > 0 && (
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-semibold text-emerald-700">{formatCurrency(totalPipelineValue)}</span>
+                <span className="text-[10px] font-mono text-emerald-500 uppercase">Pipeline</span>
+              </div>
+            )}
 
             {/* Search */}
             <div className="relative">
@@ -261,7 +353,7 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
 
             {/* Sync */}
             <button
-              onClick={handleSync}
+              onClick={() => handleSync()}
               disabled={syncing}
               className="flex items-center gap-2 px-4 py-2 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all rounded-xl disabled:opacity-50"
             >
@@ -275,13 +367,11 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
       {/* Main content */}
       <main className="max-w-[1400px] mx-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-32">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-10 h-10 border-2 border-zinc-100 border-t-zinc-900 rounded-full"
-            />
-          </div>
+          <CRMLoadingSkeleton />
+        ) : error ? (
+          <CRMErrorState onRetry={fetchContacts} />
+        ) : contacts.length === 0 ? (
+          <CRMEmptyState onSync={(provider) => handleSync(provider)} onAddContact={handleAddContact} />
         ) : (
           <>
             {/* Stage summary chips */}
@@ -536,35 +626,41 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
                 {/* Timeline */}
                 <div>
                   <h3 className="text-xs font-mono text-zinc-900 uppercase tracking-[0.3em] mb-4">Activity Timeline</h3>
-                  <div className="space-y-0">
-                    {selectedContact.timeline.map((entry, i) => {
-                      const Icon = TIMELINE_ICONS[entry.type] || MessageSquare;
-                      const isLast = i === selectedContact.timeline.length - 1;
-                      return (
-                        <div key={entry.id} className="flex gap-3">
-                          {/* Timeline line + dot */}
-                          <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                              entry.type === "agent" ? "bg-indigo-100 text-indigo-600" : "bg-zinc-100 text-zinc-500"
-                            }`}>
-                              <Icon className="w-3.5 h-3.5" />
+                  {selectedContact.timeline.length === 0 ? (
+                    <div className="text-center py-8 text-zinc-400 text-sm">
+                      No activity recorded yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-0">
+                      {selectedContact.timeline.map((entry, i) => {
+                        const Icon = TIMELINE_ICONS[entry.type] || MessageSquare;
+                        const isLast = i === selectedContact.timeline.length - 1;
+                        return (
+                          <div key={entry.id} className="flex gap-3">
+                            {/* Timeline line + dot */}
+                            <div className="flex flex-col items-center">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                entry.type === "agent" ? "bg-indigo-100 text-indigo-600" : "bg-zinc-100 text-zinc-500"
+                              }`}>
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              {!isLast && <div className="w-px flex-1 bg-zinc-200 my-1" />}
                             </div>
-                            {!isLast && <div className="w-px flex-1 bg-zinc-200 my-1" />}
-                          </div>
-                          {/* Content */}
-                          <div className={`pb-4 ${isLast ? "" : ""}`}>
-                            <div className="text-sm text-zinc-900">{entry.summary}</div>
-                            <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                              {formatDate(entry.date)}
-                              {entry.agent && (
-                                <span className="ml-2 text-indigo-500">via {entry.agent} agent</span>
-                              )}
+                            {/* Content */}
+                            <div className="pb-4">
+                              <div className="text-sm text-zinc-900">{entry.summary}</div>
+                              <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                                {formatDate(entry.date)}
+                                {entry.agent && (
+                                  <span className="ml-2 text-indigo-500">via {entry.agent} agent</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
