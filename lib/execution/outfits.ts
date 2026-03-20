@@ -94,7 +94,7 @@ Email Benchmarks:
 - Best send times: Tue/Wed/Thu 10am or 2pm
 - Subject line: 6-10 words, personalization increases opens 26%`,
     costCeiling: 0.50,
-    maxToolRounds: 5,
+    maxToolRounds: 8,
   },
 
   finance: {
@@ -164,7 +164,7 @@ Pricing Strategy Frameworks:
 - Competitive: price relative to alternatives. Good for commoditized markets
 - Penetration: low price to gain share, raise later. Risky but fast growth`,
     costCeiling: 0.30,
-    maxToolRounds: 4,
+    maxToolRounds: 7,
   },
 
   hr: {
@@ -238,7 +238,7 @@ Onboarding Milestones:
 - Month 1: Ship first feature/project independently
 - Month 3: Full contributor, own a domain or project area`,
     costCeiling: 0.30,
-    maxToolRounds: 4,
+    maxToolRounds: 7,
   },
 
   operations: {
@@ -312,7 +312,7 @@ Vendor Evaluation Criteria:
 - Support and reliability (15%)
 - Scalability (10%)`,
     costCeiling: 0.30,
-    maxToolRounds: 4,
+    maxToolRounds: 7,
   },
 
   sales: {
@@ -370,7 +370,7 @@ Objection Handling:
 - Competition: never badmouth. Focus on unique differentiators
 - Authority: "Let's loop in the decision maker for a brief call"`,
     costCeiling: 0.40,
-    maxToolRounds: 5,
+    maxToolRounds: 8,
   },
 
   growth: {
@@ -436,7 +436,7 @@ Growth Benchmarks (SaaS):
 - Viral coefficient >1.0 = organic growth (rare and powerful)
 - Payback period: <12 months for healthy unit economics`,
     costCeiling: 0.50,
-    maxToolRounds: 5,
+    maxToolRounds: 8,
   },
 
   research: {
@@ -505,7 +505,7 @@ Trend Analysis:
 - Compare: year-over-year, quarter-over-quarter
 - Context: macro trends, regulatory changes, technology shifts`,
     costCeiling: 0.60,
-    maxToolRounds: 6,
+    maxToolRounds: 8,
   },
 
   codebot: {
@@ -577,7 +577,7 @@ GitHub Best Practices:
 - PRs: description of WHY, not just what. Link to issue. Include test plan
 - Branch naming: type/description (feature/add-auth, fix/login-bug)`,
     costCeiling: 0.60,
-    maxToolRounds: 5,
+    maxToolRounds: 8,
   },
 };
 
