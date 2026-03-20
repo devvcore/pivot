@@ -123,6 +123,55 @@ export function formatIntegrationContextAsText(ctx: IntegrationContext | undefin
             lines.push(`    * ${c.name || 'Unknown'} — ${c.email || 'no email'} (${c.id})`);
           }
         }
+      } else if (provider === 'gmail' && rec.recordType === 'emails') {
+        const raw = (typeof rec.data === 'string' ? safeParseJson(rec.data as string) : rec.data) as Record<string, unknown>;
+        const rawData = raw?.data as Record<string, unknown> | undefined;
+        const msgs = rawData?.messages ?? raw?.messages ?? rawData ?? raw;
+        if (Array.isArray(msgs)) {
+          lines.push(`  - emails: ${msgs.length} recent emails`);
+          // Group by sender for client intelligence
+          const bySender = new Map<string, { count: number; subjects: string[]; latest: string }>();
+          for (const msg of msgs.slice(0, 50)) {
+            const m = msg as Record<string, unknown>;
+            const from = String(m.sender ?? m.from ?? m.From ?? '').replace(/<[^>]+>/g, '').trim();
+            const subject = String(m.subject ?? m.Subject ?? m.snippet ?? '').slice(0, 80);
+            const date = String(m.date ?? m.Date ?? m.internalDate ?? '');
+            if (from && !from.includes('noreply') && !from.includes('notification')) {
+              const existing = bySender.get(from) ?? { count: 0, subjects: [], latest: '' };
+              existing.count++;
+              if (existing.subjects.length < 3) existing.subjects.push(subject);
+              if (!existing.latest || date > existing.latest) existing.latest = date;
+              bySender.set(from, existing);
+            }
+          }
+          // Show top contacts (most emails)
+          const topContacts = [...bySender.entries()]
+            .sort(([, a], [, b]) => b.count - a.count)
+            .slice(0, 10);
+          if (topContacts.length > 0) {
+            lines.push(`  - top email contacts:`);
+            for (const [name, info] of topContacts) {
+              lines.push(`    * ${name} (${info.count} emails) — recent: "${info.subjects[0] ?? ''}"`);
+            }
+          }
+        }
+      } else if (provider === 'slack' && rec.recordType === 'messages') {
+        const raw = typeof rec.data === 'string' ? safeParseJson(rec.data as string) : rec.data;
+        if (Array.isArray(raw)) {
+          let totalMsgs = 0;
+          for (const ch of raw as Array<Record<string, unknown>>) {
+            const msgs = ch.messages as unknown[];
+            totalMsgs += Array.isArray(msgs) ? msgs.length : 0;
+          }
+          lines.push(`  - slack messages: ${totalMsgs} messages across ${(raw as unknown[]).length} channels`);
+          // Show channel summaries
+          for (const ch of (raw as Array<Record<string, unknown>>).slice(0, 5)) {
+            const msgs = ch.messages as Array<Record<string, unknown>> | undefined;
+            const channelName = ch.channel ?? 'unknown';
+            const msgCount = Array.isArray(msgs) ? msgs.length : 0;
+            lines.push(`    * #${channelName}: ${msgCount} messages`);
+          }
+        }
       } else {
         const summary = summarizeData(rec.data);
         lines.push(`  - ${rec.recordType}: ${summary}`);
