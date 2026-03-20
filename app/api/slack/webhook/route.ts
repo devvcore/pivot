@@ -140,6 +140,7 @@ async function handleDirectMessage(
     const chatMessages = updatedHistory.map(m => ({
       role: m.role as "user" | "assistant",
       content: m.content,
+      timestamp: parseFloat(m.ts) * 1000 || Date.now(),
     }));
 
     const result = await runBusinessAgent({
@@ -202,6 +203,7 @@ async function handleAppMention(
     const chatMessages = updatedHistory.map(m => ({
       role: m.role as "user" | "assistant",
       content: m.content,
+      timestamp: parseFloat(m.ts) * 1000 || Date.now(),
     }));
 
     const result = await runBusinessAgent({
