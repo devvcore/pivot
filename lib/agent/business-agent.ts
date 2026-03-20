@@ -500,6 +500,150 @@ Rules:
     }
   }
 
+  if (toolName === "search_crm") {
+    const query = String(args.query ?? '');
+    const stage = args.stage as string | undefined;
+    if (!query) return '[CRM] No search query provided.';
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+
+      let q = supabase
+        .from('crm_contacts')
+        .select('name, email, company, title, stage, deal_value, score, last_activity, next_followup_at, ai_summary')
+        .eq('org_id', orgId)
+        .or(`name.ilike.%${query}%,email.ilike.%${query}%,company.ilike.%${query}%`)
+        .order('score', { ascending: false })
+        .limit(10);
+
+      if (stage) q = q.eq('stage', stage);
+
+      const { data, error } = await q;
+      if (error) return `[CRM] Search failed: ${error.message}`;
+      if (!data || data.length === 0) return `[CRM] No contacts found matching "${query}".`;
+
+      const lines = [`[CRM Search: "${query}" — ${data.length} contacts]\n`];
+      for (const c of data) {
+        lines.push(`${c.name}${c.company ? ` (${c.company})` : ''} — ${c.email ?? 'no email'}`);
+        lines.push(`  Stage: ${c.stage} | Score: ${c.score}/100${c.deal_value ? ` | Deal: $${Number(c.deal_value).toLocaleString()}` : ''}`);
+        if (c.last_activity) lines.push(`  Last: ${c.last_activity}`);
+        if (c.ai_summary) lines.push(`  Summary: ${c.ai_summary}`);
+        if (c.next_followup_at) lines.push(`  Follow-up: ${new Date(c.next_followup_at).toLocaleDateString()}`);
+        lines.push('');
+      }
+      return lines.join('\n');
+    } catch (e) {
+      return `[CRM] Error: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "get_crm_contact") {
+    const email = args.email as string | undefined;
+    const name = args.name as string | undefined;
+    if (!email && !name) return '[CRM] Provide email or name to look up a contact.';
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+
+      let q = supabase.from('crm_contacts').select('*').eq('org_id', orgId);
+      if (email) q = q.eq('email', email);
+      else if (name) q = q.ilike('name', `%${name}%`);
+
+      const { data: contacts } = await q.limit(1);
+      if (!contacts || contacts.length === 0) return `[CRM] Contact not found.`;
+
+      const c = contacts[0];
+
+      // Get activities
+      const { data: activities } = await supabase
+        .from('crm_activities')
+        .select('type, title, sentiment, created_at')
+        .eq('contact_id', c.id)
+        .order('created_at', { ascending: false })
+        .limit(15);
+
+      const lines = [
+        `[CRM Contact: ${c.name}]`,
+        c.company ? `Company: ${c.company}` : '',
+        c.title ? `Title: ${c.title}` : '',
+        `Email: ${c.email ?? 'N/A'} | Phone: ${c.phone ?? 'N/A'}`,
+        `Stage: ${c.stage} | Score: ${c.score}/100`,
+        c.deal_value ? `Deal Value: $${Number(c.deal_value).toLocaleString()}` : '',
+        c.tags?.length > 0 ? `Tags: ${c.tags.join(', ')}` : '',
+        c.website ? `Website: ${c.website}` : '',
+        c.linkedin_url ? `LinkedIn: ${c.linkedin_url}` : '',
+        c.ai_summary ? `AI Summary: ${c.ai_summary}` : '',
+        c.notes ? `Notes: ${c.notes}` : '',
+      ].filter(Boolean);
+
+      if (activities && activities.length > 0) {
+        lines.push('\nRecent Activity:');
+        for (const a of activities) {
+          const date = new Date(a.created_at).toLocaleDateString();
+          lines.push(`- ${date}: ${a.title}${a.sentiment ? ` (${a.sentiment})` : ''}`);
+        }
+      }
+
+      if (c.next_followup_at) {
+        lines.push(`\nNext Follow-up: ${new Date(c.next_followup_at).toLocaleDateString()}`);
+        if (c.followup_note) lines.push(`  Note: ${c.followup_note}`);
+      }
+
+      return lines.join('\n');
+    } catch (e) {
+      return `[CRM] Error: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "get_pipeline_summary") {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+
+      const { data: contacts } = await supabase
+        .from('crm_contacts')
+        .select('stage, deal_value, name')
+        .eq('org_id', orgId);
+
+      if (!contacts || contacts.length === 0) return '[CRM] Pipeline is empty — no contacts yet.';
+
+      const stages: Record<string, { count: number; value: number; names: string[] }> = {};
+      for (const c of contacts) {
+        const s = c.stage ?? 'lead';
+        if (!stages[s]) stages[s] = { count: 0, value: 0, names: [] };
+        stages[s].count++;
+        stages[s].value += Number(c.deal_value ?? 0);
+        if (stages[s].names.length < 3) stages[s].names.push(c.name);
+      }
+
+      const order = ['lead', 'prospect', 'qualified', 'proposal', 'negotiation', 'won', 'lost', 'churned', 'active'];
+      const lines = ['[CRM Pipeline Summary]\n'];
+      let totalValue = 0;
+
+      for (const stage of order) {
+        const s = stages[stage];
+        if (!s) continue;
+        totalValue += s.value;
+        const valueStr = s.value > 0 ? ` | $${s.value.toLocaleString()}` : '';
+        lines.push(`${stage.charAt(0).toUpperCase() + stage.slice(1)}: ${s.count} contacts${valueStr}`);
+        lines.push(`  ${s.names.join(', ')}${s.count > 3 ? `, +${s.count - 3} more` : ''}`);
+      }
+
+      const wonCount = stages['won']?.count ?? 0;
+      const lostCount = stages['lost']?.count ?? 0;
+      const closedCount = wonCount + lostCount;
+      const winRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0;
+
+      lines.push(`\nTotal: ${contacts.length} contacts | Pipeline value: $${totalValue.toLocaleString()} | Win rate: ${winRate}%`);
+
+      return lines.join('\n');
+    } catch (e) {
+      return `[CRM] Error: ${String(e)}`;
+    }
+  }
+
   return `Unknown tool: ${toolName}`;
 }
 
@@ -566,6 +710,14 @@ YOUR TOOLS:
 - generate_projection(projectionType, timeframeMonths, scenario): Create interactive what-if projections that render as LIVE CHARTS with sliders, scenario bands, and drag-to-adjust. ALWAYS use this when the user asks about the future, projections, "what if", forecasts, growth, runway, cash flow, or "what do I look like in X months". Types: cash_forecast, revenue_recovery, customer_churn, growth_scenario. The chart is interactive — users can adjust parameters with sliders and drag data points.
 - navigate_to_page(query, routeId?): Navigate the user to a specific page or section in the analysis. Use when they say "show me", "take me to", "go to", "where is", or ask to see specific data. Available pages: health-score, cash-intelligence, revenue-leaks, issues, at-risk-clients, decision-brief, action-plan, financial, customers, market, growth, marketing, operations, risk.
 - get_integration_data(provider?, recordType?): Pull LIVE data from connected tools (Stripe, Gmail, Slack, etc.). Use this for real-time metrics.
+- search_crm(query, stage?): Search CRM contacts by name, email, or company. Use when user asks about clients, contacts, leads, deals, or specific people.
+- get_crm_contact(email?, name?): Get full CRM contact profile with activity timeline and deal history. Use after search_crm for deep dive.
+- get_pipeline_summary(): Get CRM pipeline overview — stages, counts, deal values, win rate. Use when user asks about pipeline, deals, funnel, or CRM health.
+
+CRM CONTEXT:
+You can manage the CRM pipeline — search contacts, view deal history, and check pipeline health.
+When the user asks about clients, contacts, deals, pipeline, leads, or prospects, SEARCH THE CRM FIRST with search_crm or get_pipeline_summary before answering.
+For actions (moving deals, adding notes, creating contacts), dispatch to Forge (Operator) who has full CRM write access.
 
 YOUR TEAM (Execution Agents you can dispatch work to):
 You have a team of specialized agents. When the user needs ACTION, proactively offer to dispatch:
