@@ -28,9 +28,10 @@ interface Props {
   items: LeakItem[];
   overlay?: OverlayData;
   onDismissOverlay?: () => void;
+  onDataClick?: (question: string) => void;
 }
 
-export function RevenueLeakChart({ items, overlay, onDismissOverlay }: Props) {
+export function RevenueLeakChart({ items, overlay, onDismissOverlay, onDataClick }: Props) {
   if (!items || !items.length) return null;
 
   const barData = items
@@ -64,7 +65,16 @@ export function RevenueLeakChart({ items, overlay, onDismissOverlay }: Props) {
                 formatter={(v) => formatDollar(Number(v ?? 0))}
                 contentStyle={TOOLTIP_STYLE}
               />
-              <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+              <Bar
+                dataKey="amount"
+                radius={[0, 4, 4, 0]}
+                cursor={onDataClick ? "pointer" : undefined}
+                onClick={(data) => {
+                  if (onDataClick && data?.name) {
+                    onDataClick(`Tell me about this revenue leak: ${data.name}. How do I fix it?`);
+                  }
+                }}
+              >
                 {barData.map((entry, i) => (
                   <Cell
                     key={i}

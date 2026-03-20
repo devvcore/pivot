@@ -25,9 +25,10 @@ interface Props {
   customers: Customer[];
   overlay?: OverlayData;
   onDismissOverlay?: () => void;
+  onDataClick?: (question: string) => void;
 }
 
-export function CustomerRiskScatter({ customers, overlay, onDismissOverlay }: Props) {
+export function CustomerRiskScatter({ customers, overlay, onDismissOverlay, onDataClick }: Props) {
   if (!customers || !customers.length) return null;
 
   const data = customers
@@ -72,7 +73,16 @@ export function CustomerRiskScatter({ customers, overlay, onDismissOverlay }: Pr
               }
               contentStyle={TOOLTIP_STYLE}
             />
-            <Scatter data={data} name="Customers">
+            <Scatter
+              data={data}
+              name="Customers"
+              cursor={onDataClick ? "pointer" : undefined}
+              onClick={(data) => {
+                if (onDataClick && data?.name) {
+                  onDataClick(`How do I retain ${data.name}? They have a ${data.risk}% risk score with ${formatDollar(data.revenue)} revenue at risk.`);
+                }
+              }}
+            >
               {data.map((entry, i) => (
                 <Cell
                   key={i}
@@ -84,7 +94,12 @@ export function CustomerRiskScatter({ customers, overlay, onDismissOverlay }: Pr
         </ResponsiveContainer>
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center">
           {data.slice(0, 5).map((d, i) => (
-            <span key={i} className="text-[10px] text-zinc-500 whitespace-nowrap">
+            <span
+              key={i}
+              className={`text-[10px] text-zinc-500 whitespace-nowrap ${onDataClick ? "cursor-pointer hover:text-indigo-600 transition-colors" : ""}`}
+              onClick={() => onDataClick?.(`How do I retain ${d.name}? They have a ${d.risk}% risk score with ${formatDollar(d.revenue)} revenue at risk.`)}
+              title={onDataClick ? "Click to ask Pivvy" : undefined}
+            >
               {d.name}: {d.risk}% risk, {formatDollar(d.revenue)}
             </span>
           ))}

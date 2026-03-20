@@ -27,9 +27,10 @@ interface OverlayData {
 interface Props {
   projections: WeeklyProjection[];
   overlay?: OverlayData;
+  onDataClick?: (question: string) => void;
 }
 
-export function CashFlowChart({ projections, overlay }: Props) {
+export function CashFlowChart({ projections, overlay, onDataClick }: Props) {
   if (!projections?.length) return null;
 
   const baseData = projections.map((p) => ({
@@ -94,8 +95,34 @@ export function CashFlowChart({ projections, overlay }: Props) {
               formatter={(v, name) => [formatDollar(Number(v ?? 0)), String(name)]}
               contentStyle={TOOLTIP_STYLE}
             />
-            <Bar dataKey="inflows" fill={CHART_COLORS.success} opacity={0.6} radius={[2, 2, 0, 0]} name="Inflows" />
-            <Bar dataKey="outflows" fill={CHART_COLORS.danger} opacity={0.6} radius={[2, 2, 0, 0]} name="Outflows" />
+            <Bar
+              dataKey="inflows"
+              fill={CHART_COLORS.success}
+              opacity={0.6}
+              radius={[2, 2, 0, 0]}
+              name="Inflows"
+              cursor={onDataClick ? "pointer" : undefined}
+              onClick={(data) => {
+                if (onDataClick && data?.name) {
+                  const trend = data.inflows > data.outflows ? "up" : "down";
+                  onDataClick(`Why is my cash flow ${trend} in ${data.name}? Inflows: ${formatDollar(data.inflows)}, Outflows: ${formatDollar(data.outflows)}.`);
+                }
+              }}
+            />
+            <Bar
+              dataKey="outflows"
+              fill={CHART_COLORS.danger}
+              opacity={0.6}
+              radius={[2, 2, 0, 0]}
+              name="Outflows"
+              cursor={onDataClick ? "pointer" : undefined}
+              onClick={(data) => {
+                if (onDataClick && data?.name) {
+                  const trend = data.inflows > data.outflows ? "up" : "down";
+                  onDataClick(`Why is my cash flow ${trend} in ${data.name}? Inflows: ${formatDollar(data.inflows)}, Outflows: ${formatDollar(data.outflows)}.`);
+                }
+              }}
+            />
             <Line
               type="monotone"
               dataKey="closing"

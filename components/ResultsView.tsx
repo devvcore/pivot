@@ -396,7 +396,7 @@ function PivvyChatOverlay({
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      className="fixed bottom-24 right-6 w-96 max-h-[480px] bg-white rounded-xl shadow-lg border border-zinc-200 z-50 flex flex-col overflow-hidden"
+      className="fixed bottom-24 right-3 sm:right-6 w-[calc(100%-1.5rem)] sm:w-96 max-h-[480px] bg-white rounded-xl shadow-lg border border-zinc-200 z-50 flex flex-col overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
@@ -768,7 +768,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex flex-col font-sans">
 
       {/* ── Top Header ──────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-zinc-200 sticky top-0 z-30 px-6 py-3 flex items-center justify-between shadow-sm">
+      <header className="bg-white border-b border-zinc-200 sticky top-0 z-30 px-3 sm:px-6 py-3 flex items-center justify-between shadow-sm gap-2">
         <div className="flex items-center gap-4">
           <button onClick={activeCategory ? () => setActiveCategory(null) : onBack} className="p-2 hover:bg-zinc-50 rounded-full transition-colors text-zinc-400 hover:text-zinc-900">
             <ArrowLeft className="w-5 h-5" />
@@ -789,11 +789,11 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Search trigger */}
           <button
             onClick={() => { setSearchOpen(!searchOpen); setTimeout(() => searchInputRef.current?.focus(), 100); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 text-zinc-500 text-xs font-mono rounded-lg hover:bg-zinc-50 transition-all"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 border border-zinc-200 text-zinc-500 text-xs font-mono rounded-lg hover:bg-zinc-50 transition-all"
           >
             <Search className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Search</span>
@@ -882,12 +882,12 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
 
       {/* ── Score Hero (compact) ───────────────────────────────────────────── */}
       {!activeCategory && (
-        <div className="bg-zinc-900 text-white px-6 py-6">
-          <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-6 items-center">
+        <div className="bg-zinc-900 text-white px-4 sm:px-6 py-4 sm:py-6">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-4 sm:gap-6 items-center">
             <div className="text-center md:text-left flex-1">
               <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">Business Health Score</p>
               <div className="flex items-end gap-3 justify-center md:justify-start">
-                <span className="text-6xl font-light tabular-nums">{hs?.score ?? "\u2014"}</span>
+                <span className="text-4xl sm:text-6xl font-light tabular-nums">{hs?.score ?? "\u2014"}</span>
                 <span className="text-lg text-zinc-500 mb-1">/100</span>
                 {hs?.grade && (
                   <span className={`text-xl font-bold mb-1 px-3 py-1 rounded-lg ${GRADE_COLORS[hs.grade]?.text ?? "text-zinc-300"} ${GRADE_COLORS[hs.grade]?.bg ?? "bg-zinc-800"}`}>
@@ -898,7 +898,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
               {hs?.headline && <p className="text-base font-medium mt-1 text-zinc-100">{hs.headline}</p>}
             </div>
             {radarData.length > 0 && (
-              <div className="w-56 h-56 shrink-0">
+              <div className="w-40 h-40 sm:w-56 sm:h-56 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={radarData} outerRadius="60%">
                     <PolarGrid stroke="#3f3f46" />
@@ -924,7 +924,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
       )}
 
       {/* ── Main Content ──────────────────────────────────────────────────── */}
-      <main className="max-w-5xl mx-auto w-full px-4 py-8">
+      <main className="max-w-5xl mx-auto w-full px-3 sm:px-4 py-4 sm:py-8">
         <AnimatePresence mode="wait">
 
           {/* ════════════════════════════════════════════════════════════════ */}
@@ -940,7 +940,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
             >
               {d.dataProvenance && <ConfidenceBanner provenance={d.dataProvenance} />}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {CATEGORIES.map((cat, i) => {
                   const Icon = cat.icon;
                   const count = categorySectionCounts[cat.id] ?? 0;
@@ -1139,7 +1139,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                     </div>
                   )}
 
-                  <CashFlowChart projections={weeklyModel} overlay={chartOverlays.cash} />
+                  <CashFlowChart projections={weeklyModel} overlay={chartOverlays.cash} onDataClick={askPivvyAbout} />
                   <ChartInteraction
                     section="cash"
                     orgId={chartOrgId}
@@ -1226,7 +1226,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                     </div>
                   )}
 
-                  <RevenueLeakChart items={rl?.items || []} overlay={chartOverlays.revenue} onDismissOverlay={clearOverlay("revenue")} />
+                  <RevenueLeakChart items={rl?.items || []} overlay={chartOverlays.revenue} onDismissOverlay={clearOverlay("revenue")} onDataClick={askPivvyAbout} />
                   <ChartInteraction
                     section="revenue"
                     orgId={chartOrgId}
@@ -1298,7 +1298,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                     ))}
                   </div>
 
-                  <IssuesSeverityChart issues={ir.issues || []} overlay={chartOverlays.issues} onDismissOverlay={clearOverlay("issues")} />
+                  <IssuesSeverityChart issues={ir.issues || []} overlay={chartOverlays.issues} onDismissOverlay={clearOverlay("issues")} onDataClick={askPivvyAbout} />
                   <ChartInteraction
                     section="issues"
                     orgId={chartOrgId}
@@ -1347,7 +1347,16 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                             )}
                           </div>
                         </div>
-                        <p className="font-semibold text-zinc-900 mb-1 break-words">{issue.description}</p>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="font-semibold text-zinc-900 break-words flex-1">{issue.description}</p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); askPivvyAbout(`What should I do about this issue: ${issue.title ?? issue.description}?`); }}
+                            className="text-[9px] font-mono text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 hover:border-indigo-200 px-2 py-0.5 rounded-full transition-all shrink-0 mt-0.5"
+                            title="Click to ask Pivvy"
+                          >
+                            Ask Pivvy
+                          </button>
+                        </div>
 
                         {issue.solution && (
                           <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
@@ -1475,7 +1484,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                     </div>
                   )}
 
-                  <CustomerRiskScatter customers={arc.customers || []} overlay={chartOverlays.customers} onDismissOverlay={clearOverlay("customers")} />
+                  <CustomerRiskScatter customers={arc.customers || []} overlay={chartOverlays.customers} onDismissOverlay={clearOverlay("customers")} onDataClick={askPivvyAbout} />
                   <ChartInteraction
                     section="customers"
                     orgId={chartOrgId}
@@ -1494,10 +1503,18 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                   />
 
                   {(arc.customers || []).map((c: any, i: number) => (
-                    <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                    <div
+                      key={i}
+                      className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all group"
+                      onClick={() => askPivvyAbout(`How do I retain ${c.name}? They have a risk score of ${c.riskScore ?? c.risk ?? "high"} with ${fmt(c.revenueAtRisk ?? 0)} revenue at risk.`)}
+                      title="Click to ask Pivvy"
+                    >
                       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
                         <div>
-                          <p className="text-xl font-medium text-zinc-900 uppercase tracking-tight">{c.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xl font-medium text-zinc-900 uppercase tracking-tight">{c.name}</p>
+                            <span className="text-[9px] font-mono text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Ask Pivvy</span>
+                          </div>
                           {c.revenueAtRisk != null && (
                             <p className="text-sm text-zinc-500">Revenue at risk: {fmt(c.revenueAtRisk)}</p>
                           )}

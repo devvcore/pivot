@@ -27,9 +27,10 @@ interface Props {
   issues: Issue[];
   overlay?: OverlayData;
   onDismissOverlay?: () => void;
+  onDataClick?: (question: string) => void;
 }
 
-export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props) {
+export function IssuesSeverityChart({ issues, overlay, onDismissOverlay, onDataClick }: Props) {
   if (!issues || !issues.length) return null;
 
   // Group by severity
@@ -68,7 +69,17 @@ export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#52525b" }} axisLine={{ stroke: "#e4e4e7" }} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={TOOLTIP_STYLE} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Count">
+              <Bar
+                dataKey="count"
+                radius={[4, 4, 0, 0]}
+                name="Count"
+                cursor={onDataClick ? "pointer" : undefined}
+                onClick={(data) => {
+                  if (onDataClick && data?.name) {
+                    onDataClick(`Tell me about my ${data.name} severity issues. What should I prioritize?`);
+                  }
+                }}
+              >
                 {severityData.map((entry, i) => (
                   <Cell key={i} fill={SEVERITY_COLORS[entry.name] ?? CHART_COLORS.secondary} />
                 ))}
@@ -90,7 +101,17 @@ export function IssuesSeverityChart({ issues, overlay, onDismissOverlay }: Props
                   formatter={(v) => formatDollar(Number(v ?? 0))}
                   contentStyle={TOOLTIP_STYLE}
                 />
-                <Bar dataKey="impact" radius={[0, 4, 4, 0]} name="Financial Impact">
+                <Bar
+                  dataKey="impact"
+                  radius={[0, 4, 4, 0]}
+                  name="Financial Impact"
+                  cursor={onDataClick ? "pointer" : undefined}
+                  onClick={(data) => {
+                    if (onDataClick && data?.name) {
+                      onDataClick(`What should I do about: ${data.name}?`);
+                    }
+                  }}
+                >
                   {impactData.map((entry, i) => (
                     <Cell key={i} fill={SEVERITY_COLORS[entry.severity] ?? CHART_COLORS.secondary} />
                   ))}

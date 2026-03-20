@@ -1521,12 +1521,12 @@ export function ExecutionDashboard({
           {/* Status + Mission Control toggle */}
           <div className="flex items-center gap-2">
             {activeAgents.size > 0 && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+              <span className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 {activeAgents.size} working
               </span>
             )}
-            <span className="text-[10px] font-mono text-zinc-400 tabular-nums">
+            <span className="hidden sm:inline text-[10px] font-mono text-zinc-400 tabular-nums">
               ${(totalCostCents / 100).toFixed(2)} spent
             </span>
             <button

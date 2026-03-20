@@ -125,8 +125,8 @@ export default function MissionControl({ orgId, onBack }: MissionControlProps) {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all">
               <ArrowLeft className="w-4 h-4" />
@@ -151,8 +151,8 @@ export default function MissionControl({ orgId, onBack }: MissionControlProps) {
       </header>
 
       {/* Stats Bar */}
-      <div className="px-6 py-4 border-b border-zinc-800/50">
-        <div className="grid grid-cols-5 gap-4">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-zinc-800/50 overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="grid grid-cols-5 gap-2 sm:gap-4 min-w-[600px] sm:min-w-0">
           <StatCard label="Total Tasks" value={totalTasks} icon={<Zap className="w-4 h-4" />} />
           <StatCard label="Completed" value={totalCompleted} icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />} color="text-emerald-400" />
           <StatCard label="In Progress" value={totalInProgress} icon={<Loader2 className="w-4 h-4 text-blue-400" />} color="text-blue-400" />
@@ -161,9 +161,9 @@ export default function MissionControl({ orgId, onBack }: MissionControlProps) {
         </div>
       </div>
 
-      <div className="px-6 py-6 grid grid-cols-3 gap-6">
+      <div className="px-3 sm:px-6 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Agent Performance Cards */}
-        <div className="col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Agent Performance</h2>
           {loading && agentStats.length === 0 ? (
             <div className="flex items-center gap-2 text-zinc-600 text-sm py-8 justify-center">

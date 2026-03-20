@@ -96,7 +96,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-zinc-900 rounded-full shadow-sm flex items-center justify-center text-white hover:bg-zinc-800 transition-colors group"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-zinc-900 rounded-full shadow-sm flex items-center justify-center text-white hover:bg-zinc-800 transition-colors group"
         title="Ask Pivvy anything"
       >
         <MessageCircle className="w-6 h-6" />
@@ -109,7 +109,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
   if (minimized) {
     return (
       <div
-        className="fixed bottom-6 right-6 z-50 bg-white border border-zinc-200 rounded-xl shadow-sm px-4 py-2 flex items-center gap-3 cursor-pointer hover:border-zinc-300 transition-colors"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 bg-white border border-zinc-200 rounded-xl shadow-sm px-4 py-2 flex items-center gap-3 cursor-pointer hover:border-zinc-300 transition-colors"
         onClick={() => setMinimized(false)}
       >
         <div className="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center">
@@ -128,7 +128,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
 
   // Full chat panel
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[560px] bg-white border border-zinc-200 rounded-xl shadow-lg flex flex-col overflow-hidden">
+    <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 w-full sm:w-[400px] h-full sm:h-[560px] bg-white sm:border border-zinc-200 sm:rounded-xl shadow-lg flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 bg-zinc-900 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
