@@ -1002,7 +1002,7 @@ export function ExecutionDashboard({
             .slice(-6)
             .map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content?.slice(0, 1500) ?? "" }));
 
-          const pivvyRes = await authFetch("/api/agent/chat", {
+          const pivvyRes = await fetch("/api/agent/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orgId, message: msg, messages: recentCtx }),
@@ -1018,7 +1018,12 @@ export function ExecutionDashboard({
             setSending(false);
             return;
           }
-        } catch { /* fall through to task creation */ }
+          // If Pivvy API fails, fall through to task creation
+          console.warn('[Execution] Pivvy fast path failed:', pivvyRes.status);
+        } catch (err) {
+          console.warn('[Execution] Pivvy fast path error:', err);
+          /* fall through to task creation */
+        }
       }
     }
 
