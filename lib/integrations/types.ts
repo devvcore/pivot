@@ -12,7 +12,7 @@ export type IntegrationProvider =
   | 'paypal' | 'square' | 'xero' | 'freshbooks' | 'plaid' | 'mercury'
   | 'wave' | 'brex' | 'gusto';
 
-export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing';
+export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing' | 'pending';
 
 export interface Integration {
   id: string;

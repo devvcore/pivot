@@ -17,12 +17,31 @@ async function checkGitHubConnection(orgId: string): Promise<boolean> {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from('integrations')
-      .select('status')
+      .select('status, composio_connected_account_id')
       .eq('org_id', orgId)
       .eq('provider', 'github')
-      .eq('status', 'connected')
       .maybeSingle();
-    return !!data;
+
+    if (!data || data.status === 'error' || data.status === 'pending') return false;
+
+    if (data.status === 'connected' && data.composio_connected_account_id) {
+      try {
+        const { verifyConnection } = await import('@/lib/integrations/composio');
+        await verifyConnection(data.composio_connected_account_id);
+        return true;
+      } catch {
+        // Stale connection — mark as error
+        await supabase
+          .from('integrations')
+          .update({ status: 'error', updated_at: new Date().toISOString() })
+          .eq('org_id', orgId)
+          .eq('provider', 'github');
+        console.warn(`[checkGitHubConnection] Marked as error — Composio verification failed for org ${orgId}`);
+        return false;
+      }
+    }
+
+    return data.status === 'connected';
   } catch {
     return false;
   }

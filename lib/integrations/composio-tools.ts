@@ -56,16 +56,89 @@ async function exec(
 ): Promise<any> {
   try {
     const composio = getComposio();
-    const result = await composio.tools.execute(toolName, {
+
+    // Try to retrieve the stored connectedAccountId for more reliable execution
+    let connectedAccountId: string | undefined;
+    try {
+      const provider = toolNameToProvider(toolName);
+      if (provider) {
+        const { createAdminClient } = await import('@/lib/supabase/admin');
+        const supabase = createAdminClient();
+        const { data } = await supabase
+          .from('integrations')
+          .select('composio_connected_account_id')
+          .eq('org_id', orgId)
+          .eq('provider', provider)
+          .eq('status', 'connected')
+          .maybeSingle();
+        if (data?.composio_connected_account_id) {
+          connectedAccountId = data.composio_connected_account_id;
+        }
+      }
+    } catch { /* fall back to userId-based lookup */ }
+
+    const execParams: Record<string, unknown> = {
       userId: orgId,
       arguments: args,
       dangerouslySkipVersionCheck: true,
-    } as Record<string, unknown>);
+    };
+    // Pass connectedAccountId if available for more reliable targeting
+    if (connectedAccountId) {
+      execParams.connectedAccountId = connectedAccountId;
+    }
+
+    const result = await composio.tools.execute(toolName, execParams);
     return result;
   } catch (error) {
-    console.error(`[composio-tools] ${toolName} failed for org ${orgId}:`, error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`[composio-tools] ${toolName} failed for org ${orgId}:`, msg);
+
+    // If Composio says "not connected", mark the DB record as stale
+    if (msg.includes('not connected') || msg.includes('No connected account') || msg.includes('account not found')) {
+      try {
+        const provider = toolNameToProvider(toolName);
+        if (provider) {
+          const { createAdminClient } = await import('@/lib/supabase/admin');
+          const supabase = createAdminClient();
+          await supabase
+            .from('integrations')
+            .update({ status: 'error', updated_at: new Date().toISOString() })
+            .eq('org_id', orgId)
+            .eq('provider', provider);
+          console.warn(`[composio-tools] Marked ${provider} as 'error' for org ${orgId} — stale connection detected`);
+        }
+      } catch { /* best effort cleanup */ }
+    }
+
     return null;
   }
+}
+
+/** Map a Composio action name to a provider for DB lookups */
+function toolNameToProvider(toolName: string): string | null {
+  const upper = toolName.toUpperCase();
+  for (const [provider, prefix] of Object.entries(COMPOSIO_TOOLKIT_MAP)) {
+    if (upper.startsWith(String(prefix))) return provider;
+  }
+  // Common prefixes not in the map
+  if (upper.startsWith('GMAIL_') || upper.startsWith('GOOGLE_GMAIL')) return 'gmail';
+  if (upper.startsWith('SLACK_')) return 'slack';
+  if (upper.startsWith('GITHUB_')) return 'github';
+  if (upper.startsWith('JIRA_')) return 'jira';
+  if (upper.startsWith('LINKEDIN_')) return 'linkedin';
+  if (upper.startsWith('TWITTER_')) return 'twitter';
+  if (upper.startsWith('INSTAGRAM_')) return 'instagram';
+  if (upper.startsWith('FACEBOOK_')) return 'facebook';
+  if (upper.startsWith('YOUTUBE_')) return 'youtube';
+  if (upper.startsWith('HUBSPOT_')) return 'hubspot';
+  if (upper.startsWith('SALESFORCE_')) return 'salesforce';
+  if (upper.startsWith('NOTION_')) return 'notion';
+  if (upper.startsWith('LINEAR_')) return 'linear';
+  if (upper.startsWith('AIRTABLE_')) return 'airtable';
+  if (upper.startsWith('GOOGLE_SHEETS')) return 'google_sheets';
+  if (upper.startsWith('GOOGLE_CALENDAR')) return 'google_calendar';
+  if (upper.startsWith('MICROSOFT_TEAMS')) return 'microsoft_teams';
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════

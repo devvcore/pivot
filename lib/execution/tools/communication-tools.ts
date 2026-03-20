@@ -66,7 +66,7 @@ const sendEmail: Tool = {
       return { success: false, output: 'Required fields: to, subject, body.' };
     }
 
-    // Check if Gmail is connected
+    // Check if Gmail is connected (exclude stale 'error' records)
     const { createAdminClient } = await import('@/lib/supabase/admin');
     const supabase = createAdminClient();
     const { data: integration } = await supabase
@@ -74,7 +74,7 @@ const sendEmail: Tool = {
       .select('status')
       .eq('org_id', context.orgId)
       .eq('provider', 'gmail')
-      .eq('status', 'connected')
+      .in('status', ['connected'])
       .maybeSingle();
 
     if (!integration) {

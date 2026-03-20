@@ -133,20 +133,27 @@ async function toNanoId(id: string): Promise<string> {
   if (id.startsWith('ca_')) return id;
   // UUID format — call migration endpoint
   const apiKey = process.env.COMPOSIO_API_KEY;
-  if (!apiKey) return id;
+  if (!apiKey) {
+    console.warn('[composio] No API key — cannot convert UUID to nanoid');
+    throw new Error('Cannot verify connection: COMPOSIO_API_KEY not set');
+  }
   try {
     const res = await fetch(
       `https://backend.composio.dev/api/v3/migration/get-nanoid?uuid=${encodeURIComponent(id)}&type=CONNECTED_ACCOUNT`,
-      { headers: { 'x-api-key': apiKey }, signal: AbortSignal.timeout(5000) }
+      { headers: { 'x-api-key': apiKey }, signal: AbortSignal.timeout(8000) }
     );
     if (res.ok) {
       const data = await res.json();
       if (data.nanoid) return data.nanoid;
     }
+    // Migration endpoint didn't return a nanoid — UUID is invalid in Composio v3
+    console.warn(`[composio] UUID→nanoid migration returned no nanoid for ${id.slice(0, 8)}...`);
+    throw new Error(`Composio account ${id.slice(0, 8)}... not found in v3 — connection may be stale`);
   } catch (e) {
+    if (e instanceof Error && e.message.includes('not found')) throw e;
     console.warn('[composio] UUID→nanoid migration failed:', e);
+    throw new Error(`Cannot verify Composio connection: ${e instanceof Error ? e.message : 'unknown'}`);
   }
-  return id;
 }
 
 /** Verify a connection is active — handles UUID→nanoid conversion */

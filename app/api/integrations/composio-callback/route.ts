@@ -45,27 +45,37 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/?integration=error&reason=missing_params', origin));
     }
 
-    // Verify the connection is active (handles UUID→nanoid conversion)
+    // Verify the connection is actually active in Composio
     let verified = false;
+    let verifyError = '';
     try {
       const connection = await verifyConnection(connectedAccountId);
-      const conn = connection as any;
-      console.log(`[composio-callback] Verified connection: status=${conn?.status ?? conn?.data?.status ?? 'unknown'}`);
-      verified = true;
+      const conn = connection as Record<string, unknown>;
+      const connStatus = String(conn?.status ?? (conn?.data as Record<string, unknown>)?.status ?? 'unknown');
+      console.log(`[composio-callback] Verified connection: status=${connStatus}`);
+      // Only mark verified if Composio confirms active/initiated/connected
+      verified = connStatus !== 'failed' && connStatus !== 'error';
     } catch (e) {
-      // Log but don't block — connection might still be valid even if SDK verification fails
-      console.warn('[composio-callback] Verification warning (proceeding anyway):', (e as Error).message?.slice(0, 200));
+      verifyError = (e as Error).message?.slice(0, 200) ?? 'unknown';
+      console.warn('[composio-callback] Verification failed:', verifyError);
     }
 
-    // Save the integration record (upsert handles reconnection)
+    // Save the integration — but mark status based on actual verification
+    const finalStatus = verified ? 'connected' : 'pending';
     await upsertIntegration({
       orgId,
       provider: provider as IntegrationProvider,
-      status: 'connected',
+      status: finalStatus,
       composioConnectedAccountId: connectedAccountId,
     });
 
-    console.log(`[composio-callback] Saved integration: provider=${provider}, orgId=${orgId}, verified=${verified}`);
+    console.log(`[composio-callback] Saved integration: provider=${provider}, orgId=${orgId}, status=${finalStatus}, verified=${verified}`);
+
+    // If not verified, still redirect but with a warning
+    if (!verified) {
+      console.warn(`[composio-callback] Connection saved as 'pending' — Composio verification failed: ${verifyError}`);
+      return NextResponse.redirect(new URL(`/?integration=pending&provider=${provider}&reason=verification_pending`, origin));
+    }
 
     // Trigger initial data sync in background
     try {

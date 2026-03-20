@@ -18,12 +18,38 @@ async function checkConnection(orgId: string, provider: string): Promise<boolean
     const supabase = createAdminClient();
     const { data } = await supabase
       .from('integrations')
-      .select('status')
+      .select('status, composio_connected_account_id')
       .eq('org_id', orgId)
       .eq('provider', provider)
-      .eq('status', 'connected')
       .maybeSingle();
-    return !!data;
+
+    if (!data) return false;
+
+    // If DB says 'error', it's a known stale connection
+    if (data.status === 'error' || data.status === 'pending') return false;
+
+    if (data.status === 'connected') {
+      // Quick verification: if we have a composio account ID, verify it's still valid
+      if (data.composio_connected_account_id) {
+        try {
+          const { verifyConnection } = await import('@/lib/integrations/composio');
+          await verifyConnection(data.composio_connected_account_id);
+          return true;
+        } catch {
+          // Composio rejected — mark as error so we don't keep checking
+          await supabase
+            .from('integrations')
+            .update({ status: 'error', updated_at: new Date().toISOString() })
+            .eq('org_id', orgId)
+            .eq('provider', provider);
+          console.warn(`[checkConnection] ${provider} marked as 'error' — Composio verification failed for org ${orgId}`);
+          return false;
+        }
+      }
+      return true; // No composio ID stored, trust DB
+    }
+
+    return false;
   } catch {
     return false;
   }
