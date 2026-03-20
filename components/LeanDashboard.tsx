@@ -13,6 +13,7 @@ import {
   Lightbulb,
   PieChart as PieChartIcon,
   Layers,
+  ArrowLeft,
 } from "lucide-react";
 import {
   BarChart,
@@ -441,6 +442,15 @@ export function LeanDashboard({
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 p-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-all mr-1"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <div className="w-9 h-9 bg-zinc-900 flex items-center justify-center rounded-xl shadow-lg shadow-zinc-900/10">
             <Layers className="w-4 h-4 text-white" />
           </div>

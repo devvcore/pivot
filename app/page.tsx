@@ -10,7 +10,7 @@ import { TeamView } from "@/components/TeamView";
 import { ExecutionDashboard } from "@/components/execution";
 import { EmployeeDashboard } from "@/components/EmployeeDashboard";
 import { LeanDashboard } from "@/components/LeanDashboard";
-import { MissionControl } from "@/components/MissionControl";
+import MissionControl from "@/components/MissionControl";
 import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
@@ -271,6 +271,7 @@ export default function Home() {
 
         {view === "mission-control" && (
           <MissionControl
+            orgId={user?.organizationId ?? ""}
             onBack={() => setView("dashboard")}
           />
         )}
