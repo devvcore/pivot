@@ -951,6 +951,18 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
       });
 
       let { result, artifacts } = await this.executeTask(task, executionPlan);
+
+      // Quality gate: if result is too short or clearly broken, retry ONCE
+      if (result.length < 50 || /^(No response|Agent failed|error|undefined)/i.test(result.trim())) {
+        console.warn(`[Orchestrator] Low quality result (${result.length} chars), retrying...`);
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', { phase: 'auto_retry', reason: 'low_quality_output' });
+        const retry = await this.executeTask(task, executionPlan);
+        if (retry.result.length > result.length) {
+          result = retry.result;
+          artifacts = [...artifacts, ...retry.artifacts];
+        }
+      }
+
       task.result = result;
       task.artifacts = artifacts;
 

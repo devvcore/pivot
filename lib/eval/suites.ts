@@ -77,16 +77,16 @@ export const agentSuite: EvalSuite = {
       ],
     },
     {
-      name: 'CodeBot: GitHub Repos',
+      name: 'CodeBot: Create GitHub Issue',
       agentId: 'codebot',
-      title: 'List our GitHub repositories and recent activity',
-      description: 'You MUST call github_list_repos to list our repositories. The tool handles connection checking — just call it.',
+      title: 'Create a GitHub issue to track a bug in our authentication module',
+      description: 'Create a GitHub issue in our main repo titled "Auth module throws 401 on token refresh". Include steps to reproduce, expected behavior, and priority label. You MUST call github_create_issue to create it.',
       expectsConnect: 'github',
       tags: ['integration', 'disconnected'],
       checks: [
         minLength(50), hasConnectMarker('github'),
         noVerboseGuidance(), noHallucination(),
-        usedTool('github_list_repos'),
+        usedTool('github_create_issue'),
       ],
     },
     {

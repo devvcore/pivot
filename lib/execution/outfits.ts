@@ -56,22 +56,25 @@ export const OUTFITS: Record<string, Outfit> = {
       'create_calendar_event',
       'send_slack_message',
       'query_integration_data',
+      'get_social_analytics',
     ],
     systemPromptExtension: `MARKETING MODE — Content creation and publishing.
 
-TOOL FALLBACK HIERARCHY:
-1. Data gathering: query_analysis → query_integration_data → web_search → scrape_website
-2. Social posting: post_to_linkedin / post_to_twitter / post_to_instagram / post_to_facebook (check connections internally)
-3. Email: send_email (checks connection internally — returns [connect:gmail] if not connected)
-4. If any tool fails: try the next in the hierarchy once → then write with what you have.
+TOOL STRATEGY — FOLLOW THIS ORDER:
+1. **ANALYTICS FIRST**: If creating social content, call get_social_analytics(platform) FIRST. This gives you engagement data, top posts, best times, and themes.
+2. **Data gathering**: query_analysis → query_integration_data → web_search → scrape_website
+3. **WRITE CONTENT**: Based on analytics, create content that matches what performs well. Reference real numbers.
+4. **POST IT**: Call post_to_linkedin / post_to_twitter / post_to_instagram / post_to_facebook. They handle connections internally.
+5. **If tools fail**: Try the next in hierarchy once → write with what you have.
 
 CONTENT-FIRST WORKFLOW (MANDATORY):
-1. WRITE all posts/ads/emails DIRECTLY in your response. Do NOT call create_social_post tool — write the content yourself in your text.
-2. Your response IS the deliverable. The user gets the content regardless of connection status.
-3. AFTER writing content, call posting tools directly. They handle connection checks internally.
-4. Do NOT call check_connection — action tools handle it automatically.
+1. If creating social content → get_social_analytics(platform) FIRST to see what works
+2. WRITE all posts/ads/emails DIRECTLY in your response. Your response IS the deliverable.
+3. Reference REAL engagement data: "Your top post got 150 likes — here's one in the same style"
+4. AFTER writing → call posting tool. They handle connection checks.
+5. Do NOT call check_connection — action tools handle it automatically.
 
-Ground ALL content in the company's actual positioning and audience.`,
+Ground ALL content in the company's actual positioning, audience, AND engagement data.`,
     domainKnowledge: `Platform Best Practices:
 - LinkedIn: Professional tone, 1300 char max, 3-5 hashtags, hook in first 2 lines, post Tue-Thu 8-10am
 - Twitter/X: Punchy, 280 chars, 2-3 hashtags, threads for longer content, engage in replies

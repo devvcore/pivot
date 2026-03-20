@@ -329,7 +329,122 @@ const checkServiceConnection: Tool = {
   },
 };
 
+// ── Social Analytics Tool ────────────────────────────────────────────────────
+
+const getSocialAnalytics: Tool = {
+  name: 'get_social_analytics',
+  description: 'Get engagement analytics for a social media platform (Instagram, Facebook, Twitter, LinkedIn). Returns top-performing posts, engagement rates, best posting times, and content themes. Use this BEFORE creating social media content to understand what performs well.',
+  parameters: {
+    platform: {
+      type: 'string',
+      description: 'The platform to get analytics for: instagram, facebook, twitter, linkedin, youtube',
+    },
+  },
+  required: ['platform'],
+  category: 'marketing',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const platform = String(args.platform ?? '').toLowerCase();
+    if (!platform) {
+      return { success: false, output: 'Platform name is required (instagram, facebook, twitter, linkedin, youtube).' };
+    }
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+
+      // Check connection first
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('status')
+        .eq('org_id', context.orgId)
+        .eq('provider', platform)
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (!integration) {
+        return {
+          success: false,
+          output: `[connect:${platform}]\n\nConnect ${platform} to see your engagement analytics. Once connected, I can analyze your top-performing content and create posts optimized for your audience.`,
+        };
+      }
+
+      // Pull analytics from integration_data
+      const { data: records } = await supabase
+        .from('integration_data')
+        .select('record_type, data, synced_at')
+        .eq('org_id', context.orgId)
+        .eq('provider', platform);
+
+      if (!records || records.length === 0) {
+        // Data not synced yet — trigger a pull
+        return {
+          success: true,
+          output: `${platform} is connected but no analytics data has been synced yet. The data will be available after the next sync cycle. For now, create your best content and I'll analyze engagement once data is available.`,
+        };
+      }
+
+      // Format analytics
+      const parts: string[] = [`## ${platform.charAt(0).toUpperCase() + platform.slice(1)} Analytics\n`];
+
+      for (const rec of records) {
+        const data = typeof rec.data === 'string' ? (() => { try { return JSON.parse(rec.data); } catch { return rec.data; } })() : rec.data;
+
+        if (rec.record_type === 'engagement_summary' && data && typeof data === 'object') {
+          parts.push(`**Engagement Overview:**`);
+          parts.push(`- Total posts analyzed: ${data.totalPosts ?? 'N/A'}`);
+          parts.push(`- Total likes: ${data.totalLikes?.toLocaleString() ?? 'N/A'}`);
+          parts.push(`- Total comments: ${data.totalComments?.toLocaleString() ?? 'N/A'}`);
+          parts.push(`- Avg engagement per post: ${data.avgEngagementPerPost ?? 'N/A'}`);
+          if (data.engagementRate) parts.push(`- Engagement rate: ${data.engagementRate}%`);
+          if (data.totalImpressions) parts.push(`- Total impressions: ${data.totalImpressions.toLocaleString()}`);
+          if (data.totalReach) parts.push(`- Total reach: ${data.totalReach.toLocaleString()}`);
+
+          if (data.topPerformingPosts?.length > 0) {
+            parts.push(`\n**Top Performing Posts:**`);
+            for (const post of data.topPerformingPosts.slice(0, 5)) {
+              parts.push(`- "${post.caption?.slice(0, 60)}..." → ${post.likes} likes, ${post.comments} comments${post.impressions ? `, ${post.impressions} impressions` : ''}`);
+            }
+          }
+
+          if (data.bestPostingTimes?.length > 0) {
+            parts.push(`\n**Best Posting Times:** ${data.bestPostingTimes.join(', ')}`);
+          }
+
+          if (data.contentThemes?.length > 0) {
+            parts.push(`\n**Top Hashtags/Themes:** ${data.contentThemes.join(' ')}`);
+          }
+
+          if (data.worstPerformingPosts?.length > 0) {
+            parts.push(`\n**Lowest Performing Posts (avoid these patterns):**`);
+            for (const post of data.worstPerformingPosts.slice(0, 3)) {
+              parts.push(`- "${post.caption?.slice(0, 60)}..." → ${post.likes} likes, ${post.comments} comments`);
+            }
+          }
+        } else if (rec.record_type === 'profile' && data && typeof data === 'object') {
+          const name = data.name ?? data.username ?? data.screen_name ?? '';
+          const followers = data.followers_count ?? data.followers ?? data.fan_count ?? '';
+          if (name) parts.push(`**Profile:** ${name}`);
+          if (followers) parts.push(`**Followers:** ${Number(followers).toLocaleString()}`);
+        }
+      }
+
+      if (parts.length <= 1) {
+        parts.push('Analytics data is available but engagement metrics have not been synced yet. Create your content based on the profile data, and analytics will be enriched on the next sync.');
+      }
+
+      const synced = records[0]?.synced_at ? new Date(records[0].synced_at).toLocaleString() : 'unknown';
+      parts.push(`\n*Last synced: ${synced}*`);
+
+      return { success: true, output: parts.join('\n'), cost: 0 };
+    } catch (err) {
+      return { success: false, output: `Failed to fetch ${platform} analytics: ${err instanceof Error ? err.message : 'unknown error'}` };
+    }
+  },
+};
+
 // ── Register ──────────────────────────────────────────────────────────────────
 
-export const socialTools: Tool[] = [postToLinkedIn, postToTwitter, postToInstagram, postToFacebook, checkServiceConnection];
+export const socialTools: Tool[] = [postToLinkedIn, postToTwitter, postToInstagram, postToFacebook, getSocialAnalytics, checkServiceConnection];
 registerTools(socialTools);

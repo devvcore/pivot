@@ -23,7 +23,7 @@ import {
   getTwitterUser,
   getTeamsChannels,
   getAirtableBases,
-  getInstagramProfile, getInstagramMedia,
+  getInstagramProfile, getInstagramMedia, getInstagramInsights,
   getFacebookPages, getFacebookPagePosts,
   getYouTubeChannel, getYouTubeVideos,
 } from './composio-tools';
@@ -1077,11 +1077,122 @@ async function pullInstagram(orgId: string): Promise<void> {
     getInstagramProfile(orgId),
     getInstagramMedia(orgId, 25),
   ]);
+
+  // Enrich media with engagement insights (likes, comments, impressions, reach)
+  let mediaWithInsights = media;
+  if (media && Array.isArray(media)) {
+    const items = (media as Array<Record<string, unknown>>).slice(0, 15); // Top 15 to avoid rate limits
+    const enriched = await Promise.allSettled(
+      items.map(async (item) => {
+        const mediaId = item.id as string;
+        if (!mediaId) return item;
+        try {
+          const insights = await getInstagramInsights(orgId, mediaId);
+          return { ...item, insights };
+        } catch {
+          return item; // Keep media even if insights fail
+        }
+      })
+    );
+    mediaWithInsights = enriched.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
+  }
+
+  // Compute engagement summary from enriched media
+  const engagementSummary = computeInstagramEngagement(mediaWithInsights as Array<Record<string, unknown>>);
+
   await upsertIntegrationData(orgId, 'instagram', [
     { recordType: 'profile', data: profile },
-    { recordType: 'media', data: media },
+    { recordType: 'media', data: mediaWithInsights },
+    { recordType: 'engagement_summary', data: engagementSummary },
   ]);
-  console.log('[Pivot] Instagram pull done');
+  console.log('[Pivot] Instagram pull done (with engagement insights)');
+}
+
+/** Compute engagement analytics from Instagram media with insights */
+function computeInstagramEngagement(media: Array<Record<string, unknown>>): Record<string, unknown> {
+  if (!media || media.length === 0) return { totalPosts: 0 };
+
+  let totalLikes = 0, totalComments = 0, totalImpressions = 0, totalReach = 0;
+  const topPosts: Array<Record<string, unknown>> = [];
+
+  for (const item of media) {
+    const insights = item.insights as Record<string, unknown> | undefined;
+    const likes = Number(item.like_count ?? insights?.likes ?? insights?.like_count ?? 0);
+    const comments = Number(item.comments_count ?? insights?.comments ?? insights?.comments_count ?? 0);
+    const impressions = Number(insights?.impressions ?? 0);
+    const reach = Number(insights?.reach ?? 0);
+
+    totalLikes += likes;
+    totalComments += comments;
+    totalImpressions += impressions;
+    totalReach += reach;
+
+    topPosts.push({
+      id: item.id,
+      caption: String(item.caption ?? '').slice(0, 100),
+      mediaType: item.media_type,
+      timestamp: item.timestamp,
+      likes,
+      comments,
+      impressions,
+      reach,
+      engagement: likes + comments,
+    });
+  }
+
+  // Sort by engagement (likes + comments)
+  topPosts.sort((a, b) => (b.engagement as number) - (a.engagement as number));
+
+  const avgEngagement = media.length > 0 ? Math.round((totalLikes + totalComments) / media.length) : 0;
+
+  return {
+    totalPosts: media.length,
+    totalLikes,
+    totalComments,
+    totalImpressions,
+    totalReach,
+    avgEngagementPerPost: avgEngagement,
+    engagementRate: totalImpressions > 0 ? Math.round((totalLikes + totalComments) / totalImpressions * 10000) / 100 : 0,
+    topPerformingPosts: topPosts.slice(0, 5),
+    worstPerformingPosts: topPosts.slice(-3).reverse(),
+    bestPostingTimes: extractBestTimes(topPosts.slice(0, 10)),
+    contentThemes: extractThemes(topPosts.slice(0, 10)),
+  };
+}
+
+function extractBestTimes(posts: Array<Record<string, unknown>>): string[] {
+  const hours: Record<number, number> = {};
+  for (const post of posts) {
+    const ts = post.timestamp as string;
+    if (!ts) continue;
+    try {
+      const h = new Date(ts).getHours();
+      hours[h] = (hours[h] ?? 0) + 1;
+    } catch { /* skip */ }
+  }
+  return Object.entries(hours)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([h]) => {
+      const hour = parseInt(h);
+      return hour < 12 ? `${hour || 12}AM` : `${hour === 12 ? 12 : hour - 12}PM`;
+    });
+}
+
+function extractThemes(posts: Array<Record<string, unknown>>): string[] {
+  const themes = new Map<string, number>();
+  for (const post of posts) {
+    const caption = String(post.caption ?? '').toLowerCase();
+    // Extract hashtags
+    const hashtags = caption.match(/#\w+/g) ?? [];
+    for (const tag of hashtags) {
+      themes.set(tag, (themes.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...themes.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([tag]) => tag);
 }
 
 async function pullFacebook(orgId: string): Promise<void> {

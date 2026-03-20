@@ -588,11 +588,30 @@ const queryIntegrationData: Tool = {
       }
 
       if (!records || records.length === 0) {
+        if (provider) {
+          // Check if the service is actually connected
+          const { data: integration } = await supabase
+            .from('integrations')
+            .select('status')
+            .eq('org_id', context.orgId)
+            .eq('provider', provider)
+            .eq('status', 'connected')
+            .maybeSingle();
+
+          if (!integration) {
+            return {
+              success: false,
+              output: `[connect:${provider}]`,
+            };
+          }
+          return {
+            success: false,
+            output: `${provider} is connected but no data has been synced yet. Data will be available after the next sync.`,
+          };
+        }
         return {
           success: false,
-          output: provider
-            ? `No live data found for "${provider}". The service may not be connected or no data has been synced yet. Use check_connection to verify.`
-            : 'No integration data available. No services are connected yet.',
+          output: 'No integration data available. Connect services to pull live data.',
         };
       }
 
