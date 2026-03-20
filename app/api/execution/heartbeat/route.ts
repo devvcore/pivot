@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     const errors: string[] = [];
 
     if (pendingTasks?.length) {
-      const orchestrator = createOrchestrator();
+      const orchestrator = createOrchestrator(undefined, true /* isBackground */);
 
       for (const t of pendingTasks) {
         try {
