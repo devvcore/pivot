@@ -1068,7 +1068,12 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
               {coreTab === 0 && (
                 <div className="space-y-4">
                   {(hs.dimensions || []).map((dim: any, i: number) => (
-                    <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 flex flex-col md:flex-row gap-5 items-start md:items-center shadow-sm">
+                    <div
+                      key={i}
+                      className="bg-white border border-zinc-200 rounded-2xl p-6 flex flex-col md:flex-row gap-5 items-start md:items-center shadow-sm cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all group"
+                      onClick={() => askPivvyAbout(`How can I improve my ${dim.name} score? It's currently ${dim.score}/100.`)}
+                      title="Click to ask Pivvy"
+                    >
                       <div className="flex items-center gap-4 shrink-0">
                         <div className="text-center w-16">
                           <div className="text-3xl font-light text-zinc-900 tabular-nums">{dim.score}</div>
@@ -1088,7 +1093,10 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                         </div>
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold text-zinc-900">{dim.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-zinc-900">{dim.name}</p>
+                          <span className="text-[9px] font-mono text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Ask Pivvy</span>
+                        </div>
                         {dim.summary && <p className="text-sm text-zinc-500 mt-1">{dim.summary}</p>}
                         {dim.driver && <p className="text-sm text-zinc-700 mt-1 font-medium">Key driver: {dim.driver}</p>}
                         {(dim as any).key_finding && <p className="text-sm text-zinc-600 mt-1 italic">{(dim as any).key_finding}</p>}
@@ -1237,14 +1245,22 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                   />
 
                   {(rl?.items || []).map((item: any, i: number) => (
-                    <div key={i} className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                    <div
+                      key={i}
+                      className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all group"
+                      onClick={() => askPivvyAbout(`Tell me about this revenue leak: ${item.description}. How do I fix it?`)}
+                      title="Click to ask Pivvy"
+                    >
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex items-center gap-3">
                           <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-600 text-xs font-bold flex items-center justify-center shrink-0">
                             #{i + 1}
                           </span>
                           <div>
-                            <p className="font-semibold text-zinc-900">{item.description}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-zinc-900">{item.description}</p>
+                              <span className="text-[9px] font-mono text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Ask Pivvy</span>
+                            </div>
                             {(item as any).clientOrArea && <p className="text-sm text-zinc-500">{(item as any).clientOrArea}</p>}
                           </div>
                         </div>

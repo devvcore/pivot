@@ -1414,9 +1414,17 @@ export function ExecutionDashboard({
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 font-sans flex">
+      {/* ── Mobile sidebar backdrop ── */}
+      {showSidebar && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       {/* ── Sidebar (conversation history) ── */}
       {showSidebar && (
-        <div className="w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-50">
+        <div className="fixed inset-y-0 left-0 z-50 w-64 md:relative md:z-auto bg-white border-r border-zinc-200 flex flex-col h-screen md:sticky top-0">
           <div className="p-3 border-b border-zinc-100">
             <button
               onClick={handleNewChat}

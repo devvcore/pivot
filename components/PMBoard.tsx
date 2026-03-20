@@ -315,7 +315,7 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
       </header>
 
       {/* Main content */}
-      <main className="max-w-[1400px] mx-auto p-6">
+      <main className="max-w-[1400px] mx-auto p-3 sm:p-6">
         {loading ? (
           <PMLoadingSkeleton />
         ) : error ? (
@@ -324,14 +324,14 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
           <PMEmptyState onGenerate={handleGenerateFromAnalysis} onCreate={handleCreateTicket} />
         ) : (
           /* Kanban Board */
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: "touch" }}>
             {COLUMNS.map((col, ci) => (
               <motion.div
                 key={col.key}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: ci * 0.05 }}
-                className="flex-shrink-0 w-72"
+                className="flex-shrink-0 w-64 sm:w-72"
               >
                 {/* Column header */}
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-t-2 ${col.border} bg-white`}>
@@ -355,7 +355,7 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: ci * 0.05 + ti * 0.03 }}
                         onClick={() => setSelectedTicket(ticket)}
-                        className="bg-white border border-zinc-200 rounded-xl p-3 cursor-pointer hover:shadow-md hover:border-zinc-300 transition-all group"
+                        className="bg-white border border-zinc-200 rounded-xl p-2.5 sm:p-3 cursor-pointer hover:shadow-md hover:border-zinc-300 transition-all group"
                       >
                         {/* Priority + Title */}
                         <div className="flex items-start gap-2 mb-2">
@@ -447,7 +447,7 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 250 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white border-l border-zinc-200 shadow-2xl z-50 overflow-y-auto"
+              className="fixed inset-0 sm:inset-auto sm:right-0 sm:top-0 sm:bottom-0 w-full sm:max-w-lg bg-white sm:border-l border-zinc-200 shadow-2xl z-50 overflow-y-auto"
             >
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between z-10">
