@@ -240,6 +240,7 @@ export function AppShell({
       <div
         className={[
           "flex-1 min-h-screen transition-all duration-150",
+          "pt-14 md:pt-0", // top padding for mobile hamburger button
           "md:ml-16", // always offset by collapsed width on desktop
         ].join(" ")}
       >

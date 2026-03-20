@@ -283,21 +283,65 @@ function PivvyChatOverlay({
   onClose,
   orgId,
   onNavigate,
+  prefillQuestion,
+  onPrefillConsumed,
 }: {
   open: boolean;
   onClose: () => void;
   orgId: string;
   onNavigate: (categoryId: string, sectionKey?: string) => void;
+  /** When set, auto-fills and sends this question */
+  prefillQuestion?: string | null;
+  /** Called after the prefill is consumed so parent can clear it */
+  onPrefillConsumed?: () => void;
 }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const prefillHandledRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  // Auto-send prefill question when it arrives
+  useEffect(() => {
+    if (prefillQuestion && open && !loading && prefillHandledRef.current !== prefillQuestion) {
+      prefillHandledRef.current = prefillQuestion;
+      setInput(prefillQuestion);
+      onPrefillConsumed?.();
+      // Trigger send after state settles
+      setTimeout(() => {
+        const syntheticInput = prefillQuestion;
+        setInput("");
+        setMessages(prev => [...prev, { role: "user", content: syntheticInput }]);
+        // Inline the API call (can't call handleSend due to closure)
+        (async () => {
+          setLoading(true);
+          try {
+            const res = await authFetch("/api/agent/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orgId, message: syntheticInput, mode: "quick" }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const reply = data.reply ?? data.message ?? data.response ?? "I could not find a specific answer.";
+              setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+            } else {
+              setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I could not process that request." }]);
+            }
+          } catch {
+            setMessages(prev => [...prev, { role: "assistant", content: "Connection error. Please try again." }]);
+          } finally {
+            setLoading(false);
+          }
+        })();
+      }, 50);
+    }
+  }, [prefillQuestion, open, loading, orgId, onPrefillConsumed]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -446,6 +490,13 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
 
   // Pivvy mini-chat
   const [pivvyOpen, setPivvyOpen] = useState(false);
+  const [pivvyPrefill, setPivvyPrefill] = useState<string | null>(null);
+
+  /** Open Pivvy chat pre-filled with a question from a chart click */
+  const askPivvyAbout = useCallback((question: string) => {
+    setPivvyPrefill(question);
+    setPivvyOpen(true);
+  }, []);
 
   // Action plan task completion (persisted per run)
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(() => {
@@ -1680,6 +1731,8 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
             onClose={() => setPivvyOpen(false)}
             orgId={job.questionnaire.orgId ?? "default-org"}
             onNavigate={handlePivvyNavigate}
+            prefillQuestion={pivvyPrefill}
+            onPrefillConsumed={() => setPivvyPrefill(null)}
           />
         )}
       </AnimatePresence>

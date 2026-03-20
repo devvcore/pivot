@@ -301,9 +301,9 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 font-sans">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+      <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={onBack}
               className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
@@ -312,12 +312,12 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
               <ArrowLeft className="w-5 h-5 text-zinc-600" />
             </button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-zinc-900">CRM Pipeline</h1>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900">CRM Pipeline</h1>
               <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em]">Contacts & Deals</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
             {/* Pipeline Value */}
             {contacts.length > 0 && (
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -328,14 +328,14 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
             )}
 
             {/* Search */}
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search contacts..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 text-sm border border-zinc-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 w-48"
+                className="pl-9 pr-4 py-2 text-sm border border-zinc-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 w-full sm:w-48"
               />
             </div>
 
@@ -355,17 +355,17 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
             <button
               onClick={() => handleSync()}
               disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all rounded-xl disabled:opacity-50"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all rounded-xl disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-              Sync
+              <span className="hidden sm:inline">Sync</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="max-w-[1400px] mx-auto p-6">
+      <main className="max-w-[1400px] mx-auto p-3 sm:p-6">
         {loading ? (
           <CRMLoadingSkeleton />
         ) : error ? (
@@ -399,14 +399,14 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
             </div>
 
             {/* Kanban Board */}
-            <div className="flex gap-4 overflow-x-auto pb-4">
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: "touch" }}>
               {activeStages.map((stage, si) => (
                 <motion.div
                   key={stage.key}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: si * 0.05 }}
-                  className="flex-shrink-0 w-72"
+                  className="flex-shrink-0 w-64 sm:w-72"
                 >
                   {/* Column header */}
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-t-2 ${stage.border} bg-white`}>
@@ -427,7 +427,7 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: si * 0.05 + ci * 0.03 }}
                         onClick={() => handleSelectContact(contact)}
-                        className="bg-white border border-zinc-200 rounded-xl p-3 cursor-pointer hover:shadow-md hover:border-zinc-300 transition-all group"
+                        className="bg-white border border-zinc-200 rounded-xl p-2.5 sm:p-3 cursor-pointer hover:shadow-md hover:border-zinc-300 transition-all group"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="min-w-0">
@@ -551,7 +551,7 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 250 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white border-l border-zinc-200 shadow-2xl z-50 overflow-y-auto"
+              className="fixed inset-0 sm:inset-auto sm:right-0 sm:top-0 sm:bottom-0 w-full sm:max-w-lg bg-white sm:border-l border-zinc-200 shadow-2xl z-50 overflow-y-auto"
             >
               {/* Panel header */}
               <div className="sticky top-0 bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between z-10">

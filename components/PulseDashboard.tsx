@@ -287,7 +287,7 @@ function PulseCard({
       transition={{ duration: 0.5, delay: delay * 0.1 }}
       onClick={onClick}
       className={`
-        relative bg-white rounded-xl border border-zinc-200 p-5
+        relative bg-white rounded-xl border border-zinc-200 p-3 sm:p-5
         shadow-sm hover:border-zinc-300
         transition-colors duration-150
         ${onClick ? "cursor-pointer" : ""}
@@ -408,19 +408,19 @@ export function PulseDashboard({ orgId, onNavigate }: PulseDashboardProps) {
   const timeLabel = timeAgo < 1 ? "Just now" : `${timeAgo}m ago`;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* ── AI Summary Bar ─────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-zinc-900 rounded-xl px-6 py-4 flex items-center gap-4"
+        className="bg-zinc-900 rounded-xl px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4"
       >
 
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="p-2 bg-zinc-800 rounded-lg shrink-0">
             <Sparkles className="w-4 h-4 text-zinc-400" />
           </div>
-          <p className="text-sm text-zinc-300 truncate">
+          <p className="text-sm text-zinc-300 break-words sm:truncate">
             {typedSummary}
             <span className="inline-block w-0.5 h-4 bg-zinc-500 ml-0.5 animate-pulse align-middle" />
           </p>

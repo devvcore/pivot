@@ -250,9 +250,9 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 font-sans">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 py-4 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+      <header className="bg-white/80 backdrop-blur-md border-b border-zinc-200 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={onBack}
               className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
@@ -261,12 +261,12 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
               <ArrowLeft className="w-5 h-5 text-zinc-600" />
             </button>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-zinc-900">Project Board</h1>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900">Project Board</h1>
               <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em]">Tasks & Tickets</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
             {/* Stats */}
             {tickets.length > 0 && (
               <div className="hidden sm:flex items-center gap-4 px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono">
@@ -276,14 +276,14 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
             )}
 
             {/* Search */}
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search tickets..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 text-sm border border-zinc-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 w-48"
+                className="pl-9 pr-4 py-2 text-sm border border-zinc-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 w-full sm:w-48"
               />
             </div>
 
@@ -304,10 +304,11 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
             <button
               onClick={handleGenerateFromAnalysis}
               disabled={generating}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all rounded-xl disabled:opacity-50"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all rounded-xl disabled:opacity-50"
             >
               <Sparkles className={`w-4 h-4 ${generating ? "animate-pulse" : ""}`} />
-              Generate from Analysis
+              <span className="hidden sm:inline">Generate from Analysis</span>
+              <span className="sm:hidden">Generate</span>
             </button>
           </div>
         </div>
