@@ -30,6 +30,7 @@ import '../execution/tools/communication-tools';
 import '../execution/tools/social-tools';
 import '../execution/tools/github-action-tools';
 import '../execution/tools/productivity-tools';
+import '../execution/tools/media-tools';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

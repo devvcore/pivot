@@ -57,6 +57,8 @@ export const OUTFITS: Record<string, Outfit> = {
       'send_slack_message',
       'query_integration_data',
       'get_social_analytics',
+      'generate_media',
+      'research_brand',
     ],
     systemPromptExtension: `MARKETING MODE — Content creation and publishing.
 

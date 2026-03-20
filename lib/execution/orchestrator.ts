@@ -33,6 +33,7 @@ import './tools/data-tools';
 import './tools/social-tools';
 import './tools/github-action-tools';
 import './tools/productivity-tools';
+import './tools/media-tools';
 
 const FLASH_MODEL = 'gemini-2.5-flash';
 

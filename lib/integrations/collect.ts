@@ -1107,8 +1107,21 @@ async function pullAirtable(orgId: string): Promise<void> {
 
 async function pullLinkedIn(orgId: string): Promise<void> {
   const profile = await getLinkedInProfile(orgId);
+  // Extract key metrics from profile for social media deep dive
+  const profileData = profile && typeof profile === 'object' ? profile as Record<string, unknown> : {};
+  const socialSummary = {
+    platform: 'linkedin',
+    name: profileData.firstName ? `${profileData.firstName} ${profileData.lastName ?? ''}` : profileData.localizedFirstName ?? 'Unknown',
+    headline: profileData.headline ?? profileData.localizedHeadline ?? '',
+    connections: profileData.numConnections ?? profileData.connections ?? 'N/A',
+    followers: profileData.followersCount ?? profileData.followers ?? 'N/A',
+    profileViews: profileData.profileViews ?? 'N/A',
+    industry: profileData.industry ?? '',
+    location: profileData.location ?? profileData.locationName ?? '',
+  };
   await upsertIntegrationData(orgId, 'linkedin', [
     { recordType: 'profile', data: profile },
+    { recordType: 'social_summary', data: socialSummary },
   ]);
   console.log('[Pivot] LinkedIn pull done');
 }
