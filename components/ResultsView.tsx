@@ -898,9 +898,18 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
               {hs?.headline && <p className="text-base font-medium mt-1 text-zinc-100">{hs.headline}</p>}
             </div>
             {radarData.length > 0 && (
-              <div className="w-40 h-40 sm:w-56 sm:h-56 shrink-0">
+              <div className="w-40 h-40 sm:w-56 sm:h-56 shrink-0 cursor-pointer" title="Click a dimension to ask Pivvy">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData} outerRadius="60%">
+                  <RadarChart
+                    data={radarData}
+                    outerRadius="60%"
+                    onClick={(state: any) => {
+                      if (state?.activePayload?.[0]?.payload) {
+                        const dim = state.activePayload[0].payload;
+                        askPivvyAbout(`How can I improve my ${dim.dimension} score? It's currently ${dim.score}/100.`);
+                      }
+                    }}
+                  >
                     <PolarGrid stroke="#3f3f46" />
                     <PolarAngleAxis dataKey="dimension" tick={{ fill: "#71717a", fontSize: 9 }} tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 12) + "\u2026" : v} />
                     <Radar name="Score" dataKey="score" stroke="#e4e4e7" fill="#e4e4e7" fillOpacity={0.25} />
@@ -1165,7 +1174,17 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                           <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `W${v}`} />
                           <YAxis tick={{ fontSize: 11, fill: "#71717a" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} width={65} />
                           <Tooltip formatter={(v) => fmt(v as number)} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                          <Bar dataKey="closingBalance" radius={[4, 4, 0, 0]}>
+                          <Bar
+                            dataKey="closingBalance"
+                            radius={[4, 4, 0, 0]}
+                            cursor="pointer"
+                            onClick={(data: any) => {
+                              if (data?.week != null) {
+                                const flag = data.riskFlag ? " (flagged as risky)" : "";
+                                askPivvyAbout(`Why is my cash flow ${data.closingBalance > 0 ? "at" : "negative at"} ${fmt(data.closingBalance)} in Week ${data.week}${flag}? What should I do?`);
+                              }
+                            }}
+                          >
                             {weeklyModel.map((entry: any, i: number) => (
                               <Cell key={i} fill={entry.riskFlag ? "#ef4444" : "#18181b"} />
                             ))}

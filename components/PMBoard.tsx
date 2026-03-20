@@ -71,9 +71,9 @@ function formatDate(d: string): string {
 
 function PMLoadingSkeleton() {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4" style={{ WebkitOverflowScrolling: "touch" }}>
       {Array.from({ length: 5 }).map((_, ci) => (
-        <div key={ci} className="flex-shrink-0 w-72">
+        <div key={ci} className="flex-shrink-0 w-64 sm:w-72">
           <div className="h-10 bg-zinc-200 rounded-t-xl animate-pulse" />
           <div className="space-y-2 min-h-[200px] bg-zinc-50/50 border border-t-0 border-zinc-200 rounded-b-xl p-2">
             {Array.from({ length: 2 }).map((_, ti) => (

@@ -140,7 +140,7 @@ export default function MissionControl({ orgId, onBack }: MissionControlProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-zinc-600 font-mono">
+            <span className="hidden sm:inline text-[10px] text-zinc-600 font-mono">
               Updated {lastRefresh.toLocaleTimeString()}
             </span>
             <button onClick={() => { setLoading(true); fetchTasks(); }} className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all">
@@ -172,7 +172,7 @@ export default function MissionControl({ orgId, onBack }: MissionControlProps) {
           ) : agentStats.length === 0 ? (
             <div className="text-zinc-600 text-sm py-8 text-center">No agent tasks yet. Run some tasks from the Execution tab.</div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {agentStats.map(agent => {
                 const config = AGENTS[agent.agentId];
                 return (
