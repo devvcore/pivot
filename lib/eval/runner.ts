@@ -31,6 +31,7 @@ import '../execution/tools/social-tools';
 import '../execution/tools/github-action-tools';
 import '../execution/tools/productivity-tools';
 import '../execution/tools/media-tools';
+import '../execution/tools/crm-tools';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

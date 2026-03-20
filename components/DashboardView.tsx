@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User, Trophy, Crown, Link2 } from "lucide-react";
+import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User, Trophy, Crown, Link2, ClipboardList } from "lucide-react";
 import { ROITracker } from "./ROITracker";
 import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
@@ -32,6 +32,8 @@ interface DashboardViewProps {
   onLean?: () => void;
   onMissionControl?: () => void;
   onIntegrations?: () => void;
+  onCRM?: () => void;
+  onPM?: () => void;
   userName?: string;
   username?: string;
   orgLogoUrl?: string | null;
@@ -76,7 +78,7 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, onIntegrations, userName, username, orgLogoUrl, orgId }: DashboardViewProps) {
+export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLean, onMissionControl, onIntegrations, onCRM, onPM, userName, username, orgLogoUrl, orgId }: DashboardViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -205,6 +207,22 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
               className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
             >
               <Link2 className="w-4 h-4" /> Integrations
+            </button>
+          )}
+          {onCRM && (
+            <button
+              onClick={onCRM}
+              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
+            >
+              <Users className="w-4 h-4" /> CRM
+            </button>
+          )}
+          {onPM && (
+            <button
+              onClick={onPM}
+              className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95 rounded-xl"
+            >
+              <ClipboardList className="w-4 h-4" /> Projects
             </button>
           )}
           <button

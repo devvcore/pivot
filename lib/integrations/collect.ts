@@ -882,6 +882,14 @@ export async function pullFreshIntegrationData(orgId: string): Promise<void> {
   const succeeded = results.filter(r => r.status === 'fulfilled').length;
   const failed = results.filter(r => r.status === 'rejected').length;
   console.log(`[Pivot] Integration pull complete: ${succeeded} succeeded, ${failed} failed`);
+
+  // Auto-sync CRM contacts after integration data is fresh
+  try {
+    const { syncAllCRMData } = await import('@/lib/crm/auto-sync');
+    await syncAllCRMData(orgId);
+  } catch (err) {
+    console.warn('[Pivot] CRM auto-sync failed (non-fatal):', err instanceof Error ? err.message : err);
+  }
 }
 
 // ── Upsert helper ───────────────────────────────────────────────────────────

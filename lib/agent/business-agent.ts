@@ -26,7 +26,7 @@ import type { ChatMessage, AgentMemory, MVPDeliverables } from "@/lib/types";
 
 const FLASH_MODEL = "gemini-2.5-flash";
 const MAX_HISTORY_MESSAGES = 16;
-const AVAILABLE_TOOL_NAMES = ["search_web", "get_report_section", "analyze_website", "generate_projection", "navigate_to_page", "get_integration_data"];
+const AVAILABLE_TOOL_NAMES = ["search_web", "get_report_section", "analyze_website", "generate_projection", "navigate_to_page", "get_integration_data", "search_crm", "get_crm_contact", "get_pipeline_summary"];
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -139,6 +139,54 @@ const TOOLS = [
           description: "Filter by record type. Known types — stripe: payments, customers, charges_overview, customers_overview; slack: channel_list, team_overview; gmail: emails, recent_activity, profile. Leave empty to get all records for a provider (RECOMMENDED when unsure).",
         },
       },
+      required: [],
+    },
+  },
+  {
+    name: "search_crm",
+    description:
+      "Search CRM contacts by name, email, or company. Returns contact details, pipeline stage, deal value, and recent activities. Use when the user asks about clients, contacts, leads, deals, or pipeline.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "Search term — name, email, or company. Partial matches supported.",
+        },
+        stage: {
+          type: "string",
+          description: "Optional stage filter: lead, prospect, qualified, proposal, negotiation, won, lost, churned, active",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_crm_contact",
+    description:
+      "Get full CRM contact profile with activity timeline, deal history, and AI summary. Use after search_crm to dive deep into a specific contact, or when user asks about a specific person/company.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        email: {
+          type: "string",
+          description: "Contact email address to look up.",
+        },
+        name: {
+          type: "string",
+          description: "Contact name (if email not available).",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_pipeline_summary",
+    description:
+      "Get CRM pipeline overview — contacts grouped by stage with counts, total deal values, and win rate. Use when user asks about pipeline, deals, CRM status, or sales funnel.",
+    parameters: {
+      type: "object" as const,
+      properties: {},
       required: [],
     },
   },

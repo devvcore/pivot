@@ -59,6 +59,10 @@ export const OUTFITS: Record<string, Outfit> = {
       'get_social_analytics',
       'generate_media',
       'research_brand',
+      // CRM tools (for personalized outreach)
+      'search_crm',
+      'get_contact_details',
+      'add_contact_note',
     ],
     systemPromptExtension: `MARKETING MODE — Content creation and publishing.
 
@@ -193,6 +197,9 @@ Pricing Strategy Frameworks:
       'reply_to_email',
       'create_calendar_event',
       'query_integration_data',
+      // CRM tools (for relationship context)
+      'search_crm',
+      'get_contact_details',
     ],
     systemPromptExtension: `HR MODE — Hiring, interviews, compensation, onboarding.
 
@@ -257,6 +264,11 @@ Onboarding Milestones:
       'create_spreadsheet',
       'create_report',
       'benchmark_comparison',
+      // Internal PM tools
+      'create_ticket',
+      'list_tickets',
+      'update_ticket',
+      'assign_ticket',
       // Composio action tools
       'create_jira_ticket',
       'send_email',
@@ -268,8 +280,16 @@ Onboarding Milestones:
       'search_emails',
       'create_calendar_event',
       'query_integration_data',
+      // CRM tools (full pipeline management)
+      'search_crm',
+      'get_contact_details',
+      'update_contact_stage',
+      'add_contact_note',
+      'create_contact',
+      'suggest_followups',
+      'get_pipeline_summary',
     ],
-    systemPromptExtension: `OPERATIONS MODE — Processes, SOPs, project plans, risk management.
+    systemPromptExtension: `OPERATIONS MODE — Processes, SOPs, project plans, risk management, ticket tracking.
 
 TOOL FALLBACK HIERARCHY:
 1. Company data: query_analysis(search, "operations") → query_analysis(search, "health checklist")
@@ -464,6 +484,9 @@ Growth Benchmarks (SaaS):
       'search_emails',
       'send_slack_message',
       'query_integration_data',
+      // CRM tools (for client research)
+      'search_crm',
+      'get_contact_details',
     ],
     systemPromptExtension: `RESEARCH MODE — Web research, market analysis, competitive intelligence.
 

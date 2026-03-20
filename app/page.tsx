@@ -12,13 +12,15 @@ import { EmployeeDashboard } from "@/components/EmployeeDashboard";
 import { LeanDashboard } from "@/components/LeanDashboard";
 import MissionControl from "@/components/MissionControl";
 import { IntegrationsPanel } from "@/components/IntegrationsPanel";
+import { CRMDashboard } from "@/components/CRMDashboard";
+import { PMBoard } from "@/components/PMBoard";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const RUN_ID_KEY = "pivot_runId";
 
-type AppView = "dashboard" | "upload" | "processing" | "results" | "team" | "execution" | "employees" | "lean" | "mission-control" | "integrations";
+type AppView = "dashboard" | "upload" | "processing" | "results" | "team" | "execution" | "employees" | "lean" | "mission-control" | "integrations" | "crm" | "pm";
 
 interface UserProfile {
   id: string;
@@ -200,6 +202,8 @@ export default function Home() {
             onLean={() => setView("lean")}
             onMissionControl={() => setView("mission-control")}
             onIntegrations={() => setView("integrations")}
+            onCRM={() => setView("crm")}
+            onPM={() => setView("pm")}
             userName={user?.name}
             username={user?.username}
             orgLogoUrl={orgLogoUrl}
@@ -278,6 +282,21 @@ export default function Home() {
 
         {view === "integrations" && user && (
           <IntegrationsPanel
+            orgId={user.organizationId}
+            onBack={() => setView("dashboard")}
+          />
+        )}
+
+        {view === "crm" && user && (
+          <CRMDashboard
+            orgId={user.organizationId}
+            onBack={() => setView("dashboard")}
+            onExecute={() => setView("execution")}
+          />
+        )}
+
+        {view === "pm" && user && (
+          <PMBoard
             orgId={user.organizationId}
             onBack={() => setView("dashboard")}
           />
