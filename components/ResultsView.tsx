@@ -1667,7 +1667,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
       {/* ── Floating Ask Pivvy Button ──────────────────────────────────────── */}
       <button
         onClick={() => setPivvyOpen(!pivvyOpen)}
-        className="fixed bottom-6 right-24 z-40 w-12 h-12 bg-zinc-900 text-white rounded-full shadow-lg hover:shadow-md transition-all flex items-center justify-center"
+        className="fixed bottom-6 right-24 z-40 w-12 h-12 bg-zinc-900 text-white rounded-full shadow-sm hover:bg-zinc-800 transition-colors flex items-center justify-center"
         title="Ask Pivvy"
       >
         {pivvyOpen ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}

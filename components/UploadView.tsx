@@ -875,7 +875,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
               <button
                 onClick={handleContinueFromUpload}
                 disabled={uploading || stagedFiles.length === 0}
-                className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group overflow-hidden relative rounded-xl"
+                className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-95 group overflow-hidden relative rounded-lg"
               >
                 <ChevronRight className="w-4 h-4" />
                 {uploading ? "Extracting from documents…" : "Continue to Live Call"}
@@ -1054,7 +1054,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
               <div className="space-y-3">
                 <button
                   onClick={() => setPhase("chat")}
-                  className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/10 active:scale-95 rounded-xl"
+                  className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 transition-colors active:scale-95 rounded-lg"
                 >
                   <Phone className="w-4 h-4" />
                   Continue to Live Call
@@ -1092,7 +1092,7 @@ export function UploadView({ onBack, onUploadComplete, orgId }: UploadViewProps)
             {/* Persistent back button + error banner */}
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-md w-full px-4 space-y-2">
               {error && (
-                <div className="bg-red-950/90 border border-red-800 rounded-xl p-4 flex items-start gap-3 shadow-2xl backdrop-blur-sm">
+                <div className="bg-red-950/90 border border-red-800 rounded-lg p-4 flex items-start gap-3 shadow-sm backdrop-blur-sm">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                   <div className="flex-1 text-xs text-red-200 leading-normal">{error}</div>
                   <button onClick={() => handleLaunchAnalysis()} className="text-[10px] font-mono text-emerald-400 hover:text-white uppercase tracking-wider shrink-0 mr-2">

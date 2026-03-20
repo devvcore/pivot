@@ -348,7 +348,7 @@ export function AgentChatButton({ orgId, orgName, onNavigate }: { orgId: string;
         onClick={() => setOpen(true)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-zinc-900 text-white px-4 py-3 rounded-2xl shadow-2xl shadow-zinc-900/30 hover:bg-zinc-700 transition-all"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-zinc-900 text-white px-4 py-3 rounded-xl shadow-sm hover:bg-zinc-800 transition-colors"
       >
         <Bot className="w-4 h-4" />
         <span className="text-xs font-mono uppercase tracking-widest">Ask Pivvy</span>
@@ -365,7 +365,7 @@ export function AgentChatButton({ orgId, orgName, onNavigate }: { orgId: string;
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-96 h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-3xl shadow-2xl shadow-zinc-900/20 overflow-hidden flex flex-col"
+            className="fixed bottom-20 right-4 left-4 sm:left-auto sm:right-6 z-50 sm:w-96 h-[520px] max-h-[80vh] bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden flex flex-col"
           >
             <AgentChat orgId={orgId} orgName={orgName} onClose={() => setOpen(false)} onNavigate={onNavigate} />
           </motion.div>

@@ -156,7 +156,7 @@ export function TeamView({ orgId, onBack }: TeamViewProps) {
             resetForm();
             setShowForm(true);
           }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group font-bold rounded-xl"
+          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-colors active:scale-95 group font-bold rounded-lg"
         >
           <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Add Employee
         </button>

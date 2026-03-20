@@ -1621,7 +1621,7 @@ export function ExecutionDashboard({
           {/* Empty state with recommendation pills */}
           {!hydrating && !hasMessages && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-              <div className="w-16 h-16 bg-zinc-900 flex items-center justify-center rounded-2xl shadow-xl shadow-zinc-900/10 mb-6">
+              <div className="w-16 h-16 bg-zinc-900 flex items-center justify-center rounded-xl mb-6">
                 <Bot className="w-7 h-7 text-white" />
               </div>
               <h2 className="text-2xl font-light text-zinc-900 mb-2">What do you need done?</h2>

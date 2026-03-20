@@ -216,7 +216,7 @@ export function ChartInteraction({ section, prompts, orgId, projectionConfig, on
 
               {/* Projection insight banner with metrics */}
               {projection && (
-                <div className="mt-3 bg-gradient-to-r from-blue-50/60 to-white border border-blue-200 rounded-xl p-3">
+                <div className="mt-3 bg-blue-50/60 border border-blue-200 rounded-xl p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       {projection.title && (

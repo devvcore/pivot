@@ -368,7 +368,7 @@ export function EmployeeDashboard({
           <button
             onClick={runScoringCycle}
             disabled={scoring}
-            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-50 transition-all shadow-xl shadow-zinc-900/10 active:scale-95 group font-bold rounded-xl"
+            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-50 transition-colors active:scale-95 group font-bold rounded-lg"
           >
             {scoring ? (
               <>

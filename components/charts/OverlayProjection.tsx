@@ -39,7 +39,7 @@ export function OverlayProjection({ data, onDismiss }: OverlayProjectionProps) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 bg-gradient-to-br from-blue-50/50 to-white border border-blue-200 rounded-2xl p-5 relative shadow-sm"
+      className="mt-4 bg-blue-50/50 border border-blue-200 rounded-xl p-5 relative shadow-sm"
     >
       {onDismiss && (
         <button onClick={onDismiss} className="absolute top-3 right-3 p-1 text-zinc-400 hover:text-zinc-700 transition-colors rounded">
