@@ -21,6 +21,7 @@ import { getAgent, type AgentDefinition } from './agents/index';
 import { OUTFITS, getOutfitSystemPrompt } from './outfits';
 import { globalRegistry, createCostTracker, type ToolContext, type ToolResult } from './tools/index';
 import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLessons } from './agent-memory';
+import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedureAsContext, type Procedure } from './procedures';
 
 // Import tool modules to ensure they self-register
 import './tools/web-tools';
@@ -173,14 +174,32 @@ function getGemini(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isRetryable = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('503');
+      if (!isRetryable || attempt === maxRetries) throw err;
+      const delay = Math.pow(2, attempt + 1) * 1000 + Math.random() * 1000;
+      console.warn(`[Orchestrator] Retry ${attempt + 1}/${maxRetries}: ${msg.slice(0, 80)}`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw new Error('Unreachable');
+}
+
 async function quickGenerate(prompt: string): Promise<string> {
-  const ai = getGemini();
-  const response = await ai.models.generateContent({
-    model: FLASH_MODEL,
-    contents: prompt,
-    config: { temperature: 0.0, maxOutputTokens: 4000 },
+  return withRetry(async () => {
+    const ai = getGemini();
+    const response = await ai.models.generateContent({
+      model: FLASH_MODEL,
+      contents: prompt,
+      config: { temperature: 0.0, maxOutputTokens: 4000 },
+    });
+    return response.text ?? '';
   });
-  return response.text ?? '';
 }
 
 // ── Orchestrator ──────────────────────────────────────────────────────────────
@@ -481,7 +500,7 @@ Output ONLY a JSON array of strings, no other text. Example:
    * Emits tool_call, tool_result, and thinking events throughout.
    * Records per-call costs to execution_costs.
    */
-  async executeTask(task: ExecutionTask, executionPlan?: string | null): Promise<{ result: string; artifacts: TaskArtifact[] }> {
+  async executeTask(task: ExecutionTask, executionPlan?: string | null, procedure?: Procedure | null): Promise<{ result: string; artifacts: TaskArtifact[]; toolCallHistory: Array<{ name: string; args: Record<string, unknown> }> }> {
     const agent = getAgent(task.agentId);
     if (!agent) {
       throw new Error(`Unknown agent: ${task.agentId}`);
@@ -496,11 +515,17 @@ Output ONLY a JSON array of strings, no other text. Example:
     const memories = await loadAgentMemories(task.orgId, task.agentId, 8);
     const memoryContext = formatMemoriesAsContext(memories);
 
-    // Build system prompt (with memory appended)
+    // Build system prompt (with memory and procedure appended)
     let systemPrompt = this.buildSystemPrompt(agent, task);
     if (memoryContext) {
       systemPrompt += '\n\n' + memoryContext;
     }
+    if (procedure) {
+      systemPrompt += '\n\n' + formatProcedureAsContext(procedure);
+    }
+
+    // Track tool calls for procedure learning
+    const toolCallHistory: Array<{ name: string; args: Record<string, unknown> }> = [];
 
     // Get tool definitions for this outfit
     const tools = globalRegistry.getByNames(outfit.tools);
@@ -662,6 +687,9 @@ Output ONLY a JSON array of strings, no other text. Example:
           round,
         });
 
+        // Record for procedure learning
+        toolCallHistory.push({ name, args: args as Record<string, unknown> });
+
         // Execute the tool
         let toolResult: ToolResult;
         try {
@@ -787,7 +815,7 @@ Output ONLY a JSON array of strings, no other text. Example:
     // Post-processing: inject any [connect:X] markers that tools returned but agent didn't pass through
     finalResponse = this.injectMissedConnectMarkers(finalResponse, conversationHistory);
 
-    return { result: finalResponse, artifacts: allArtifacts };
+    return { result: finalResponse, artifacts: allArtifacts, toolCallHistory };
   }
 
   /**
@@ -943,27 +971,46 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         }
       }
 
+      // 2c. Procedure lookup — check if we've done this type of task before
+      let matchedProcedure: Procedure | null = null;
+      try {
+        matchedProcedure = await findMatchingProcedure(task.orgId, task.agentId, task.title);
+        if (matchedProcedure) {
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+            phase: 'procedure_match',
+            procedureId: matchedProcedure.id,
+            procedureTitle: matchedProcedure.title,
+            runCount: matchedProcedure.runCount,
+          });
+        }
+      } catch {
+        /* procedure lookup is best-effort */
+      }
+
       // 3. Execute
       await this.setTaskStatus(task, 'executing', { attempts: 1 });
       task.attempts = 1;
+      const executionStartMs = Date.now();
 
       await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
         phase: 'pre_execution',
         triageLevel,
         criteriaCount: task.acceptanceCriteria.length,
         hasPlan: !!executionPlan,
+        hasProcedure: !!matchedProcedure,
       });
 
-      let { result, artifacts } = await this.executeTask(task, executionPlan);
+      let { result, artifacts, toolCallHistory } = await this.executeTask(task, executionPlan, matchedProcedure);
 
       // Quality gate: if result is too short or clearly broken, retry ONCE
       if (result.length < 50 || /^(No response|Agent failed|error|undefined)/i.test(result.trim())) {
         console.warn(`[Orchestrator] Low quality result (${result.length} chars), retrying...`);
         await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', { phase: 'auto_retry', reason: 'low_quality_output' });
-        const retry = await this.executeTask(task, executionPlan);
+        const retry = await this.executeTask(task, executionPlan, matchedProcedure);
         if (retry.result.length > result.length) {
           result = retry.result;
           artifacts = [...artifacts, ...retry.artifacts];
+          toolCallHistory = retry.toolCallHistory;
         }
       }
 
@@ -992,6 +1039,14 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
           triageLevel,
           totalCost: task.costSpent,
         });
+
+        // Save procedure from successful QUICK task
+        const quickTimeMs = Date.now() - executionStartMs;
+        if (matchedProcedure) {
+          recordProcedureUse(matchedProcedure.id, quickTimeMs).catch(() => {});
+        } else {
+          saveProcedure(task.orgId, task.agentId, task.title, toolCallHistory, quickTimeMs).catch(() => {});
+        }
 
         return task;
       }

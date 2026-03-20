@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User, Trophy, Crown, Link2 } from "lucide-react";
+import { ROITracker } from "./ROITracker";
 import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -232,6 +233,18 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
               : `${completedJobs.length} completed · ${inProgressJobs.length} in progress · ${failedJobs.length} failed`}
           </p>
         </motion.div>
+
+        {/* ROI Tracker */}
+        {orgId && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-8"
+          >
+            <ROITracker orgId={orgId} />
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}

@@ -40,6 +40,7 @@ import {
   Target,
   TrendingUp,
   Mail,
+  CheckCircle,
   type LucideIcon,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -1432,41 +1433,77 @@ export function ExecutionDashboard({
               );
             }
 
-            /* ── Routing badge ── */
+            /* ── Routing badge — show which agent was assigned ── */
             if (msg.type === "routing") {
+              const agentId = msg.agentId ?? "";
+              const agentConfig = AGENT_NAMES[agentId];
               return (
-                <div key={msg.id} className="flex justify-center">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full">
-                    <ArrowRight className="w-3 h-3" />
-                    {msg.content}
-                    {msg.agentName && (
-                      <span className="text-indigo-400">({AGENT_NAMES[msg.agentId ?? ""]?.name === msg.agentName ? formatLabel(msg.agentId ?? "") : msg.agentName})</span>
+                <div key={msg.id} className="flex justify-center my-2">
+                  <div className="inline-flex items-center gap-2 text-[11px] font-medium bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 px-4 py-2 rounded-full">
+                    {agentConfig && (
+                      <span className={`w-5 h-5 ${agentConfig.color} rounded-full flex items-center justify-center text-[9px] font-bold text-white`}>
+                        {agentConfig.emoji}
+                      </span>
                     )}
-                  </span>
+                    <span className="text-indigo-700">{msg.content}</span>
+                  </div>
                 </div>
               );
             }
 
-            /* ── Thinking indicator ── */
+            /* ── Thinking / progress indicator — rich status with phase ── */
             if (msg.type === "thinking") {
+              const phase = msg.content?.toLowerCase() ?? "";
+              const isPlanning = phase.includes("plan");
+              const isExecuting = phase.includes("execut") || phase.includes("start");
+              const isReviewing = phase.includes("review");
+              const icon = isPlanning ? "📋" : isExecuting ? "⚡" : isReviewing ? "🔍" : "💭";
               return (
-                <div key={msg.id} className="flex items-start gap-2">
-                  <div className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                    <Brain className="w-3.5 h-3.5 text-violet-500" />
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 text-xs text-violet-600">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    {msg.content}
+                <div key={msg.id} className="flex items-center gap-2 pl-2 my-1">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50/50 border border-violet-100 rounded-full">
+                    <span className="text-xs">{icon}</span>
+                    <span className="text-[11px] text-violet-600 font-medium">{msg.content}</span>
+                    <Loader2 className="w-3 h-3 animate-spin text-violet-400" />
                   </div>
                 </div>
               );
             }
 
-            /* ── Tool use ── */
+            /* ── Tool use — show what the agent is doing ── */
             if (msg.type === "tool_use") {
+              const toolName = msg.toolName ?? "unknown";
+              const isComplete = !!msg.toolResult;
+              const label = toolName === "query_analysis" ? "Searching business data" :
+                toolName === "query_integration_data" ? "Pulling live data" :
+                toolName === "web_search" ? "Searching the web" :
+                toolName === "scrape_website" ? "Reading website" :
+                toolName === "send_email" ? "Sending email" :
+                toolName === "post_to_linkedin" ? "Posting to LinkedIn" :
+                toolName === "post_to_instagram" ? "Posting to Instagram" :
+                toolName === "post_to_twitter" ? "Posting to Twitter" :
+                toolName === "generate_media" ? "Creating media content" :
+                toolName === "get_social_analytics" ? "Analyzing social engagement" :
+                toolName === "create_jira_ticket" ? "Creating Jira ticket" :
+                toolName === "github_create_issue" ? "Creating GitHub issue" :
+                toolName === "write_to_google_sheets" ? "Writing to Sheets" :
+                `Using ${formatLabel(toolName)}`;
               return (
-                <div key={msg.id} className="pl-9">
-                  <ToolCard msg={msg} />
+                <div key={msg.id} className="pl-4 my-1">
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${
+                    isComplete ? "bg-emerald-50/50 border border-emerald-100" : "bg-indigo-50/50 border border-indigo-100"
+                  }`}>
+                    {isComplete ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    ) : (
+                      <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin shrink-0" />
+                    )}
+                    <span className={isComplete ? "text-emerald-700" : "text-indigo-700"}>
+                      {label}
+                    </span>
+                    {isComplete && msg.toolResult && (
+                      <span className="text-[10px] text-emerald-500 ml-auto">Done</span>
+                    )}
+                  </div>
                 </div>
               );
             }
