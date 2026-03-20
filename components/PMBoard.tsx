@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -18,6 +18,9 @@ import {
   FileText,
   Sparkles,
   Building2,
+  ClipboardList,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -58,27 +61,100 @@ const PRIORITY_CONFIG: Record<TicketPriority, { label: string; color: string; bg
   low:      { label: "Low",      color: "text-zinc-500",   bg: "bg-zinc-50",   border: "border-zinc-200",   icon: ChevronDown },
 };
 
-// ─── Demo Data ──────────────────────────────────────────────────────────────
-
-function makeDemoTickets(): Ticket[] {
-  return [
-    { id: "t1", title: "Redesign onboarding flow", description: "Simplify the 5-step onboarding to 3 steps based on user feedback. Reduce drop-off at step 3.", status: "in_progress", priority: "high", assignee: "Alice", assigneeType: "person", dueDate: "2026-03-25", tags: ["ux", "onboarding"], aiSummary: "User analytics show 40% drop-off at step 3. Combining steps 3+4 and adding progress indicator should improve completion.", linkedContactId: null, linkedContactName: null, createdAt: "2026-03-10" },
-    { id: "t2", title: "Fix payment webhook failures", description: "Stripe webhooks intermittently failing with 500 errors. Affects ~2% of transactions.", status: "todo", priority: "critical", assignee: "codebot", assigneeType: "agent", dueDate: "2026-03-21", tags: ["bug", "payments"], aiSummary: "Likely race condition in idempotency check. Need to add retry logic with exponential backoff.", linkedContactId: null, linkedContactName: null, createdAt: "2026-03-18" },
-    { id: "t3", title: "Q2 marketing campaign plan", description: "Develop comprehensive Q2 campaign strategy targeting enterprise segment.", status: "review", priority: "medium", assignee: "marketer", assigneeType: "agent", dueDate: "2026-03-28", tags: ["marketing", "q2"], aiSummary: "Draft complete with 3 campaign tracks: content series, webinar program, and ABM outreach to top 50 accounts.", linkedContactId: "c3", linkedContactName: "Maria Rodriguez", createdAt: "2026-03-12" },
-    { id: "t4", title: "Competitor analysis: NovaTech launch", description: "NovaTech announced new product line. Need competitive positioning update.", status: "backlog", priority: "high", assignee: null, assigneeType: null, dueDate: null, tags: ["research", "competitive"], aiSummary: null, linkedContactId: null, linkedContactName: null, createdAt: "2026-03-19" },
-    { id: "t5", title: "Update employee handbook", description: "Annual review of employee handbook for compliance updates.", status: "backlog", priority: "low", assignee: null, assigneeType: null, dueDate: "2026-04-15", tags: ["hr", "compliance"], aiSummary: null, linkedContactId: null, linkedContactName: null, createdAt: "2026-03-15" },
-    { id: "t6", title: "API rate limiting implementation", description: "Add rate limiting to public API endpoints to prevent abuse.", status: "in_progress", priority: "medium", assignee: "Bob", assigneeType: "person", dueDate: "2026-03-24", tags: ["backend", "security"], aiSummary: "Using token bucket algorithm. Redis-backed for distributed rate limiting across pods.", linkedContactId: null, linkedContactName: null, createdAt: "2026-03-11" },
-    { id: "t7", title: "Customer success report: MedGroup", description: "Generate quarterly impact report for MedGroup account.", status: "done", priority: "medium", assignee: "analyst", assigneeType: "agent", dueDate: "2026-03-15", tags: ["customer-success"], aiSummary: "Report delivered. 23% efficiency improvement, $150K savings identified. Customer renewed for 2 years.", linkedContactId: "c7", linkedContactName: "Lisa Thompson", createdAt: "2026-03-05" },
-    { id: "t8", title: "Integrate Slack notifications", description: "Add real-time Slack notifications for deal stage changes and task assignments.", status: "todo", priority: "medium", assignee: "codebot", assigneeType: "agent", dueDate: "2026-03-26", tags: ["integration", "slack"], aiSummary: null, linkedContactId: null, linkedContactName: null, createdAt: "2026-03-17" },
-    { id: "t9", title: "Sales deck refresh", description: "Update pitch deck with new case studies and Q1 metrics.", status: "review", priority: "high", assignee: "marketer", assigneeType: "agent", dueDate: "2026-03-22", tags: ["sales", "content"], aiSummary: "New deck includes 3 case studies, updated ROI calculator, and competitive comparison slides.", linkedContactId: null, linkedContactName: null, createdAt: "2026-03-14" },
-    { id: "t10", title: "Database migration plan", description: "Plan migration from PostgreSQL 14 to 16 with zero downtime.", status: "backlog", priority: "medium", assignee: null, assigneeType: null, dueDate: "2026-04-01", tags: ["infra", "database"], aiSummary: null, linkedContactId: null, linkedContactName: null, createdAt: "2026-03-19" },
-  ];
-}
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ─── Loading Skeleton ───────────────────────────────────────────────────────
+
+function PMLoadingSkeleton() {
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-4">
+      {Array.from({ length: 5 }).map((_, ci) => (
+        <div key={ci} className="flex-shrink-0 w-72">
+          <div className="h-10 bg-zinc-200 rounded-t-xl animate-pulse" />
+          <div className="space-y-2 min-h-[200px] bg-zinc-50/50 border border-t-0 border-zinc-200 rounded-b-xl p-2">
+            {Array.from({ length: 2 }).map((_, ti) => (
+              <div key={ti} className="bg-white border border-zinc-200 rounded-xl p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="h-5 w-16 bg-zinc-200 rounded animate-pulse" />
+                </div>
+                <div className="h-4 w-40 bg-zinc-200 rounded animate-pulse" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 bg-zinc-100 rounded-full animate-pulse" />
+                  <div className="h-3 w-16 bg-zinc-100 rounded animate-pulse" />
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-3 w-16 bg-zinc-100 rounded animate-pulse" />
+                  <div className="flex gap-1">
+                    <div className="h-4 w-10 bg-zinc-100 rounded animate-pulse" />
+                    <div className="h-4 w-10 bg-zinc-100 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Empty State ────────────────────────────────────────────────────────────
+
+function PMEmptyState({ onGenerate, onCreate }: { onGenerate: () => void; onCreate: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6">
+      <div className="w-16 h-16 rounded-2xl bg-zinc-100 flex items-center justify-center mb-6">
+        <ClipboardList className="w-8 h-8 text-zinc-300" />
+      </div>
+      <h2 className="text-lg font-semibold text-zinc-900 mb-2">No tickets yet</h2>
+      <p className="text-sm text-zinc-500 text-center max-w-md mb-8">
+        Generate tickets from your business analysis, or create one manually to get started.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={onGenerate}
+          className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all rounded-xl"
+        >
+          <Sparkles className="w-4 h-4" />
+          Generate from Analysis
+        </button>
+        <button
+          onClick={onCreate}
+          className="flex items-center gap-2 px-5 py-2.5 border border-zinc-200 text-zinc-700 text-xs font-mono uppercase tracking-widest hover:bg-zinc-50 transition-all rounded-xl"
+        >
+          <Plus className="w-4 h-4" />
+          Create Ticket
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Error State ────────────────────────────────────────────────────────────
+
+function PMErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6">
+      <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-6">
+        <AlertTriangle className="w-8 h-8 text-red-300" />
+      </div>
+      <h2 className="text-lg font-semibold text-zinc-900 mb-2">Failed to load tickets</h2>
+      <p className="text-sm text-zinc-500 text-center max-w-md mb-6">
+        Something went wrong while fetching your project board. Please try again.
+      </p>
+      <button
+        onClick={onRetry}
+        className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-all rounded-xl"
+      >
+        <RefreshCw className="w-4 h-4" />
+        Retry
+      </button>
+    </div>
+  );
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -91,36 +167,45 @@ interface PMBoardProps {
 export function PMBoard({ orgId, onBack }: PMBoardProps) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [generating, setGenerating] = useState(false);
 
-  // Fetch tickets — try API first, fall back to demo
-  useEffect(() => {
+  // Fetch tickets — API only, no demo fallback
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
-    fetch(`/api/pm/tickets?orgId=${encodeURIComponent(orgId)}`)
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error("not found");
-      })
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setTickets(data);
-        } else {
-          setTickets(makeDemoTickets());
-        }
-      })
-      .catch(() => {
-        setTickets(makeDemoTickets());
-      })
-      .finally(() => setLoading(false));
+    setError(false);
+    try {
+      const res = await fetch(`/api/pm/tickets?orgId=${encodeURIComponent(orgId)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setTickets(Array.isArray(data) ? data : []);
+    } catch {
+      setError(true);
+      setTickets([]);
+    }
+    setLoading(false);
   }, [orgId]);
+
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
   const handleGenerateFromAnalysis = async () => {
     setGenerating(true);
-    // In production this would call the analyst agent to generate tasks from the latest analysis
-    setTimeout(() => setGenerating(false), 1500);
+    try {
+      const res = await fetch(`/api/pm/generate?orgId=${encodeURIComponent(orgId)}`, { method: "POST" });
+      if (res.ok) {
+        await fetchTickets();
+      }
+    } catch {
+      // generation failed
+    }
+    setGenerating(false);
+  };
+
+  const handleCreateTicket = () => {
+    // Placeholder — would open a ticket creation form or modal
   };
 
   const handleAssignToAgent = (ticket: Ticket) => {
@@ -183,10 +268,12 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
 
           <div className="flex items-center gap-3">
             {/* Stats */}
-            <div className="hidden sm:flex items-center gap-4 px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono">
-              <span className="text-zinc-500">{totalActive} active</span>
-              <span className="text-emerald-600">{totalDone} done</span>
-            </div>
+            {tickets.length > 0 && (
+              <div className="hidden sm:flex items-center gap-4 px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono">
+                <span className="text-zinc-500">{totalActive} active</span>
+                <span className="text-emerald-600">{totalDone} done</span>
+              </div>
+            )}
 
             {/* Search */}
             <div className="relative">
@@ -229,13 +316,11 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
       {/* Main content */}
       <main className="max-w-[1400px] mx-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-32">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-10 h-10 border-2 border-zinc-100 border-t-zinc-900 rounded-full"
-            />
-          </div>
+          <PMLoadingSkeleton />
+        ) : error ? (
+          <PMErrorState onRetry={fetchTickets} />
+        ) : tickets.length === 0 ? (
+          <PMEmptyState onGenerate={handleGenerateFromAnalysis} onCreate={handleCreateTicket} />
         ) : (
           /* Kanban Board */
           <div className="flex gap-4 overflow-x-auto pb-4">
