@@ -41,12 +41,19 @@ import {
   TrendingUp,
   Mail,
   CheckCircle,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
 import { authFetch } from "@/lib/auth-fetch";
 import ConnectionPrompt from "./ConnectionPrompt";
+import {
+  generateArtifact,
+  detectArtifacts,
+  type DetectedArtifacts,
+  type ArtifactType,
+} from "@/lib/execution/artifact-generator";
 
 /* ── Agent name map ── */
 const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; color: string }> = {
@@ -281,6 +288,46 @@ function detectMultiTask(text: string): boolean {
   return false;
 }
 
+/* ── Wide task detection — same task across multiple items ── */
+const WIDE_PATTERNS = [
+  /(?:for|about|on|research|analyze|compare|review|contact|email|brief)\s+(?:these|the following|each of|all of|every)\s+\w+[\s:]+(.+)/i,
+  /for\s+each\s+\w+\s+(?:in|:)\s*(.+)/i,
+  /\b(?:all|each|every)\s+(?:my|our)\s+(?:clients?|customers?|leads?|contacts?|accounts?|prospects?|subscribers?)\b/i,
+];
+
+function detectWideTask(text: string): boolean {
+  for (const pattern of WIDE_PATTERNS) {
+    if (pattern.test(text)) return true;
+  }
+  // Colon-separated list with 2+ items after an action phrase
+  const colonMatch = text.match(/^.+:\s*(.+)$/s);
+  if (colonMatch) {
+    const items = colonMatch[1].split(/,\s*(?:and\s+)?|\s+and\s+/).filter(s => s.trim().length > 0);
+    if (items.length >= 2) return true;
+  }
+  return false;
+}
+
+/* ── Wide task card status type ── */
+interface WideTaskCard {
+  id: string;
+  item: string;
+  title: string;
+  agentId: string;
+  status: "queued" | "in_progress" | "completed" | "failed";
+  result?: string;
+  costCents: number;
+  toolsUsed: string[];
+}
+
+interface WideExecution {
+  wideId: string;
+  taskTemplate: string;
+  agentId: string;
+  cards: WideTaskCard[];
+  startedAt: number;
+}
+
 /* ── Conversational pre-filter — only catch true non-tasks ── */
 const THANKS_PATTERN = /^(thanks|thank you|thx|ty|cheers)\b/i;
 
@@ -319,6 +366,77 @@ function ToolCard({ msg }: { msg: ChatMessage }) {
         </pre>
       )}
     </button>
+  );
+}
+
+/* ── Artifact download bar (Manus-style) ── */
+function ArtifactDownloadBar({ content, title }: { content: string; title: string }) {
+  const detected = detectArtifacts(content);
+  const [copiedMd, setCopiedMd] = useState(false);
+
+  // Don't show if content is trivial (< 100 chars, no structure)
+  if (content.length < 100 && !detected.hasTable && !detected.hasCodeBlock) return null;
+
+  const downloadArtifact = (type: ArtifactType) => {
+    const artifact = generateArtifact(type, title, content);
+    const blob = new Blob([artifact.content], { type: artifact.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = artifact.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyMarkdown = () => {
+    navigator.clipboard.writeText(content);
+    setCopiedMd(true);
+    setTimeout(() => setCopiedMd(false), 2000);
+  };
+
+  const btnClass =
+    "flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium rounded-full transition-all";
+
+  return (
+    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+      {detected.hasTable && (
+        <button
+          onClick={() => downloadArtifact("csv")}
+          className={`${btnClass} text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100`}
+        >
+          <Download className="w-3 h-3" /> CSV
+        </button>
+      )}
+      {(detected.isReport || content.length > 200) && (
+        <button
+          onClick={() => downloadArtifact("html")}
+          className={`${btnClass} text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100`}
+        >
+          <Download className="w-3 h-3" /> Report
+        </button>
+      )}
+      {detected.hasStructuredData && (
+        <button
+          onClick={() => downloadArtifact("json")}
+          className={`${btnClass} text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100`}
+        >
+          <Download className="w-3 h-3" /> JSON
+        </button>
+      )}
+      <button
+        onClick={copyMarkdown}
+        className={`${btnClass} text-zinc-600 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100`}
+      >
+        {copiedMd ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+        {copiedMd ? "Copied" : "Markdown"}
+      </button>
+      <button
+        onClick={() => downloadArtifact("markdown")}
+        className={`${btnClass} text-zinc-600 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100`}
+      >
+        <Download className="w-3 h-3" /> .md
+      </button>
+    </div>
   );
 }
 
@@ -385,6 +503,7 @@ export function ExecutionDashboard({
   const [showSidebar, setShowSidebar] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<{ id: string; file: File; preview?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [wideExecution, setWideExecution] = useState<WideExecution | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -611,6 +730,82 @@ export function ExecutionDashboard({
           clearInterval(interval);
           pollIntervals.current.delete(interval);
           setActiveAgents(prev => { const s = new Set(prev); s.delete(agentId); return s; });
+        }
+      } catch {
+        // silently ignore
+      }
+    }, 2000);
+
+    pollIntervals.current.add(interval);
+  }
+
+  /* ── Poll wide tasks — update grid cards ── */
+  function pollWideTask(taskId: string, item: string) {
+    let pollCount = 0;
+    const interval = setInterval(async () => {
+      pollCount++;
+      if (pollCount > 150) {
+        clearInterval(interval);
+        pollIntervals.current.delete(interval);
+        return;
+      }
+
+      try {
+        const res = await authFetch(`/api/execution/tasks/${taskId}`);
+        if (res.status === 401 || !res.ok) {
+          if (res.status === 401) {
+            clearInterval(interval);
+            pollIntervals.current.delete(interval);
+          }
+          return;
+        }
+        const { task, events: dbEvents } = await res.json();
+
+        // Extract tools used from events
+        const tools = (dbEvents ?? [])
+          .filter((e: any) => e.event_type === "tool_call")
+          .map((e: any) => e.data?.tool ?? "unknown");
+
+        // Update the wide execution card
+        setWideExecution(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            cards: prev.cards.map(card =>
+              card.id === taskId
+                ? {
+                    ...card,
+                    status: task.status as WideTaskCard["status"],
+                    result: task.result ?? undefined,
+                    costCents: Math.round((task.cost_spent ?? 0) * 100),
+                    toolsUsed: tools,
+                  }
+                : card
+            ),
+          };
+        });
+
+        if (isTerminalStatus(task.status)) {
+          clearInterval(interval);
+          pollIntervals.current.delete(interval);
+
+          // Check if all wide tasks are done
+          setWideExecution(prev => {
+            if (!prev) return prev;
+            const allDone = prev.cards.every(card =>
+              card.id === taskId
+                ? isTerminalStatus(task.status)
+                : isTerminalStatus(card.status)
+            );
+            if (allDone) {
+              setActiveAgents(prevAgents => {
+                const s = new Set(prevAgents);
+                s.delete(prev.agentId);
+                return s;
+              });
+            }
+            return prev;
+          });
         }
       } catch {
         // silently ignore
@@ -1056,9 +1251,62 @@ export function ExecutionDashboard({
         .join('\n');
       const contextBlock = recentContext ? `\n\n--- CONVERSATION CONTEXT (previous messages in this session) ---\n${recentContext}\n--- END CONTEXT ---\nIMPORTANT: Use the context above. If the user references something from a previous message (e.g. "post this", "send that", "use those numbers"), find it in the context. Do NOT create new content if the user is asking you to USE existing content.` : '';
 
-      const isMultiTask = detectMultiTask(msg);
+      const isWide = detectWideTask(msg);
+      const isMultiTask = !isWide && detectMultiTask(msg);
 
-      if (isMultiTask) {
+      if (isWide) {
+        // ── Wide path: same task across multiple items in parallel ──
+        const res = await authFetch("/api/execution/wide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orgId, task: msg + contextBlock, costCeiling: 0.50, conversationId: currentConvoId }),
+        });
+
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => null);
+          throw new Error(res.status === 401 ? "Session expired. Please refresh the page or sign in again." : errBody?.error || "Failed to create wide execution");
+        }
+        const { tasks: wideTasks, wideId, agentId: resolvedAgent, taskTemplate } = await res.json();
+
+        if (!wideTasks || wideTasks.length === 0) throw new Error("No items detected for wide execution");
+
+        // Initialize wide execution grid
+        const cards: WideTaskCard[] = wideTasks.map((t: any) => ({
+          id: t.id,
+          item: t.item,
+          title: t.title,
+          agentId: t.agentId ?? resolvedAgent,
+          status: "queued" as const,
+          costCents: 0,
+          toolsUsed: [],
+        }));
+
+        setWideExecution({
+          wideId,
+          taskTemplate,
+          agentId: resolvedAgent,
+          cards,
+          startedAt: Date.now(),
+        });
+
+        setActiveAgents(prev => new Set(prev).add(resolvedAgent));
+
+        // Add routing message
+        const agentInfo = AGENT_NAMES[resolvedAgent] ?? { name: resolvedAgent, emoji: "?" };
+        setMessages(prev => [...prev, {
+          id: `wide-route-${wideId}`,
+          timestamp: Date.now(),
+          type: "routing",
+          content: `Wide execution: ${agentInfo.name} working on ${wideTasks.length} items in parallel`,
+          agentName: agentInfo.name,
+          agentId: resolvedAgent,
+        }]);
+
+        // Start polling each wide task
+        for (const ct of wideTasks) {
+          pollWideTask(ct.id, ct.item);
+        }
+      } else if (isMultiTask) {
         // ── Batch path: split into multiple tasks ──
         const res = await authFetch("/api/execution/batch", {
           method: "POST",
@@ -1513,7 +1761,10 @@ export function ExecutionDashboard({
               const agentId = msg.agentId ?? "strategist";
               const initial = AGENT_NAMES[agentId]?.emoji ?? "A";
               const agentColor = AGENT_NAMES[agentId]?.color ?? "bg-emerald-500";
+              const agentRole = AGENT_NAMES[agentId]?.role ?? "Agent";
               const contentParts = splitConnectMarkers(msg.content);
+              const detected = detectArtifacts(msg.content);
+              const isDocument = detected.isReport || detected.hasTable || msg.content.length > 600;
               const proseClasses = `prose prose-sm prose-zinc max-w-none
                           prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
                           prose-h2:text-base prose-h3:text-sm
@@ -1525,6 +1776,11 @@ export function ExecutionDashboard({
                           prose-table:text-sm prose-th:text-left prose-th:text-zinc-600 prose-th:font-medium prose-th:pb-1 prose-td:py-1
                           prose-hr:my-3 prose-hr:border-zinc-200
                           prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline`;
+
+              // Extract a title from the first heading or agent name
+              const titleMatch = msg.content.match(/^#+\s+(.+)$/m);
+              const docTitle = titleMatch?.[1] ?? `${msg.agentName ?? agentRole} Output`;
+
               return (
                 <div key={msg.id} className="space-y-2">
                   <div className="flex items-start gap-2">
@@ -1533,19 +1789,53 @@ export function ExecutionDashboard({
                     </div>
                     <div className="max-w-[85%] min-w-0">
                       <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
-                      <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                        <div className={proseClasses}>
-                          {contentParts.map((part, idx) =>
-                            part.type === "text" ? (
-                              <ReactMarkdown key={idx}>{part.value}</ReactMarkdown>
-                            ) : (
-                              <div key={idx} className="my-2">
-                                <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
-                              </div>
-                            )
-                          )}
+                      {isDocument ? (
+                        /* ── Document frame (Manus-style) ── */
+                        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
+                          {/* Document header bar */}
+                          <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-zinc-50 to-white border-b border-zinc-100">
+                            <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                            <span className="text-xs font-semibold text-zinc-800 truncate flex-1">{docTitle}</span>
+                            <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">
+                              {detected.hasTable ? "DATA" : "REPORT"}
+                            </span>
+                          </div>
+                          {/* Document body */}
+                          <div className="px-4 py-3">
+                            <div className={proseClasses}>
+                              {contentParts.map((part, idx) =>
+                                part.type === "text" ? (
+                                  <ReactMarkdown key={idx}>{part.value}</ReactMarkdown>
+                                ) : (
+                                  <div key={idx} className="my-2">
+                                    <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                          {/* Download bar */}
+                          <div className="px-4 py-2 bg-zinc-50/80 border-t border-zinc-100">
+                            <ArtifactDownloadBar content={msg.content} title={docTitle} />
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        /* ── Regular chat bubble for short responses ── */
+                        <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                          <div className={proseClasses}>
+                            {contentParts.map((part, idx) =>
+                              part.type === "text" ? (
+                                <ReactMarkdown key={idx}>{part.value}</ReactMarkdown>
+                              ) : (
+                                <div key={idx} className="my-2">
+                                  <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
+                                </div>
+                              )
+                            )}
+                          </div>
+                          <ArtifactDownloadBar content={msg.content} title={docTitle} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

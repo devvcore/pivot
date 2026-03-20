@@ -164,3 +164,47 @@ export function extractLessons(
 
   return lessons.slice(0, 3);
 }
+
+/**
+ * Silent fact extraction from task output — learns business context without announcing.
+ * Extracts client names, project details, dollar amounts, and key decisions.
+ */
+export function extractFactsFromOutput(
+  output: string,
+  taskTitle: string,
+): string[] {
+  const facts: string[] = [];
+
+  // Extract client/customer names mentioned alongside dollar amounts
+  const clientPayments = output.match(/(\w[\w\s]{2,30})\s*[\(—–-]\s*\$[\d,.]+/g);
+  if (clientPayments) {
+    for (const match of clientPayments.slice(0, 3)) {
+      facts.push(`CONTEXT: Client reference from "${taskTitle.slice(0, 40)}": ${match.trim()}`);
+    }
+  }
+
+  // Extract email addresses mentioned
+  const emails = output.match(/[\w.-]+@[\w.-]+\.\w{2,}/g);
+  if (emails) {
+    const uniqueEmails = [...new Set(emails)].slice(0, 3);
+    for (const email of uniqueEmails) {
+      facts.push(`CONTEXT: Contact email found: ${email}`);
+    }
+  }
+
+  // Extract key dollar amounts with labels
+  const amounts = output.match(/(?:MRR|ARR|revenue|cost|budget|runway|burn rate|total)[:\s]*\$[\d,.]+[KMB]?/gi);
+  if (amounts) {
+    for (const amount of amounts.slice(0, 2)) {
+      facts.push(`CONTEXT: Business metric: ${amount.trim()}`);
+    }
+  }
+
+  // Extract decisions or commitments
+  const decisions = output.match(/(?:decided to|will|plan to|committed to|agreed to)\s+[^.]{10,60}\./gi);
+  if (decisions) {
+    facts.push(`CONTEXT: Decision from "${taskTitle.slice(0, 30)}": ${decisions[0].trim()}`);
+  }
+
+  return facts.slice(0, 5);
+}

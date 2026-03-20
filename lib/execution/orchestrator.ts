@@ -20,8 +20,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAgent, type AgentDefinition } from './agents/index';
 import { OUTFITS, getOutfitSystemPrompt } from './outfits';
 import { globalRegistry, createCostTracker, type ToolContext, type ToolResult } from './tools/index';
-import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLessons } from './agent-memory';
+import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLessons, extractFactsFromOutput } from './agent-memory';
 import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedureAsContext, type Procedure } from './procedures';
+import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory } from './defensive-harness';
+import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, type Directive } from './directives';
+import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
 
 // Import tool modules to ensure they self-register
 import './tools/web-tools';
@@ -206,9 +209,11 @@ async function quickGenerate(prompt: string): Promise<string> {
 
 export class Orchestrator {
   private deliverables: Record<string, unknown> | undefined;
+  private isBackground: boolean;
 
-  constructor(deliverables?: Record<string, unknown>) {
+  constructor(deliverables?: Record<string, unknown>, isBackground = false) {
     this.deliverables = deliverables;
+    this.isBackground = isBackground;
   }
 
   // ── Event Emission ────────────────────────────────────────────────────────────
@@ -239,6 +244,104 @@ export class Orchestrator {
     } catch (err) {
       console.warn(`[Orchestrator] Event emission error (${eventType}):`, err);
     }
+  }
+
+  // ── Approval Gate ────────────────────────────────────────────────────────────
+
+  /**
+   * Request approval for an ACT/DESTRUCTIVE tool call in background mode.
+   * Creates an approval row in execution_approvals, emits an event,
+   * then polls for up to 5 minutes (every 10s) for a decision.
+   *
+   * Returns: 'approved' | 'rejected' | 'timeout'
+   */
+  private async requestApproval(
+    task: ExecutionTask,
+    toolName: string,
+    toolArgs: Record<string, unknown>
+  ): Promise<'approved' | 'rejected' | 'timeout'> {
+    const supabase = createAdminClient();
+    const actionDescription = describeToolAction(toolName, toolArgs);
+    const riskLevel = assessRiskLevel(toolName, toolArgs);
+    const tier = getToolTier(toolName);
+
+    // 1. Insert approval request
+    const { data: approval, error: insertError } = await supabase
+      .from('execution_approvals')
+      .insert({
+        task_id: task.id,
+        org_id: task.orgId,
+        agent_id: task.agentId,
+        action_description: actionDescription,
+        reasoning: `Agent "${task.agentId}" wants to execute ${toolName} (tier: ${tier}) during background/scheduled run.`,
+        risk_level: riskLevel,
+        preview: { toolName, toolArgs, tier },
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (insertError || !approval) {
+      console.error('[Orchestrator] Approval insert failed:', insertError?.message);
+      // Fail-safe: if we can't create an approval, block the action
+      return 'timeout';
+    }
+
+    const approvalId = (approval as Record<string, unknown>).id as string;
+
+    // 2. Update task status to awaiting_approval
+    await this.setTaskStatus(task, 'awaiting_approval');
+
+    // 3. Emit approval_request event (dashboard can subscribe to this)
+    await this.emitEvent(task.id, task.agentId, task.orgId, 'approval_request', {
+      approvalId,
+      toolName,
+      toolArgs,
+      actionDescription,
+      riskLevel,
+      tier,
+    });
+
+    // 4. Poll for approval decision (max 5 minutes, every 10 seconds)
+    const MAX_WAIT_MS = 5 * 60 * 1000;
+    const POLL_INTERVAL_MS = 10 * 1000;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < MAX_WAIT_MS) {
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+
+      const { data: updated, error: fetchError } = await supabase
+        .from('execution_approvals')
+        .select('status')
+        .eq('id', approvalId)
+        .single();
+
+      if (fetchError) {
+        console.warn('[Orchestrator] Approval poll error:', fetchError.message);
+        continue;
+      }
+
+      const status = (updated as Record<string, unknown>)?.status as string;
+
+      if (status === 'approved') {
+        // Resume executing status
+        await this.setTaskStatus(task, 'executing');
+        return 'approved';
+      } else if (status === 'rejected' || status === 'revision_requested') {
+        await this.setTaskStatus(task, 'executing');
+        return 'rejected';
+      }
+      // Still 'pending' → keep polling
+    }
+
+    // 5. Timeout — mark the approval as timed out
+    await supabase
+      .from('execution_approvals')
+      .update({ status: 'rejected', feedback: 'Auto-rejected: approval timed out after 5 minutes' })
+      .eq('id', approvalId);
+
+    await this.setTaskStatus(task, 'executing');
+    return 'timeout';
   }
 
   // ── Cost Tracking to Supabase ─────────────────────────────────────────────────
@@ -511,12 +614,20 @@ Output ONLY a JSON array of strings, no other text. Example:
       throw new Error(`Unknown outfit: ${agent.defaultOutfit}`);
     }
 
-    // Load persistent agent memory
-    const memories = await loadAgentMemories(task.orgId, task.agentId, 8);
+    // Load persistent agent memory + org directives in parallel
+    const [memories, orgDirectives] = await Promise.all([
+      loadAgentMemories(task.orgId, task.agentId, 8),
+      loadDirectives(task.orgId),
+    ]);
     const memoryContext = formatMemoriesAsContext(memories);
+    const directivesContext = formatDirectivesAsContext(orgDirectives);
 
-    // Build system prompt (with memory and procedure appended)
+    // Build system prompt (with directives, memory, and procedure appended)
     let systemPrompt = this.buildSystemPrompt(agent, task);
+    // Directives go BEFORE behavioral rules (injected right after domain knowledge)
+    if (directivesContext) {
+      systemPrompt += '\n\n' + directivesContext;
+    }
     if (memoryContext) {
       systemPrompt += '\n\n' + memoryContext;
     }
@@ -645,7 +756,34 @@ Output ONLY a JSON array of strings, no other text. Example:
       const functionResponses: FunctionResponsePart[] = [];
 
       for (const fc of functionCalls) {
-        const { name, args } = fc.functionCall;
+        let { name, args } = fc.functionCall;
+
+        // Defensive harness: fuzzy-match hallucinated tool names
+        if (!globalRegistry.get(name)) {
+          const matched = fuzzyMatchTool(name, outfit.tools);
+          if (matched) {
+            console.warn(`[DefensiveHarness] Fuzzy-matched tool "${name}" → "${matched}"`);
+            await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_call', {
+              tool: name,
+              correctedTo: matched,
+              round,
+              harness: 'fuzzy_match',
+            });
+            name = matched;
+          }
+        }
+
+        // Defensive harness: correct misspelled arg names + coerce types
+        const toolDef = globalRegistry.get(name);
+        if (toolDef) {
+          const expectedParams = Object.keys(toolDef.parameters);
+          args = correctArgs(name, args as Record<string, unknown>, expectedParams);
+          const typeSchema: Record<string, string> = {};
+          for (const [pName, pDef] of Object.entries(toolDef.parameters)) {
+            typeSchema[pName] = pDef.type;
+          }
+          args = coerceArgs(args, typeSchema);
+        }
 
         // Loop guard: track call frequency
         const sig = `${name}:${JSON.stringify(args)}`;
@@ -680,11 +818,54 @@ Output ONLY a JSON array of strings, no other text. Example:
           continue;
         }
 
+        // Directive violation check — block 'never' directives before execution
+        const violation = checkDirectiveViolation(name, args as Record<string, unknown>, orgDirectives);
+        if (violation.violated) {
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_call', {
+            tool: name,
+            args,
+            round,
+            blocked: true,
+            reason: violation.directive,
+          });
+          functionResponses.push({
+            functionResponse: {
+              name,
+              response: { output: violation.directive },
+            },
+          });
+          continue;
+        }
+
+        // ── Approval gate: ACT/DESTRUCTIVE tools need approval in background mode ──
+        if (needsApproval(name, this.isBackground)) {
+          const approvalResult = await this.requestApproval(task, name, args as Record<string, unknown>);
+          if (approvalResult === 'rejected') {
+            functionResponses.push({
+              functionResponse: {
+                name,
+                response: { output: `ACTION BLOCKED: The user rejected this ${name} action. Do NOT retry. Explain that the action was not taken and offer alternatives.` },
+              },
+            });
+            continue;
+          } else if (approvalResult === 'timeout') {
+            functionResponses.push({
+              functionResponse: {
+                name,
+                response: { output: `APPROVAL TIMED OUT: No response within 5 minutes for ${name}. The action was NOT executed. Mention this in your response and suggest the user can re-trigger it.` },
+              },
+            });
+            continue;
+          }
+          // 'approved' → fall through to execute
+        }
+
         // Emit tool_call event
         await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_call', {
           tool: name,
           args,
           round,
+          tier: getToolTier(name),
         });
 
         // Record for procedure learning
@@ -768,11 +949,16 @@ Output ONLY a JSON array of strings, no other text. Example:
         parts: functionResponses,
       });
 
-      // Self-reflection checkpoint: after 2 tool rounds, nudge agent to synthesize
-      if (round === 2 && functionCalls.length > 0) {
+      // Manus-style todo.md attention mechanism: re-inject task goals after every 2 rounds
+      // This prevents the agent from "losing focus" as conversation grows
+      if (round > 0 && round % 2 === 0 && functionCalls.length > 0) {
+        const toolsSoFar = [...toolCallCounts.keys()].join(', ');
+        const progressReminder = round === 2
+          ? `PROGRESS CHECK — You've called: ${toolsSoFar}. Your task: "${task.title}". Do you have ENOUGH data to write a high-quality response? If yes, WRITE IT NOW. If you need one more specific piece of data, get it and then write.`
+          : `FOCUS REMINDER — Task: "${task.title}". You've used ${round} tool rounds (${toolsSoFar}). Write your deliverable NOW with what you have. Do NOT call more tools.`;
         conversationHistory.push({
           role: 'user',
-          parts: [{ text: 'SYSTEM CHECKPOINT: You have gathered data from multiple tools. Before calling more tools, assess: do you have ENOUGH information to produce a high-quality response? If yes, write your deliverable NOW. Only call more tools if you have a specific data gap that would significantly improve the output.' }],
+          parts: [{ text: `SYSTEM: ${progressReminder}` }],
         });
       }
 
@@ -809,6 +995,44 @@ Output ONLY a JSON array of strings, no other text. Example:
       } catch (err) {
         console.error('[Orchestrator] Forced synthesis failed:', err instanceof Error ? err.message : err);
         finalResponse = 'The agent gathered research data but failed to synthesize a final response. Please try again.';
+      }
+    }
+
+    // Defensive harness: detect lazy response and re-generate with tool context
+    const toolOutputs = extractToolOutputsFromHistory(conversationHistory);
+    if (toolOutputs.length > 0 && detectLazyResponse(finalResponse, toolOutputs)) {
+      console.warn(`[DefensiveHarness] Lazy response detected (${finalResponse.length} chars). Re-generating with tool context.`);
+      await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+        phase: 'lazy_response_recovery',
+        originalLength: finalResponse.length,
+        toolOutputCount: toolOutputs.length,
+      });
+
+      // Append tool outputs as context and ask for a real response
+      const toolSummary = toolOutputs
+        .map((o, i) => `--- Tool Result ${i + 1} ---\n${o.slice(0, 3000)}`)
+        .join('\n\n');
+      conversationHistory.push({
+        role: 'user',
+        parts: [{ text: `SYSTEM: Your response was too brief and did not use the tool data you gathered. Here is a summary of ALL tool outputs:\n\n${toolSummary}\n\nNow write a COMPLETE, DETAILED response that synthesizes this data. Address the task fully: "${task.title}". Minimum 200 words.` }],
+      });
+
+      try {
+        const regenResponse = await ai.models.generateContent({
+          model: FLASH_MODEL,
+          contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,
+            systemInstruction: systemPrompt,
+          } as Record<string, unknown>,
+        });
+        const regenText = regenResponse.text ?? '';
+        if (regenText.length > finalResponse.length) {
+          finalResponse = regenText;
+        }
+      } catch (err) {
+        console.error('[DefensiveHarness] Lazy response recovery failed:', err instanceof Error ? err.message : err);
       }
     }
 
@@ -1083,6 +1307,14 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
             totalCost: task.costSpent,
           });
 
+          // Save procedure from reviewed+accepted task
+          const acceptTimeMs = Date.now() - executionStartMs;
+          if (matchedProcedure) {
+            recordProcedureUse(matchedProcedure.id, acceptTimeMs).catch(() => {});
+          } else {
+            saveProcedure(task.orgId, task.agentId, task.title, toolCallHistory, acceptTimeMs).catch(() => {});
+          }
+
           return task;
         }
 
@@ -1138,6 +1370,12 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
           task.id);
       }
 
+      // Silent fact extraction from output (Ultron pattern — learns without announcing)
+      const facts = extractFactsFromOutput(result, task.title);
+      for (const fact of facts) {
+        await saveAgentMemory(task.orgId, task.agentId, fact, 'context', task.id).catch(() => {});
+      }
+
       // Exhausted revision attempts -- accept what we have
       task.completedAt = new Date().toISOString();
       task.reviewFeedback = (task.reviewFeedback ?? '') + '\n[Accepted after max revision attempts]';
@@ -1154,6 +1392,14 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         verdict: 'accepted_after_max_revisions',
         totalCost: task.costSpent,
       });
+
+      // Save procedure even from exhausted-revision completion (still useful pattern)
+      const exhaustedTimeMs = Date.now() - executionStartMs;
+      if (matchedProcedure) {
+        recordProcedureUse(matchedProcedure.id, exhaustedTimeMs).catch(() => {});
+      } else {
+        saveProcedure(task.orgId, task.agentId, task.title, toolCallHistory, exhaustedTimeMs).catch(() => {});
+      }
 
       return task;
 
@@ -1547,9 +1793,11 @@ Please address all the feedback above and produce an improved version.`,
 
 /**
  * Create an orchestrator with deliverables loaded.
+ * @param deliverables - Business analysis data and integration data
+ * @param isBackground - If true, ACT-tier tools require approval before execution
  */
-export function createOrchestrator(deliverables?: Record<string, unknown>): Orchestrator {
-  return new Orchestrator(deliverables);
+export function createOrchestrator(deliverables?: Record<string, unknown>, isBackground = false): Orchestrator {
+  return new Orchestrator(deliverables, isBackground);
 }
 
 /**
@@ -1561,9 +1809,9 @@ export async function executeQuickTask(
   description: string,
   agentId: string,
   deliverables?: Record<string, unknown>,
-  options?: { priority?: TaskPriority; costCeiling?: number }
+  options?: { priority?: TaskPriority; costCeiling?: number; isBackground?: boolean }
 ): Promise<ExecutionTask> {
-  const orchestrator = createOrchestrator(deliverables);
+  const orchestrator = createOrchestrator(deliverables, options?.isBackground ?? false);
 
   const taskId = await orchestrator.submitTask({
     orgId,

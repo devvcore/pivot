@@ -92,7 +92,7 @@ export async function GET(req: Request) {
       }
 
       // Fire pipeline
-      const orchestrator = createOrchestrator(deliverables);
+      const orchestrator = createOrchestrator(deliverables, true /* isBackground */);
       orchestrator.runPipeline(task.id).then(async (completedTask) => {
         // Push result to channel if configured
         if (schedule.push_channel && schedule.push_target && completedTask.result) {
