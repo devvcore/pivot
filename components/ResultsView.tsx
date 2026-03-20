@@ -357,7 +357,7 @@ function PivvyChatOverlay({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 bg-zinc-900 rounded-full flex items-center justify-center">
             <MessageCircle className="w-3 h-3 text-white" />
           </div>
           <span className="text-sm font-semibold text-zinc-900">Ask Pivvy</span>
@@ -905,7 +905,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                       className={`group relative bg-white border-2 rounded-2xl p-5 text-left transition-all shadow-sm hover:shadow-md ${cat.borderColor}`}
                     >
                       {/* Icon */}
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-3 shadow-sm group-hover:scale-105 transition-transform`}>
+                      <div className={`w-10 h-10 rounded-xl ${cat.color} flex items-center justify-center mb-3 transition-colors`}>
                         <Icon className="w-5 h-5 text-white" />
                       </div>
 
@@ -1667,7 +1667,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
       {/* ── Floating Ask Pivvy Button ──────────────────────────────────────── */}
       <button
         onClick={() => setPivvyOpen(!pivvyOpen)}
-        className="fixed bottom-6 right-24 z-40 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+        className="fixed bottom-6 right-24 z-40 w-12 h-12 bg-zinc-900 text-white rounded-full shadow-lg hover:shadow-md transition-all flex items-center justify-center"
         title="Ask Pivvy"
       >
         {pivvyOpen ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}

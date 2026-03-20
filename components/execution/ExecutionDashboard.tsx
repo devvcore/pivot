@@ -1687,7 +1687,7 @@ export function ExecutionDashboard({
               const agentConfig = AGENT_NAMES[agentId];
               return (
                 <div key={msg.id} className="flex justify-center my-2">
-                  <div className="inline-flex items-center gap-2 text-[11px] font-medium bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 px-4 py-2 rounded-full">
+                  <div className="inline-flex items-center gap-2 text-[11px] font-medium bg-zinc-50 border border-indigo-100 px-4 py-2 rounded-full">
                     {agentConfig && (
                       <span className={`w-5 h-5 ${agentConfig.color} rounded-full flex items-center justify-center text-[9px] font-bold text-white`}>
                         {agentConfig.emoji}
@@ -1793,7 +1793,7 @@ export function ExecutionDashboard({
                         /* ── Document frame (Manus-style) ── */
                         <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
                           {/* Document header bar */}
-                          <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-zinc-50 to-white border-b border-zinc-100">
+                          <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-zinc-100">
                             <FileText className="w-3.5 h-3.5 text-indigo-500" />
                             <span className="text-xs font-semibold text-zinc-800 truncate flex-1">{docTitle}</span>
                             <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">
@@ -2049,7 +2049,7 @@ export function ExecutionDashboard({
         </div>
 
         {/* ── Input (textarea for multiline support) ── */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-[#F8F9FA] via-[#F8F9FA] to-transparent pt-6 pb-4 px-4">
+        <div className="sticky bottom-0 bg-[#F8F9FA] pt-6 pb-4 px-4">
           {/* File previews */}
           {stagedFiles.length > 0 && (
             <div className="flex gap-2 mb-2 flex-wrap px-1">

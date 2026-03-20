@@ -96,7 +96,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white hover:scale-105 transition-all group"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-zinc-900 rounded-full shadow-sm flex items-center justify-center text-white hover:bg-zinc-800 transition-colors group"
         title="Ask Pivvy anything"
       >
         <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
@@ -109,10 +109,10 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
   if (minimized) {
     return (
       <div
-        className="fixed bottom-6 right-6 z-50 bg-white border border-zinc-200 rounded-2xl shadow-xl px-4 py-2 flex items-center gap-3 cursor-pointer hover:shadow-2xl transition-all"
+        className="fixed bottom-6 right-6 z-50 bg-white border border-zinc-200 rounded-xl shadow-sm px-4 py-2 flex items-center gap-3 cursor-pointer hover:border-zinc-300 transition-colors"
         onClick={() => setMinimized(false)}
       >
-        <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full flex items-center justify-center">
+        <div className="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center">
           <MessageCircle className="w-4 h-4 text-white" />
         </div>
         <span className="text-sm font-medium text-zinc-700">Pivvy</span>
@@ -128,23 +128,23 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
 
   // Full chat panel
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[560px] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[560px] bg-white border border-zinc-200 rounded-xl shadow-lg flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 bg-gradient-to-r from-indigo-500 to-blue-600 flex items-center justify-between shrink-0">
+      <div className="px-4 py-3 bg-zinc-900 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <MessageCircle className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-zinc-700 rounded-full flex items-center justify-center">
+            <MessageCircle className="w-4 h-4 text-zinc-200" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Pivvy</p>
-            <p className="text-[10px] text-white/70">Your AI business advisor</p>
+            <p className="text-sm font-semibold text-zinc-100">Pivvy</p>
+            <p className="text-[10px] text-zinc-500">Your AI business advisor</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setMinimized(true)} className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+          <button onClick={() => setMinimized(true)} className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors">
             <Minimize2 className="w-4 h-4" />
           </button>
-          <button onClick={() => { setOpen(false); setMinimized(false); }} className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+          <button onClick={() => { setOpen(false); setMinimized(false); }} className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -173,7 +173,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
           if (msg.role === "user") {
             return (
               <div key={i} className="flex justify-end">
-                <div className="max-w-[85%] bg-indigo-500 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm">
+                <div className="max-w-[85%] bg-zinc-900 text-white rounded-2xl rounded-br-md px-3 py-2 text-sm">
                   {msg.content}
                 </div>
               </div>
@@ -239,7 +239,7 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
           <button
             onClick={send}
             disabled={loading || !input.trim()}
-            className="p-2 bg-indigo-500 text-white rounded-xl disabled:opacity-40 hover:bg-indigo-600 transition-all shrink-0"
+            className="p-2 bg-zinc-900 text-white rounded-lg disabled:opacity-40 hover:bg-zinc-700 transition-colors shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>

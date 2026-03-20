@@ -287,9 +287,9 @@ function PulseCard({
       transition={{ duration: 0.5, delay: delay * 0.1 }}
       onClick={onClick}
       className={`
-        relative bg-white rounded-2xl border border-zinc-200/80 p-5
-        shadow-sm hover:shadow-lg hover:-translate-y-0.5
-        transition-all duration-300 ease-out
+        relative bg-white rounded-xl border border-zinc-200 p-5
+        shadow-sm hover:border-zinc-300
+        transition-colors duration-150
         ${onClick ? "cursor-pointer" : ""}
         group
       `}
@@ -297,7 +297,7 @@ function PulseCard({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5">
-          <div className={`p-2 rounded-xl ${iconColor}`}>
+          <div className={`p-2 rounded-lg ${iconColor}`}>
             <Icon className="w-4 h-4" />
           </div>
           <span className="text-sm font-medium text-zinc-500">{title}</span>
@@ -413,22 +413,20 @@ export function PulseDashboard({ orgId, onNavigate }: PulseDashboardProps) {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 rounded-2xl px-6 py-4 flex items-center gap-4 overflow-hidden"
+        className="bg-zinc-900 rounded-xl px-6 py-4 flex items-center gap-4"
       >
-        {/* Subtle gradient shimmer */}
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5" />
 
-        <div className="relative flex items-center gap-3 flex-1 min-w-0">
-          <div className="p-2 bg-emerald-500/20 rounded-xl shrink-0">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="p-2 bg-zinc-800 rounded-lg shrink-0">
+            <Sparkles className="w-4 h-4 text-zinc-400" />
           </div>
-          <p className="text-sm text-zinc-200 truncate">
+          <p className="text-sm text-zinc-300 truncate">
             {typedSummary}
-            <span className="inline-block w-0.5 h-4 bg-emerald-400 ml-0.5 animate-pulse align-middle" />
+            <span className="inline-block w-0.5 h-4 bg-zinc-500 ml-0.5 animate-pulse align-middle" />
           </p>
         </div>
 
-        <div className="relative flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {data.unreadAlerts > 0 && (
             <button
               onClick={() => onNavigate("alerts")}

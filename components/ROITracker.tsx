@@ -129,7 +129,7 @@ export function ROITracker({ orgId }: ROITrackerProps) {
   const sparkPoints = miniSparkline(weeklyData);
 
   return (
-    <div className="bg-gradient-to-r from-emerald-50/80 via-white to-emerald-50/40 border border-emerald-200/60 rounded-2xl p-6 shadow-sm">
+    <div className="bg-emerald-50/50 border border-emerald-200/60 rounded-2xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
