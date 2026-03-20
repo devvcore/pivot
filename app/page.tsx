@@ -16,6 +16,7 @@ import { CRMDashboard } from "@/components/CRMDashboard";
 import { PMBoard } from "@/components/PMBoard";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2 } from "lucide-react";
+import PivvyFloatingChat from "@/components/PivvyFloatingChat";
 import { createClient } from "@/lib/supabase/client";
 
 const RUN_ID_KEY = "pivot_runId";
@@ -302,14 +303,8 @@ export default function Home() {
           />
         )}
 
-        <button
-          onClick={handleLogout}
-          className="fixed bottom-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-zinc-500 hover:text-zinc-900 transition-all border border-zinc-200 shadow-sm z-50 group"
-          title="Sign Out"
-        >
-          <div className="text-[10px] font-mono uppercase tracking-widest px-2 hidden group-hover:block absolute right-12 top-1/2 -translate-y-1/2 bg-white py-1 rounded shadow-sm">Sign Out</div>
-          <Building2 className="w-4 h-4" />
-        </button>
+        {/* Floating Pivvy Chat — available on every page */}
+        <PivvyFloatingChat orgId={user?.organizationId ?? ""} onNavigate={(section) => { setView("results"); }} />
       </motion.div>
     </AnimatePresence>
   );
