@@ -1,12 +1,12 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, Legend, ReferenceLine, ReferenceArea,
 } from "recharts";
-import { TrendingUp, TrendingDown, ArrowRight, RotateCcw, SlidersHorizontal, Calendar, ChevronDown } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRight, RotateCcw, SlidersHorizontal, GripVertical } from "lucide-react";
 import { CHART_COLORS, TOOLTIP_STYLE, formatDollar } from "./chart-utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -186,6 +186,136 @@ function parseTextToChartData(text: string): DataPoint[] | null {
   return null;
 }
 
+// ── Animated Data Hook ───────────────────────────────────────────────────────
+// Interpolates data values at 60fps for smooth chart morphing when sliders change
+
+function useAnimatedData(targetData: DataPoint[]): DataPoint[] {
+  const [display, setDisplay] = useState(targetData);
+  const prevRef = useRef(targetData);
+  const frameRef = useRef<number>(0);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = targetData;
+
+    // If lengths differ, snap immediately
+    if (prev.length !== targetData.length) {
+      setDisplay(targetData);
+      return;
+    }
+
+    // Check if data actually changed
+    const changed = targetData.some((t, i) =>
+      t.projected !== prev[i]?.projected || t.optimistic !== prev[i]?.optimistic
+    );
+    if (!changed) return;
+
+    const startTime = performance.now();
+    const duration = 350;
+
+    function tick(now: number) {
+      const t = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+
+      const interpolated = targetData.map((target, i) => ({
+        ...target,
+        projected: Math.round((prev[i]?.projected ?? target.projected) + (target.projected - (prev[i]?.projected ?? target.projected)) * eased),
+        baseline: Math.round((prev[i]?.baseline ?? target.baseline) + (target.baseline - (prev[i]?.baseline ?? target.baseline)) * eased),
+        optimistic: target.optimistic != null
+          ? Math.round((prev[i]?.optimistic ?? target.optimistic) + (target.optimistic - (prev[i]?.optimistic ?? target.optimistic)) * eased)
+          : undefined,
+        pessimistic: target.pessimistic != null
+          ? Math.round((prev[i]?.pessimistic ?? target.pessimistic) + (target.pessimistic - (prev[i]?.pessimistic ?? target.pessimistic)) * eased)
+          : undefined,
+      }));
+
+      setDisplay(interpolated);
+      if (t < 1) frameRef.current = requestAnimationFrame(tick);
+    }
+
+    cancelAnimationFrame(frameRef.current);
+    frameRef.current = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [targetData]);
+
+  return display;
+}
+
+// ── Draggable Dot ────────────────────────────────────────────────────────────
+// Renders a dot that can be dragged vertically to adjust projected values
+
+function DraggableDot(props: any) {
+  const { cx, cy, index, payload, onDrag, yDomain, chartHeight, marginTop, marginBottom } = props;
+  const [hovered, setHovered] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const isFuture = index > 0; // First point is current, rest are projections
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isFuture) return;
+    e.stopPropagation();
+    (e.target as SVGElement).setPointerCapture(e.pointerId);
+    setDragging(true);
+  }, [isFuture]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging || !onDrag) return;
+    const svg = (e.target as SVGElement).closest("svg");
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const svgY = e.clientY - rect.top;
+    const plotHeight = (chartHeight ?? 220) - (marginTop ?? 5) - (marginBottom ?? 25);
+    const ratio = Math.max(0, Math.min(1, (svgY - (marginTop ?? 5)) / plotHeight));
+    const [yMin, yMax] = yDomain ?? [0, 100];
+    const value = yMax - ratio * (yMax - yMin);
+    onDrag(index, Math.round(value));
+  }, [dragging, onDrag, index, yDomain, chartHeight, marginTop, marginBottom]);
+
+  const handlePointerUp = useCallback(() => setDragging(false), []);
+
+  if (cx == null || cy == null) return null;
+
+  return (
+    <g>
+      {/* Hit area */}
+      {isFuture && (
+        <circle
+          cx={cx} cy={cy} r={14}
+          fill="transparent"
+          style={{ cursor: "ns-resize" }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={() => { setHovered(false); setDragging(false); }}
+          onPointerEnter={() => setHovered(true)}
+        />
+      )}
+      {/* Visible dot */}
+      <circle
+        cx={cx} cy={cy}
+        r={dragging ? 6 : hovered && isFuture ? 5 : 3}
+        fill={dragging ? "#1d4ed8" : CHART_COLORS.accent}
+        stroke="#fff"
+        strokeWidth={2}
+        style={{ transition: "r 100ms ease", pointerEvents: "none" }}
+      />
+      {/* Drag ring indicator */}
+      {(hovered || dragging) && isFuture && (
+        <circle
+          cx={cx} cy={cy}
+          r={dragging ? 10 : 8}
+          fill="none"
+          stroke={CHART_COLORS.accent}
+          strokeWidth={1}
+          strokeDasharray="3 2"
+          opacity={0.4}
+          style={{ pointerEvents: "none" }}
+        />
+      )}
+    </g>
+  );
+}
+
 // ── Custom Tooltip ───────────────────────────────────────────────────────────
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -273,15 +403,39 @@ export function ProjectionChart({ data, narrative }: Props) {
   // Slice to time horizon
   const chartPoints = useMemo(() => sliceToHorizon(withScenarios, horizon), [withScenarios, horizon]);
 
+  // Drag overrides: user-adjusted data points
+  const [dragOverrides, setDragOverrides] = useState<Record<number, number>>({});
+  const chartPointsWithDrag = useMemo(() => {
+    if (Object.keys(dragOverrides).length === 0) return chartPoints;
+    return chartPoints.map((p, i) => {
+      if (dragOverrides[i] != null) {
+        const val = dragOverrides[i];
+        return { ...p, projected: val, optimistic: Math.round(val * 1.15), pessimistic: Math.round(val * 0.88) };
+      }
+      return p;
+    });
+  }, [chartPoints, dragOverrides]);
+
+  // Animate data transitions for smooth morphing
+  const animatedPoints = useAnimatedData(chartPointsWithDrag);
+
+  // Drag handler
+  const handleDotDrag = useCallback((index: number, value: number) => {
+    setDragOverrides(prev => ({ ...prev, [index]: value }));
+  }, []);
+
+  // Reset drag overrides when sliders or horizon change
+  useEffect(() => { setDragOverrides({}); }, [paramValues, horizon]);
+
   // Slope info
-  const slope = useMemo(() => calculateSlope(chartPoints), [chartPoints]);
+  const slope = useMemo(() => calculateSlope(animatedPoints), [animatedPoints]);
 
   // Metrics
   const metrics = useMemo(() => {
     if (!data.metrics) return undefined;
     if (!isModified) return data.metrics;
-    const first = chartPoints[0];
-    const last = chartPoints[chartPoints.length - 1];
+    const first = animatedPoints[0];
+    const last = animatedPoints[animatedPoints.length - 1];
     if (!first || !last) return data.metrics;
     const currentValue = first.baseline;
     const projectedValue = last.projected;
@@ -289,7 +443,7 @@ export function ProjectionChart({ data, narrative }: Props) {
       ? Math.round(((projectedValue - currentValue) / currentValue) * 100)
       : 0;
     return { ...data.metrics, projectedValue, changePercent };
-  }, [data.metrics, chartPoints, isModified]);
+  }, [data.metrics, animatedPoints, isModified, dragOverrides]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setParamValues(prev => ({ ...prev, [key]: value }));
@@ -304,12 +458,14 @@ export function ProjectionChart({ data, narrative }: Props) {
     setParamValues(defaults);
   }, [data.parameters]);
 
-  if (!chartPoints.length) return null;
+  if (!animatedPoints.length) return null;
+
+  const hasDragOverrides = Object.keys(dragOverrides).length > 0;
 
   const isPositive = metrics ? metrics.changePercent >= 0 : true;
 
   // Calculate Y-axis domain with padding for scenario bands
-  const allValues = chartPoints.flatMap(p => [
+  const allValues = animatedPoints.flatMap(p => [
     p.baseline, p.projected,
     p.optimistic ?? p.projected,
     p.pessimistic ?? p.projected,
@@ -496,7 +652,7 @@ export function ProjectionChart({ data, narrative }: Props) {
       {/* Chart */}
       <div className="px-2">
         <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={chartPoints} margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
+          <ComposedChart data={animatedPoints} margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
             <defs>
               <linearGradient id="scenarioBand" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.08} />
@@ -584,39 +740,65 @@ export function ProjectionChart({ data, narrative }: Props) {
               animationDuration={500}
             />
 
-            {/* Main projection line */}
+            {/* Main projection line — dots are draggable */}
             <Line
               type="monotone"
               dataKey="projected"
-              stroke={CHART_COLORS.accent}
+              stroke={hasDragOverrides ? "#1d4ed8" : CHART_COLORS.accent}
               strokeWidth={2.5}
-              dot={{ r: 3, fill: CHART_COLORS.accent, strokeWidth: 2, stroke: "#fff" }}
-              activeDot={{ r: 5, fill: CHART_COLORS.accent, strokeWidth: 2, stroke: "#fff" }}
+              dot={(dotProps: any) => (
+                <DraggableDot
+                  key={dotProps.index}
+                  {...dotProps}
+                  onDrag={handleDotDrag}
+                  yDomain={[yMin, yMax]}
+                  chartHeight={220}
+                  marginTop={5}
+                  marginBottom={25}
+                />
+              )}
+              activeDot={false}
               name="Projected"
-              animationDuration={500}
-              animationEasing="ease-out"
+              animationDuration={0}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
       {/* Legend + scenario range */}
-      {showScenarios && chartPoints.length > 1 && (
+      {showScenarios && animatedPoints.length > 1 && (
         <div className="px-5 pb-2">
           <div className="flex items-center gap-4 text-[9px] text-zinc-400">
             <span className="flex items-center gap-1">
               <span className="w-3 h-0.5 bg-emerald-500 inline-block" style={{ borderTop: "1px dashed #22c55e" }} />
-              Best: {formatDollar(chartPoints[chartPoints.length - 1]?.optimistic ?? 0)}
+              Best: {formatDollar(animatedPoints[animatedPoints.length - 1]?.optimistic ?? 0)}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-3 h-0.5 bg-blue-500 inline-block" />
-              Expected: {formatDollar(chartPoints[chartPoints.length - 1]?.projected ?? 0)}
+              Expected: {formatDollar(animatedPoints[animatedPoints.length - 1]?.projected ?? 0)}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-3 h-0.5 bg-amber-500 inline-block" style={{ borderTop: "1px dashed #f59e0b" }} />
-              Conservative: {formatDollar(chartPoints[chartPoints.length - 1]?.pessimistic ?? 0)}
+              Conservative: {formatDollar(animatedPoints[animatedPoints.length - 1]?.pessimistic ?? 0)}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Drag mode indicator */}
+      {hasDragOverrides && (
+        <div className="mx-5 mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-[9px] text-indigo-500 font-medium">
+            <GripVertical className="w-3 h-3" />
+            {Object.keys(dragOverrides).length} point{Object.keys(dragOverrides).length !== 1 ? "s" : ""} manually adjusted — drag dots to reshape the projection
+          </div>
+          <button
+            onClick={() => setDragOverrides({})}
+            className="flex items-center gap-1 text-[9px] text-zinc-400 hover:text-zinc-600"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset
+          </button>
         </div>
       )}
 
