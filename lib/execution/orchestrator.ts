@@ -697,7 +697,7 @@ Output ONLY a JSON array of strings, no other text. Example:
         });
 
         // Annotate failed tool results so agent knows to try alternatives
-        let finalOutput = outputStr.slice(0, 24000);
+        let finalOutput = outputStr.slice(0, 50000); // Gemini Flash has 1M context — use more of it
         if (finalOutput.includes('[connect:')) {
           // Connect markers MUST be passed through verbatim — add explicit instruction
           finalOutput = `${finalOutput}\n\nIMPORTANT: You MUST include the [connect:...] marker EXACTLY as shown above in your response. Copy it verbatim on its own line. The UI renders it as a clickable connection button.`;

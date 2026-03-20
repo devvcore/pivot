@@ -78,13 +78,13 @@ const queryAnalysis: Tool = {
         if (key.startsWith('__')) continue; // skip internal keys
         const data = deliverables[key];
         const serialized = JSON.stringify(data);
-        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 2000)}`);
+        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 8000)}`);
       }
 
-      // Include integration data if present
+      // Include integration data if present — full context, no truncation
       const integrationData = deliverables.__integrationData;
       if (integrationData && typeof integrationData === 'string') {
-        sectionSummaries.push(`[LIVE INTEGRATION DATA]:\n${(integrationData as string).slice(0, 4000)}`);
+        sectionSummaries.push(`[LIVE INTEGRATION DATA]:\n${integrationData as string}`);
       }
 
       const answer = await generateWithGemini(

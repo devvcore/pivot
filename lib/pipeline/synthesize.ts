@@ -868,7 +868,8 @@ export async function synthesizeDeliverables(
   const genai = new GoogleGenAI({ apiKey });
   // Use lean structured packet context (much smaller than raw KnowledgeGraph JSON)
   // Cap at 60K chars to stay within model context limits
-  const kg = formatPacketAsContext(packet).slice(0, 60_000);
+  // Use full context — Gemini Flash supports 1M tokens, no need to truncate
+  const kg = formatPacketAsContext(packet);
 
   // Each core synthesis is independent — wrap individually so one failure doesn't kill all
   const safeCall = async <T>(label: string, fn: () => Promise<T>): Promise<T | undefined> => {
@@ -1714,12 +1715,21 @@ export async function synthesizeRoadmap(
   const actionPlan = deliverables.actionPlan?.days?.slice(0, 5) ?? [];
   const leaks = deliverables.revenueLeakAnalysis?.items?.slice(0, 3) ?? [];
 
+  // Include client data and social media for personalized actions
+  const clientNames = (deliverables.atRiskCustomers?.customers ?? []).map((c: Record<string, unknown>) => c.name).filter(Boolean);
+  const socialPlatforms = questionnaire.socialMediaPlatforms?.join(', ') ?? 'Not specified';
+  const website = (questionnaire as unknown as Record<string, unknown>).companyWebsite as string ?? 'Not provided';
+
   const actionContext = `
 QUICK WINS: ${JSON.stringify(quickWins)}
 TOP ISSUES: ${JSON.stringify(issues.map(i => ({ title: i.title, severity: i.severity, impact: i.financialImpact })))}
 ACTION PLAN: ${JSON.stringify(actionPlan)}
 TOP REVENUE LEAKS: ${JSON.stringify(leaks.map(l => ({ desc: l.description, amount: l.amount })))}
 BUSINESS: ${questionnaire.organizationName} (${questionnaire.industry})
+WEBSITE: ${website}
+SOCIAL MEDIA PLATFORMS: ${socialPlatforms}
+KNOWN CLIENTS: ${clientNames.length > 0 ? clientNames.join(', ') : 'Check Stripe data for client list'}
+KEY CUSTOMERS FROM QUESTIONNAIRE: ${questionnaire.keyCustomers ?? 'Not provided'}
 `;
 
   const schema = `{
@@ -1748,15 +1758,19 @@ ${actionContext}
 Create a practical 30-day action plan with 1-3 items per day:
 - Days 1-7: Critical actions (cash protection, risk mitigation, quick wins)
 - Days 8-14: Revenue recovery and customer retention
-- Days 15-21: Growth initiatives and marketing
+- Days 15-21: Growth initiatives and marketing (include social media actions)
 - Days 22-30: Systems improvement and long-term positioning
 
 Rules:
-- Every action must be specific and actionable (not "improve marketing" but "Post 3 Instagram reels showcasing customer success stories")
+- Every action must be SPECIFIC and EXECUTABLE by an AI agent — not "improve marketing" but "Draft and send upsell email to Amanda Reed offering monthly maintenance package at $500/mo"
+- Reference ACTUAL client names, actual revenue numbers, actual platforms from the data
+- Include social media actions: specific posts to create, specific platforms to post on, specific content topics
+- Include email outreach actions: specific clients to email, specific subject lines, specific offers
 - Reference the actual quick wins, issues, and leaks from the data
 - Set owner as "Owner" by default
 - Include 4 weekly themes
 - Be realistic — a business owner has limited hours
+- IMPORTANT: Each action should be something an AI agent could execute if asked (send email, create post, research competitor, build spreadsheet, create ticket)
 
 Return ONLY valid JSON:
 ${schema}`;
