@@ -313,8 +313,8 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
   const chartOrgId = job.questionnaire.orgId ?? "default-org";
 
   const radarData = (hs?.dimensions || []).map((dim) => ({
-    dimension: dim.name.split(" ")[0],
-    score: dim.score,
+    dimension: (dim.name ?? "—").split(" ")[0],
+    score: dim.score ?? 0,
   }));
 
   const rawWeeklyModel = (ci as any)?.weeklyProjections || (ci as any)?.weekly_model || [];
@@ -544,7 +544,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                       </div>
                     )}
 
-                    <CashFlowChart projections={(ci as any).weeklyProjections ?? []} overlay={chartOverlays.cash} />
+                    <CashFlowChart projections={weeklyModel} overlay={chartOverlays.cash} />
                     <ChartInteraction
                       section="cash"
                       orgId={chartOrgId}
@@ -682,11 +682,11 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                 {/* ── Issues Register ──────────────────────────────────── */}
                 {coreTab === 3 && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4 mb-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
                       {[
-                        { label: "Total Issues",        value: String(ir.issues?.length ?? 0) },
-                        { label: "Critical",            value: String(ir.issues?.filter(i => i.severity === "HIGH" || i.severity === "Critical").length ?? 0), cls: "text-red-600" },
-                        { label: "Financial Exposure",  value: fmt(ir.issues?.reduce((s, i) => s + (i.financialImpact ?? 0), 0) ?? 0) },
+                        { label: "Total Issues",        value: String((ir.issues ?? []).length) },
+                        { label: "Critical",            value: String((ir.issues ?? []).filter(i => i.severity === "HIGH" || i.severity === "Critical").length), cls: "text-red-600" },
+                        { label: "Financial Exposure",  value: fmt((ir.issues ?? []).reduce((s, i) => s + (i.financialImpact ?? 0), 0)) },
                       ].map((m) => (
                         <div key={m.label} className="bg-white border border-zinc-200 rounded-2xl p-6 text-center shadow-sm">
                           <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2">{m.label}</p>
