@@ -2,6 +2,106 @@
 @import "tw-animate-css";
 
 @theme {
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: var(--font-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), "DM Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-display), "Instrument Serif", Georgia, serif;
+}
+
+/*
+ * Pivot Design System
+ *
+ * Aesthetic: Swiss precision meets editorial authority.
+ * Feel: Bloomberg Terminal's confidence, Monocle's taste, Linear's restraint.
+ *
+ * Color: Warm neutrals (stone, not zinc) + single teal accent.
+ * Typography: DM Sans body, Instrument Serif for hero numbers, DM Mono for data.
+ * Spacing: Generous. Let content breathe.
+ * Corners: 8px (rounded-lg) standard. 12px (rounded-xl) for cards. Nothing rounder.
+ * Shadows: Almost none. Borders do the work.
+ * Motion: Subtle opacity fades only. No bouncing, no scaling.
+ */
+
+/* ── Base refinements ─────────────────────────────────────────────── */
+
+body {
+  letter-spacing: -0.01em;
+  font-feature-settings: "ss01", "ss02", "cv01";
+  text-rendering: optimizeLegibility;
+}
+
+/* Hero numbers — Instrument Serif for key metrics */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Tabular numbers for data alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Scrollbar styling — thin, unobtrusive ────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D6D3D1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A8A29E;
+}
+
+/* ── Focus states — teal ring, not blue ───────────────────────────── */
+
+*:focus-visible {
+  outline: 2px solid #0D9488;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Selection — teal tint ────────────────────────────────────────── */
+
+::selection {
+  background: #CCFBF1;
+  color: #0F172A;
+}
+
+/* ── Prose overrides for agent output ─────────────────────────────── */
+
+.prose h2 {
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.prose h3 {
+  letter-spacing: -0.01em;
+}
+
+.prose table {
+  font-variant-numeric: tabular-nums;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+/* ── Mono labels — the Pivot signature look ──────────────────────── */
+/* Uppercase mono labels used throughout: section headers, stat labels */
+
+.pivot-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #78716C;
 }

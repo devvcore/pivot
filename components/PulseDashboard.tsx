@@ -153,7 +153,7 @@ function agentLabel(id: string): string {
 function ChangeBadge({ change, direction }: { change: number; direction: "up" | "down" | "flat" }) {
   const colorClass =
     direction === "up"
-      ? "text-emerald-600 bg-emerald-50"
+      ? "text-teal-600 bg-teal-50"
       : direction === "down"
         ? "text-red-600 bg-red-50"
         : "text-zinc-500 bg-zinc-100";
@@ -458,7 +458,7 @@ export function PulseDashboard({ orgId, onNavigate }: PulseDashboardProps) {
         {/* Cash Position */}
         <PulseCard
           icon={DollarSign}
-          iconColor="bg-emerald-100 text-emerald-600"
+          iconColor="bg-emerald-100 text-teal-600"
           title="Cash Position"
           value={data.cashPosition.current}
           format="currency"

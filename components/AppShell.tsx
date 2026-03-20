@@ -95,7 +95,7 @@ export function AppShell({
   const collapsed = !hovered && !mobileOpen;
 
   return (
-    <div className="min-h-screen flex bg-[#F8F9FA]">
+    <div className="min-h-screen flex bg-[#FAFAF9]">
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
@@ -119,7 +119,7 @@ export function AppShell({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className={[
-          "fixed top-0 left-0 h-full z-50 flex flex-col bg-white border-r border-zinc-200",
+          "fixed top-0 left-0 h-full z-50 flex flex-col bg-white border-r border-stone-200",
           "transition-all duration-150 ease-in-out",
           // Desktop: 64px collapsed, 240px expanded on hover
           collapsed ? "w-16" : "w-60",
@@ -128,7 +128,7 @@ export function AppShell({
         ].join(" ")}
       >
         {/* Logo area */}
-        <div className="h-16 flex items-center gap-3 px-4 border-b border-zinc-100 shrink-0 overflow-hidden">
+        <div className="h-16 flex items-center gap-3 px-4 border-b border-stone-100 shrink-0 overflow-hidden">
           {orgLogoUrl ? (
             <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-zinc-200 flex items-center justify-center shrink-0">
               <img src={orgLogoUrl} alt="" className="w-5 h-5 object-contain" />
@@ -143,7 +143,7 @@ export function AppShell({
               <div className="font-bold text-sm text-zinc-900 truncate leading-none">
                 {orgName || "Pivot"}
               </div>
-              <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-[0.15em] mt-0.5">
+              <div className="pivot-label mt-0.5">
                 Intelligence
               </div>
             </div>
@@ -178,18 +178,18 @@ export function AppShell({
                   "w-full flex items-center gap-3 rounded-lg transition-all duration-150 relative group",
                   collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
                   active
-                    ? "bg-indigo-50/60 text-zinc-900"
+                    ? "bg-teal-50/40 text-zinc-900"
                     : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700",
                 ].join(" ")}
               >
                 {/* Active indicator */}
                 {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-500 rounded-r-full" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-teal-600 rounded-r-full" />
                 )}
                 <Icon
                   className={[
                     "w-5 h-5 shrink-0",
-                    active ? "text-indigo-500" : "text-zinc-400 group-hover:text-zinc-600",
+                    active ? "text-teal-600" : "text-zinc-400 group-hover:text-zinc-600",
                   ].join(" ")}
                 />
                 {!collapsed && (
@@ -214,7 +214,7 @@ export function AppShell({
         </nav>
 
         {/* Bottom section */}
-        <div className="border-t border-zinc-100 py-3 px-2 space-y-0.5 shrink-0">
+        <div className="border-t border-stone-100 py-3 px-2 space-y-0.5 shrink-0">
           <button
             onClick={onLogout}
             title={collapsed ? "Sign out" : undefined}
