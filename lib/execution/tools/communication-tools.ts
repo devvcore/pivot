@@ -33,7 +33,7 @@ function csvFromData(headers: string[], rows: string[][]): string {
 
 const sendEmail: Tool = {
   name: 'send_email',
-  description: 'Draft and send an email via Gmail. If Gmail credentials are not configured, the email will be generated as a draft artifact instead of being sent. Supports plain text emails.',
+  description: 'Send an email via Gmail. This tool ACTUALLY SENDS the email — it is not a draft. When the user asks you to send, email, or message someone, you MUST call this tool with the to, subject, and body. Do NOT write the email inline in your response — call this tool instead.',
   parameters: {
     to: {
       type: 'string',
@@ -66,47 +66,53 @@ const sendEmail: Tool = {
       return { success: false, output: 'Required fields: to, subject, body.' };
     }
 
-    // Try Composio Gmail first (user's connected OAuth account)
-    try {
-      const { createAdminClient } = await import('@/lib/supabase/admin');
-      const supabase = createAdminClient();
-      const { data: integration } = await supabase
-        .from('integrations')
-        .select('status')
-        .eq('org_id', context.orgId)
-        .eq('provider', 'gmail')
-        .eq('status', 'connected')
-        .maybeSingle();
+    // Check if Gmail is connected
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const supabase = createAdminClient();
+    const { data: integration } = await supabase
+      .from('integrations')
+      .select('status')
+      .eq('org_id', context.orgId)
+      .eq('provider', 'gmail')
+      .eq('status', 'connected')
+      .maybeSingle();
 
-      if (integration) {
-        const { sendEmail: composioSendEmail } = await import('@/lib/integrations/composio-tools');
-        const result = await composioSendEmail(context.orgId, to, subject, body);
-        if (result) {
-          return {
-            success: true,
-            output: `✅ Email sent successfully via Gmail!\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}`,
-            cost: 0,
-          };
-        }
-      }
-    } catch {
-      // Fall through to draft mode
+    if (!integration) {
+      // Gmail not connected — return connect marker + draft
+      const draft = formatEmailBody(subject, body, to);
+      return {
+        success: false,
+        output: `[connect:gmail]`,
+        artifacts: [{ type: 'email', name: `email-to-${to.split('@')[0]}.txt`, content: draft }],
+        cost: 0,
+      };
     }
 
-    // Fallback: generate as draft artifact
-    const draft = formatEmailBody(subject, body, to);
-    return {
-      success: true,
-      output: `Email drafted (Gmail not connected via Composio).\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}\n\nConnect Gmail via Settings → Integrations to send emails automatically.\n\n---\n${body}`,
-      artifacts: [{ type: 'email', name: `email-to-${to.split('@')[0]}.txt`, content: draft }],
-      cost: 0,
-    };
+    // Gmail IS connected — send via Composio
+    try {
+      const { sendEmail: composioSendEmail } = await import('@/lib/integrations/composio-tools');
+      const result = await composioSendEmail(context.orgId, to, subject, body);
+      if (result) {
+        return {
+          success: true,
+          output: `✅ Email sent successfully via Gmail!\n\nTo: ${to}${cc ? `\nCC: ${cc}` : ''}\nSubject: ${subject}`,
+          cost: 0,
+        };
+      }
+      return {
+        success: false,
+        output: `Email send failed — Gmail returned no result. Try again or check the Gmail connection.`,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, output: `Email send failed: ${message}` };
+    }
   },
 };
 
 const sendSlackMessage: Tool = {
   name: 'send_slack_message',
-  description: 'Send a message to a Slack channel or user. If Slack credentials are not configured, the message will be generated as a draft artifact.',
+  description: 'Send a message to a Slack channel or user. This tool ACTUALLY SENDS the message. When the user asks you to message someone on Slack, you MUST call this tool — do NOT write the message inline in your response.',
   parameters: {
     channel: {
       type: 'string',
@@ -183,10 +189,10 @@ const sendSlackMessage: Tool = {
       } catch { /* fall through to draft */ }
     }
 
-    // Fallback: draft artifact
+    // Slack not connected — return connect marker + draft
     return {
-      success: true,
-      output: `Slack message drafted (Slack not connected).\n\nChannel: ${channel}\nMessage:\n${message}\n\nConnect Slack via Settings → Integrations to send messages automatically.`,
+      success: false,
+      output: `[connect:slack]`,
       artifacts: [{ type: 'document', name: `slack-${channel.replace('#', '')}.txt`, content: `Channel: ${channel}\n\n${message}` }],
       cost: 0,
     };
@@ -319,18 +325,26 @@ const readEmails: Tool = {
       if (!integration) {
         return {
           success: false,
-          output: 'Gmail is not connected. The user needs to connect Gmail via Settings → Integrations to read emails.',
+          output: '[connect:gmail]',
         };
       }
 
       const { getEmails } = await import('@/lib/integrations/composio-tools');
       const result = await getEmails(context.orgId, query, maxResults);
 
-      if (!result || (Array.isArray(result) && result.length === 0)) {
+      if (!result) {
         return { success: true, output: query ? `No emails found matching "${query}".` : 'Inbox is empty or no recent emails found.', cost: 0 };
       }
 
-      const emails = Array.isArray(result) ? result : (result?.messages ?? result?.data ?? [result]);
+      // Composio wraps response: { data: { messages: [...] } } or direct array
+      const emails = Array.isArray(result)
+        ? result
+        : (result?.data?.messages ?? result?.messages ?? result?.data ?? [result]);
+
+      if (!Array.isArray(emails) || emails.length === 0) {
+        return { success: true, output: query ? `No emails found matching "${query}".` : 'Inbox is empty or no recent emails found.', cost: 0 };
+      }
+
       const formatted = emails.slice(0, maxResults).map((e: any, i: number) => {
         const from = e.sender || e.from || e.headers?.from || 'Unknown';
         const subject = e.subject || e.headers?.subject || '(no subject)';
@@ -397,8 +411,8 @@ const replyToEmail: Tool = {
 
       if (!integration) {
         return {
-          success: true,
-          output: `Reply drafted (Gmail not connected).\n\nTo: ${to}\nSubject: ${subject}\n\n${body}\n\nConnect Gmail via Settings → Integrations to send replies automatically.`,
+          success: false,
+          output: '[connect:gmail]',
           artifacts: [{ type: 'email', name: `reply-to-${to.split('@')[0]}.txt`, content: formatEmailBody(subject, body, to) }],
           cost: 0,
         };
@@ -455,18 +469,26 @@ const searchEmails: Tool = {
       if (!integration) {
         return {
           success: false,
-          output: 'Gmail is not connected. Connect Gmail via Settings → Integrations to search emails.',
+          output: '[connect:gmail]',
         };
       }
 
       const { getEmails } = await import('@/lib/integrations/composio-tools');
       const result = await getEmails(context.orgId, query, maxResults);
 
-      if (!result || (Array.isArray(result) && result.length === 0)) {
+      if (!result) {
         return { success: true, output: `No emails found matching "${query}".`, cost: 0 };
       }
 
-      const emails = Array.isArray(result) ? result : (result?.messages ?? result?.data ?? [result]);
+      // Composio wraps response: { data: { messages: [...] } } or direct array
+      const emails = Array.isArray(result)
+        ? result
+        : (result?.data?.messages ?? result?.messages ?? result?.data ?? [result]);
+
+      if (!Array.isArray(emails) || emails.length === 0) {
+        return { success: true, output: `No emails found matching "${query}".`, cost: 0 };
+      }
+
       const formatted = emails.slice(0, maxResults).map((e: any, i: number) => {
         const from = e.sender || e.from || e.headers?.from || 'Unknown';
         const subject = e.subject || e.headers?.subject || '(no subject)';

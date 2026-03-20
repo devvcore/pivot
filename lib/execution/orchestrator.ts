@@ -20,6 +20,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAgent, type AgentDefinition } from './agents/index';
 import { OUTFITS, getOutfitSystemPrompt } from './outfits';
 import { globalRegistry, createCostTracker, type ToolContext, type ToolResult } from './tools/index';
+import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLessons } from './agent-memory';
 
 // Import tool modules to ensure they self-register
 import './tools/web-tools';
@@ -408,16 +409,15 @@ export class Orchestrator {
    * HEAVY = complex multi-step, needs thorough review
    */
   async triageTask(task: ExecutionTask): Promise<TriageLevel> {
-    const prompt = `Classify this task's complexity level.
+    const prompt = `Classify this task's complexity level. Bias towards QUICK — most single-turn requests are QUICK.
 
 Task: "${task.title}"
 Description: "${task.description}"
-Priority: ${task.priority}
 
 Respond with EXACTLY one word:
-- QUICK: Simple, single-output task (e.g., create one document, generate one invoice, look up one thing). Low risk of error.
-- STANDARD: Moderate complexity (e.g., multi-section report, campaign with variants, analysis). Needs review.
-- HEAVY: Complex, multi-step task (e.g., comprehensive strategy, multi-channel campaign, financial model with scenarios). Needs thorough review.
+- QUICK: Most tasks. Single deliverable, lookup, sending something, creating one item, research, analysis. DEFAULT to this.
+- STANDARD: Multi-part deliverables that need cross-referencing (e.g., full strategy with budget AND timeline AND staffing).
+- HEAVY: Only for tasks that explicitly require multiple complex interconnected outputs.
 
 Response:`;
 
@@ -480,7 +480,7 @@ Output ONLY a JSON array of strings, no other text. Example:
    * Emits tool_call, tool_result, and thinking events throughout.
    * Records per-call costs to execution_costs.
    */
-  async executeTask(task: ExecutionTask): Promise<{ result: string; artifacts: TaskArtifact[] }> {
+  async executeTask(task: ExecutionTask, executionPlan?: string | null): Promise<{ result: string; artifacts: TaskArtifact[] }> {
     const agent = getAgent(task.agentId);
     if (!agent) {
       throw new Error(`Unknown agent: ${task.agentId}`);
@@ -491,8 +491,15 @@ Output ONLY a JSON array of strings, no other text. Example:
       throw new Error(`Unknown outfit: ${agent.defaultOutfit}`);
     }
 
-    // Build system prompt
-    const systemPrompt = this.buildSystemPrompt(agent, task);
+    // Load persistent agent memory
+    const memories = await loadAgentMemories(task.orgId, task.agentId, 8);
+    const memoryContext = formatMemoriesAsContext(memories);
+
+    // Build system prompt (with memory appended)
+    let systemPrompt = this.buildSystemPrompt(agent, task);
+    if (memoryContext) {
+      systemPrompt += '\n\n' + memoryContext;
+    }
 
     // Get tool definitions for this outfit
     const tools = globalRegistry.getByNames(outfit.tools);
@@ -522,8 +529,8 @@ Output ONLY a JSON array of strings, no other text. Example:
     const allArtifacts: TaskArtifact[] = [];
     const conversationHistory: Array<{ role: string; parts: unknown[] }> = [];
 
-    // Initial user message
-    const userPrompt = this.buildTaskPrompt(task);
+    // Initial user message (with execution plan if available)
+    const userPrompt = this.buildTaskPrompt(task, executionPlan);
     conversationHistory.push({
       role: 'user',
       parts: [{ text: userPrompt }],
@@ -532,13 +539,17 @@ Output ONLY a JSON array of strings, no other text. Example:
     let maxRounds = outfit.maxToolRounds;
     let finalResponse = '';
 
+    // Loop guard: detect repeated tool calls (BetterBot-style)
+    const toolCallCounts = new Map<string, number>();  // tool_name -> count
+    const toolSigCounts = new Map<string, number>();   // tool_name+args -> count
+
     for (let round = 0; round < maxRounds; round++) {
       const response = await ai.models.generateContent({
         model: FLASH_MODEL,
         contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
         config: {
           temperature: 0.1,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 4096,
           systemInstruction: systemPrompt,
           tools: functionDeclarations.length > 0
             ? [{ functionDeclarations }]
@@ -610,6 +621,36 @@ Output ONLY a JSON array of strings, no other text. Example:
       for (const fc of functionCalls) {
         const { name, args } = fc.functionCall;
 
+        // Loop guard: track call frequency
+        const sig = `${name}:${JSON.stringify(args)}`;
+        toolCallCounts.set(name, (toolCallCounts.get(name) ?? 0) + 1);
+        toolSigCounts.set(sig, (toolSigCounts.get(sig) ?? 0) + 1);
+
+        const nameCount = toolCallCounts.get(name) ?? 0;
+        const sigCount = toolSigCounts.get(sig) ?? 0;
+
+        // Block exact duplicate calls (same tool + same args called 2+ times)
+        if (sigCount >= 2) {
+          functionResponses.push({
+            functionResponse: {
+              name,
+              response: { output: `DUPLICATE: You already called ${name} with these exact arguments. Use the data you have and write your response NOW.` },
+            },
+          });
+          continue;
+        }
+
+        // Block same tool called too many times (3+)
+        if (nameCount >= 3) {
+          functionResponses.push({
+            functionResponse: {
+              name,
+              response: { output: `ENOUGH: You have called ${name} ${nameCount} times. STOP searching. Write your final response with the data you have.` },
+            },
+          });
+          continue;
+        }
+
         // Emit tool_call event
         await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_call', {
           tool: name,
@@ -618,7 +659,19 @@ Output ONLY a JSON array of strings, no other text. Example:
         });
 
         // Execute the tool
-        const toolResult = await globalRegistry.execute(name, args, toolContext);
+        let toolResult: ToolResult;
+        try {
+          toolResult = await globalRegistry.execute(name, args, toolContext);
+        } catch (toolErr) {
+          const errMsg = toolErr instanceof Error ? toolErr.message : String(toolErr);
+          functionResponses.push({
+            functionResponse: {
+              name,
+              response: { output: `TOOL ERROR: ${name} threw an exception: ${errMsg}. Try a different approach or write your response with available data.` },
+            },
+          });
+          continue;
+        }
 
         // Collect artifacts
         if (toolResult.artifacts) {
@@ -628,22 +681,53 @@ Output ONLY a JSON array of strings, no other text. Example:
         // Track cost from tool cost tracker
         task.costSpent = costTracker.totalSpent;
 
+        const outputStr = typeof toolResult.output === 'string' ? toolResult.output : JSON.stringify(toolResult.output ?? '');
+
         // Emit tool_result event
         await this.emitEvent(task.id, task.agentId, task.orgId, 'tool_result', {
           tool: name,
-          outputSummary: toolResult.output.slice(0, 500),
+          outputSummary: outputStr.slice(0, 500),
+          success: toolResult.success,
           artifactCount: toolResult.artifacts?.length ?? 0,
           round,
         });
 
+        // Annotate failed tool results so agent knows to try alternatives
+        let finalOutput = outputStr.slice(0, 24000);
+        if (finalOutput.includes('[connect:')) {
+          // Connect markers MUST be passed through verbatim — add explicit instruction
+          finalOutput = `${finalOutput}\n\nIMPORTANT: You MUST include the [connect:...] marker EXACTLY as shown above in your response. Copy it verbatim on its own line. The UI renders it as a clickable connection button.`;
+        } else if (!toolResult.success) {
+          finalOutput = `NOTE: This tool call did not succeed. ${finalOutput}`;
+        }
+
         functionResponses.push({
           functionResponse: {
             name,
-            response: {
-              output: toolResult.output.slice(0, 24000),
-            },
+            response: { output: finalOutput },
           },
         });
+      }
+
+      // Context compaction: compress old tool results to prevent context bloat
+      // After 3+ tool rounds, truncate earlier tool results to summaries
+      if (round >= 3) {
+        for (let h = 0; h < conversationHistory.length - 4; h++) {
+          const msg = conversationHistory[h];
+          if (msg.role === 'user' && Array.isArray(msg.parts)) {
+            for (let pi = 0; pi < msg.parts.length; pi++) {
+              const p = msg.parts[pi] as Record<string, unknown>;
+              const fr = p?.functionResponse as Record<string, unknown> | undefined;
+              if (fr?.response) {
+                const resp = fr.response as Record<string, unknown>;
+                const output = resp.output;
+                if (typeof output === 'string' && output.length > 500) {
+                  resp.output = output.slice(0, 300) + '\n...[truncated — use this data in your response]';
+                }
+              }
+            }
+          }
+        }
       }
 
       // Add function responses to history
@@ -651,6 +735,14 @@ Output ONLY a JSON array of strings, no other text. Example:
         role: 'user',
         parts: functionResponses,
       });
+
+      // Self-reflection checkpoint: after 2 tool rounds, nudge agent to synthesize
+      if (round === 2 && functionCalls.length > 0) {
+        conversationHistory.push({
+          role: 'user',
+          parts: [{ text: 'SYSTEM CHECKPOINT: You have gathered data from multiple tools. Before calling more tools, assess: do you have ENOUGH information to produce a high-quality response? If yes, write your deliverable NOW. Only call more tools if you have a specific data gap that would significantly improve the output.' }],
+        });
+      }
 
       // Check cost ceiling
       if (!costTracker.canAfford(0.001)) {
@@ -662,7 +754,79 @@ Output ONLY a JSON array of strings, no other text. Example:
       }
     }
 
+    // Safety net: if the loop exhausted all rounds without producing a text response,
+    // force one final "synthesize" call so the agent summarizes what it found.
+    if (!finalResponse.trim()) {
+      conversationHistory.push({
+        role: 'user',
+        parts: [{ text: 'SYSTEM: You have used all available tool rounds. Provide your FINAL comprehensive response now using ALL the information you gathered from your tool calls. Synthesize everything into a well-structured deliverable. Do NOT call any more tools — just write your answer.' }],
+      });
+
+      try {
+        const synthResponse = await ai.models.generateContent({
+          model: FLASH_MODEL,
+          contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+            systemInstruction: systemPrompt,
+            // No tools — force pure text output
+          } as Record<string, unknown>,
+        });
+        finalResponse = synthResponse.text ?? '';
+      } catch (err) {
+        console.error('[Orchestrator] Forced synthesis failed:', err instanceof Error ? err.message : err);
+        finalResponse = 'The agent gathered research data but failed to synthesize a final response. Please try again.';
+      }
+    }
+
+    // Post-processing: inject any [connect:X] markers that tools returned but agent didn't pass through
+    finalResponse = this.injectMissedConnectMarkers(finalResponse, conversationHistory);
+
     return { result: finalResponse, artifacts: allArtifacts };
+  }
+
+  /**
+   * Scan conversation history for [connect:X] markers in tool results that
+   * the agent didn't copy into its final response. Inject them.
+   */
+  private injectMissedConnectMarkers(response: string, history: Array<{ role: string; parts: unknown[] }>): string {
+    const connectRe = /\[connect:([a-z_]+)\]/g;
+
+    // Find all connect markers from tool results in history
+    const toolMarkers = new Set<string>();
+    for (const msg of history) {
+      if (msg.role !== 'user') continue;
+      for (const part of msg.parts) {
+        const p = part as Record<string, unknown>;
+        const fr = p?.functionResponse as Record<string, unknown> | undefined;
+        const respObj = fr?.response as Record<string, unknown> | undefined;
+        const output = respObj?.output;
+        if (typeof output === 'string') {
+          let match: RegExpExecArray | null;
+          const re = new RegExp(connectRe.source, 'g');
+          while ((match = re.exec(output)) !== null) {
+            toolMarkers.add(match[0]); // e.g. "[connect:linkedin]"
+          }
+        }
+      }
+    }
+
+    if (toolMarkers.size === 0) return response;
+
+    // Check which markers are already in the response
+    const responseMarkers = new Set<string>();
+    let m: RegExpExecArray | null;
+    const re2 = new RegExp(connectRe.source, 'g');
+    while ((m = re2.exec(response)) !== null) {
+      responseMarkers.add(m[0]);
+    }
+
+    // Inject missing markers
+    const missing = [...toolMarkers].filter(marker => !responseMarkers.has(marker));
+    if (missing.length === 0) return response;
+
+    return response + '\n\n' + missing.join('\n');
   }
 
   /**
@@ -691,20 +855,33 @@ EVALUATION STEPS:
 1. For each acceptance criterion, determine if it is MET or NOT MET with a brief explanation.
 
 2. HALLUCINATION CHECK (critical):
-   - Does the output contain invented statistics without "estimated" labels?
-   - Does it reference fake company names, case studies, or testimonials?
+   - Does the output contain invented statistics or financial numbers not from tool output?
+   - Does it have fabricated expense breakdowns (e.g. "Operations: $500, Marketing: $300")?
+   - Does it show an "estimated burn rate" or fabricated monthly expenses?
+   - Does it reference fake company names, case studies, testimonials, or customer IDs?
    - Does it quote people who weren't mentioned in the task?
    - Does it present made-up data as factual?
-   - If ANY hallucination is found, verdict must be REVISE with specific callouts.
+   - Does it contain tables with fabricated category allocations?
+   - If ANY hallucination or fabricated number is found, verdict must be REVISE with specific callouts.
 
 3. GROUNDING CHECK:
    - Is the output specific to THIS company, or could it apply to any business?
    - Are recommendations backed by data from the analysis or clearly labeled as general advice?
+   - Does the output include [source: ...] or [from ...] citations for data points?
+   - Are numbers traceable to a specific tool result or user input?
+   - Any number without a source citation should be flagged as potentially ungrounded.
 
 Then provide your VERDICT:
-- ACCEPT: All criteria met, no hallucinations, output is grounded and specific.
-- REVISE: Some criteria not met OR hallucinations detected. Provide specific feedback on what to fix.
-- FAIL: Fundamentally inadequate, generic, or heavily hallucinated.
+- ACCEPT: All criteria met, no hallucinations, output is grounded, specific, and production-ready.
+- REVISE: Some criteria not met OR hallucinations detected OR output is generic. Provide specific, actionable feedback.
+- FAIL: Fundamentally inadequate, heavily hallucinated, or completely off-topic.
+
+QUALITY DIMENSIONS (score each 1-5):
+- Accuracy: Are facts correct? Numbers sourced?
+- Specificity: Company-specific or could apply to anyone?
+- Actionability: Can the user act on this immediately?
+- Structure: Well-organized with headers, tables, bold key points?
+- Completeness: All aspects of the task addressed?
 
 Output format:
 CRITERIA EVALUATION:
@@ -714,9 +891,11 @@ CRITERIA EVALUATION:
 
 HALLUCINATION CHECK: [CLEAN/ISSUES FOUND] - [details]
 
+QUALITY SCORES: Accuracy=[1-5] Specificity=[1-5] Actionability=[1-5] Structure=[1-5] Completeness=[1-5]
+
 VERDICT: [ACCEPT/REVISE/FAIL]
 
-FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each one.]`;
+FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If ACCEPT with quality scores below 4, note what could be improved next time.]`;
 
     const result = await quickGenerate(prompt);
 
@@ -738,13 +917,27 @@ FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each 
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
     try {
-      // 1. Triage
+      // 1. Triage — fast classification (single Gemini call)
       await this.setTaskStatus(task, 'triaging');
       const triageLevel = await this.triageTask(task);
 
-      // 2. Generate acceptance criteria
-      task.acceptanceCriteria = await this.generateCriteria(task);
-      await this.updateTaskInDb(taskId, { acceptanceCriteria: task.acceptanceCriteria });
+      // 2. Generate acceptance criteria (skip for QUICK — saves a Gemini call)
+      if (triageLevel !== 'quick') {
+        task.acceptanceCriteria = await this.generateCriteria(task);
+        await this.updateTaskInDb(taskId, { acceptanceCriteria: task.acceptanceCriteria });
+      }
+
+      // 2b. Planning phase for STANDARD/HEAVY — helps agent think before acting
+      let executionPlan: string | null = null;
+      if (triageLevel !== 'quick') {
+        executionPlan = await this.generatePlan(task);
+        if (executionPlan) {
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+            phase: 'planning',
+            plan: executionPlan,
+          });
+        }
+      }
 
       // 3. Execute
       await this.setTaskStatus(task, 'executing', { attempts: 1 });
@@ -754,9 +947,10 @@ FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each 
         phase: 'pre_execution',
         triageLevel,
         criteriaCount: task.acceptanceCriteria.length,
+        hasPlan: !!executionPlan,
       });
 
-      let { result, artifacts } = await this.executeTask(task);
+      let { result, artifacts } = await this.executeTask(task, executionPlan);
       task.result = result;
       task.artifacts = artifacts;
 
@@ -767,7 +961,7 @@ FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each 
         costSpent: task.costSpent,
       });
 
-      // 4. Review (skip for QUICK tasks)
+      // 4. QUICK tasks → done immediately (no review, no revision)
       if (triageLevel === 'quick') {
         task.completedAt = new Date().toISOString();
         await this.setTaskStatus(task, 'completed', {
@@ -786,10 +980,10 @@ FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each 
         return task;
       }
 
-      // 5. Review loop
+      // 5. Review loop (STANDARD: 1 revision max, HEAVY: 2)
       await this.setTaskStatus(task, 'reviewing');
 
-      const maxReviewAttempts = triageLevel === 'heavy' ? 3 : 2;
+      const maxReviewAttempts = triageLevel === 'heavy' ? 2 : 1;
 
       for (let attempt = 0; attempt < maxReviewAttempts; attempt++) {
         // Emit thinking event for review phase
@@ -863,6 +1057,14 @@ FEEDBACK: [If REVISE, specific instructions. If hallucinations found, list each 
 
           await this.setTaskStatus(task, 'reviewing');
         }
+      }
+
+      // Extract and save lessons from the review process
+      const lessons = extractLessons(task.agentId, task.title, result, task.reviewFeedback ?? undefined);
+      for (const lesson of lessons) {
+        await saveAgentMemory(task.orgId, task.agentId, lesson,
+          lesson.startsWith('CORRECTION') ? 'correction' : lesson.startsWith('CONTEXT') ? 'context' : 'lesson',
+          task.id);
       }
 
       // Exhausted revision attempts -- accept what we have
@@ -953,8 +1155,13 @@ You have business analysis data available via the query_analysis tool.
 
       if (hasIntegrationData) {
         dataPrompt += `\n\nLIVE INTEGRATION DATA AVAILABLE from: ${integrationProviders.join(', ')}
-- Call query_analysis(section: "search", query: "integration data for [topic]") to access real metrics.
-- PREFER real integration data over estimates. Cite sources: "[from Stripe]", "[from GitHub]", etc.
+- **USE query_integration_data tool** to pull REAL live data from connected services (Stripe, Slack, Gmail, etc.)
+  - query_integration_data(provider: "stripe") → real payment/customer data
+  - query_integration_data(provider: "slack") → real channel/team data
+  - query_integration_data() → list ALL available integration data
+- You can also use query_analysis(section: "search", query: "...") for data baked into the analysis.
+- ALWAYS PREFER query_integration_data for real-time metrics over estimates.
+- Cite sources: "[from Stripe]", "[from Gmail]", etc.
 - This is LIVE data from the user's connected accounts — treat it as ground truth.`;
       }
       parts.push(dataPrompt);
@@ -962,30 +1169,86 @@ You have business analysis data available via the query_analysis tool.
       parts.push(`--- Data Access ---
 No business analysis data is loaded. This means:
 1. The task title and description are your PRIMARY context. Extract every detail: company, industry, product, audience.
-2. Do NOT call query_analysis - there is no data to query. Go straight to your domain tools.
-3. Use web_search to gather real market data if needed.
-4. NEVER produce generic placeholder content. Be specific with the information given.
-5. If web_search also fails, work ONLY with the information from the task. Label all estimates clearly as "estimated" and DO NOT present them as facts.`);
+2. Do NOT call query_analysis - there is no data to query.
+3. CREATE YOUR DELIVERABLE DIRECTLY using the information in the task. Your #1 job is producing the content/analysis/plan — not searching for data.
+4. You CAN use query_integration_data to pull LIVE data from connected services (Stripe, Slack, Gmail, etc.) if relevant.
+5. You CAN use web_search for real market data if needed (1-2 searches max).
+6. NEVER produce generic placeholder content. Be specific with the information given.
+7. Action tools (post_to_linkedin, write_to_google_sheets, send_email, etc.) check connections internally. Do NOT call check_connection separately.
+8. If you don't have data for something, say "I don't have that data." Do NOT estimate, fabricate, or make up numbers.`);
     }
 
     // ═══ 6. BEHAVIORAL RULES (BetterBot-style) ═══
     parts.push(`--- Rules ---
 
-JUST DO IT:
-- When given a task, EXECUTE IT. Don't ask "would you like me to..." before starting. Start working immediately.
-- Lead with your output. Show the work first, then explain your choices.
-- If a tool fails, don't announce the failure - just try a different approach silently.
-- Never repeat a failed tool call. Adapt and use alternative tools.
-- One strong deliverable is better than multiple weak ones.
+EXECUTION MINDSET (inspired by the best AI agents):
+- You are a DOER, not an advisor. Execute the task. The request IS your permission.
+- NEVER ask permission before starting. NEVER say "would you like me to..." Just do it.
+- Lead with the OUTPUT, not the process. Show the deliverable, then briefly explain.
+- One excellent deliverable beats three mediocre ones. Focus.
 
-CONVERSATIONAL OUTPUT:
-- You are talking to a REAL PERSON in a chat interface. Write like a talented colleague presenting their work.
-- Lead with a brief 1-2 sentence summary of what you did.
-- Present your work using clean markdown: ## headers, **bold**, > blockquotes for featured content, tables for data.
-- After presenting, ALWAYS offer 2-3 concrete next steps: "Would you like me to..."
-- If you can take action via integrations (post to social, push to sheets, create issues), offer to do so.
-- Be confident. You are an expert. Present your work with conviction.
-- NEVER dump raw content without context. Always introduce it, present it clearly, then offer to do more.
+THINK → ACT → VERIFY:
+1. THINK (0 tool calls): What exactly does the user need? What's the deliverable format?
+2. ACT (1-3 tool calls): Get the data you need. Be surgical — one good tool call beats three vague ones.
+3. VERIFY (0 tool calls): Before writing, check: Do I have enough data? Are my facts sourced?
+4. DELIVER: Write the output. Be specific, be actionable, cite your sources.
+
+TOOL DISCIPLINE — CRITICAL:
+- Budget: 2-4 tool calls total. NEVER more than 5.
+- Before EVERY tool call, ask: "Can I answer this without calling a tool?" If yes, WRITE.
+- query_analysis: list_sections ONCE → 1 targeted search. That's it.
+- web_search: 1-2 max. One good query beats five mediocre ones.
+- After EVERY tool result: "Do I have enough now?" If yes, STOP calling tools and WRITE.
+- NEVER call the same tool with the same arguments twice. You already have that data.
+- NEVER call tools just to look thorough. Efficiency IS quality.
+
+FAIL-FAST RECOVERY:
+- Tool fails → try ONE alternative → write with available data. Never retry the same call.
+- Tool returns no data → say "no data found" → proceed with task description context.
+- Connection not available → include [connect:provider] verbatim → still produce the deliverable.
+- After 2 failed tools, STOP trying tools and write your best answer from context.
+
+CONTENT + ACTION — BOTH REQUIRED:
+- Your #1 priority is producing the DELIVERABLE (content, analysis, plan, posting, etc.) in your response text.
+- WRITE the actual content (posts, emails, job postings, budgets, plans) DIRECTLY in your response.
+- Do NOT delegate content creation to tools like create_social_post, create_ad_copy. Write it yourself.
+- The ORDER is: (1) gather data if needed, (2) WRITE your deliverable, (3) call action tools to publish.
+- MANDATORY: When the user asks to POST/SEND/CREATE something, you MUST call the action tool. ALWAYS. No exceptions.
+  - "Post to LinkedIn" → MUST call post_to_linkedin
+  - "Send email" → MUST call send_email
+  - "Create Jira ticket" → MUST call create_jira_ticket
+  - "List GitHub repos" → MUST call github_list_repos
+  - Even if you think it might fail, CALL THE TOOL. The tool handles connections internally.
+- If the tool returns [connect:provider], include it VERBATIM in your response AND still show your content.
+- If a send/post tool fails, report the failure clearly. Do NOT pretend you sent it.
+- NEVER skip a tool call because you think the service isn't connected. The tools handle this.
+
+FOLLOW-UP CONTEXT — CRITICAL:
+- If the CONVERSATION CONTEXT contains a previous message where content was created (e.g. an Instagram post, email draft, LinkedIn post), and the user now says "post it" or "send it" or "post to instagram" — use the EXISTING content from context. Do NOT create brand new content.
+- Look for the most recent relevant content in the conversation context and use it directly.
+- Example: if context shows you previously created an Instagram caption, and user says "post to instagram", call post_to_instagram with that existing caption. Don't write a new one.
+- When the user says "post to X", call the posting tool directly with the content from context. The tool checks connections internally and returns [connect:X] if not connected.
+
+OUTPUT QUALITY — THE BAR IS HIGH:
+- You are talking to a REAL PERSON. Write like the best consultant they've ever hired.
+- STRUCTURE: ## Header → Key Insight → Supporting Data → Action Items
+- FORMAT: **Bold** key numbers/findings. | Tables | for comparisons. > Blockquotes for featured content.
+- LENGTH: 300-500 words. Dense > long. If asked for "comprehensive", max 600. NEVER exceed 600.
+- SPECIFICITY: Every claim must reference THIS company's data, not generic advice. "Your Stripe shows $X MRR" not "MRR is important."
+- NUMBERS: Always show the actual number from data, not vague statements. "$4,200 MRR from 12 paying customers" not "moderate revenue."
+- TABLES: Max 5 rows. If more exist, show "Top 5 of X" with a note.
+- NO FILLER: Never repeat information. Never list capabilities. Never describe process. Show results.
+- OPENING LINE: Start with the most important finding or deliverable. No preamble.
+- CLOSING: 2-3 specific next steps YOU can do. "Want me to create a LinkedIn post from this?" not "Consider social media."
+
+PROACTIVE ACTION SUGGESTIONS — ALWAYS DO THIS:
+- End EVERY response with 2-3 specific, ready-to-execute next steps
+- Frame them as things YOU will do: "Want me to draft a LinkedIn post about this?" not "You could post on LinkedIn"
+- Be specific: "I'll create an upsell email to your 2 hosting clients" not "Consider email marketing"
+- If the task involves analysis, suggest actions: posting, emailing, creating tickets, exporting to sheets
+- If the task involves content, suggest distribution: "Want me to post this to LinkedIn/Twitter?"
+- If the task involves hiring, suggest: "Want me to post this job to LinkedIn?"
+- Make the user feel like they have a team working for them, not a chatbot answering questions.
 
 QUALITY BAR:
 - Your output must be ready to use immediately - not a draft or template.
@@ -993,12 +1256,46 @@ QUALITY BAR:
 - Use real data, real examples, and specific recommendations.
 - End every response with a clear "Next Steps" section.
 
-ANTI-HALLUCINATION:
-- NEVER invent statistics, case studies, testimonials, or quotes that don't exist.
-- NEVER make up company names, product features, or customer stories.
-- If you use numbers (market size, growth rates), use well-known industry benchmarks or label them as estimates.
-- If you don't know something, say so and offer to research it.
-- Clearly distinguish between facts and recommendations.`);
+DATA-FIRST — USE WHAT YOU HAVE:
+- You have access to query_analysis (business report data) and query_integration_data (live Stripe, Gmail, etc.).
+- BEFORE saying "I don't have that data" or asking the user for info, call your tools.
+- If asked about MRR, revenue, expenses, customers — call query_integration_data(provider: "stripe") FIRST.
+- If asked about health score, runway, strategy — call query_analysis FIRST.
+- NEVER say "please provide your financials" when you have query_integration_data available.
+- NEVER say "data not available" without calling at least one tool first.
+- If the user corrects you ("my burn rate is actually $X"), accept their correction immediately. Don't argue with the business owner about their own numbers.
+
+ANTI-HALLUCINATION — ABSOLUTE RULE:
+- NEVER invent financial numbers. No fake expense breakdowns. No estimated category allocations. No estimated burn rates.
+- NEVER create tables with made-up categories (e.g. "Operations: $500, Marketing: $300").
+- NEVER invent customer IDs, transaction IDs, payment amounts, or dates.
+- Every number you show MUST come from tool output, the user's own words, or clearly labeled industry benchmarks.
+- If you don't have data, say so clearly. NEVER fabricate.
+- VIOLATING THIS RULE DESTROYS USER TRUST.
+
+SOURCE CITATIONS — MANDATORY:
+- Every factual claim and number MUST have an inline source tag.
+- Format: "Revenue was **$4,200** [from Stripe]" or "Industry average is 15-20% [industry benchmark]"
+- Valid sources: [from Stripe], [from Gmail], [from GitHub], [from Salesforce], [from analysis report], [from task description], [industry benchmark], [from web search]
+- If you cannot cite a source for a number, DO NOT include it.
+- This is not optional. Every data point needs a source.
+
+SELF-CHECK — BEFORE YOUR FINAL RESPONSE:
+- Before writing your answer, mentally verify:
+  1. Did I address ALL parts of the request?
+  2. Does every number have a [source] tag?
+  3. Am I being specific to THIS company, not generic?
+  4. Is my response under 500 words?
+  5. Did I end with actionable next steps?
+- If any check fails, fix it before responding.
+
+INLINE CONNECTIONS — MANDATORY:
+- When ANY tool returns a string containing "[connect:XXXX]" (e.g. "[connect:linkedin]", "[connect:github]", "[connect:jira]"), you MUST copy that exact marker into your response. This is critical — the UI renders it as a clickable connection button.
+- NEVER paraphrase, explain, or replace the marker. Output it verbatim on its own line.
+- NEVER say "go to Settings", "connect via Integrations", "click the connection panel", or give any setup instructions.
+- Keep it short and natural around the marker.
+- CORRECT: "I'd love to post that to LinkedIn for you!\n\n[connect:linkedin]\n\nOnce connected, I'll post it right away."
+- WRONG: "LinkedIn isn't connected yet. Please connect it in your Integration settings."`);
 
     // ═══ 7. PROACTIVE TRIGGERS ═══
     const triggers = this.getProactiveTriggers(agent, task);
@@ -1019,7 +1316,7 @@ ANTI-HALLUCINATION:
     // Marketing: auto-offer posting
     if (agent.id === 'marketer') {
       if (lower.includes('post') || lower.includes('social') || lower.includes('linkedin') || lower.includes('twitter') || lower.includes('instagram') || lower.includes('facebook') || lower.includes('content')) {
-        triggers.push('SOCIAL POSTING: After creating content, offer to post directly. Call check_connection for linkedin/twitter/instagram/facebook. If connected, ask "Want me to post this now?" If not, guide them to connect accounts.');
+        triggers.push('SOCIAL POSTING: After creating content, offer to post directly. Call the posting tool (post_to_linkedin, post_to_twitter, etc.) — it checks connections internally.');
       }
       if (lower.includes('instagram') || lower.includes('ig') || lower.includes('insta')) {
         triggers.push('INSTAGRAM: If the user uploaded an image, use the uploaded image URL with post_to_instagram. Do NOT ask the user for an image URL — use the attachment URL from the task description.');
@@ -1028,36 +1325,54 @@ ANTI-HALLUCINATION:
         triggers.push('FACEBOOK: Use post_to_facebook to publish. If the user uploaded a photo, use the attachment URL.');
       }
       if (lower.includes('email') || lower.includes('campaign')) {
-        triggers.push('EMAIL: After creating email content, offer to send via Gmail if connected. Call check_connection for gmail.');
+        triggers.push('EMAIL: After creating email content, offer to send via send_email. The tool checks Gmail connection internally.');
       }
     }
 
     // Analyst: auto-offer sheets export
     if (agent.id === 'analyst') {
       if (lower.includes('budget') || lower.includes('forecast') || lower.includes('projection') || lower.includes('financial')) {
-        triggers.push('SPREADSHEET: After creating financial data, offer to export to Google Sheets. Call check_connection for google_sheets. If connected, offer "Want me to push this to your Google Sheets?"');
+        triggers.push('SPREADSHEET: After creating financial data, offer to export to Google Sheets. Call write_to_google_sheets directly — it checks the connection internally.');
       }
     }
 
     // Recruiter: auto-offer LinkedIn posting
     if (agent.id === 'recruiter') {
       if (lower.includes('job') || lower.includes('posting') || lower.includes('hire')) {
-        triggers.push('JOB POSTING: After creating a job posting, offer to publish it on LinkedIn. Call check_connection for linkedin.');
+        triggers.push('JOB POSTING: After creating a job posting, offer to publish it on LinkedIn. Call post_to_linkedin directly — it checks the connection internally.');
       }
     }
 
     // Operator: auto-offer Jira/project tools
     if (agent.id === 'operator') {
       if (lower.includes('project') || lower.includes('plan') || lower.includes('task') || lower.includes('milestone')) {
-        triggers.push('PROJECT MANAGEMENT: After creating a plan, offer to create Jira tickets for the milestones. Call check_connection for jira.');
+        triggers.push('PROJECT MANAGEMENT: After creating a plan, offer to create Jira tickets for the milestones. Call create_jira_ticket directly — it checks the connection internally.');
       }
     }
 
     // CodeBot: auto-offer GitHub actions
     if (agent.id === 'codebot') {
       if (lower.includes('issue') || lower.includes('bug') || lower.includes('feature')) {
-        triggers.push('GITHUB: Offer to create a GitHub issue with the findings. Call check_connection for github first.');
+        triggers.push('GITHUB: Offer to create a GitHub issue with the findings. Call github_create_issue directly — it checks the connection internally.');
       }
+    }
+
+    // Strategist: proactive action dispatch
+    if (agent.id === 'strategist') {
+      triggers.push('STRATEGY IN ACTION: After providing strategic analysis, suggest concrete actions other agents can take. Examples: "Want me to have the marketer draft a LinkedIn post about this?", "Should the recruiter create a job listing for that engineer role?", "I can have the analyst model this financially." Make the user feel like they have a team.');
+      if (lower.includes('competitor') || lower.includes('market') || lower.includes('research')) {
+        triggers.push('RESEARCH: After analysis, offer to go deeper. "Want me to research [specific competitor] in detail?" or "Should I analyze their pricing strategy?"');
+      }
+    }
+
+    // Researcher: proactive follow-ups
+    if (agent.id === 'researcher') {
+      triggers.push('RESEARCH FOLLOW-UP: After delivering research, suggest specific actions: "Want the marketer to create content based on these findings?" or "Should the strategist build a competitive response plan?"');
+    }
+
+    // Analyst: always offer actionable follow-ups
+    if (agent.id === 'analyst') {
+      triggers.push('DATA TO ACTION: After any analysis, suggest next steps: "Want me to export this to Google Sheets?", "Should I model a 6-month projection?", "Want the marketer to create a report for stakeholders?"');
     }
 
     // Universal: revision context
@@ -1068,7 +1383,31 @@ ANTI-HALLUCINATION:
     return triggers;
   }
 
-  private buildTaskPrompt(task: ExecutionTask): string {
+  /**
+   * Generate a lightweight execution plan for STANDARD/HEAVY tasks.
+   * Helps the agent think before acting — inspired by Claude Code's internal reasoning.
+   */
+  private async generatePlan(task: ExecutionTask): Promise<string | null> {
+    const prompt = `You are planning tool usage for an AI agent task. Output a brief plan (3-5 bullet points) listing:
+1. What information do I need? (and which tool to get it)
+2. What is the deliverable? (exact format: email, table, analysis, etc.)
+3. What's my tool call sequence? (ordered list, max 4 calls)
+
+Task: "${task.title}"
+Description: "${task.description}"
+Available tools: query_analysis, query_integration_data, web_search, scrape_website, send_email, post_to_linkedin, post_to_twitter, write_to_google_sheets, create_jira_ticket, github_create_issue
+
+Output ONLY the bullet-point plan, nothing else. Be specific.`;
+
+    try {
+      const plan = await quickGenerate(prompt);
+      return plan.trim();
+    } catch {
+      return null;
+    }
+  }
+
+  private buildTaskPrompt(task: ExecutionTask, executionPlan?: string | null): string {
     // BetterBot-style: direct, action-oriented, no hedging
     let prompt = `Execute this now: **${task.title}**`;
 
@@ -1090,7 +1429,12 @@ ANTI-HALLUCINATION:
 - Use the files as the user intends — don't ask for files again, you already have them.`;
     }
 
-    prompt += `\n\nUse your tools, produce the deliverable, and present it conversationally with next steps.`;
+    // Inject execution plan for STANDARD/HEAVY tasks
+    if (executionPlan) {
+      prompt += `\n\n--- Execution Plan (follow this) ---\n${executionPlan}\n\nFollow this plan. Gather data first, then produce the deliverable. Do NOT deviate unless a tool fails.`;
+    }
+
+    prompt += `\n\nUse your tools, produce the deliverable, and present it conversationally. Keep your response under 500 words. End with 2-3 short next step bullets.`;
 
     return prompt;
   }

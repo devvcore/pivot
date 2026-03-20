@@ -6,7 +6,7 @@ import type { VizType } from "@/lib/viz-types";
 import SourceBadge from "./SourceBadge";
 import type { SourceStatus } from "./SourceBadge";
 import type { ClaimValidation } from "@/lib/types";
-import { formatLabel } from "@/lib/utils";
+import { formatLabel, humanizeValue } from "@/lib/utils";
 import ScoreGauge from "./charts/ScoreGauge";
 import RankedBarsChart from "./charts/RankedBarsChart";
 import BreakdownDonut from "./charts/BreakdownDonut";
@@ -147,7 +147,7 @@ const formatKey = formatLabel;
 
 /** Format metric value with auto-detection */
 function formatMetricValue(key: string, value: string | number): string {
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return humanizeValue(value);
   const k = key.toLowerCase();
   if (k.includes("percent") || k.includes("pct") || k.includes("rate") || k.includes("margin")) {
     return `${value}%`;
@@ -210,8 +210,9 @@ function SmartVisualization({ vizType, data, items }: { vizType: VizType; data: 
 // ── Data Table Component ────────────────────────────────────────────────────
 
 function DataTable({ items, label, maxRows }: { items: any[]; label?: string; maxRows: number }) {
-  if (items.length === 0) return null;
+  if (!items || items.length === 0 || !items[0]) return null;
   const cols = Object.keys(items[0]).filter(k => !k.endsWith("_source") && !k.startsWith("_")).slice(0, 6);
+  if (cols.length === 0) return null;
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm overflow-x-auto">
@@ -232,7 +233,7 @@ function DataTable({ items, label, maxRows }: { items: any[]; label?: string; ma
                 let display: string;
                 if (v == null) display = "—";
                 else if (typeof v === "number") display = v.toLocaleString();
-                else if (typeof v === "string") display = v;
+                else if (typeof v === "string") display = humanizeValue(v);
                 else if (Array.isArray(v)) display = v.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(", ");
                 else if (typeof v === "object") {
                   // Extract meaningful value from nested objects

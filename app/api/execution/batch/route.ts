@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateRequest } from "@/lib/supabase/auth-api";
 import { createOrchestrator } from "@/lib/execution/orchestrator";
+import { collectIntegrationContext, formatIntegrationContextAsText } from "@/lib/integrations/collect";
 import { GoogleGenAI } from "@google/genai";
 import { v4 as uuidv4 } from "uuid";
 
@@ -83,7 +84,8 @@ Example: [{"title": "Create LinkedIn posts about our AI product", "agentId": "ma
       const text = result.text ?? "";
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        const raw = JSON.parse(jsonMatch[0]);
+        let raw: Array<{ title?: string; agentId?: string }>;
+        try { raw = JSON.parse(jsonMatch[0]); } catch { raw = []; }
         if (Array.isArray(raw) && raw.length > 0) {
           parsedTasks = raw.map((item: { title?: string; agentId?: string }) => ({
             title: (item.title ?? "").trim(),
@@ -104,24 +106,35 @@ Example: [{"title": "Create LinkedIn posts about our AI product", "agentId": "ma
 
     console.log(`[POST /api/execution/batch] Split "${message.slice(0, 60)}..." → ${parsedTasks.length} tasks`);
 
-    // ── 2. Load deliverables from latest completed analysis ──
+    // ── 2. Load deliverables from latest completed analysis for THIS org ──
     const supabase = createAdminClient();
     let deliverables: Record<string, unknown> | undefined;
 
-    try {
-      const { data: latestJob } = await supabase
-        .from("jobs")
-        .select("results_json")
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+    const { data: latestJob, error: jobError } = await supabase
+      .from("jobs")
+      .select("results_json")
+      .eq("organization_id", orgId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
 
-      if (latestJob?.results_json) {
-        deliverables = latestJob.results_json;
-      }
-    } catch {
-      // No analysis data
+    if (jobError) {
+      console.log(`[POST /api/execution/batch] No completed analysis for org ${orgId}: ${jobError.message}`);
+    } else if (latestJob?.results_json) {
+      deliverables = latestJob.results_json as Record<string, unknown>;
+      console.log(`[POST /api/execution/batch] Loaded deliverables (${Object.keys(deliverables).length} sections)`);
+    }
+
+    // ── 2b. Load integration data (Stripe, Salesforce, GitHub, etc.) ──
+    const integrationCtx = await collectIntegrationContext(orgId);
+    const integrationText = formatIntegrationContextAsText(integrationCtx);
+    if (integrationCtx.providers.length > 0) {
+      console.log(`[POST /api/execution/batch] Loaded integration data from: ${integrationCtx.providers.join(", ")}`);
+      // Inject integration data into deliverables so agents see it
+      if (!deliverables) deliverables = {};
+      deliverables.__integrationData = integrationText;
+      deliverables.__integrationProviders = integrationCtx.providers;
     }
 
     // ── 3. Create tasks and fire pipelines ──
@@ -175,8 +188,16 @@ Example: [{"title": "Create LinkedIn posts about our AI product", "agentId": "ma
 
       // Fire pipeline async (non-blocking)
       const orchestrator = createOrchestrator(deliverables);
-      orchestrator.runPipeline(task.id).catch((err: Error) => {
+      orchestrator.runPipeline(task.id).catch(async (err: Error) => {
         console.error(`[POST /api/execution/batch] Pipeline failed for ${task.id}:`, err.message);
+        // Update task status so UI doesn't show "queued" forever
+        try {
+          await supabase.from("execution_tasks").update({ status: "failed", review_feedback: err.message }).eq("id", task.id);
+          await supabase.from("execution_events").insert({
+            task_id: task.id, agent_id: parsed.agentId, org_id: orgId,
+            event_type: "error", data: { error: err.message, phase: "pipeline" },
+          });
+        } catch { /* best-effort status update */ }
       });
     }
 

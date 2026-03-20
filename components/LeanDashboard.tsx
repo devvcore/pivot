@@ -26,6 +26,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { authFetch } from "@/lib/auth-fetch";
 
 // ─── Client-Side Types ───────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export function LeanDashboard({
     try {
       const [empRes, scoreRes] = await Promise.all([
         fetch(`/api/employees?orgId=${encodeURIComponent(orgId)}`),
-        fetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`),
+        authFetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`),
       ]);
 
       if (empRes.ok) {

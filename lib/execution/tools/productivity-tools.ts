@@ -179,7 +179,7 @@ const writeToGoogleSheets: Tool = {
 
     const connected = await checkConnection(context.orgId, 'google_sheets');
     if (!connected) {
-      return { success: false, output: '⚠️ Google Sheets is not connected. Ask the user to connect it via Settings → Integrations.' };
+      return { success: false, output: '[connect:google_sheets]' };
     }
 
     try {
@@ -234,7 +234,7 @@ const readFromGoogleSheets: Tool = {
 
     const connected = await checkConnection(context.orgId, 'google_sheets');
     if (!connected) {
-      return { success: false, output: '⚠️ Google Sheets is not connected. Ask the user to connect it via Settings → Integrations.' };
+      return { success: false, output: '[connect:google_sheets]' };
     }
 
     try {
@@ -277,7 +277,7 @@ const listCalendarEvents: Tool = {
   async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
     const connected = await checkConnection(context.orgId, 'google_calendar');
     if (!connected) {
-      return { success: false, output: '⚠️ Google Calendar is not connected. Ask the user to connect it via Settings → Integrations.' };
+      return { success: false, output: '[connect:google_calendar]' };
     }
 
     try {
@@ -331,7 +331,7 @@ const searchNotionPages: Tool = {
 
     const connected = await checkConnection(context.orgId, 'notion');
     if (!connected) {
-      return { success: false, output: '⚠️ Notion is not connected. Ask the user to connect it via Settings → Integrations.' };
+      return { success: false, output: '[connect:notion]' };
     }
 
     try {
@@ -392,7 +392,7 @@ const createJiraTicket: Tool = {
 
     const connected = await checkConnection(context.orgId, 'jira');
     if (!connected) {
-      return { success: false, output: '⚠️ Jira is not connected. Ask the user to connect it via Settings → Integrations.' };
+      return { success: false, output: '[connect:jira]' };
     }
 
     try {
@@ -452,7 +452,7 @@ const createHubSpotContact: Tool = {
 
     const connected = await checkConnection(context.orgId, 'hubspot');
     if (!connected) {
-      return { success: false, output: '⚠️ HubSpot is not connected. Ask the user to connect it via Settings → Integrations.' };
+      return { success: false, output: '[connect:hubspot]' };
     }
 
     try {
@@ -516,8 +516,8 @@ const createCalendarEvent: Tool = {
     const connected = await checkConnection(context.orgId, 'google_calendar');
     if (!connected) {
       return {
-        success: true,
-        output: `Calendar event drafted (Google Calendar not connected):\n\nTitle: ${title}\nStart: ${startTime}\nEnd: ${endTime}${description ? `\nDescription: ${description}` : ''}${attendeesStr ? `\nAttendees: ${attendeesStr}` : ''}\n\nConnect Google Calendar via Settings → Integrations to create events automatically.`,
+        success: false,
+        output: '[connect:google_calendar]',
         cost: 0,
       };
     }

@@ -13,7 +13,7 @@ const VALID_PROVIDERS = new Set([
   'slack', 'gmail', 'github', 'jira', 'hubspot', 'quickbooks',
   'salesforce', 'stripe', 'workday', 'google_analytics', 'google_sheets',
   'notion', 'linear', 'asana', 'google_calendar', 'microsoft_teams', 'airtable', 'adp',
-  'linkedin', 'twitter',
+  'linkedin', 'twitter', 'instagram', 'facebook', 'youtube',
 ]);
 
 export async function GET(req: NextRequest) {

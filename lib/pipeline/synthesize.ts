@@ -881,13 +881,18 @@ export async function synthesizeDeliverables(
     }
   };
 
-  const health = await safeCall("Generating Health Score", () => genHealthScore(genai, kg));
-  const cash = await safeCall("Generating Cash Intelligence", () => genCashIntelligence(genai, kg));
-  const leaks = await safeCall("Identifying Revenue Leaks", () => genRevenueLeaks(genai, kg));
-  const issues = await safeCall("Compiling Issues Register", () => genIssuesRegister(genai, kg));
-  const customers = await safeCall("Analysing At-Risk Customers", () => genAtRiskCustomers(genai, kg));
-  const brief = await safeCall("Drafting Decision Brief", () => genDecisionBrief(genai, kg, questionnaire));
-  const actionPlan = await safeCall("Building Action Plan", () => genActionPlan(genai, kg, questionnaire));
+  // Parallelize independent MVP calls (7 calls at once, then marketIntel which depends on research)
+  console.log("[Pivot] Running 7 core sections in parallel...");
+  const [health, cash, leaks, issues, customers, brief, actionPlan] = await Promise.all([
+    safeCall("Generating Health Score", () => genHealthScore(genai, kg)),
+    safeCall("Generating Cash Intelligence", () => genCashIntelligence(genai, kg)),
+    safeCall("Identifying Revenue Leaks", () => genRevenueLeaks(genai, kg)),
+    safeCall("Compiling Issues Register", () => genIssuesRegister(genai, kg)),
+    safeCall("Analysing At-Risk Customers", () => genAtRiskCustomers(genai, kg)),
+    safeCall("Drafting Decision Brief", () => genDecisionBrief(genai, kg, questionnaire)),
+    safeCall("Building Action Plan", () => genActionPlan(genai, kg, questionnaire)),
+  ]);
+  // Research + Market Intel must be sequential (marketIntel depends on researchCtx)
   const researchCtx = await safeCall("Researching external market context", () => researchExternalContext(genai, kg, packet));
   const marketIntel = await safeCall("Building Growth Intelligence", () => genMarketIntelligence(genai, kg, researchCtx ?? ""));
 
@@ -1000,12 +1005,14 @@ async function genCashIntelligence(genai: GoogleGenAI, kg: string) {
 
 ANTI-HALLUCINATION RULES FOR CASH PROJECTIONS:
 - Use ONLY financial data from the VERIFIED FINANCIAL FACTS section for opening balances and known amounts.
-- For weeks where you have actual data, use the exact numbers from the documents.
+- **Integration data IS verified data.** If VERIFIED FINANCIAL FACTS includes entries from "Stripe Integration (Live)" or "QuickBooks Integration (Live)", these are REAL numbers from connected accounts — treat them as ground truth.
+- If "Total Revenue (all-time)" or "Cash Collected via Stripe" is available, use it as the cash position. This IS the real revenue collected.
+- If "Monthly Revenue (last 30 days)" is available, use it for inflow projections.
 - For projected weeks, clearly base projections on documented patterns and state your assumptions.
 - If total document data is insufficient for meaningful 13-week projections, produce FEWER weeks
   with a summary explaining the data limitation, rather than fabricating 13 weeks of made-up numbers.
 - NEVER invent specific dollar amounts that appear to come from documents.
-- Set currentCashPosition to null if no cash figure exists in the VERIFIED FINANCIAL FACTS.
+- Set currentCashPosition to the Stripe total revenue if available, or null ONLY if no cash/revenue figure exists at all.
 
 SCOPE BOUNDARIES — AVOID REPETITION:
 - Focus ONLY on cash flow, liquidity, and cash runway analysis.
@@ -1131,11 +1138,13 @@ Use every signal available: contract terms, communication frequency, payment his
 satisfaction signals, tenure, revenue concentration, competitive threats.
 
 ANTI-HALLUCINATION RULES:
-- Only name customers that ACTUALLY APPEAR in the uploaded documents or VERIFIED FINANCIAL FACTS.
+- Only name customers that ACTUALLY APPEAR in the uploaded documents, VERIFIED FINANCIAL FACTS, or CONNECTED TOOL DATA.
+- Customer names from Stripe Integration are REAL customers — use their actual names, emails, and payment amounts.
 - Do NOT invent customer names. If a customer is mentioned in the data, use their exact name.
 - If fewer than 3 customers are identifiable from the data, return ONLY the ones you can identify.
   Do NOT pad the list with made-up customer names.
-- Revenue at risk should be based on documented figures where available, or noted as an estimate.
+- Revenue at risk should be based on ACTUAL payment data from Stripe where available. Calculate from real transaction amounts.
+- Do NOT say "likely" or "unknown" when Stripe payment history provides concrete data. Use the real numbers.
 
 Return ONLY valid JSON matching this schema:\n${schema}`;
   return callJson(genai, prompt);
@@ -1282,8 +1291,8 @@ async function genMarketIntelligence(
     {
       "metric": "<metric name>",
       "industryRange": "<typical industry range or value>",
-      "thisBusinessEstimate": "<estimated position for THIS business based on available data, or 'Insufficient data'>",
-      "gapAnalysis": "<above benchmark / below benchmark / at benchmark / unknown>",
+      "thisBusinessEstimate": "<estimated position for THIS business based on ALL available data — integrations, documents, questionnaire>",
+      "gapAnalysis": "<above benchmark / below benchmark / at benchmark>",
       "implication": "<what this gap means in practice for this business>"
     }
   ],
@@ -1529,17 +1538,28 @@ function buildDataProvenance(packet: BusinessPacket): DataProvenance {
   const facts = packet.financialFacts ?? [];
   const sourceFiles = [...new Set(facts.map((f) => f.sourceFile))];
 
-  // Check coverage gaps
+  // Map integration providers to coverage categories
+  const connectedProviders = packet.integrationData?.providers ?? [];
+  const financialProviders = ['stripe', 'quickbooks', 'salesforce', 'paypal', 'square', 'xero', 'freshbooks', 'plaid', 'mercury', 'wave', 'brex', 'gusto'];
+  const customerProviders = ['stripe', 'salesforce', 'hubspot', 'square', 'xero', 'freshbooks', 'paypal'];
+  const operationsProviders = ['jira', 'linear', 'github', 'asana', 'airtable', 'notion'];
+  const hasFinancialIntegration = connectedProviders.some(p => financialProviders.includes(p));
+  const hasCustomerIntegration = connectedProviders.some(p => customerProviders.includes(p));
+  const hasOperationsIntegration = connectedProviders.some(p => operationsProviders.includes(p));
+
+  // Check coverage gaps — suppress if integration covers the category
   const coverageGaps: string[] = [];
   const coverage = packet.dataCoverage ?? {};
-  for (const cat of ["Financial Position", "Revenue Model", "Customer Portfolio", "Operations"]) {
-    if (!coverage[cat]) coverageGaps.push(`No ${cat} documents provided`);
+  if (!coverage["Financial Position"] && !hasFinancialIntegration) coverageGaps.push("No Financial Position documents or integrations");
+  if (!coverage["Revenue Model"] && !hasFinancialIntegration) coverageGaps.push("No Revenue Model documents or integrations");
+  if (!coverage["Customer Portfolio"] && !hasCustomerIntegration) coverageGaps.push("No Customer Portfolio documents or integrations");
+  if (!coverage["Operations"] && !hasOperationsIntegration) coverageGaps.push("No Operations documents or integrations");
+
+  if (!packet.keyMetrics.cashPosition && !hasFinancialIntegration && !facts.some((f) => f.label.toLowerCase().includes("cash"))) {
+    coverageGaps.push("No cash position data found");
   }
-  if (!packet.keyMetrics.cashPosition && !facts.some((f) => f.label.toLowerCase().includes("cash"))) {
-    coverageGaps.push("No cash position data found in documents");
-  }
-  if (!packet.keyMetrics.estimatedMonthlyRevenue && !facts.some((f) => f.label.toLowerCase().includes("revenue"))) {
-    coverageGaps.push("No revenue figures found in documents");
+  if (!packet.keyMetrics.estimatedMonthlyRevenue && !hasFinancialIntegration && !facts.some((f) => f.label.toLowerCase().includes("revenue"))) {
+    coverageGaps.push("No revenue figures found");
   }
 
   // Detect conflicts between facts with similar labels
@@ -1569,6 +1589,7 @@ function buildDataProvenance(packet: BusinessPacket): DataProvenance {
     financialFactCount: facts.length,
     warnings,
     coverageGaps,
+    integrationProviderCount: connectedProviders.length,
   };
 }
 
@@ -1657,9 +1678,9 @@ Revenue Range: ${questionnaire.revenueRange}
 Identify 5-7 Key Performance Indicators for this specific business:
 1. 2-3 should be North Star metrics (the most important ones)
 2. Include current value if you can find it in the data — mark as "from_documents"
-3. If you can't find the value, set currentValue to "Unknown" and sourceData to "unknown"
-4. Set realistic target values based on industry benchmarks
-5. NEVER invent specific current values — if data doesn't exist, say "Unknown"
+3. If you can't find the exact value in documents, check CONNECTED TOOL DATA (Stripe revenue, customer counts, etc.) — those ARE real values, not estimates
+4. If neither documents nor integrations have the value, estimate from industry benchmarks and questionnaire context — mark as [ESTIMATED]
+5. NEVER say "Unknown" — always provide the best available value from integrations, documents, or industry benchmarks
 
 If CONNECTED TOOL DATA is available, incorporate real metrics from connected tools as current KPI values rather than estimating. Mark these as "[from {provider}]" to distinguish from document-sourced or estimated values.
 
@@ -1869,7 +1890,7 @@ Each item MUST cite evidence from the data — no generic advice.
 - Threats: competitive, market, financial, or operational threats with likelihood ratings
 - Strategic Priorities: rank the top 3-5 priorities by impact, combining insights from all four quadrants
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Minimum: 3 items per SWOT quadrant, 3 strategic priorities.
 
@@ -1929,7 +1950,7 @@ Calculate unit economics from the uploaded financial data. For each metric:
 - Compare each against industry benchmarks
 - Add 3-5 specific recommendations for improving unit economics
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -1994,7 +2015,7 @@ Analyze competitive positioning:
 - Create battle cards for top 3 competitors with specific counter-arguments and talk tracks
 - Rate each competitive advantage as durable, temporary, or at_risk
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 Only reference competitors that appear in the data or questionnaire.
 
 Return ONLY valid JSON:
@@ -2074,7 +2095,7 @@ Generate a compelling investor one-pager that distills ALL business data into:
 - Honest key risks (investors respect transparency)
 - A compelling "why now" narrative
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 Financial highlights MUST come from document data. Do NOT fabricate traction metrics.
 
 Return ONLY valid JSON:
@@ -2149,7 +2170,7 @@ Based on the business's gaps, revenue leaks, and growth opportunities, recommend
 - Include 3-5 key responsibilities for each role
 - Identify current team gaps even if no hire is recommended
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Recommend 3-5 hires. Rank by expected ROI.
 
@@ -2222,7 +2243,7 @@ For each scenario:
 
 Also identify key growth drivers, risks, and their revenue impact.
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 If baseline revenue is unknown, note it clearly and use the revenue range as a rough guide.
 
 Return ONLY valid JSON:
@@ -2306,7 +2327,7 @@ If no at-risk customers were identified, return an empty entries array and focus
 
 If CONNECTED TOOL DATA includes CRM data (Salesforce, HubSpot), reference actual churn indicators from customer records. If Stripe data is present, analyze real subscription cancellation patterns and payment failures.
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -2396,7 +2417,7 @@ EVERYTHING must be tailored to THIS specific business — no generic sales advic
 
 If CONNECTED TOOL DATA includes Salesforce or HubSpot data, reference actual pipeline values, deal stages, and conversion rates rather than estimating. Cite "[from Salesforce]" or "[from HubSpot]".
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -2482,7 +2503,7 @@ Based on ALL deliverables (KPIs, issues, leaks, opportunities, health score), su
 - Set current progress to 0 for new objectives
 - Also suggest 2-3 additional objectives the business could adopt later
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -2762,7 +2783,7 @@ For each milestone:
 Identify the critical path — the sequence of milestones that determines the overall timeline.
 Set completionRate to the percentage of milestones already completed or in progress (0-100).
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -2837,7 +2858,7 @@ For each risk:
 Sort risks by riskScore descending. Set overallRiskLevel based on the distribution of risk scores.
 Estimate a mitigation budget based on the actions required.
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -2909,7 +2930,7 @@ For each potential partner:
 Separate into quick wins (closable in 30 days) and long-term strategic plays (6+ months).
 Create an overarching partnership strategy that aligns with the business's goals.
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3007,7 +3028,7 @@ Perform a comprehensive funding readiness assessment:
 
 9. NEXT STEPS: 5-7 specific actions to improve funding readiness.
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3183,7 +3204,7 @@ For EACH scenario:
 
 Provide an overall recommended strategy and 3-5 contingency plans.
 
-Use ONLY data from the business report. If data is insufficient for a specific number, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — instead derive the best answer from what IS available and mark estimates as [ESTIMATED]. A reasonable estimate is far more useful than "Insufficient data".
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3353,7 +3374,7 @@ Build a detailed retention playbook with the following:
 5. ENGAGEMENT METRICS: 4-6 key engagement metrics to track, with current values (from data),
    target values, and the gap between them.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3429,7 +3450,7 @@ Perform a detailed revenue attribution analysis:
 5. ATTRIBUTION MODEL: Describe which attribution model best fits this business
    (first-touch, last-touch, linear, time-decay, data-driven) and why.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3513,7 +3534,7 @@ Create a concise, board-ready deck summary:
 
 Tone: Concise, data-driven, executive-level. No fluff.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3596,7 +3617,7 @@ Perform a comprehensive competitive moat analysis:
 
 6. COMPETITOR COMPARISON: Brief comparison of moat strength vs. known competitors.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3680,7 +3701,7 @@ Evaluate the go-to-market strategy across all dimensions:
 
 5. PRIORITIZED ACTIONS: 5-7 specific actions ranked by expected revenue impact.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3774,7 +3795,7 @@ Perform a comprehensive cash optimization analysis:
 
 If CONNECTED TOOL DATA includes QuickBooks or Stripe data, use those REAL financial metrics (revenue, expenses, cash position) instead of estimating. Cite "[from QuickBooks]" or "[from Stripe]" for any figures sourced from integrations.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3860,7 +3881,7 @@ Perform a comprehensive talent gap analysis:
 
 7. TOTAL HIRING BUDGET ESTIMATE: Sum the estimated cost of all recommended hires.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -3949,7 +3970,7 @@ Perform a comprehensive revenue diversification analysis:
 
 6. TARGET MIX: Describe the ideal revenue mix the business should aim for.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -4040,7 +4061,7 @@ Generate a comprehensive compliance checklist:
 
 7. INDUSTRY-SPECIFIC NOTES: Key regulatory considerations unique to this industry.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 If the compliance status cannot be determined from available data, mark as "unknown" — do NOT assume compliance.
 
 Return ONLY valid JSON:
@@ -4130,7 +4151,7 @@ Develop a comprehensive expansion playbook:
 
 7. TIMELINE: Provide a phased timeline for pursuing the prioritized expansion markets.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -4222,7 +4243,7 @@ Perform a comprehensive product-market fit analysis:
 
 9. TARGET SEGMENT FIT: Describe the customer segment with the strongest fit.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -4304,7 +4325,7 @@ Perform a comprehensive brand health analysis:
 
 9. MESSAGING GUIDELINES (3-5): Core messaging principles the brand should follow for consistency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -4388,7 +4409,7 @@ Perform a comprehensive pricing elasticity analysis:
 
 8. RECOMMENDATIONS (4-6): Prioritized pricing strategy recommendations.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -4474,7 +4495,7 @@ Perform a comprehensive strategic initiatives analysis:
 
 7. PRIORITIZATION FRAMEWORK: Suggest a framework for prioritizing these initiatives (e.g., impact vs. effort matrix, RICE scoring).
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -4557,7 +4578,7 @@ Perform a comprehensive cash conversion cycle analysis:
 
 8. RECOMMENDATIONS (4-6): Prioritized recommendations for improving cash conversion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 If the business is a services/SaaS business with no inventory, note DIO as 0 or N/A and focus on DSO and DPO.
 
 Return ONLY valid JSON:
@@ -5149,7 +5170,7 @@ Perform a comprehensive AI readiness assessment:
 
 10. RECOMMENDATIONS (4-6): Prioritized actions to improve AI readiness and adoption.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5229,7 +5250,7 @@ Perform a comprehensive network effects analysis:
 
 9. RECOMMENDATIONS (4-6): Prioritized actions to maximize network effects and defensibility.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5305,7 +5326,7 @@ Perform a comprehensive data monetization assessment:
 
 7. RECOMMENDATIONS (4-6): Prioritized actions to capture the data monetization opportunity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5385,7 +5406,7 @@ Perform a comprehensive subscription metrics analysis:
 
 8. RECOMMENDATIONS (4-6): Prioritized actions to improve subscription metrics.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5464,7 +5485,7 @@ Perform a comprehensive market timing analysis:
 
 8. RECOMMENDATIONS (4-6): Prioritized strategic actions based on the timing analysis.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5550,7 +5571,7 @@ Perform a comprehensive scenario stress test:
 
 8. RECOMMENDATIONS (4-6): Prioritized actions to improve resilience and prepare for adverse scenarios.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5633,7 +5654,7 @@ Perform a comprehensive acquisition target analysis:
 
 8. RECOMMENDATIONS (4-6): Strategic recommendations for the M&A approach.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5710,7 +5731,7 @@ Compute or estimate key financial ratios from the provided data and compare each
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve financial ratio performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5794,7 +5815,7 @@ Analyze marketing channel performance and recommend an optimal channel mix:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to optimize the channel mix.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5886,7 +5907,7 @@ Analyze current and upcoming regulatory requirements:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen regulatory compliance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -5963,7 +5984,7 @@ Build a comprehensive crisis playbook:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve overall crisis preparedness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6037,7 +6058,7 @@ Build a comprehensive competitive intelligence feed:
 
 6. RECOMMENDATIONS (4-6): Actionable competitive strategy recommendations.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6114,7 +6135,7 @@ Build a comprehensive cash flow sensitivity analysis:
 
 7. RECOMMENDATIONS (4-6): Actions to reduce cash flow sensitivity and increase resilience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6189,7 +6210,7 @@ Build a comprehensive digital maturity assessment:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to advance digital maturity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6273,7 +6294,7 @@ Build a comprehensive customer acquisition funnel analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve funnel conversion and reduce CPA.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6346,7 +6367,7 @@ Build a comprehensive strategic alignment assessment:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve strategic alignment.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6426,7 +6447,7 @@ Build a comprehensive budget optimization analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable budget optimization steps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6509,7 +6530,7 @@ Produce a comprehensive pricing strategy matrix:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to optimize pricing for revenue growth.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6590,7 +6611,7 @@ Produce a comprehensive MRR waterfall analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve NRR and reduce churn/contraction.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6670,7 +6691,7 @@ Produce a comprehensive technical debt assessment:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to systematically reduce technical debt.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6748,7 +6769,7 @@ Produce a comprehensive team performance analysis:
 
 If CONNECTED TOOL DATA includes Slack data, reference real team communication patterns (message volume, active channels, response times). If Jira/Asana/Linear data is present, reference actual project metrics. Cite the data source.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6832,7 +6853,7 @@ Produce a comprehensive market entry strategy:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to prepare for and execute market entry.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6907,7 +6928,7 @@ Produce a comprehensive working capital analysis:
 
 7. RECOMMENDATIONS (4-6): Specific, actionable steps to optimize working capital — accelerate receivables, manage payables, reduce inventory, etc.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -6988,7 +7009,7 @@ Produce a comprehensive debt strategy analysis:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to optimize debt structure, reduce interest costs, maintain covenant compliance, and leverage debt capacity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7068,7 +7089,7 @@ Produce a comprehensive tax strategy analysis:
 
 9. RECOMMENDATIONS (4-6): Prioritized, actionable tax planning steps. Note: this is strategic guidance, not legal/tax advice — recommend consulting a CPA/tax attorney for implementation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7148,7 +7169,7 @@ Produce a comprehensive investor readiness assessment:
 
 10. RECOMMENDATIONS (4-6): Prioritized steps to become investor-ready, with specific timelines.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7227,7 +7248,7 @@ Produce a comprehensive M&A readiness assessment:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to increase M&A readiness and maximize valuation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7311,7 +7332,7 @@ Produce a comprehensive strategic roadmap:
 
 9. RECOMMENDATIONS (4-6): Actionable strategic planning steps — what to start, stop, and continue.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7391,7 +7412,7 @@ Produce a comprehensive process efficiency analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve process efficiency, prioritized by impact.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7470,7 +7491,7 @@ Produce a comprehensive vendor risk assessment:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce vendor risk, prioritized by urgency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7551,7 +7572,7 @@ Produce a comprehensive quality metrics analysis:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to improve quality metrics, prioritized by customer impact.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7631,7 +7652,7 @@ Produce a comprehensive knowledge management assessment:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve knowledge management, prioritized by risk reduction.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7711,7 +7732,7 @@ Produce a comprehensive compliance scorecard:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve compliance posture, prioritized by risk and deadline urgency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7794,7 +7815,7 @@ Produce a comprehensive market penetration analysis:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to increase market penetration.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7871,7 +7892,7 @@ Produce a comprehensive flywheel analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce friction and amplify growth loops.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -7948,7 +7969,7 @@ Produce a comprehensive partnerships strategy:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to identify, approach, and close partnership deals.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8029,7 +8050,7 @@ Produce a comprehensive international expansion analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to prepare for and execute international expansion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8117,7 +8138,7 @@ Produce a comprehensive R&D effectiveness analysis:
 
 10. RECOMMENDATIONS (4-6): Actionable steps to improve R&D effectiveness and innovation ROI.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8195,7 +8216,7 @@ Produce a comprehensive brand equity analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to strengthen brand equity, close perception gaps, and build loyalty.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8275,7 +8296,7 @@ Produce a comprehensive revenue drivers analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to diversify revenue, accelerate growth, and reduce concentration risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8356,7 +8377,7 @@ Produce a comprehensive margin optimization analysis:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to improve margins, reduce costs, and optimize pricing.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8440,7 +8461,7 @@ Produce a comprehensive demand forecasting analysis:
 
 10. RECOMMENDATIONS (4-6): Actionable steps to capitalize on demand trends, prepare for peaks, and mitigate troughs.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8521,7 +8542,7 @@ Produce a comprehensive cohort analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve retention, increase NRR, and replicate the best cohort's success.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8606,7 +8627,7 @@ Produce a comprehensive win/loss analysis:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to improve win rates, shorten sales cycles, and counter competitive threats.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8691,7 +8712,7 @@ Produce a comprehensive sales forecast:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve forecast accuracy, accelerate pipeline, and close gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8766,7 +8787,7 @@ Produce a comprehensive OKR cascade analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve OKR alignment, resolve dependency conflicts, and strengthen cascade discipline.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8845,7 +8866,7 @@ Produce a comprehensive meeting effectiveness analysis:
 
 7. RECOMMENDATIONS (4-6): Specific, actionable steps to improve meeting effectiveness — eliminate waste, speed up decisions, and improve follow-through.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8918,7 +8939,7 @@ Produce a comprehensive communication audit:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve communication health, close alignment gaps, and strengthen information flow.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -8993,7 +9014,7 @@ Produce a comprehensive decision velocity analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate decision-making, improve delegation, and remove bottlenecks.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9068,7 +9089,7 @@ Produce a comprehensive resource optimization analysis:
 
 7. RECOMMENDATIONS (4-6): Specific steps to improve allocation efficiency, eliminate waste, and rebalance toward highest-impact areas.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9145,7 +9166,7 @@ Produce a comprehensive change management analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve change readiness, overcome resistance, and accelerate adoption.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9221,7 +9242,7 @@ Produce a comprehensive cash reserve strategy:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to optimize the cash reserve position — build to optimal, invest excess, and prepare for downside scenarios.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9299,7 +9320,7 @@ Produce a comprehensive revenue quality score:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve revenue quality — increase recurring revenue, reduce concentration, improve predictability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9377,7 +9398,7 @@ Produce a comprehensive cost intelligence analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to reduce costs, improve efficiency, and optimize spending without sacrificing growth.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9467,7 +9488,7 @@ Produce a comprehensive financial model:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve the financial trajectory, hedge against downside scenarios, and capitalize on upside.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9544,7 +9565,7 @@ Produce a comprehensive profitability map:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve overall profitability — fix underperforming segments, double down on high-margin areas, and eliminate unhealthy cross-subsidies.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9624,7 +9645,7 @@ Produce a comprehensive capital allocation analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve capital allocation — prioritize highest-ROIC investments, exit low-return commitments, and optimize the portfolio.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9702,7 +9723,7 @@ Produce a comprehensive Customer Voice analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to amplify positive sentiment and address negative themes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9780,7 +9801,7 @@ Produce a comprehensive Referral Engine analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to increase viral coefficient, activate advocates, and build referral loops.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9855,7 +9876,7 @@ Produce a comprehensive Price Sensitivity Index:
 
 7. RECOMMENDATIONS (4-6): Actionable pricing strategies to maximize revenue while managing sensitivity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -9930,7 +9951,7 @@ Produce a comprehensive Customer Effort Score analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce customer effort, increase self-service, and smooth high-friction touchpoints.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10010,7 +10031,7 @@ Produce a comprehensive Account Expansion Map:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to accelerate account expansion, improve wallet share, and systematize growth.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10088,7 +10109,7 @@ Produce a comprehensive Loyalty Program Design:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to launch, iterate, and scale the loyalty program.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10163,7 +10184,7 @@ Produce a comprehensive Competitive Pricing Matrix:
 
 7. RECOMMENDATIONS (4-6): Actionable pricing strategies to optimize positioning, capture value, and defend against competitive threats.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10239,7 +10260,7 @@ Produce a comprehensive Market Sentiment Index:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to capitalize on positive sentiment or hedge against negative trends.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10316,7 +10337,7 @@ Produce a comprehensive Disruption Radar:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to monitor threats, build resilience, and turn disruptions into opportunities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10391,7 +10412,7 @@ Produce a comprehensive Ecosystem Map:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen ecosystem position, reduce dangerous dependencies, and capture platform value.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10461,7 +10482,7 @@ Produce a comprehensive Category Creation analysis:
 
 9. RECOMMENDATIONS (4-6): Actionable steps to launch, evangelize, and defend the new category.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10539,7 +10560,7 @@ Produce a comprehensive Market Velocity analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to accelerate growth, outpace the market, and mitigate deceleration risks.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10620,7 +10641,7 @@ Produce a comprehensive Employee Engagement analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve engagement and reduce turnover risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10704,7 +10725,7 @@ Produce a comprehensive Talent Acquisition Funnel analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve funnel efficiency and reduce time/cost to hire.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10785,7 +10806,7 @@ Produce a comprehensive Compensation Benchmark analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to close compensation gaps and improve retention through total rewards.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10866,7 +10887,7 @@ Produce a comprehensive Succession Planning analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen succession pipelines and reduce key-person risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -10950,7 +10971,7 @@ Produce a comprehensive Diversity Metrics analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve diversity, close pay equity gaps, and strengthen inclusion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11039,7 +11060,7 @@ Produce a comprehensive Employer Brand analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to strengthen employer brand, improve EVP, and increase offer acceptance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11128,7 +11149,7 @@ Produce a comprehensive Data Governance analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve governance maturity and close compliance gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11219,7 +11240,7 @@ Produce a comprehensive Analytics Maturity analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to advance analytics maturity and close skill gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11308,7 +11329,7 @@ Produce a comprehensive Customer Data Platform analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to unify customer data, improve identity resolution, and enable data activation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11393,7 +11414,7 @@ Produce a comprehensive Predictive Modeling analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to build predictive modeling capability and capture the highest-ROI opportunities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11480,7 +11501,7 @@ Produce a comprehensive Reporting Framework analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve reporting coverage, self-service adoption, and data freshness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11573,7 +11594,7 @@ Produce a comprehensive Data Quality Score analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve data quality, automate monitoring, and reduce data debt.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11660,7 +11681,7 @@ Produce a comprehensive Sales Pipeline Health analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve pipeline health, coverage, and velocity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11753,7 +11774,7 @@ Produce a comprehensive Deal Velocity analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate deal velocity and remove bottlenecks.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11849,7 +11870,7 @@ Produce a comprehensive Win Rate Optimizer analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve win rates across segments and against competitors.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -11941,7 +11962,7 @@ Produce a comprehensive Sales Enablement analysis:
 
 6. RECOMMENDATIONS (4-6): Actionable steps to improve enablement, close training gaps, and increase tool adoption.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12035,7 +12056,7 @@ Produce a comprehensive Territory Planning analysis:
 
 6. RECOMMENDATIONS (4-6): Actionable steps to rebalance territories, close coverage gaps, and capture untapped potential.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12130,7 +12151,7 @@ Produce a comprehensive Quota Intelligence analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve quota setting, attainment, and ramp effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12233,7 +12254,7 @@ Produce a comprehensive Feature Prioritization analysis:
 
 6. RECOMMENDATIONS (4-6): Actionable steps for product roadmap prioritization.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12325,7 +12346,7 @@ Produce a comprehensive Product Usage Analytics analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve engagement, increase stickiness, and reduce churn.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12420,7 +12441,7 @@ Produce a comprehensive Tech Stack Audit:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the tech stack, reduce costs, close security gaps, and eliminate redundancies.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12521,7 +12542,7 @@ Produce a comprehensive API Strategy analysis:
 
 6. RECOMMENDATIONS (4-6): Actionable steps to improve API strategy, monetization, and developer experience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12618,7 +12639,7 @@ Produce a comprehensive Platform Scalability analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve scalability, reduce unit costs, and eliminate bottlenecks.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12716,7 +12737,7 @@ Produce a comprehensive User Onboarding analysis:
 
 8. RECOMMENDATIONS (4-6): Actionable steps to improve onboarding completion, reduce time to value, and fix dropoff points.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12795,7 +12816,7 @@ Produce a comprehensive Supply Chain Risk analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce supply chain risk, diversify suppliers, and improve resilience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12872,7 +12893,7 @@ Produce a comprehensive Inventory Optimization analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve turnover, reduce carrying costs, eliminate dead stock, and optimize reorder points.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -12951,7 +12972,7 @@ Produce a comprehensive Vendor Scorecard analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve vendor management, renegotiate terms, and reduce vendor risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13030,7 +13051,7 @@ Produce a comprehensive Operational Efficiency analysis:
 
 If CONNECTED TOOL DATA includes project management data (Jira, Asana, Linear), reference actual sprint velocities, completion rates, and cycle times. If Slack data is present, reference communication patterns and meeting frequency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13107,7 +13128,7 @@ Produce a comprehensive Quality Management analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce defects, lower quality costs, and build a culture of continuous improvement.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13184,7 +13205,7 @@ Produce a comprehensive Capacity Planning analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize utilization, prepare for scaling triggers, and address infrastructure needs.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13263,7 +13284,7 @@ Produce a comprehensive Customer Journey Map analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce friction, optimize moments of truth, and improve the overall journey.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13338,7 +13359,7 @@ Produce a comprehensive NPS Analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve NPS, grow the promoter base, and reduce detractors.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13415,7 +13436,7 @@ Produce a comprehensive Support Ticket Intelligence analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce ticket volume, improve resolution times, lower escalation rates, and expand self-service.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13490,7 +13511,7 @@ Produce a comprehensive Customer Health Score analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve customer health, reduce churn risk, and capitalize on expansion opportunities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13565,7 +13586,7 @@ Produce a comprehensive Voice of Customer analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to address complaints, prioritize feature requests, and amplify what customers love.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13646,7 +13667,7 @@ Produce a comprehensive Customer Segmentation analysis:
 
 If CONNECTED TOOL DATA includes CRM data (Salesforce, HubSpot), reference actual customer records, segments, and deal values. If Stripe data is present, reference real subscription and payment patterns.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13725,7 +13746,7 @@ Produce a comprehensive Innovation Pipeline analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve the innovation pipeline.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13800,7 +13821,7 @@ Produce a comprehensive IP Portfolio analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the IP portfolio.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13875,7 +13896,7 @@ Produce a comprehensive R&D Efficiency analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve R&D efficiency and ROI.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -13951,7 +13972,7 @@ Produce a comprehensive Technology Readiness analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve technology readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14026,7 +14047,7 @@ Produce a comprehensive Partnership Ecosystem analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the partnership ecosystem.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14101,7 +14122,7 @@ Produce a comprehensive Mergers & Acquisitions analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable M&A strategy steps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14178,7 +14199,7 @@ Produce a comprehensive ESG Scorecard analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve ESG performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14251,7 +14272,7 @@ Produce a comprehensive Carbon Footprint analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce carbon footprint.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14326,7 +14347,7 @@ Produce a comprehensive Regulatory Compliance analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve compliance posture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14401,7 +14422,7 @@ Produce a comprehensive Business Continuity analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve business continuity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14476,7 +14497,7 @@ Produce a comprehensive Ethics Framework analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the ethics framework.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14551,7 +14572,7 @@ Produce a comprehensive Social Impact analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to increase social impact and improve reporting.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14630,7 +14651,7 @@ Produce a comprehensive Scenario Planning analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to prepare for multiple scenarios and maximize optionality.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14705,7 +14726,7 @@ Produce a comprehensive Capital Structure analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize capital structure and reduce financing costs.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14780,7 +14801,7 @@ Produce a comprehensive Working Capital analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve working capital efficiency and free up cash.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14855,7 +14876,7 @@ Produce a comprehensive Tax Strategy analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce tax burden while maintaining full compliance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -14928,7 +14949,7 @@ Produce a comprehensive Fundraising Readiness assessment:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to maximize fundraising success and valuation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15003,7 +15024,7 @@ Produce a comprehensive Exit Strategy analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to maximize exit value and prepare for a successful transaction.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15081,7 +15102,7 @@ Produce a comprehensive Talent Acquisition analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to improve hiring velocity, quality, and employer brand.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15157,7 +15178,7 @@ Produce a comprehensive Employee Engagement analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to boost engagement, reduce turnover, and strengthen culture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15233,7 +15254,7 @@ Produce a comprehensive Compensation Benchmark analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize compensation strategy, close critical gaps, and improve retention.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15309,7 +15330,7 @@ Produce a comprehensive Succession Planning analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the leadership pipeline and reduce key-person risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15385,7 +15406,7 @@ Produce a comprehensive Diversity & Inclusion analysis:
 
 7. RECOMMENDATIONS (4-6): Actionable, measurable steps to advance DEI goals and create lasting cultural change.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15459,7 +15480,7 @@ Produce a comprehensive Culture Assessment:
 
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen healthy cultural elements and address toxic patterns.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15526,7 +15547,7 @@ Produce a comprehensive Deal Pipeline analysis:
 6. VELOCITY TREND: Whether pipeline velocity is improving, declining, or stable.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve pipeline health and velocity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15588,7 +15609,7 @@ Produce a comprehensive Sales Forecasting analysis:
 6. UPLIFT OPPORTUNITIES (3-5): Areas where forecast can be improved.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve forecast accuracy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15651,7 +15672,7 @@ Produce a comprehensive Account-Based Marketing analysis:
 6. CONVERSION RATE: ABM-specific conversion rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve ABM effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15714,7 +15735,7 @@ Produce a comprehensive Commission Optimization analysis:
 6. TOP PERFORMER RETENTION: Retention rate of top-performing salespeople.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize commission structure.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15779,7 +15800,7 @@ Produce a comprehensive Product Analytics analysis:
 6. POWER USER PERCENTAGE: Percentage of users who are power users.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve product engagement.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15842,7 +15863,7 @@ Produce a comprehensive Competitive Response analysis:
 6. BLIND SPOTS (2-4): Areas where competitive intelligence is lacking.
 7. RECOMMENDATIONS (4-6): Actionable steps for competitive response.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15908,7 +15929,7 @@ Produce a comprehensive Market Entry Playbook:
 6. RISK MITIGATION (3-5): Strategies to mitigate market entry risks.
 7. RECOMMENDATIONS (4-6): Actionable steps to execute market entry plans.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -15971,7 +15992,7 @@ Produce a comprehensive Partner Channel Strategy:
 6. NEW CHANNEL OPPORTUNITIES (3-5): New channel opportunities to explore.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize channel strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16034,7 +16055,7 @@ Produce a comprehensive Acquisition Integration analysis:
 6. TOP RISK: The single biggest integration risk and its potential impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve integration outcomes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16097,7 +16118,7 @@ Produce a comprehensive International Readiness assessment:
 6. LOCALIZATION NEEDS (3-5): Product, content, and operational localization requirements.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve international readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16160,7 +16181,7 @@ Produce a comprehensive Revenue Model Analysis:
 6. MODEL FIT: How well the revenue model fits the target market and customer base.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the revenue model.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16223,7 +16244,7 @@ Produce a comprehensive Growth Experiments analysis:
 6. VELOCITY SCORE (0-100): How fast the organization runs and learns from experiments.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve experimentation velocity and quality.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16288,7 +16309,7 @@ Produce a comprehensive Customer Acquisition Cost analysis:
 6. IMPROVEMENT POTENTIAL: Estimated CAC reduction potential with specific actions.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce CAC and improve acquisition efficiency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16351,7 +16372,7 @@ Produce a comprehensive Lifetime Value Optimization analysis:
 6. COST REDUCTION: Biggest opportunity to reduce cost-to-serve.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase LTV across segments.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16414,7 +16435,7 @@ Produce a comprehensive Churn Prediction analysis:
 6. INTERVENTION ROI: Expected ROI from churn intervention programs.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce churn and improve prediction accuracy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16477,7 +16498,7 @@ Produce a comprehensive Net Revenue Retention analysis:
 6. TOP EXPANSION DRIVER: Primary driver of expansion revenue and how to amplify it.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve NRR.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16540,7 +16561,7 @@ Produce a comprehensive Customer Advocacy analysis:
 6. TOP PROGRAM: Best performing advocacy program and why.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow customer advocacy and referral revenue.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16603,7 +16624,7 @@ Produce a comprehensive Feedback Loop analysis:
 6. TOP INSIGHT: Most impactful insight derived from customer feedback.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve feedback collection and close the loop faster.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16668,7 +16689,7 @@ Produce a comprehensive Process Automation analysis:
 6. TECH REQUIREMENTS (3-5): Technology and infrastructure requirements for automation.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate automation adoption.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16731,7 +16752,7 @@ Produce a comprehensive Cost Benchmark analysis:
 6. QUICK SAVINGS (3-5): Cost reductions that can be achieved quickly.
 7. RECOMMENDATIONS (4-6): Actionable steps to bring costs in line with or below benchmarks.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16794,7 +16815,7 @@ Produce a comprehensive Vendor Negotiation analysis:
 6. RISK FACTORS (3-5): Risks associated with vendor renegotiation (e.g., service disruption, relationship damage).
 7. RECOMMENDATIONS (4-6): Actionable steps to execute vendor negotiations effectively.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16857,7 +16878,7 @@ Produce a comprehensive Scalability Assessment:
 6. TOTAL INVESTMENT: Total investment required across all dimensions to scale.
 7. RECOMMENDATIONS (4-6): Actionable steps to remove scaling bottlenecks.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16920,7 +16941,7 @@ Produce a comprehensive Incident Readiness assessment:
 6. LAST DRILL DATE: When was the last incident response drill or tabletop exercise conducted.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve incident readiness and response.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -16983,7 +17004,7 @@ Produce a comprehensive Operational Risk analysis:
 6. INSURANCE COVERAGE: Assessment of whether current insurance coverage is adequate for identified risks.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce operational risk exposure.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17048,7 +17069,7 @@ Produce a comprehensive Data Strategy analysis:
 6. TOP PRIORITY: The single highest-priority data initiative to drive business value.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance data strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17111,7 +17132,7 @@ Produce a comprehensive AI Use Cases analysis:
 6. BARRIERS (3-5): Key barriers to AI adoption (data, talent, culture, infrastructure, etc.).
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate AI adoption.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17174,7 +17195,7 @@ Produce a comprehensive Analytics Roadmap:
 6. QUICK WINS (3-5): Analytics improvements that can be delivered quickly with high impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance analytics maturity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17237,7 +17258,7 @@ Produce a comprehensive Data Privacy analysis:
 6. BREACH READINESS: Assessment of data breach notification and response readiness.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen data privacy compliance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17300,7 +17321,7 @@ Produce a comprehensive MLOps Readiness assessment:
 6. MONITORING COVERAGE: Percentage of production models with active performance monitoring.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve MLOps maturity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17363,7 +17384,7 @@ Produce a comprehensive Digital Transformation analysis:
 6. CHANGE READINESS: Assessment of organizational readiness for digital change.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate digital transformation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17429,7 +17450,7 @@ Produce a comprehensive Revenue Operations analysis:
 6. TOP GAP: The single largest gap in revenue operations.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve RevOps alignment and efficiency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17493,7 +17514,7 @@ Produce a comprehensive Billing Optimization analysis:
 6. TOP FIX: The single highest-impact fix to improve billing.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize billing operations.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17557,7 +17578,7 @@ Produce a comprehensive Contract Intelligence analysis:
 6. AUTO-RENEWAL RATE: Percentage of contracts with auto-renewal clauses.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the contract portfolio.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17621,7 +17642,7 @@ Produce a comprehensive Commission Tracking analysis:
 6. TOP PERFORMER: The highest-performing commission plan and why it works.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize commission structures.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17685,7 +17706,7 @@ Produce a comprehensive Revenue Recognition analysis:
 6. TOP RISK: The single biggest revenue recognition risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve revenue recognition practices.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17749,7 +17770,7 @@ Produce a comprehensive Subscription Health analysis:
 6. EXPANSION RATE: Net expansion revenue rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve subscription health.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17815,7 +17836,7 @@ Produce a comprehensive Product Roadmap Health analysis:
 6. STAKEHOLDER ALIGNMENT: Assessment of how well stakeholders are aligned on priorities.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve roadmap health and execution.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17879,7 +17900,7 @@ Produce a comprehensive Tech Debt Prioritization analysis:
 6. VELOCITY IMPACT: Quantified impact of tech debt on development velocity.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce tech debt strategically.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -17943,7 +17964,7 @@ Produce a comprehensive Release Velocity analysis:
 6. MTTR: Mean time to recovery from deployment failures.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve release velocity and reliability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18007,7 +18028,7 @@ Produce a comprehensive Bug Trend Analysis:
 6. QUALITY TREND: Overall quality trajectory (improving, stable, declining).
 7. RECOMMENDATIONS (4-6): Actionable steps to improve software quality.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18071,7 +18092,7 @@ Produce a comprehensive API Performance analysis:
 6. TOP BOTTLENECK: The single biggest performance bottleneck.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve API performance and reliability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18135,7 +18156,7 @@ Produce a comprehensive User Experience Score analysis:
 6. TOP FRICTION: The single biggest UX friction point driving drop-off.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve user experience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18201,7 +18222,7 @@ Produce a comprehensive Workforce Planning analysis:
 6. TIME TO FILL: Average time to fill open positions.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize workforce planning.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18265,7 +18286,7 @@ Produce a comprehensive Skills Gap Analysis:
 6. READINESS SCORE (0-100): Overall organizational skills readiness score.
 7. RECOMMENDATIONS (4-6): Actionable steps to close skills gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18329,7 +18350,7 @@ Produce a comprehensive Remote Work Effectiveness analysis:
 6. EMPLOYEE SATISFACTION: Remote employee satisfaction rating.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve remote work effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18393,7 +18414,7 @@ Produce a comprehensive Team Velocity analysis:
 6. IMPROVEMENT RATE: Rate of velocity improvement over recent sprints.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve team velocity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18457,7 +18478,7 @@ Produce a comprehensive Burnout Risk analysis:
 6. TOP CAUSE: The single biggest driver of burnout risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce burnout risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18521,7 +18542,7 @@ Produce a comprehensive Learning & Development analysis:
 6. TOP PROGRAM: The single highest-impact program and why it works.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve L&D effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18587,7 +18608,7 @@ Produce a comprehensive Regulatory Risk analysis:
 6. PREPAREDNESS SCORE (0-100): Regulatory preparedness score.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce regulatory risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18651,7 +18672,7 @@ Produce a comprehensive Contract Management analysis:
 6. TOP RISK: The single biggest contract management risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve contract management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18715,7 +18736,7 @@ Produce a comprehensive IP Strategy analysis:
 6. COMPETITIVE ADVANTAGE: Assessment of how IP creates competitive advantage.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the IP strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18779,7 +18800,7 @@ Produce a comprehensive Legal Spend Analysis:
 6. TOP CATEGORY: The highest spend category and whether it is justified.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize legal spend.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18843,7 +18864,7 @@ Produce a comprehensive Policy Compliance analysis:
 6. TOP PRIORITY: The single highest-priority compliance gap to address.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve policy compliance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18907,7 +18928,7 @@ Produce a comprehensive Audit Readiness analysis:
 6. NEXT AUDIT DATE: Date of the next scheduled audit.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve audit readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -18973,7 +18994,7 @@ Produce a comprehensive Sales Methodology analysis:
 6. WIN RATE: Overall win rate across all deals.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve sales methodology and adoption.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19037,7 +19058,7 @@ Produce a comprehensive Pipeline Velocity analysis:
 6. FORECAST ACCURACY: Historical forecast accuracy percentage.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve pipeline velocity and coverage.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19101,7 +19122,7 @@ Produce a comprehensive Deal Qualification analysis:
 6. TOP DISQUALIFIER: The most common reason deals fail qualification.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve deal qualification quality.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19165,7 +19186,7 @@ Produce a comprehensive Sales Coaching analysis:
 6. IMPACT ON QUOTA: Measured impact of coaching on quota attainment.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve sales coaching and development.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19229,7 +19250,7 @@ Produce a comprehensive Account Planning analysis:
 6. EXPANSION PIPELINE: Total expansion pipeline value.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve account planning and expansion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19293,7 +19314,7 @@ Produce a comprehensive Competitive Battlecards analysis:
 6. BEST COUNTER: The most effective counter-strategy.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve competitive win rates.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19359,7 +19380,7 @@ Produce a comprehensive Cash Burn Analysis:
 6. TOP BURN AREA: Largest single burn category.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize burn rate and extend runway.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19423,7 +19444,7 @@ Produce a comprehensive Revenue Per Employee analysis:
 6. IMPROVEMENT POTENTIAL: Estimated improvement potential in dollars.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve revenue per employee.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19487,7 +19508,7 @@ Produce a comprehensive Financial Benchmarking analysis:
 6. PEER GROUP: Description of the peer group used for comparison.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve financial standing vs. peers.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19551,7 +19572,7 @@ Produce a comprehensive Investment Portfolio analysis:
 6. TOP PERFORMER: Best-performing investment by ROI.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize investment portfolio.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19615,7 +19636,7 @@ Produce a comprehensive Cost Allocation Model analysis:
 6. TOP VARIANCE: Cost center with the largest variance between allocated and actual.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve cost allocation and reduce variances.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19679,7 +19700,7 @@ Produce a comprehensive Margin Waterfall analysis:
 6. BIGGEST LEAKAGE: Layer with the largest margin leakage.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve margins and reduce leakage.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19745,7 +19766,7 @@ Produce a comprehensive Customer Onboarding Metrics analysis:
 6. TOP DROPOFF: Step with the highest customer dropoff.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve onboarding and reduce time-to-value.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19809,7 +19830,7 @@ Produce a comprehensive Health Score Model analysis:
 6. TOP PREDICTOR: Dimension most predictive of churn or expansion.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve overall customer health.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19873,7 +19894,7 @@ Produce a comprehensive CS Expansion Playbook analysis:
 6. CONVERSION RATE: Overall expansion opportunity conversion rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase CS-driven expansion revenue.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -19937,7 +19958,7 @@ Produce a comprehensive Renewal Forecasting analysis:
 6. TOP RISK: Single biggest risk to renewals.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve renewal rates and forecast accuracy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20001,7 +20022,7 @@ Produce a comprehensive CS Operations analysis:
 6. ESCALATION RATE: Percentage of cases escalated.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve CS operations efficiency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20065,7 +20086,7 @@ Produce a comprehensive Customer Milestones analysis:
 6. CORRELATION TO RETENTION: Correlation between milestone completion and retention rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve milestone achievement.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20131,7 +20152,7 @@ Produce a comprehensive OKR Framework analysis:
 6. ALIGNMENT SCORE (numeric 0-100): Score reflecting how well OKRs align across the organization.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve OKR adoption and alignment.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20195,7 +20216,7 @@ Produce a comprehensive Strategic Pillars analysis:
 6. RESOURCE ALLOCATION: Summary of how resources are allocated across pillars.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve strategic execution and alignment.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20259,7 +20280,7 @@ Produce a comprehensive Competitive Positioning analysis:
 6. PERCEPTION GAP: Gap between actual competitive position and market perception.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen competitive positioning.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20323,7 +20344,7 @@ Produce a comprehensive Market Share Analysis:
 6. TOP OPPORTUNITY: Single biggest market share opportunity.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow market share.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20387,7 +20408,7 @@ Produce a comprehensive Growth Corridors analysis:
 6. INVESTMENT REQUIRED: Total estimated investment required to pursue corridors.
 7. RECOMMENDATIONS (4-6): Actionable steps to evaluate and pursue growth corridors.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20451,7 +20472,7 @@ Produce a comprehensive Value Prop Canvas analysis:
 6. CUSTOMER VALIDATION: Level of customer validation achieved (e.g., "Validated via 50+ interviews").
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen value proposition and close gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20517,7 +20538,7 @@ Produce a comprehensive Competitive Monitoring analysis:
 6. MONITORING CADENCE: Recommended frequency for ongoing competitive monitoring.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen competitive positioning and monitoring.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20581,7 +20602,7 @@ Produce a comprehensive Market Trend Radar analysis:
 6. OPPORTUNITY WINDOW: Window of opportunity to capitalize on favorable trends.
 7. RECOMMENDATIONS (4-6): Actionable steps to position the business ahead of market trends.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20645,7 +20666,7 @@ Produce a comprehensive Industry Benchmark Index:
 6. PEER GROUP: Description of the peer group used for benchmarking.
 7. RECOMMENDATIONS (4-6): Actionable steps to close gaps on underperforming metrics.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20709,7 +20730,7 @@ Produce a comprehensive Customer Intel Platform analysis:
 6. BLIND SPOTS (3-5): Areas where customer intelligence is lacking or incomplete.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen customer intelligence capabilities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20773,7 +20794,7 @@ Produce a comprehensive Price Sensitivity Model:
 6. OPTIMAL PRICE: Recommended optimal price point based on analysis.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize pricing based on sensitivity data.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20837,7 +20858,7 @@ Produce a comprehensive Demand Signal Analysis:
 6. FORECAST ACCURACY: Estimated accuracy of current demand forecasting.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve demand sensing and forecasting.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20903,7 +20924,7 @@ Produce a comprehensive Digital Maturity Index:
 6. DIGITAL READINESS: Overall digital readiness assessment.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate digital maturity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -20967,7 +20988,7 @@ Produce a comprehensive Cloud Migration Readiness assessment:
 6. QUICK WINS (3-5): Workloads or actions that can be migrated quickly for immediate benefit.
 7. RECOMMENDATIONS (4-6): Actionable steps to prepare for and execute cloud migration.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21031,7 +21052,7 @@ Produce a comprehensive Automation ROI analysis:
 6. TOP OPPORTUNITY: Single highest-impact automation opportunity.
 7. RECOMMENDATIONS (4-6): Actionable steps to prioritize and implement automation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21095,7 +21116,7 @@ Produce a comprehensive Digital Workplace analysis:
 6. TOP GAP: Biggest gap in digital workplace capabilities.
 7. RECOMMENDATIONS (4-6): Actionable steps to enhance the digital workplace experience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21159,7 +21180,7 @@ Produce a comprehensive Cybersecurity Posture assessment:
 6. INCIDENT READINESS LEVEL: Level of readiness for security incidents.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen cybersecurity posture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21223,7 +21244,7 @@ Produce a comprehensive Tech Vendor Consolidation analysis:
 6. CONSOLIDATION PLAN: High-level consolidation plan summary.
 7. RECOMMENDATIONS (4-6): Actionable steps to execute vendor consolidation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21289,7 +21310,7 @@ Produce a comprehensive Revenue Source Mapping:
 6. DIVERSIFICATION SCORE: Revenue diversification score or rating.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize and diversify revenue sources.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21353,7 +21374,7 @@ Produce a comprehensive Channel Mix Optimization analysis:
 6. REALLOCATION POTENTIAL: Revenue potential from reallocating channel investment.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize channel mix and allocation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21417,7 +21438,7 @@ Produce a comprehensive Cross-Sell Engine analysis:
 6. IMPLEMENTATION PLAN: High-level implementation plan for the cross-sell program.
 7. RECOMMENDATIONS (4-6): Actionable steps to build and scale cross-sell/upsell capabilities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21481,7 +21502,7 @@ Produce a comprehensive Price Optimization Model:
 6. COMPETITIVE POSITION: Current competitive pricing position.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize pricing for maximum revenue and margin.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21545,7 +21566,7 @@ Produce a comprehensive Promotion Effectiveness analysis:
 6. WASTED SPEND: Estimated wasted promotional spend on underperforming campaigns.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve promotion effectiveness and reduce waste.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21609,7 +21630,7 @@ Produce a comprehensive Revenue Health Index:
 6. QUALITY SCORE: Revenue quality score or rating.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve revenue health and sustainability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21675,7 +21696,7 @@ Produce a comprehensive Organizational Network analysis:
 6. COLLABORATION SCORE (numeric 0-100): Overall collaboration score.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve organizational connectivity and reduce silos.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21739,7 +21760,7 @@ Produce a comprehensive Decision Efficiency analysis:
 6. DATA USAGE: How effectively data is used to inform decisions.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve decision-making speed and quality.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21803,7 +21824,7 @@ Produce a comprehensive Meeting Efficiency analysis:
 6. TOP ISSUE: Biggest meeting efficiency issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve meeting efficiency and reclaim productive time.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21867,7 +21888,7 @@ Produce a comprehensive Knowledge Capital analysis:
 6. KNOWLEDGE SHARING INDEX: Overall knowledge sharing effectiveness rating.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen knowledge capital and reduce knowledge risk.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21931,7 +21952,7 @@ Produce a comprehensive Change Management Score:
 6. SUCCESS RATE: Historical or estimated change initiative success rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve change management capabilities and readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -21995,7 +22016,7 @@ Produce a comprehensive Culture Alignment analysis:
 6. ENGAGEMENT CORRELATION: Correlation between culture alignment and employee engagement.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen culture alignment and close gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22063,7 +22084,7 @@ Produce a comprehensive Partner Performance analysis:
 6. CHURN RISK: Identify partners at risk of churning or disengaging.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve partner performance and ecosystem health.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22127,7 +22148,7 @@ Produce a comprehensive Ecosystem Mapping analysis:
 6. WHITESPACE: Largest whitespace or unserved opportunity in the ecosystem.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen ecosystem position and leverage opportunities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22191,7 +22212,7 @@ Produce a comprehensive Alliance Strategy analysis:
 6. SUCCESS RATE: Historical or projected alliance success rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to pursue and optimize alliance strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22255,7 +22276,7 @@ Produce a comprehensive Channel Partner Health analysis:
 6. AT-RISK PARTNERS (numeric): Number of channel partners showing signs of risk or decline.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve channel partner health and performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22319,7 +22340,7 @@ Produce a comprehensive Co-Selling Pipeline analysis:
 6. TOP DEAL: Largest or most strategically important co-sell deal.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow and close co-selling pipeline more effectively.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22383,7 +22404,7 @@ Produce a comprehensive Integration Marketplace analysis:
 6. ADOPTION RATE: Overall integration adoption rate across the customer base.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow the integration marketplace and ecosystem.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22451,7 +22472,7 @@ Produce a comprehensive Brand Equity Index:
 6. AWARENESS: Overall brand awareness level and reach.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen brand equity and market position.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22515,7 +22536,7 @@ Produce a comprehensive Sentiment Dashboard:
 6. TOP NEGATIVE: Most common negative sentiment theme or concern.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve brand sentiment and address negative themes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22579,7 +22600,7 @@ Produce a comprehensive Media Share of Voice analysis:
 6. VIRAL MOMENTS: Notable high-impact or viral media moments.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase media share of voice and visibility.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22643,7 +22664,7 @@ Produce a comprehensive Crisis Communications Readiness assessment:
 6. PLAYBOOK: Status and quality of crisis communications playbook.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve crisis communications readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22707,7 +22728,7 @@ Produce a comprehensive Thought Leadership analysis:
 6. AUDIENCE GROWTH: Thought leadership audience growth rate and trend.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen thought leadership and industry authority.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22771,7 +22792,7 @@ Produce a comprehensive Brand Consistency analysis:
 6. GUIDELINES ADHERENCE: Overall adherence to brand guidelines across the organization.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve brand consistency and guideline adherence.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22839,7 +22860,7 @@ Produce a comprehensive Monetization Model analysis:
 6. REVENUE PER USER: Average revenue per user or customer.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize monetization and diversify revenue.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22903,7 +22924,7 @@ Produce a comprehensive Free Trial Conversion analysis:
 6. ACTIVATION RATE: Percentage of trial users reaching the activation milestone.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve trial conversion rates.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -22967,7 +22988,7 @@ Produce a comprehensive Usage-Based Pricing analysis:
 6. PREDICTABILITY: Assessment of revenue predictability under usage-based model.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize usage-based pricing and improve revenue capture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23031,7 +23052,7 @@ Produce a comprehensive Bundle Optimization analysis:
 6. CANNIBAL RATE: Overall cannibalization rate across bundle offerings.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize bundle strategy and minimize cannibalization.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23095,7 +23116,7 @@ Produce a comprehensive Discount Discipline analysis:
 6. TOP ABUSE: Most abused or overused discount category.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve discount discipline and reduce unnecessary leakage.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23166,7 +23187,7 @@ SCOPE BOUNDARIES — AVOID REPETITION WITH CORE REVENUE LEAKS:
 
 If CONNECTED TOOL DATA includes financial data (QuickBooks, Stripe), identify specific revenue leaks from real transaction patterns, failed payments, and billing gaps. Cite the data source for each identified leak.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23234,7 +23255,7 @@ Produce a comprehensive Customer Academy analysis:
 6. REVENUE IMPACT: Revenue impact attributable to the education program.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve the customer academy and drive more engagement.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23298,7 +23319,7 @@ Produce a comprehensive Content Engagement analysis:
 6. CONTENT GAPS (3-5): Topics or formats missing from the content library.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve content engagement and fill gaps.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23362,7 +23383,7 @@ Produce a comprehensive Community Health analysis:
 6. TOP CONTRIBUTOR: Profile or characteristics of top community contributors.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve community health and drive engagement.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23426,7 +23447,7 @@ Produce a comprehensive Certification Program analysis:
 6. RENEWAL RATE: Certification renewal or re-certification rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow and improve the certification program.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23490,7 +23511,7 @@ Produce a comprehensive Self-Service Adoption analysis:
 6. TOP CHANNEL: Highest-performing self-service channel by usage and resolution.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase self-service adoption and effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23554,7 +23575,7 @@ Produce a comprehensive Support Deflection analysis:
 6. IMPROVEMENT AREA: Support category with the most room for deflection improvement.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase support deflection and reduce ticket volume.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23622,7 +23643,7 @@ Produce a comprehensive Investor Deck analysis:
 6. NARRATIVE SCORE (numeric 0-100): How compelling the overall narrative is.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the investor deck.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23686,7 +23707,7 @@ Produce a comprehensive Funding Timeline analysis:
 6. READINESS SCORE (numeric 0-100): Fundraising readiness score.
 7. RECOMMENDATIONS (4-6): Actionable steps to stay on track with funding milestones.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23750,7 +23771,7 @@ Produce a comprehensive Valuation Model analysis:
 6. KEY ASSUMPTION: The most critical assumption in the model.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve valuation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23814,7 +23835,7 @@ Produce a comprehensive Cap Table Management analysis:
 6. CLEANLINESS SCORE (numeric 0-100): Cap table cleanliness and simplicity score.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the cap table.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23878,7 +23899,7 @@ Produce a comprehensive Investor Communication analysis:
 6. INVESTOR SATISFACTION: Overall investor satisfaction with communications.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve investor communications.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -23942,7 +23963,7 @@ Produce a comprehensive Board Reporting analysis:
 6. GOVERNANCE SCORE (numeric 0-100): Overall governance and board reporting maturity score.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve board reporting and governance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24010,7 +24031,7 @@ Produce a comprehensive Geographic Expansion Strategy analysis:
 6. RISK LEVEL: Overall risk level of the expansion strategy.
 7. RECOMMENDATIONS (4-6): Actionable steps to execute geographic expansion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24074,7 +24095,7 @@ Produce a comprehensive Local Market Entry analysis:
 6. LOCAL PARTNER NEED: Assessment of the need for a local partner.
 7. RECOMMENDATIONS (4-6): Actionable steps to navigate market entry barriers.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24138,7 +24159,7 @@ Produce a comprehensive Market Regulations analysis:
 6. HIGHEST RISK: The regulation area posing the highest risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to address regulatory requirements.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24202,7 +24223,7 @@ Produce a comprehensive Partner Localization analysis:
 6. TIME TO MARKET: Estimated time to achieve market-ready localization.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate localization efforts.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24266,7 +24287,7 @@ Produce a comprehensive Cultural Adaptation analysis:
 6. ADAPTATION TIMELINE: Estimated timeline for cultural adaptation.
 7. RECOMMENDATIONS (4-6): Actionable steps to build cultural competency for expansion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24330,7 +24351,7 @@ Produce a comprehensive Expansion ROI analysis:
 6. IRR: Internal rate of return for the expansion investment.
 7. RECOMMENDATIONS (4-6): Actionable steps to maximize expansion ROI.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24398,7 +24419,7 @@ Produce a comprehensive Product-Led Metrics analysis:
 6. GROWTH RATE: Overall product-led growth rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen product-led growth.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24462,7 +24483,7 @@ Produce a comprehensive Activation Funnel analysis:
 6. MEDIAN TIME TO ACTIVATE: Median time from signup to activation.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve activation funnel conversion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24526,7 +24547,7 @@ Produce a comprehensive Feature Adoption analysis:
 6. STICKINESS SCORE (numeric 0-100): Product stickiness score based on feature adoption.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase feature adoption and stickiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24590,7 +24611,7 @@ Produce a comprehensive Virality analysis:
 6. TOP LOOP: Highest-performing viral loop.
 7. RECOMMENDATIONS (4-6): Actionable steps to amplify virality and organic growth.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24654,7 +24675,7 @@ Produce a comprehensive Product Qualified Leads analysis:
 6. TOP CRITERIA: Most predictive PQL criteria.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve PQL identification and conversion.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24718,7 +24739,7 @@ Produce a comprehensive Time to Value analysis:
 6. RETENTION CORRELATION: Correlation between TTV and long-term retention.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce time to value.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24786,7 +24807,7 @@ Produce a comprehensive AI Readiness Score analysis:
 6. ESTIMATED INVESTMENT: Total estimated investment to achieve AI readiness.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve AI readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24850,7 +24871,7 @@ Produce a comprehensive ML Use Case Priority analysis:
 6. QUICK WINS (numeric): Number of quick-win ML use cases (high value, high feasibility).
 7. RECOMMENDATIONS (4-6): Actionable steps to launch and scale ML initiatives.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24914,7 +24935,7 @@ Produce a comprehensive Data Infrastructure analysis:
 6. MODERNIZATION SCORE (numeric 0-100): Data infrastructure modernization maturity score.
 7. RECOMMENDATIONS (4-6): Actionable steps to build AI-ready data infrastructure.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -24978,7 +24999,7 @@ Produce a comprehensive AI Talent Gap analysis:
 6. TRAINING POTENTIAL: Assessment of upskilling potential for existing team members.
 7. RECOMMENDATIONS (4-6): Actionable steps to close the AI talent gap.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25042,7 +25063,7 @@ Produce a comprehensive Ethical AI Framework analysis:
 6. TRANSPARENCY SCORE (numeric 0-100): AI transparency and explainability score.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the ethical AI framework.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25106,7 +25127,7 @@ Produce a comprehensive AI ROI Projection analysis:
 6. TOP SCENARIO: Highest-ROI AI investment scenario.
 7. RECOMMENDATIONS (4-6): Actionable steps to maximize AI investment returns.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25172,7 +25193,7 @@ Produce a comprehensive Advocacy Program analysis:
 6. TOP TIER: Highest-performing advocacy tier.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow and optimize the advocacy program.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25236,7 +25257,7 @@ Produce a comprehensive Referral Mechanism analysis:
 6. VIRAL COEFFICIENT: Viral coefficient of referral program.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve referral mechanisms.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25300,7 +25321,7 @@ Produce a comprehensive Testimonial Pipeline analysis:
 6. TOP ASSET: Highest-performing testimonial asset.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen testimonial pipeline.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25364,7 +25385,7 @@ Produce a comprehensive Case Study Factory analysis:
 6. TOP STUDY: Highest-performing case study.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve case study output and effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25428,7 +25449,7 @@ Produce a comprehensive Customer Advisory Board analysis:
 6. TOP INITIATIVE: Top initiative driven by advisory board feedback.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the advisory board.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25492,7 +25513,7 @@ Produce a comprehensive NPS Action Plan:
 6. TOP PRIORITY: Highest-priority NPS improvement action.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve NPS across the business.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25558,7 +25579,7 @@ Produce a comprehensive Procurement Efficiency analysis:
 6. COMPLIANCE RATE: Overall procurement compliance rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve procurement efficiency.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25622,7 +25643,7 @@ Produce a comprehensive Expense Management analysis:
 6. SAVINGS OPPORTUNITY: Total identified savings opportunity.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize expense management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25686,7 +25707,7 @@ Produce a comprehensive Invoice Automation analysis:
 6. COST PER INVOICE: Average cost per invoice processed.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve invoice automation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25750,7 +25771,7 @@ Produce a comprehensive Payment Optimization analysis:
 6. LATE PAY PENALTY: Total late payment penalties incurred.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize payment processes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25814,7 +25835,7 @@ Produce a comprehensive Financial Controls analysis:
 6. FRAUD RISK: Overall fraud risk assessment.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen financial controls.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25878,7 +25899,7 @@ Produce a comprehensive Treasury Management analysis:
 6. LIQUIDITY RATIO: Current liquidity ratio.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve treasury management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -25944,7 +25965,7 @@ Produce a comprehensive Demand Gen Engine analysis:
 6. TOP CHANNEL: Top-performing demand gen channel.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize demand generation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26008,7 +26029,7 @@ Produce a comprehensive Content Marketing ROI analysis:
 6. TOP ASSET: Top-performing content asset type.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve content marketing ROI.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26072,7 +26093,7 @@ Produce a comprehensive SEO Strategy analysis:
 6. TECHNICAL HEALTH: Overall technical SEO health.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve SEO performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26136,7 +26157,7 @@ Produce a comprehensive Paid Media Optimization analysis:
 6. WASTED SPEND: Estimated wasted or inefficient spend.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize paid media performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26200,7 +26221,7 @@ Produce a comprehensive Event ROI analysis:
 6. TOP EVENT: Top-performing event by ROI.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve event ROI.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26264,7 +26285,7 @@ Produce a comprehensive Influencer Strategy analysis:
 6. TOP INFLUENCER: Top-performing influencer partner.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize influencer strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26330,7 +26351,7 @@ Produce a comprehensive Platform Economics analysis:
 6. GROWTH RATE: Platform growth rate.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize platform economics.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26394,7 +26415,7 @@ Produce a comprehensive Developer Experience analysis:
 6. TOP ISSUE: Top developer experience issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve developer experience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26458,7 +26479,7 @@ Produce a comprehensive API Monetization analysis:
 6. PRICING MODEL: Current API pricing model.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize API monetization.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26522,7 +26543,7 @@ Produce a comprehensive Marketplace Strategy analysis:
 6. BUYER SATISFACTION: Buyer satisfaction score or rating.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize marketplace strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26586,7 +26607,7 @@ Produce a comprehensive Platform Governance analysis:
 6. TOP ISSUE: Top governance issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen platform governance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26650,7 +26671,7 @@ Produce a comprehensive Platform Network Dynamics analysis:
 6. MOAT SCORE (numeric 0-100): Competitive moat score from network effects.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen platform network dynamics.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26716,7 +26737,7 @@ Produce a comprehensive Contract Lifecycle analysis:
 6. AUTOMATION SCORE (numeric 0-100): Overall contract automation maturity score.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the contract lifecycle.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26780,7 +26801,7 @@ Produce a comprehensive Compliance Automation analysis:
 6. ANNUAL COST: Estimated annual compliance cost.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase compliance automation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26844,7 +26865,7 @@ Produce a comprehensive Legal Risk Register:
 6. TOP RISK: The single highest-priority legal risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to reduce legal risk exposure.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26908,7 +26929,7 @@ Produce a comprehensive Intellectual Property Audit:
 6. GAPS (3-5): Key gaps in IP protection.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the IP portfolio.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -26972,7 +26993,7 @@ Produce a comprehensive Regulatory Calendar:
 6. NEXT DEADLINE: The next upcoming regulatory deadline.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve regulatory calendar management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27036,7 +27057,7 @@ Produce a comprehensive Privacy Compliance assessment:
 6. DATA BREACH RISK: Current data breach risk level.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen privacy compliance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27102,7 +27123,7 @@ Produce a comprehensive Data Warehouse Strategy:
 6. COST OPTIMIZATION: Cost optimization opportunity assessment.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance data warehouse strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27166,7 +27187,7 @@ Produce a comprehensive BI Dashboard Design analysis:
 6. TOP DASHBOARD: Most impactful or widely used dashboard.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve BI dashboard strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27230,7 +27251,7 @@ Produce a comprehensive Predictive Model Catalog:
 6. TOP MODEL: Highest-impact predictive model.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance predictive modeling capabilities.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27294,7 +27315,7 @@ Produce a comprehensive Data Lineage Map:
 6. STALE PCT: Percentage of datasets considered stale or outdated.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve data lineage coverage and quality.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27358,7 +27379,7 @@ Produce a comprehensive Metrics Dictionary:
 6. TOP GAP: The biggest gap in metrics governance.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve metrics governance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27422,7 +27443,7 @@ Produce a comprehensive Analytics Governance assessment:
 6. TOP ISSUE: Top analytics governance issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen analytics governance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27488,7 +27509,7 @@ Produce a comprehensive Employee Journey analysis:
 6. RETENTION RISK: Current employee retention risk level.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve the employee journey.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27552,7 +27573,7 @@ Produce a comprehensive Workplace Wellness assessment:
 6. TOP PROGRAM: Most impactful wellness program.
 7. RECOMMENDATIONS (4-6): Actionable steps to enhance workplace wellness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27616,7 +27637,7 @@ Produce a comprehensive Learning Pathways analysis:
 6. TOP PATH: Highest-priority learning pathway.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen learning pathways.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27680,7 +27701,7 @@ Produce a comprehensive Performance Framework assessment:
 6. REVIEW CADENCE: Current performance review cadence.
 7. RECOMMENDATIONS (4-6): Actionable steps to enhance the performance framework.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27744,7 +27765,7 @@ Produce a comprehensive Pay Equity Analysis:
 6. TOP GAP: The most significant pay equity gap.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve pay equity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27808,7 +27829,7 @@ Produce a comprehensive DEI Benchmark:
 6. TOP STRENGTH: The strongest DEI dimension.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance DEI.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27874,7 +27895,7 @@ Produce a comprehensive Business Model Canvas analysis:
 6. PIVOT READINESS: Readiness to pivot the business model if needed.
 7. RECOMMENDATIONS (4-6): Actionable steps to innovate the business model.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -27938,7 +27959,7 @@ Produce a comprehensive Revenue Model Design:
 6. TOP CHANNEL: Highest-performing revenue channel.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the revenue model.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28002,7 +28023,7 @@ Produce a comprehensive Value Chain Optimization analysis:
 6. TOP BOTTLENECK: Biggest bottleneck in the value chain.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the value chain.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28066,7 +28087,7 @@ Produce a comprehensive Cost Structure Analysis:
 6. TOP DRIVER: The single largest cost driver.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the cost structure.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28130,7 +28151,7 @@ Produce a comprehensive Partnership Model analysis:
 6. TOP PARTNER: Most valuable partnership.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the partnership model.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28194,7 +28215,7 @@ Produce a comprehensive Growth Lever Assessment:
 6. READINESS SCORE (numeric 0-100): Overall growth readiness score.
 7. RECOMMENDATIONS (4-6): Actionable steps to activate the highest-impact growth levers.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28260,7 +28281,7 @@ Produce a comprehensive Vendor Management analysis:
 6. RISK LEVEL: Overall vendor risk level assessment.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize vendor management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28324,7 +28345,7 @@ Produce a comprehensive Supply Chain Visibility analysis:
 6. AVG LEAD TIME: Average lead time across all supply chain nodes.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve supply chain visibility.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28388,7 +28409,7 @@ Produce a comprehensive Sustainable Sourcing analysis:
 6. TOP OPPORTUNITY: Single best opportunity to improve sustainable sourcing.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance sustainable sourcing.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28452,7 +28473,7 @@ Produce a comprehensive Facility Optimization analysis:
 6. SAVINGS OPPORTUNITY: Estimated savings opportunity from optimization.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize facility operations.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28516,7 +28537,7 @@ Produce a comprehensive Fleet Management analysis:
 6. REPLACEMENT NEEDED (numeric): Number of assets due for replacement.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize fleet management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28580,7 +28601,7 @@ Produce a comprehensive Customer Success analysis:
 6. EXPANSION REVENUE: Revenue from existing customer expansion.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen customer success.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28646,7 +28667,7 @@ Produce a comprehensive Crisis Management analysis:
 6. TOP VULNERABILITY: Most critical unaddressed vulnerability.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve crisis management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28710,7 +28731,7 @@ Produce a comprehensive Operational Resilience analysis:
 6. TOP RISK: Top operational resilience risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen operational resilience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28774,7 +28795,7 @@ Produce a comprehensive Stakeholder Mapping analysis:
 6. TOP PRIORITY: Highest priority stakeholder group requiring immediate attention.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve stakeholder engagement.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28838,7 +28859,7 @@ Produce a comprehensive Digital Presence analysis:
 6. STRONGEST CHANNEL: Best-performing digital channel.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen digital presence.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28902,7 +28923,7 @@ Produce a comprehensive Channel Strategy analysis:
 6. DIVERSIFICATION SCORE (numeric 0-100): Channel diversification health score.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize channel strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -28966,7 +28987,7 @@ Produce a comprehensive Account Management analysis:
 6. EXPANSION POTENTIAL: Total estimated expansion revenue potential.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize account management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29032,7 +29053,7 @@ Produce a comprehensive Fundraising Strategy analysis:
 6. READINESS SCORE (numeric 0-100): Overall fundraising readiness score.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen fundraising strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29096,7 +29117,7 @@ Produce a comprehensive Cap Table Management analysis:
 6. OPTION POOL: Employee option pool size as percentage.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize cap table management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29160,7 +29181,7 @@ Produce a comprehensive Exit Planning analysis:
 6. READINESS SCORE (numeric 0-100): Overall exit readiness score.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance exit planning.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29224,7 +29245,7 @@ Produce a comprehensive Board Governance analysis:
 6. MEETING FREQUENCY: Board meeting frequency.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen board governance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29288,7 +29309,7 @@ Produce a comprehensive Recruitment Funnel analysis:
 6. TOP SOURCE: Best performing candidate source.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the recruitment funnel.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29352,7 +29373,7 @@ Produce a comprehensive Employer Branding analysis:
 6. TOP STRENGTH: Top employer brand strength.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen employer branding.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29418,7 +29439,7 @@ Produce a comprehensive Team Topology analysis:
 6. TOP TEAM: Highest-performing team.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize team topology.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29482,7 +29503,7 @@ Produce a comprehensive Onboarding Optimization analysis:
 6. TOP ISSUE: Top onboarding issue or bottleneck.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize onboarding.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29546,7 +29567,7 @@ Produce a comprehensive Meeting Culture analysis:
 6. TOP ISSUE: Top meeting culture issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve meeting culture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29610,7 +29631,7 @@ Produce a comprehensive Document Management analysis:
 6. TOP GAP: Top document management gap.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve document management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29674,7 +29695,7 @@ Produce a comprehensive Workflow Automation analysis:
 6. TOP OPPORTUNITY: Single best automation opportunity.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance workflow automation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29738,7 +29759,7 @@ Produce a comprehensive Quality Assurance analysis:
 6. TOP ISSUE: Top quality assurance issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen quality assurance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29806,7 +29827,7 @@ Produce a comprehensive Incident Response analysis:
 6. TOP THREAT: The most significant threat vector or category.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve incident response.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29870,7 +29891,7 @@ Produce a comprehensive Access Control analysis:
 6. TOP RISK: The most critical access control risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen access control.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29934,7 +29955,7 @@ Produce a comprehensive Audit Trail analysis:
 6. COMPLIANCE SCORE (numeric 0-100): Overall compliance score.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen audit trails and compliance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -29998,7 +30019,7 @@ Produce a comprehensive Penetration Testing analysis:
 6. LAST TEST DATE: Date or timeframe of the most recent penetration test.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve penetration testing program.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30062,7 +30083,7 @@ Produce a comprehensive Security Awareness analysis:
 6. TOP RISK: The most significant security awareness risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen security awareness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30126,7 +30147,7 @@ Produce a comprehensive Data Classification analysis:
 6. TOP GAP: The most significant data classification gap.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve data classification.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30194,7 +30215,7 @@ Produce a comprehensive API Design analysis:
 6. VERSIONING STRATEGY: Primary API versioning strategy in use.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve API design and governance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30258,7 +30279,7 @@ Produce a comprehensive Microservices Architecture analysis:
 6. TOP BOTTLENECK: The most critical architectural bottleneck.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve microservices architecture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30322,7 +30343,7 @@ Produce a comprehensive Cloud Optimization analysis:
 6. RIGHT-SIZING COUNT (numeric): Number of resources identified for right-sizing.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize cloud spend and architecture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30386,7 +30407,7 @@ Produce a comprehensive DevOps Maturity analysis:
 6. CHANGE FAIL RATE: Percentage of deployments causing failures.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance DevOps maturity.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30450,7 +30471,7 @@ Produce a comprehensive System Monitoring analysis:
 6. BLIND SPOTS (numeric): Number of systems or areas without monitoring coverage.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve system monitoring and observability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30514,7 +30535,7 @@ Produce a comprehensive Code Quality analysis:
 6. TOP ISSUE: The most critical code quality issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve code quality and reduce technical debt.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30583,7 +30604,7 @@ Produce a comprehensive Customer Lifetime Value analysis:
 6. GROWTH TREND: Overall CLV growth trend direction.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve customer lifetime value.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30647,7 +30668,7 @@ Produce a comprehensive Sentiment Analysis:
 6. TREND DIRECTION: Overall sentiment trend direction.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve customer sentiment.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30711,7 +30732,7 @@ Produce a comprehensive Support Ticket Analysis:
 6. TOP CATEGORY: The highest volume ticket category.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve support ticket operations.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30775,7 +30796,7 @@ Produce a comprehensive Segment Profitability analysis:
 6. REBALANCE OPPORTUNITY: The biggest opportunity to rebalance segment profitability.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize segment profitability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30839,7 +30860,7 @@ Produce a comprehensive Referral Analytics analysis:
 6. VIRAL COEFFICIENT: Viral coefficient or referral multiplier.
 7. RECOMMENDATIONS (4-6): Actionable steps to grow referral and viral channels.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30903,7 +30924,7 @@ Produce a comprehensive Customer Health Dashboard analysis:
 6. TOP ALERT: The most urgent customer health alert requiring attention.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve customer health outcomes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -30972,7 +30993,7 @@ Produce a comprehensive Innovation Portfolio analysis:
 6. TOP PROJECT: The top innovation project by expected impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the innovation portfolio.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31036,7 +31057,7 @@ Produce a comprehensive Contingency Planning analysis:
 6. TOP GAP: The most significant contingency planning gap.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen contingency planning.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31100,7 +31121,7 @@ Produce a comprehensive Operating Rhythm analysis:
 6. TOP IMPROVEMENT: Top operating rhythm improvement opportunity.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize the operating rhythm.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31164,7 +31185,7 @@ Produce a comprehensive Cross-Functional Sync analysis:
 6. TOP BLOCKER: The most critical cross-functional blocker.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve cross-functional sync.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31228,7 +31249,7 @@ Produce a comprehensive War Room Strategy analysis:
 6. TOP PRIORITY: The current top war room priority.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve war room effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31292,7 +31313,7 @@ Produce a comprehensive Revenue Intelligence analysis:
 6. ACTIONABLE COUNT (numeric): Number of immediately actionable revenue insights.
 7. RECOMMENDATIONS (4-6): Actionable steps to capitalize on revenue intelligence.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31358,7 +31379,7 @@ Produce a comprehensive Market Research analysis:
 6. TOP INSIGHT: The most impactful market insight.
 7. RECOMMENDATIONS (4-6): Actionable steps to leverage market research findings.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31422,7 +31443,7 @@ Produce a comprehensive Competitor Tracking analysis:
 6. MARKET SHARE TREND: Overall market share trend direction.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen competitive position.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31486,7 +31507,7 @@ Produce a comprehensive Industry Trends analysis:
 6. OPPORTUNITY WINDOW: Window of opportunity for key trends.
 7. RECOMMENDATIONS (4-6): Actionable steps to capitalize on industry trends.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31550,7 +31571,7 @@ Produce a comprehensive Social Listening analysis:
 6. TOP PLATFORM: Top platform by engagement or mentions.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve social presence and brand perception.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31614,7 +31635,7 @@ Produce a comprehensive UX Research analysis:
 6. TOP ISSUE: The most critical UX issue.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve user experience.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31678,7 +31699,7 @@ Produce a comprehensive Web Analytics analysis:
 6. TOP PAGE: Top performing page by traffic or conversions.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize web performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31744,7 +31765,7 @@ Produce a comprehensive Email Marketing analysis:
 6. TOP CAMPAIGN: Best performing campaign by engagement or revenue.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve email marketing performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31808,7 +31829,7 @@ Produce a comprehensive Conversion Optimization analysis:
 6. QUICK WIN COUNT (numeric): Number of quick-win optimization opportunities.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve conversion rates.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31872,7 +31893,7 @@ Produce a comprehensive A/B Testing Framework analysis:
 6. TOP WIN: Biggest A/B test win by impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve experimentation effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -31938,7 +31959,7 @@ Produce a comprehensive Marketing Attribution analysis:
 
 If CONNECTED TOOL DATA includes Google Analytics data, reference actual traffic metrics, conversion rates, and user behavior. If HubSpot data is present, reference real marketing campaign performance and lead metrics.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32002,7 +32023,7 @@ Produce a comprehensive Content Calendar analysis:
 6. TOP CONTENT: Top performing content piece by engagement.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve content strategy and calendar execution.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32172,7 +32193,7 @@ Produce a comprehensive Budget Planning analysis:
 6. TOP VARIANCE: Category with the largest budget variance.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve budget planning and adherence.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32236,7 +32257,7 @@ Produce a comprehensive Revenue Forecasting analysis:
 6. TOP DRIVER: Top revenue growth driver.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve revenue forecasting and growth.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32300,7 +32321,7 @@ Produce a comprehensive Cash Management analysis:
 6. TOP RISK: The top cash management risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize cash management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32364,7 +32385,7 @@ Produce a comprehensive Credit Management analysis:
 6. TOP RISK: Top credit management risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize credit management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32428,7 +32449,7 @@ Produce a comprehensive Debt Structure analysis:
 6. NEAREST MATURITY: Nearest debt maturity date and amount.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize debt structure.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32492,7 +32513,7 @@ Produce a comprehensive Financial Reporting analysis:
 6. TOP GAP: Biggest gap in financial reporting.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve financial reporting.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32558,7 +32579,7 @@ Produce a comprehensive Carbon Reduction analysis:
 6. TOP SOURCE: Largest emission source.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate carbon reduction.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32622,7 +32643,7 @@ Produce a comprehensive Circular Economy analysis:
 6. TOP PROCESS: Top circular economy process by impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance circular economy practices.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32686,7 +32707,7 @@ Produce a comprehensive Community Impact analysis:
 6. TOP PROGRAM: Top community program by impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase community impact.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32750,7 +32771,7 @@ Produce a comprehensive Water Management analysis:
 6. TOP RISK: Top water management risk.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve water management.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32814,7 +32835,7 @@ Produce a comprehensive Waste Reduction analysis:
 6. TOP STREAM: Largest waste stream by volume.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate waste reduction.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32878,7 +32899,7 @@ Produce a comprehensive Sustainable Innovation analysis:
 6. TOP INITIATIVE: Top sustainable innovation initiative by impact.
 7. RECOMMENDATIONS (4-6): Actionable steps to advance sustainable innovation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -32944,7 +32965,7 @@ Produce a comprehensive Talent Pipeline analysis:
 6. CONVERSION RATE: Overall pipeline conversion rate from application to hire.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve talent pipeline effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33008,7 +33029,7 @@ Produce a comprehensive Leadership Development analysis:
 6. TOP PRIORITY: The most critical leadership development priority.
 7. RECOMMENDATIONS (4-6): Actionable steps to accelerate leadership development.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33072,7 +33093,7 @@ Produce a comprehensive Succession Readiness analysis:
 6. TOP RISK: The highest succession risk area in the organization.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve succession readiness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33136,7 +33157,7 @@ Produce a comprehensive Compensation Strategy analysis:
 6. TOP GAP: The largest compensation gap that needs addressing.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize compensation strategy.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33200,7 +33221,7 @@ Produce a comprehensive Workforce Analytics report:
 6. TOP INSIGHT: The most impactful workforce analytics insight.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve workforce outcomes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33264,7 +33285,7 @@ Produce a comprehensive Organizational Effectiveness analysis:
 6. TOP OPPORTUNITY: The highest-impact opportunity to improve organizational effectiveness.
 7. RECOMMENDATIONS (4-6): Actionable steps to enhance organizational effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33330,7 +33351,7 @@ Produce a comprehensive Sales Motion Design analysis:
 6. TOP OPPORTUNITY: The top opportunity to optimize sales motion design.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve sales motion effectiveness.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33394,7 +33415,7 @@ Produce a comprehensive Deal Analytics report:
 6. TOP BOTTLENECK: The biggest pipeline bottleneck impacting close rates.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve deal pipeline performance.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33458,7 +33479,7 @@ Produce a comprehensive Territory Optimization analysis:
 6. TOP GAP: The biggest territory coverage gap.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize territory design and coverage.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33522,7 +33543,7 @@ Produce a comprehensive Sales Compensation analysis:
 6. TOP ISSUE: The most critical sales compensation issue to address.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize sales compensation design.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33586,7 +33607,7 @@ Produce a comprehensive Revenue Prediction analysis:
 6. TOP DRIVER: The top revenue driver for the prediction period.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve revenue prediction accuracy and outcomes.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33650,7 +33671,7 @@ Produce a comprehensive Account Penetration analysis:
 6. CROSS-SELL RATE: Current cross-sell rate across the customer base.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase account penetration.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33716,7 +33737,7 @@ Produce a comprehensive Product Vision analysis:
 6. CONFIDENCE SCORE (0-100): Confidence in current product vision clarity and execution.
 7. RECOMMENDATIONS (4-6): Actionable steps to sharpen and execute product vision.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33780,7 +33801,7 @@ Produce a comprehensive Feature Roadmap analysis:
 6. TOP PRIORITY: The top priority feature on the roadmap.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve roadmap planning and execution.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33844,7 +33865,7 @@ Produce a comprehensive Product-Market Fit Assessment:
 6. TOP SIGNAL: The strongest product-market fit signal.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen product-market fit.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33908,7 +33929,7 @@ Produce a comprehensive User Activation analysis:
 6. ACTIVATION METRIC: The key activation metric definition used.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve user activation rates.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -33972,7 +33993,7 @@ Produce a comprehensive Product Insights report:
 6. POWER USER PCT: Percentage of users classified as power users.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve product engagement and usage.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34036,7 +34057,7 @@ Produce a comprehensive Release Strategy analysis:
 6. TOP RISK: The top risk in the current release strategy.
 7. RECOMMENDATIONS (4-6): Actionable steps to improve release strategy and deployment reliability.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34102,7 +34123,7 @@ Produce a comprehensive Brand Position Map analysis:
 6. POSITION STRENGTH (0-100): Overall brand positioning strength score.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen brand positioning.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34166,7 +34187,7 @@ Produce a comprehensive Brand Valuation assessment:
 6. TOP DRIVER: The top driver of brand value.
 7. RECOMMENDATIONS (4-6): Actionable steps to increase brand value.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34230,7 +34251,7 @@ Produce a comprehensive Brand Hierarchy analysis:
 6. TOP ISSUE: The top brand architecture issue to address.
 7. RECOMMENDATIONS (4-6): Actionable steps to optimize brand hierarchy and architecture.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34294,7 +34315,7 @@ Produce a comprehensive Reputation Analysis:
 6. TOP RISK: The top reputation risk area requiring attention.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen and protect reputation.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34358,7 +34379,7 @@ Produce a comprehensive Messaging Framework:
 6. TOP PILLAR: The strongest messaging pillar.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen the messaging framework.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;
@@ -34422,7 +34443,7 @@ Produce a comprehensive Visual Branding assessment:
 6. TOP IMPROVEMENT: The highest priority visual branding improvement.
 7. RECOMMENDATIONS (4-6): Actionable steps to strengthen visual branding.
 
-Use ONLY data from the business report. If data is insufficient, say "Insufficient data" — do NOT invent numbers.
+Use ALL available data: uploaded documents, connected integrations (Stripe, QuickBooks, etc.), questionnaire answers, and industry benchmarks. NEVER say "Insufficient data" — derive the best answer from what IS available and mark estimates as [ESTIMATED].
 
 Return ONLY valid JSON:
 ${schema}`;

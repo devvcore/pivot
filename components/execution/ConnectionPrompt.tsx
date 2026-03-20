@@ -112,6 +112,169 @@ const SERVICES: ServiceConnection[] = [
     connected: false,
     description: "Manage contacts, deals, and CRM data",
   },
+  {
+    id: "instagram",
+    name: "Instagram",
+    provider: "instagram",
+    icon: "instagram",
+    color: "#E4405F",
+    connected: false,
+    description: "Post photos, stories, and engage with followers",
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    provider: "facebook",
+    icon: "facebook",
+    color: "#1877F2",
+    connected: false,
+    description: "Post to Pages, manage ads, engage audience",
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    provider: "youtube",
+    icon: "youtube",
+    color: "#FF0000",
+    connected: false,
+    description: "Manage channel, videos, and analytics",
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    provider: "stripe",
+    icon: "stripe",
+    color: "#635BFF",
+    connected: false,
+    description: "View payments, invoices, and financial data",
+  },
+  {
+    id: "google_analytics",
+    name: "Google Analytics",
+    provider: "google_analytics",
+    icon: "analytics",
+    color: "#E37400",
+    connected: false,
+    description: "Website traffic and user behavior data",
+  },
+  {
+    id: "linear",
+    name: "Linear",
+    provider: "linear",
+    icon: "linear",
+    color: "#5E6AD2",
+    connected: false,
+    description: "Track issues, projects, and sprints",
+  },
+  {
+    id: "asana",
+    name: "Asana",
+    provider: "asana",
+    icon: "asana",
+    color: "#F06A6A",
+    connected: false,
+    description: "Manage tasks, projects, and team work",
+  },
+  {
+    id: "airtable",
+    name: "Airtable",
+    provider: "airtable",
+    icon: "airtable",
+    color: "#18BFFF",
+    connected: false,
+    description: "Manage databases and structured data",
+  },
+  {
+    id: "microsoft_teams",
+    name: "Microsoft Teams",
+    provider: "microsoft_teams",
+    icon: "teams",
+    color: "#6264A7",
+    connected: false,
+    description: "Send messages and collaborate with your team",
+  },
+  // ── Financial / Cash Flow ──
+  {
+    id: "paypal",
+    name: "PayPal",
+    provider: "paypal",
+    icon: "paypal",
+    color: "#003087",
+    connected: false,
+    description: "View transactions, balances, invoices, and settlements",
+  },
+  {
+    id: "square",
+    name: "Square",
+    provider: "square",
+    icon: "square",
+    color: "#006AFF",
+    connected: false,
+    description: "POS transactions, deposits, inventory, and customers",
+  },
+  {
+    id: "xero",
+    name: "Xero",
+    provider: "xero",
+    icon: "xero",
+    color: "#13B5EA",
+    connected: false,
+    description: "Invoices, bills, bank reconciliation, and financial reports",
+  },
+  {
+    id: "freshbooks",
+    name: "FreshBooks",
+    provider: "freshbooks",
+    icon: "freshbooks",
+    color: "#0075DD",
+    connected: false,
+    description: "Client invoices, expenses, time tracking, and reports",
+  },
+  {
+    id: "plaid",
+    name: "Bank Accounts (Plaid)",
+    provider: "plaid",
+    icon: "plaid",
+    color: "#111111",
+    connected: false,
+    description: "Connect any bank for real-time balances and transactions",
+  },
+  {
+    id: "mercury",
+    name: "Mercury",
+    provider: "mercury",
+    icon: "mercury",
+    color: "#5C5CE0",
+    connected: false,
+    description: "Startup banking: balances, transactions, burn rate",
+  },
+  {
+    id: "wave",
+    name: "Wave",
+    provider: "wave",
+    icon: "wave",
+    color: "#1C6EF2",
+    connected: false,
+    description: "Free accounting: invoices, expenses, and financial reports",
+  },
+  {
+    id: "brex",
+    name: "Brex",
+    provider: "brex",
+    icon: "brex",
+    color: "#F26922",
+    connected: false,
+    description: "Corporate card transactions, budgets, and spend analytics",
+  },
+  {
+    id: "gusto",
+    name: "Gusto",
+    provider: "gusto",
+    icon: "gusto",
+    color: "#F45D48",
+    connected: false,
+    description: "Payroll, employee costs, benefits, and tax data",
+  },
 ];
 
 /* ── Service Icon Component ── */
@@ -166,6 +329,97 @@ function ServiceIcon({ service, size = 24 }: { service: ServiceConnection; size?
     hubspot: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
         <path d="M18.164 7.93V5.084a2.198 2.198 0 001.267-1.984v-.066A2.198 2.198 0 0017.235.838h-.066a2.198 2.198 0 00-2.196 2.196v.066c0 .907.55 1.684 1.335 2.02v2.81a6.27 6.27 0 00-2.792 1.266l-7.453-5.794a2.465 2.465 0 00.076-.6A2.476 2.476 0 003.663.326h-.001a2.476 2.476 0 000 4.953c.487 0 .939-.144 1.32-.39l7.333 5.7a6.293 6.293 0 00-.16 7.415l-2.2 2.2a2.053 2.053 0 00-.597-.098 2.078 2.078 0 102.078 2.078c0-.206-.04-.402-.097-.589l2.168-2.168a6.29 6.29 0 009.16-5.556 6.291 6.291 0 00-5.503-6.24z" />
+      </svg>
+    ),
+    instagram: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+      </svg>
+    ),
+    facebook: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+      </svg>
+    ),
+    youtube: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+      </svg>
+    ),
+    stripe: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z" />
+      </svg>
+    ),
+    analytics: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M22.84 2.998v17.958c0 .97-.788 1.758-1.758 1.758h-2.344c-.97 0-1.758-.788-1.758-1.758V2.998c0-.97.788-1.758 1.758-1.758h2.344c.97 0 1.758.788 1.758 1.758zM14.4 8.918v12.038c0 .97-.788 1.758-1.758 1.758H10.3c-.97 0-1.758-.788-1.758-1.758V8.918c0-.97.788-1.758 1.758-1.758h2.344c.97 0 1.758.788 1.758 1.758zM5.96 14.838v6.118c0 .97-.788 1.758-1.758 1.758H1.858C.888 22.714.1 21.926.1 20.956v-6.118c0-.97.788-1.758 1.758-1.758h2.344c.97 0 1.758.788 1.758 1.758z" />
+      </svg>
+    ),
+    linear: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2.643 14.092a.618.618 0 01-.04-.218.625.625 0 01.169-.432l7.786-7.786a.626.626 0 01.432-.169c.076 0 .15.014.218.04l9.063 3.412a.625.625 0 01.345.82.626.626 0 01-.345.344l-3.413 1.141a.625.625 0 00-.344.344L15.373 14.9a.625.625 0 01-.82.345L2.643 14.092zM1.1 15.952a.625.625 0 00-.055.925l6.078 6.078a.625.625 0 00.925-.055l2.207-2.758a.625.625 0 00-.063-.844l-6.298-6.298a.625.625 0 00-.844-.063L1.1 15.952z" />
+      </svg>
+    ),
+    asana: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.78 12.653c-2.882 0-5.22 2.337-5.22 5.219s2.338 5.22 5.22 5.22 5.22-2.338 5.22-5.22-2.337-5.22-5.22-5.22zM5.22 12.653C2.337 12.653 0 14.99 0 17.872s2.337 5.22 5.22 5.22 5.22-2.338 5.22-5.22-2.338-5.22-5.22-5.22zM17.22 5.22C17.22 2.337 14.882 0 12 0S6.78 2.337 6.78 5.22 9.118 10.44 12 10.44s5.22-2.338 5.22-5.22z" />
+      </svg>
+    ),
+    airtable: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.532 2.537L2.343 6.247a.625.625 0 000 1.146l9.188 3.71a2.26 2.26 0 001.698 0l9.188-3.71a.625.625 0 000-1.146l-9.188-3.71a2.26 2.26 0 00-1.697 0zM2 9.5v7.75a.625.625 0 00.368.569l9 4.063a.625.625 0 00.882-.569V13.5L2 9.5zm20 0l-10.25 4v7.813a.625.625 0 00.882.569l9-4.063a.625.625 0 00.368-.569V9.5z" />
+      </svg>
+    ),
+    teams: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.625 8.25h-1.5c.075-.39.125-.787.125-1.2a4.55 4.55 0 00-4.55-4.55 4.52 4.52 0 00-2.7.9 5.25 5.25 0 00-8.25 4.3v.025c0 .18.012.356.03.53H2.25a1.5 1.5 0 00-1.5 1.5V15a1.5 1.5 0 001.5 1.5h2.325c.45 2.1 2.325 3.75 4.575 3.75s4.125-1.65 4.575-3.75h.9c.563 1.013 1.638 1.725 2.888 1.725a3.263 3.263 0 003.262-3.262V9.75a1.5 1.5 0 00-1.5-1.5zM14.7 4.2a2.85 2.85 0 012.55 1.575 5.22 5.22 0 00-2.55 1.87V5a5.22 5.22 0 00-.525-.588A2.8 2.8 0 0114.7 4.2zM9.15 5a3.55 3.55 0 013.55 3.55V15a3.55 3.55 0 01-7.1 0V8.55A3.55 3.55 0 019.15 5z" />
+      </svg>
+    ),
+    // ── Financial / Cash Flow Icons ──
+    paypal: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M7.076 21.337H2.47a.641.641 0 01-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 00-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 00-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 00.554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 01.921-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.775-4.471z" />
+      </svg>
+    ),
+    square: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4.01 0A3.998 3.998 0 000 3.99v16.02C0 22.21 1.79 24 3.99 24h16.02c2.21 0 3.99-1.79 3.99-3.99V3.99C24 1.79 22.21 0 20.01 0H4.01zm1.49 4.5h13c.83 0 1.5.67 1.5 1.5v12c0 .83-.67 1.5-1.5 1.5h-13c-.83 0-1.5-.67-1.5-1.5V6c0-.83.67-1.5 1.5-1.5zm2 3v9h9v-9h-9z" />
+      </svg>
+    ),
+    xero: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.243 15.243L8.47 12.956l-2.287 2.287-.707-.707L7.763 12.25 5.476 9.964l.707-.707L8.47 11.543l2.287-2.286.707.707L9.177 12.25l2.287 2.286-.707.707zm4.486 0L12.956 12.956l-2.287 2.287-.707-.707 2.287-2.286-2.287-2.286.707-.707 2.287 2.286 2.287-2.286.707.707-2.287 2.286 2.287 2.286-.707.707z" />
+      </svg>
+    ),
+    freshbooks: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.713.666L4 3.754v16.493l8.713 3.087L20 20.247V3.754L12.713.666zM17.5 18.5l-4.787 1.696L8 18.5V5.5l4.713-1.696L17.5 5.5v13z" />
+      </svg>
+    ),
+    plaid: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10.005 0L0 4.002v7.996L4.002 14V6.004L10.005 4V0zm3.99 0v4l6.003 2.004V14l4.002-2.002V4.002L13.995 0zM0 12.002L4.002 14v7.998L10.005 24v-4L4.002 18V12.002H0zm20 0V18l-6.005 2v4l10.005-4v-7.998h-4z" />
+      </svg>
+    ),
+    mercury: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2V7zm0 8h2v2h-2v-2z" />
+      </svg>
+    ),
+    wave: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2 12c1.5-3 3-6 5-6s3 6 5 6 3-6 5-6 3.5 3 5 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </svg>
+    ),
+    brex: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 4h18a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V6a2 2 0 012-2zm0 4v10h18V8H3zm2 2h4v2H5v-2zm6 0h4v2h-4v-2z" />
+      </svg>
+    ),
+    gusto: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
       </svg>
     ),
   };
@@ -251,23 +505,32 @@ export default function ConnectionPrompt({
 
       if (data.redirectUrl) {
         window.open(data.redirectUrl, "_blank", "width=600,height=700");
-        // Poll for connection status
+        // Poll for connection status — fetch fresh list each time to avoid stale closure
         const interval = setInterval(async () => {
-          await fetchConnections();
-          const connected = services.find(
-            (s) => s.provider === provider
-          )?.connected;
-          if (connected) {
-            clearInterval(interval);
-            setConnecting(null);
-            onConnectionChange?.();
-          }
+          try {
+            const pollRes = await fetch(`/api/integrations/list?orgId=${orgId}`);
+            if (pollRes.ok) {
+              const pollData = await pollRes.json();
+              const integrations = pollData.integrations ?? [];
+              const isConnected = integrations.some(
+                (i: { provider: string; status: string }) => i.provider === provider && i.status === "connected"
+              );
+              if (isConnected) {
+                clearInterval(interval);
+                setConnecting(null);
+                await fetchConnections();
+                onConnectionChange?.();
+              }
+            }
+          } catch { /* poll error, retry next interval */ }
         }, 3000);
         // Stop polling after 2 minutes
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           clearInterval(interval);
           setConnecting(null);
         }, 120000);
+        // Cleanup on unmount would need a ref — this is a one-shot action so timeout is acceptable
+        void timeout;
       } else if (data.connected) {
         await fetchConnections();
         setConnecting(null);

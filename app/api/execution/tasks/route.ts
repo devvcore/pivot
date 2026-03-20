@@ -211,8 +211,16 @@ export async function POST(request: NextRequest) {
 
     // Run pipeline async (non-blocking) — fire and forget
     const orchestrator = createOrchestrator(deliverables);
-    orchestrator.runPipeline(task.id).catch((err: Error) => {
+    orchestrator.runPipeline(task.id).catch(async (err: Error) => {
       console.error(`[POST /api/execution/tasks] Pipeline failed for ${task.id}:`, err.message);
+      try {
+        const adminSb = createAdminClient();
+        await adminSb.from("execution_tasks").update({ status: "failed", review_feedback: err.message }).eq("id", task.id);
+        await adminSb.from("execution_events").insert({
+          task_id: task.id, agent_id: task.agent_id, org_id: orgId,
+          event_type: "error", data: { error: err.message, phase: "pipeline" },
+        });
+      } catch { /* best-effort */ }
     });
 
     return NextResponse.json({ task }, { status: 201 });

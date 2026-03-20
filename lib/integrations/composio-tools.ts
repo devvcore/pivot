@@ -36,6 +36,15 @@ export const COMPOSIO_TOOLKIT_MAP: Record<IntegrationProvider, string> = {
   instagram: 'INSTAGRAM',
   facebook: 'FACEBOOK',
   youtube: 'YOUTUBE',
+  paypal: 'PAYPAL',
+  square: 'SQUARE',
+  xero: 'XERO',
+  freshbooks: 'FRESHBOOKS',
+  plaid: 'PLAID',
+  mercury: 'MERCURY',
+  wave: 'WAVE',
+  brex: 'BREX',
+  gusto: 'GUSTO',
 };
 
 // ─── Internal Execute Wrapper ────────────────────────────────────────────────

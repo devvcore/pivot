@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, ShieldCheck, Sparkles, FileText, RefreshCw, Users, Activity, Gauge, Cpu, User, Trophy, Crown, Link2 } from "lucide-react";
+import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
 
 interface JobSummary {
@@ -95,7 +96,7 @@ export function DashboardView({ onStartNew, onViewRun, onTeam, onEmployees, onLe
     if (!orgId) return;
     Promise.all([
       fetch(`/api/employees?orgId=${encodeURIComponent(orgId)}`).then((r) => r.ok ? r.json() : []),
-      fetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`).then((r) => r.ok ? r.json() : { scores: [] }),
+      authFetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`).then((r) => r.ok ? r.json() : { scores: [] }),
     ])
       .then(([employees, scoreData]) => {
         const emps = Array.isArray(employees) ? employees : [];

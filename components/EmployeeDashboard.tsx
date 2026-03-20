@@ -32,6 +32,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { authFetch } from "@/lib/auth-fetch";
 
 // ─── Client-Side Types ───────────────────────────────────────────────────────
 // These mirror the server-side types from lib/scoring/engine.ts but are safe
@@ -179,7 +180,7 @@ export function EmployeeDashboard({
     try {
       const [empRes, scoreRes] = await Promise.all([
         fetch(`/api/employees?orgId=${encodeURIComponent(orgId)}`),
-        fetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`),
+        authFetch(`/api/employees/scores?orgId=${encodeURIComponent(orgId)}`),
       ]);
 
       if (empRes.ok) {
@@ -207,7 +208,7 @@ export function EmployeeDashboard({
   const runScoringCycle = useCallback(async () => {
     setScoring(true);
     try {
-      const res = await fetch("/api/employees/scores", {
+      const res = await authFetch("/api/employees/scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orgId }),
@@ -788,14 +789,14 @@ function ExpandedDetail({
 
   useEffect(() => {
     // Fetch score history
-    fetch(`/api/employees/scores/${employee.id}?limit=30`)
+    authFetch(`/api/employees/scores/${employee.id}?limit=30`)
       .then((r) => r.json())
       .then((data) => setHistory(data.history ?? []))
       .catch(() => {})
       .finally(() => setLoadingHistory(false));
 
     // Fetch goals
-    fetch(`/api/employees/goals?employeeId=${employee.id}`)
+    authFetch(`/api/employees/goals?employeeId=${employee.id}`)
       .then((r) => r.json())
       .then((data) => setGoals(data.goals ?? []))
       .catch(() => {})
@@ -805,7 +806,7 @@ function ExpandedDetail({
   const generateGoals = async () => {
     setGeneratingGoals(true);
     try {
-      const res = await fetch("/api/employees/goals", {
+      const res = await authFetch("/api/employees/goals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId: employee.id, orgId }),
@@ -824,7 +825,7 @@ function ExpandedDetail({
   const submitAssessment = async () => {
     setSubmittingAssessment(true);
     try {
-      const res = await fetch("/api/employees/manager-input", {
+      const res = await authFetch("/api/employees/manager-input", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

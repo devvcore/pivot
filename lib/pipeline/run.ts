@@ -8,7 +8,7 @@
 import { getJob, updateJob } from "@/lib/job-store";
 import { parseFiles } from "./parse";
 import { ingestDocuments, scrapeWebsiteContent, formatPacketAsContext } from "./ingest";
-import { collectIntegrationContext, pullFreshIntegrationData } from "@/lib/integrations/collect";
+import { collectIntegrationContext, pullFreshIntegrationData, extractFinancialFactsFromIntegrations, extractOrgIntelligence } from "@/lib/integrations/collect";
 import { categorizeAndBuildGraph } from "./categorize";
 import { selectSectionsWithAI, getStrictRelevantSections, scoreSectionRelevance, getRelevanceDepth } from "./relevance";
 import {
@@ -695,4029 +695,345 @@ async function runExtendedWaves(
       return fn();
     };
 
-    // Progress tracking for extended waves (295 batches)
+    // Progress tracking for extended waves
     let _extStep = 0;
-    const _extTotal = 295;
     const _extStarted = Date.now();
-    const updateJobTracked = async (rid: string, data: { deliverables: MVPDeliverables }) => {
-      _extStep++;
-      data.deliverables = { ...data.deliverables, _progress: { completed: _extStep, total: _extTotal, currentStep: 'Refining analysis', startedAt: _extStarted } };
-      return updateJob(rid, data);
-    };
 
-    if (!deliverables.pricingStrategyMatrix || !deliverables.customerHealthScore) {
-      try {
-        console.log("[Pivot] Synthesizing pricing strategy matrix + customer health score...");
-        const [psm, chs] = await Promise.allSettled([
-          synthIf('pricingStrategyMatrix', () => synthesizePricingStrategyMatrix(businessPacket, job.questionnaire)),
-          synthIf('customerHealthScore', () => synthesizeCustomerHealthScore(businessPacket, job.questionnaire)),
-        ]);
-        if (psm.status === "fulfilled" && psm.value) deliverables = { ...deliverables, pricingStrategyMatrix: psm.value };
-        if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] PricingStrategyMatrix/CustomerHealthScore failed (non-fatal):", e);
+    // All extended wave tasks — run in batches of 10 for ~5x faster synthesis
+    const extTasks: { key: string; fn: () => Promise<unknown | null> }[] = [
+      { key: 'pricingStrategyMatrix', fn: () => synthIf('pricingStrategyMatrix', () => synthesizePricingStrategyMatrix(businessPacket, job.questionnaire)) },
+      { key: 'customerHealthScore', fn: () => synthIf('customerHealthScore', () => synthesizeCustomerHealthScore(businessPacket, job.questionnaire)) },
+      { key: 'revenueWaterfall', fn: () => synthIf('revenueWaterfall', () => synthesizeRevenueWaterfall(businessPacket, job.questionnaire)) },
+      { key: 'techDebtAssessment', fn: () => synthIf('techDebtAssessment', () => synthesizeTechDebtAssessment(businessPacket, job.questionnaire)) },
+      { key: 'teamPerformance', fn: () => synthIf('teamPerformance', () => synthesizeTeamPerformance(businessPacket, job.questionnaire)) },
+      { key: 'marketEntryStrategy', fn: () => synthIf('marketEntryStrategy', () => synthesizeMarketEntryStrategy(businessPacket, job.questionnaire)) },
+      { key: 'competitiveIntelFeed', fn: () => synthIf('competitiveIntelFeed', () => synthesizeCompetitiveIntelFeed(businessPacket, job.questionnaire)) },
+      { key: 'cashFlowSensitivity', fn: () => synthIf('cashFlowSensitivity', () => synthesizeCashFlowSensitivity(businessPacket, job.questionnaire)) },
+      { key: 'digitalMaturity', fn: () => synthIf('digitalMaturity', () => synthesizeDigitalMaturity(businessPacket, job.questionnaire)) },
+      { key: 'acquisitionFunnel', fn: () => synthIf('acquisitionFunnel', () => synthesizeAcquisitionFunnel(businessPacket, job.questionnaire)) },
+      { key: 'strategicAlignment', fn: () => synthIf('strategicAlignment', () => synthesizeStrategicAlignment(businessPacket, job.questionnaire)) },
+      { key: 'budgetOptimizer', fn: () => synthIf('budgetOptimizer', () => synthesizeBudgetOptimizer(businessPacket, job.questionnaire)) },
+      { key: 'revenueDrivers', fn: () => synthIf('revenueDrivers', () => synthesizeRevenueDrivers(businessPacket, job.questionnaire)) },
+      { key: 'marginOptimization', fn: () => synthIf('marginOptimization', () => synthesizeMarginOptimization(businessPacket, job.questionnaire)) },
+      { key: 'demandForecasting', fn: () => synthIf('demandForecasting', () => synthesizeDemandForecasting(businessPacket, job.questionnaire)) },
+      { key: 'cohortAnalysis', fn: () => synthIf('cohortAnalysis', () => synthesizeCohortAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'winLossAnalysis', fn: () => synthIf('winLossAnalysis', () => synthesizeWinLossAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'salesForecast', fn: () => synthIf('salesForecast', () => synthesizeSalesForecast(businessPacket, job.questionnaire)) },
+      { key: 'processEfficiency', fn: () => synthIf('processEfficiency', () => synthesizeProcessEfficiency(businessPacket, job.questionnaire)) },
+      { key: 'vendorRisk', fn: () => synthIf('vendorRisk', () => synthesizeVendorRisk(businessPacket, job.questionnaire)) },
+      { key: 'qualityMetrics', fn: () => synthIf('qualityMetrics', () => synthesizeQualityMetrics(businessPacket, job.questionnaire)) },
+      { key: 'capacityPlanning', fn: () => synthIf('capacityPlanning', () => synthesizeCapacityPlanning(businessPacket, job.questionnaire)) },
+      { key: 'knowledgeManagement', fn: () => synthIf('knowledgeManagement', () => synthesizeKnowledgeManagement(businessPacket, job.questionnaire)) },
+      { key: 'complianceScorecard', fn: () => synthIf('complianceScorecard', () => synthesizeComplianceScorecard(businessPacket, job.questionnaire)) },
+      { key: 'marketPenetration', fn: () => synthIf('marketPenetration', () => synthesizeMarketPenetration(businessPacket, job.questionnaire)) },
+      { key: 'flywheelAnalysis', fn: () => synthIf('flywheelAnalysis', () => synthesizeFlywheelAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'partnershipsStrategy', fn: () => synthIf('partnershipsStrategy', () => synthesizePartnershipsStrategy(businessPacket, job.questionnaire)) },
+      { key: 'internationalExpansion', fn: () => synthIf('internationalExpansion', () => synthesizeInternationalExpansion(businessPacket, job.questionnaire)) },
+      { key: 'rdEffectiveness', fn: () => synthIf('rdEffectiveness', () => synthesizeRDEffectiveness(businessPacket, job.questionnaire)) },
+      { key: 'brandEquity', fn: () => synthIf('brandEquity', () => synthesizeBrandEquity(businessPacket, job.questionnaire)) },
+      { key: 'workingCapital', fn: () => synthIf('workingCapital', () => synthesizeWorkingCapital(businessPacket, job.questionnaire)) },
+      { key: 'debtStrategy', fn: () => synthIf('debtStrategy', () => synthesizeDebtStrategy(businessPacket, job.questionnaire)) },
+      { key: 'taxStrategy', fn: () => synthIf('taxStrategy', () => synthesizeTaxStrategy(businessPacket, job.questionnaire)) },
+      { key: 'investorReadiness', fn: () => synthIf('investorReadiness', () => synthesizeInvestorReadiness(businessPacket, job.questionnaire)) },
+      { key: 'maReadiness', fn: () => synthIf('maReadiness', () => synthesizeMAReadiness(businessPacket, job.questionnaire)) },
+      { key: 'strategicRoadmap', fn: () => synthIf('strategicRoadmap', () => synthesizeStrategicRoadmap(businessPacket, job.questionnaire)) },
+      { key: 'customerVoice', fn: () => synthIf('customerVoice', () => synthesizeCustomerVoice(businessPacket, job.questionnaire)) },
+      { key: 'referralEngine', fn: () => synthIf('referralEngine', () => synthesizeReferralEngine(businessPacket, job.questionnaire)) },
+      { key: 'priceSensitivityIndex', fn: () => synthIf('priceSensitivityIndex', () => synthesizePriceSensitivityIndex(businessPacket, job.questionnaire)) },
+      { key: 'customerEffortScore', fn: () => synthIf('customerEffortScore', () => synthesizeCustomerEffortScore(businessPacket, job.questionnaire)) },
+      { key: 'accountExpansionMap', fn: () => synthIf('accountExpansionMap', () => synthesizeAccountExpansionMap(businessPacket, job.questionnaire)) },
+      { key: 'loyaltyProgramDesign', fn: () => synthIf('loyaltyProgramDesign', () => synthesizeLoyaltyProgramDesign(businessPacket, job.questionnaire)) },
+      { key: 'competitivePricingMatrix', fn: () => synthIf('competitivePricingMatrix', () => synthesizeCompetitivePricingMatrix(businessPacket, job.questionnaire)) },
+      { key: 'marketSentimentIndex', fn: () => synthIf('marketSentimentIndex', () => synthesizeMarketSentimentIndex(businessPacket, job.questionnaire)) },
+      { key: 'disruptionRadar', fn: () => synthIf('disruptionRadar', () => synthesizeDisruptionRadar(businessPacket, job.questionnaire)) },
+      { key: 'ecosystemMap', fn: () => synthIf('ecosystemMap', () => synthesizeEcosystemMap(businessPacket, job.questionnaire)) },
+      { key: 'categoryCreation', fn: () => synthIf('categoryCreation', () => synthesizeCategoryCreation(businessPacket, job.questionnaire)) },
+      { key: 'marketVelocity', fn: () => synthIf('marketVelocity', () => synthesizeMarketVelocity(businessPacket, job.questionnaire)) },
+      { key: 'okrCascade', fn: () => synthIf('okrCascade', () => synthesizeOKRCascade(businessPacket, job.questionnaire)) },
+      { key: 'meetingEffectiveness', fn: () => synthIf('meetingEffectiveness', () => synthesizeMeetingEffectiveness(businessPacket, job.questionnaire)) },
+      { key: 'communicationAudit', fn: () => synthIf('communicationAudit', () => synthesizeCommunicationAudit(businessPacket, job.questionnaire)) },
+      { key: 'decisionVelocity', fn: () => synthIf('decisionVelocity', () => synthesizeDecisionVelocity(businessPacket, job.questionnaire)) },
+      { key: 'resourceOptimizer', fn: () => synthIf('resourceOptimizer', () => synthesizeResourceOptimizer(businessPacket, job.questionnaire)) },
+      { key: 'changeManagement', fn: () => synthIf('changeManagement', () => synthesizeChangeManagement(businessPacket, job.questionnaire)) },
+      { key: 'cashReserveStrategy', fn: () => synthIf('cashReserveStrategy', () => synthesizeCashReserveStrategy(businessPacket, job.questionnaire)) },
+      { key: 'revenueQualityScore', fn: () => synthIf('revenueQualityScore', () => synthesizeRevenueQualityScore(businessPacket, job.questionnaire)) },
+      { key: 'costIntelligence', fn: () => synthIf('costIntelligence', () => synthesizeCostIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'financialModeling', fn: () => synthIf('financialModeling', () => synthesizeFinancialModeling(businessPacket, job.questionnaire)) },
+      { key: 'profitabilityMap', fn: () => synthIf('profitabilityMap', () => synthesizeProfitabilityMap(businessPacket, job.questionnaire)) },
+      { key: 'capitalAllocation', fn: () => synthIf('capitalAllocation', () => synthesizeCapitalAllocation(businessPacket, job.questionnaire)) },
+      { key: 'salesPipelineHealth', fn: () => synthIf('salesPipelineHealth', () => synthesizeSalesPipelineHealth(businessPacket, job.questionnaire)) },
+      { key: 'dealVelocity', fn: () => synthIf('dealVelocity', () => synthesizeDealVelocity(businessPacket, job.questionnaire)) },
+      { key: 'winRateOptimizer', fn: () => synthIf('winRateOptimizer', () => synthesizeWinRateOptimizer(businessPacket, job.questionnaire)) },
+      { key: 'salesEnablement', fn: () => synthIf('salesEnablement', () => synthesizeSalesEnablement(businessPacket, job.questionnaire)) },
+      { key: 'territoryPlanning', fn: () => synthIf('territoryPlanning', () => synthesizeTerritoryPlanning(businessPacket, job.questionnaire)) },
+      { key: 'quotaIntelligence', fn: () => synthIf('quotaIntelligence', () => synthesizeQuotaIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'featurePrioritization', fn: () => synthIf('featurePrioritization', () => synthesizeFeaturePrioritization(businessPacket, job.questionnaire)) },
+      { key: 'productUsageAnalytics', fn: () => synthIf('productUsageAnalytics', () => synthesizeProductUsageAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'techStackAudit', fn: () => synthIf('techStackAudit', () => synthesizeTechStackAudit(businessPacket, job.questionnaire)) },
+      { key: 'apiStrategy', fn: () => synthIf('apiStrategy', () => synthesizeApiStrategy(businessPacket, job.questionnaire)) },
+      { key: 'platformScalability', fn: () => synthIf('platformScalability', () => synthesizePlatformScalability(businessPacket, job.questionnaire)) },
+      { key: 'userOnboarding', fn: () => synthIf('userOnboarding', () => synthesizeUserOnboarding(businessPacket, job.questionnaire)) },
+      { key: 'employeeEngagement', fn: () => synthIf('employeeEngagement', () => synthesizeEmployeeEngagement(businessPacket, job.questionnaire)) },
+      { key: 'talentAcquisitionFunnel', fn: () => synthIf('talentAcquisitionFunnel', () => synthesizeTalentAcquisitionFunnel(businessPacket, job.questionnaire)) },
+      { key: 'compensationBenchmark', fn: () => synthIf('compensationBenchmark', () => synthesizeCompensationBenchmark(businessPacket, job.questionnaire)) },
+      { key: 'successionPlanning', fn: () => synthIf('successionPlanning', () => synthesizeSuccessionPlanning(businessPacket, job.questionnaire)) },
+      { key: 'diversityMetrics', fn: () => synthIf('diversityMetrics', () => synthesizeDiversityMetrics(businessPacket, job.questionnaire)) },
+      { key: 'employerBrand', fn: () => synthIf('employerBrand', () => synthesizeEmployerBrand(businessPacket, job.questionnaire)) },
+      { key: 'dataGovernance', fn: () => synthIf('dataGovernance', () => synthesizeDataGovernance(businessPacket, job.questionnaire)) },
+      { key: 'analyticsMaturity', fn: () => synthIf('analyticsMaturity', () => synthesizeAnalyticsMaturity(businessPacket, job.questionnaire)) },
+      { key: 'customerDataPlatform', fn: () => synthIf('customerDataPlatform', () => synthesizeCustomerDataPlatform(businessPacket, job.questionnaire)) },
+      { key: 'predictiveModeling', fn: () => synthIf('predictiveModeling', () => synthesizePredictiveModeling(businessPacket, job.questionnaire)) },
+      { key: 'reportingFramework', fn: () => synthIf('reportingFramework', () => synthesizeReportingFramework(businessPacket, job.questionnaire)) },
+      { key: 'dataQualityScore', fn: () => synthIf('dataQualityScore', () => synthesizeDataQualityScore(businessPacket, job.questionnaire)) },
+      { key: 'inventoryOptimization', fn: () => synthIf('inventoryOptimization', () => synthesizeInventoryOptimization(businessPacket, job.questionnaire)) },
+      { key: 'qualityManagement', fn: () => synthIf('qualityManagement', () => synthesizeQualityManagement(businessPacket, job.questionnaire)) },
+      { key: 'npsAnalysis', fn: () => synthIf('npsAnalysis', () => synthesizeNpsAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'supportTicketIntelligence', fn: () => synthIf('supportTicketIntelligence', () => synthesizeSupportTicketIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'voiceOfCustomer', fn: () => synthIf('voiceOfCustomer', () => synthesizeVoiceOfCustomer(businessPacket, job.questionnaire)) },
+      { key: 'rdEfficiency', fn: () => synthIf('rdEfficiency', () => synthesizeRdEfficiency(businessPacket, job.questionnaire)) },
+      { key: 'technologyReadiness', fn: () => synthIf('technologyReadiness', () => synthesizeTechnologyReadiness(businessPacket, job.questionnaire)) },
+      { key: 'partnershipEcosystem', fn: () => synthIf('partnershipEcosystem', () => synthesizePartnershipEcosystem(businessPacket, job.questionnaire)) },
+      { key: 'mergersAcquisitions', fn: () => synthIf('mergersAcquisitions', () => synthesizeMergersAcquisitions(businessPacket, job.questionnaire)) },
+      { key: 'esgScorecard', fn: () => synthIf('esgScorecard', () => synthesizeEsgScorecard(businessPacket, job.questionnaire)) },
+      { key: 'carbonFootprint', fn: () => synthIf('carbonFootprint', () => synthesizeCarbonFootprint(businessPacket, job.questionnaire)) },
+      { key: 'regulatoryCompliance', fn: () => synthIf('regulatoryCompliance', () => synthesizeRegulatoryCompliance(businessPacket, job.questionnaire)) },
+      { key: 'businessContinuity', fn: () => synthIf('businessContinuity', () => synthesizeBusinessContinuity(businessPacket, job.questionnaire)) },
+      { key: 'ethicsFramework', fn: () => synthIf('ethicsFramework', () => synthesizeEthicsFramework(businessPacket, job.questionnaire)) },
+      { key: 'socialImpact', fn: () => synthIf('socialImpact', () => synthesizeSocialImpact(businessPacket, job.questionnaire)) },
+      { key: 'marketResearch', fn: () => synthIf('marketResearch', () => synthesizeMarketResearch(businessPacket, job.questionnaire)) },
+      { key: 'competitorTracking', fn: () => synthIf('competitorTracking', () => synthesizeCompetitorTracking(businessPacket, job.questionnaire)) },
+      { key: 'industryTrends', fn: () => synthIf('industryTrends', () => synthesizeIndustryTrends(businessPacket, job.questionnaire)) },
+      { key: 'socialListening', fn: () => synthIf('socialListening', () => synthesizeSocialListening(businessPacket, job.questionnaire)) },
+      { key: 'uxResearch', fn: () => synthIf('uxResearch', () => synthesizeUxResearch(businessPacket, job.questionnaire)) },
+      { key: 'webAnalytics', fn: () => synthIf('webAnalytics', () => synthesizeWebAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'emailMarketing', fn: () => synthIf('emailMarketing', () => synthesizeEmailMarketing(businessPacket, job.questionnaire)) },
+      { key: 'conversionOptimization', fn: () => synthIf('conversionOptimization', () => synthesizeConversionOptimization(businessPacket, job.questionnaire)) },
+      { key: 'abTestingFramework', fn: () => synthIf('abTestingFramework', () => synthesizeAbTestingFramework(businessPacket, job.questionnaire)) },
+      { key: 'marketingAttribution', fn: () => synthIf('marketingAttribution', () => synthesizeMarketingAttribution(businessPacket, job.questionnaire)) },
+      { key: 'contentCalendar', fn: () => synthIf('contentCalendar', () => synthesizeContentCalendar(businessPacket, job.questionnaire)) },
+      { key: 'socialMediaCalendar', fn: () => synthIf('socialMediaCalendar', () => synthesizeSocialMediaCalendar(businessPacket, job.questionnaire)) },
+      { key: 'budgetPlanning', fn: () => synthIf('budgetPlanning', () => synthesizeBudgetPlanning(businessPacket, job.questionnaire)) },
+      { key: 'revenueForecasting', fn: () => synthIf('revenueForecasting', () => synthesizeRevenueForecasting(businessPacket, job.questionnaire)) },
+      { key: 'cashManagement', fn: () => synthIf('cashManagement', () => synthesizeCashManagement(businessPacket, job.questionnaire)) },
+      { key: 'creditManagement', fn: () => synthIf('creditManagement', () => synthesizeCreditManagement(businessPacket, job.questionnaire)) },
+      { key: 'debtStructure', fn: () => synthIf('debtStructure', () => synthesizeDebtStructure(businessPacket, job.questionnaire)) },
+      { key: 'financialReporting', fn: () => synthIf('financialReporting', () => synthesizeFinancialReporting(businessPacket, job.questionnaire)) },
+      { key: 'carbonReduction', fn: () => synthIf('carbonReduction', () => synthesizeCarbonReduction(businessPacket, job.questionnaire)) },
+      { key: 'circularEconomy', fn: () => synthIf('circularEconomy', () => synthesizeCircularEconomy(businessPacket, job.questionnaire)) },
+      { key: 'communityImpact', fn: () => synthIf('communityImpact', () => synthesizeCommunityImpact(businessPacket, job.questionnaire)) },
+      { key: 'waterManagement', fn: () => synthIf('waterManagement', () => synthesizeWaterManagement(businessPacket, job.questionnaire)) },
+      { key: 'wasteReduction', fn: () => synthIf('wasteReduction', () => synthesizeWasteReduction(businessPacket, job.questionnaire)) },
+      { key: 'sustainableInnovation', fn: () => synthIf('sustainableInnovation', () => synthesizeSustainableInnovation(businessPacket, job.questionnaire)) },
+      { key: 'talentPipeline', fn: () => synthIf('talentPipeline', () => synthesizeTalentPipeline(businessPacket, job.questionnaire)) },
+      { key: 'leadershipDevelopment', fn: () => synthIf('leadershipDevelopment', () => synthesizeLeadershipDevelopment(businessPacket, job.questionnaire)) },
+      { key: 'successionReadiness', fn: () => synthIf('successionReadiness', () => synthesizeSuccessionReadiness(businessPacket, job.questionnaire)) },
+      { key: 'compensationStrategy', fn: () => synthIf('compensationStrategy', () => synthesizeCompensationStrategy(businessPacket, job.questionnaire)) },
+      { key: 'workforceAnalytics', fn: () => synthIf('workforceAnalytics', () => synthesizeWorkforceAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'orgEffectiveness', fn: () => synthIf('orgEffectiveness', () => synthesizeOrgEffectiveness(businessPacket, job.questionnaire)) },
+      { key: 'salesMotionDesign', fn: () => synthIf('salesMotionDesign', () => synthesizeSalesMotionDesign(businessPacket, job.questionnaire)) },
+      { key: 'dealAnalytics', fn: () => synthIf('dealAnalytics', () => synthesizeDealAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'territoryOptimization', fn: () => synthIf('territoryOptimization', () => synthesizeTerritoryOptimization(businessPacket, job.questionnaire)) },
+      { key: 'salesCompensation', fn: () => synthIf('salesCompensation', () => synthesizeSalesCompensation(businessPacket, job.questionnaire)) },
+      { key: 'revenuePrediction', fn: () => synthIf('revenuePrediction', () => synthesizeRevenuePrediction(businessPacket, job.questionnaire)) },
+      { key: 'accountPenetration', fn: () => synthIf('accountPenetration', () => synthesizeAccountPenetration(businessPacket, job.questionnaire)) },
+      { key: 'productVision', fn: () => synthIf('productVision', () => synthesizeProductVision(businessPacket, job.questionnaire)) },
+      { key: 'featureRoadmap', fn: () => synthIf('featureRoadmap', () => synthesizeFeatureRoadmap(businessPacket, job.questionnaire)) },
+      { key: 'pmfAssessment', fn: () => synthIf('pmfAssessment', () => synthesizePmfAssessment(businessPacket, job.questionnaire)) },
+      { key: 'userActivation', fn: () => synthIf('userActivation', () => synthesizeUserActivation(businessPacket, job.questionnaire)) },
+      { key: 'productInsights', fn: () => synthIf('productInsights', () => synthesizeProductInsights(businessPacket, job.questionnaire)) },
+      { key: 'releaseStrategy', fn: () => synthIf('releaseStrategy', () => synthesizeReleaseStrategy(businessPacket, job.questionnaire)) },
+      { key: 'brandPositionMap', fn: () => synthIf('brandPositionMap', () => synthesizeBrandPositionMap(businessPacket, job.questionnaire)) },
+      { key: 'brandValuation', fn: () => synthIf('brandValuation', () => synthesizeBrandValuation(businessPacket, job.questionnaire)) },
+      { key: 'brandHierarchy', fn: () => synthIf('brandHierarchy', () => synthesizeBrandHierarchy(businessPacket, job.questionnaire)) },
+      { key: 'reputationAnalysis', fn: () => synthIf('reputationAnalysis', () => synthesizeReputationAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'messagingFramework', fn: () => synthIf('messagingFramework', () => synthesizeMessagingFramework(businessPacket, job.questionnaire)) },
+      { key: 'visualBranding', fn: () => synthIf('visualBranding', () => synthesizeVisualBranding(businessPacket, job.questionnaire)) },
+      { key: 'growthPlaybook', fn: () => synthIf('growthPlaybook', () => synthesizeGrowthPlaybook(businessPacket, job.questionnaire)) },
+      { key: 'revenueRunRate', fn: () => synthIf('revenueRunRate', () => synthesizeRevenueRunRate(businessPacket, job.questionnaire)) },
+      { key: 'breakEvenModel', fn: () => synthIf('breakEvenModel', () => synthesizeBreakEvenModel(businessPacket, job.questionnaire)) },
+      { key: 'operatingLeverageIndex', fn: () => synthIf('operatingLeverageIndex', () => synthesizeOperatingLeverageIndex(businessPacket, job.questionnaire)) },
+      { key: 'grossMarginAnalysis', fn: () => synthIf('grossMarginAnalysis', () => synthesizeGrossMarginAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'fundingScenarioModel', fn: () => synthIf('fundingScenarioModel', () => synthesizeFundingScenarioModel(businessPacket, job.questionnaire)) },
+      { key: 'competitiveWargame', fn: () => synthIf('competitiveWargame', () => synthesizeCompetitiveWargame(businessPacket, job.questionnaire)) },
+      { key: 'marketDisruptionModel', fn: () => synthIf('marketDisruptionModel', () => synthesizeMarketDisruptionModel(businessPacket, job.questionnaire)) },
+      { key: 'firstMoverAnalysis', fn: () => synthIf('firstMoverAnalysis', () => synthesizeFirstMoverAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'defensibilityAudit', fn: () => synthIf('defensibilityAudit', () => synthesizeDefensibilityAudit(businessPacket, job.questionnaire)) },
+      { key: 'pivotReadiness', fn: () => synthIf('pivotReadiness', () => synthesizePivotReadiness(businessPacket, job.questionnaire)) },
+      { key: 'competitiveTimingModel', fn: () => synthIf('competitiveTimingModel', () => synthesizeCompetitiveTimingModel(businessPacket, job.questionnaire)) },
+      { key: 'customerMaturityModel', fn: () => synthIf('customerMaturityModel', () => synthesizeCustomerMaturityModel(businessPacket, job.questionnaire)) },
+      { key: 'expansionSignals', fn: () => synthIf('expansionSignals', () => synthesizeExpansionSignals(businessPacket, job.questionnaire)) },
+      { key: 'adoptionScorecard', fn: () => synthIf('adoptionScorecard', () => synthesizeAdoptionScorecard(businessPacket, job.questionnaire)) },
+      { key: 'stakeholderSentiment', fn: () => synthIf('stakeholderSentiment', () => synthesizeStakeholderSentiment(businessPacket, job.questionnaire)) },
+      { key: 'valueRealization', fn: () => synthIf('valueRealization', () => synthesizeValueRealization(businessPacket, job.questionnaire)) },
+      { key: 'renewalPlaybook', fn: () => synthIf('renewalPlaybook', () => synthesizeRenewalPlaybook(businessPacket, job.questionnaire)) },
+      { key: 'businessModelInnovation', fn: () => synthIf('businessModelInnovation', () => synthesizeBusinessModelInnovation(businessPacket, job.questionnaire)) },
+      { key: 'monetizationExperiment', fn: () => synthIf('monetizationExperiment', () => synthesizeMonetizationExperiment(businessPacket, job.questionnaire)) },
+      { key: 'pricingArchitecture', fn: () => synthIf('pricingArchitecture', () => synthesizePricingArchitecture(businessPacket, job.questionnaire)) },
+      { key: 'revenueStreamMap', fn: () => synthIf('revenueStreamMap', () => synthesizeRevenueStreamMap(businessPacket, job.questionnaire)) },
+      { key: 'costDriverAnalysis', fn: () => synthIf('costDriverAnalysis', () => synthesizeCostDriverAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'valueCapture', fn: () => synthIf('valueCapture', () => synthesizeValueCapture(businessPacket, job.questionnaire)) },
+      { key: 'revenueProcessMap', fn: () => synthIf('revenueProcessMap', () => synthesizeRevenueProcessMap(businessPacket, job.questionnaire)) },
+      { key: 'billingHealthCheck', fn: () => synthIf('billingHealthCheck', () => synthesizeBillingHealthCheck(businessPacket, job.questionnaire)) },
+      { key: 'quoteToCloseAnalysis', fn: () => synthIf('quoteToCloseAnalysis', () => synthesizeQuoteToCloseAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'revenueLeakDetector', fn: () => synthIf('revenueLeakDetector', () => synthesizeRevenueLeakDetector(businessPacket, job.questionnaire)) },
+      { key: 'forecastAccuracyModel', fn: () => synthIf('forecastAccuracyModel', () => synthesizeForecastAccuracyModel(businessPacket, job.questionnaire)) },
+      { key: 'dealDeskOptimization', fn: () => synthIf('dealDeskOptimization', () => synthesizeDealDeskOptimization(businessPacket, job.questionnaire)) },
+      { key: 'talentMarketIntel', fn: () => synthIf('talentMarketIntel', () => synthesizeTalentMarketIntel(businessPacket, job.questionnaire)) },
+      { key: 'employeeLifecycleMap', fn: () => synthIf('employeeLifecycleMap', () => synthesizeEmployeeLifecycleMap(businessPacket, job.questionnaire)) },
+      { key: 'skillsInventory', fn: () => synthIf('skillsInventory', () => synthesizeSkillsInventory(businessPacket, job.questionnaire)) },
+      { key: 'teamDynamicsAnalysis', fn: () => synthIf('teamDynamicsAnalysis', () => synthesizeTeamDynamicsAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'hybridWorkModel', fn: () => synthIf('hybridWorkModel', () => synthesizeHybridWorkModel(businessPacket, job.questionnaire)) },
+      { key: 'compensationPhilosophy', fn: () => synthIf('compensationPhilosophy', () => synthesizeCompensationPhilosophy(businessPacket, job.questionnaire)) },
+      { key: 'dataMaturityAssessment', fn: () => synthIf('dataMaturityAssessment', () => synthesizeDataMaturityAssessment(businessPacket, job.questionnaire)) },
+      { key: 'insightsPrioritization', fn: () => synthIf('insightsPrioritization', () => synthesizeInsightsPrioritization(businessPacket, job.questionnaire)) },
+      { key: 'experimentVelocity', fn: () => synthIf('experimentVelocity', () => synthesizeExperimentVelocity(businessPacket, job.questionnaire)) },
+      { key: 'decisionIntelligence', fn: () => synthIf('decisionIntelligence', () => synthesizeDecisionIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'feedbackIntelligence', fn: () => synthIf('feedbackIntelligence', () => synthesizeFeedbackIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'benchmarkingEngine', fn: () => synthIf('benchmarkingEngine', () => synthesizeBenchmarkingEngine(businessPacket, job.questionnaire)) },
+      { key: 'partnerValueMap', fn: () => synthIf('partnerValueMap', () => synthesizePartnerValueMap(businessPacket, job.questionnaire)) },
+      { key: 'coInnovationPipeline', fn: () => synthIf('coInnovationPipeline', () => synthesizeCoInnovationPipeline(businessPacket, job.questionnaire)) },
+      { key: 'ecosystemRevenue', fn: () => synthIf('ecosystemRevenue', () => synthesizeEcosystemRevenue(businessPacket, job.questionnaire)) },
+      { key: 'allianceScorecard', fn: () => synthIf('allianceScorecard', () => synthesizeAllianceScorecard(businessPacket, job.questionnaire)) },
+      { key: 'partnerEnablementPlan', fn: () => synthIf('partnerEnablementPlan', () => synthesizePartnerEnablementPlan(businessPacket, job.questionnaire)) },
+      { key: 'marketplaceReadiness', fn: () => synthIf('marketplaceReadiness', () => synthesizeMarketplaceReadiness(businessPacket, job.questionnaire)) },
+      { key: 'strategyExecution', fn: () => synthIf('strategyExecution', () => synthesizeStrategyExecution(businessPacket, job.questionnaire)) },
+      { key: 'initiativeTracking', fn: () => synthIf('initiativeTracking', () => synthesizeInitiativeTracking(businessPacket, job.questionnaire)) },
+      { key: 'resourceAllocationModel', fn: () => synthIf('resourceAllocationModel', () => synthesizeResourceAllocationModel(businessPacket, job.questionnaire)) },
+      { key: 'strategicBetting', fn: () => synthIf('strategicBetting', () => synthesizeStrategicBetting(businessPacket, job.questionnaire)) },
+      { key: 'executionCadence', fn: () => synthIf('executionCadence', () => synthesizeExecutionCadence(businessPacket, job.questionnaire)) },
+      { key: 'alignmentIndex', fn: () => synthIf('alignmentIndex', () => synthesizeAlignmentIndex(businessPacket, job.questionnaire)) },
+      { key: 'marketSignalRadar', fn: () => synthIf('marketSignalRadar', () => synthesizeMarketSignalRadar(businessPacket, job.questionnaire)) },
+      { key: 'competitorMoveTracker', fn: () => synthIf('competitorMoveTracker', () => synthesizeCompetitorMoveTracker(businessPacket, job.questionnaire)) },
+      { key: 'customerVoiceAggregator', fn: () => synthIf('customerVoiceAggregator', () => synthesizeCustomerVoiceAggregator(businessPacket, job.questionnaire)) },
+      { key: 'industryConvergenceMap', fn: () => synthIf('industryConvergenceMap', () => synthesizeIndustryConvergenceMap(businessPacket, job.questionnaire)) },
+      { key: 'emergingTechRadar', fn: () => synthIf('emergingTechRadar', () => synthesizeEmergingTechRadar(businessPacket, job.questionnaire)) },
+      { key: 'regulatoryHorizon', fn: () => synthIf('regulatoryHorizon', () => synthesizeRegulatoryHorizon(businessPacket, job.questionnaire)) },
+      { key: 'cashFlowForecaster', fn: () => synthIf('cashFlowForecaster', () => synthesizeCashFlowForecaster(businessPacket, job.questionnaire)) },
+      { key: 'profitDriverTree', fn: () => synthIf('profitDriverTree', () => synthesizeProfitDriverTree(businessPacket, job.questionnaire)) },
+      { key: 'revenueQualityIndex', fn: () => synthIf('revenueQualityIndex', () => synthesizeRevenueQualityIndex(businessPacket, job.questionnaire)) },
+      { key: 'financialResilienceScore', fn: () => synthIf('financialResilienceScore', () => synthesizeFinancialResilienceScore(businessPacket, job.questionnaire)) },
+      { key: 'workingCapitalOptimizer', fn: () => synthIf('workingCapitalOptimizer', () => synthesizeWorkingCapitalOptimizer(businessPacket, job.questionnaire)) },
+      { key: 'investmentReadinessGate', fn: () => synthIf('investmentReadinessGate', () => synthesizeInvestmentReadinessGate(businessPacket, job.questionnaire)) },
+      { key: 'customerDnaProfile', fn: () => synthIf('customerDnaProfile', () => synthesizeCustomerDnaProfile(businessPacket, job.questionnaire)) },
+      { key: 'propensityModel', fn: () => synthIf('propensityModel', () => synthesizePropensityModel(businessPacket, job.questionnaire)) },
+      { key: 'churnEarlyWarning', fn: () => synthIf('churnEarlyWarning', () => synthesizeChurnEarlyWarning(businessPacket, job.questionnaire)) },
+      { key: 'customerEffortOptimizer', fn: () => synthIf('customerEffortOptimizer', () => synthesizeCustomerEffortOptimizer(businessPacket, job.questionnaire)) },
+      { key: 'loyaltyDriver', fn: () => synthIf('loyaltyDriver', () => synthesizeLoyaltyDriver(businessPacket, job.questionnaire)) },
+      { key: 'accountIntelligence', fn: () => synthIf('accountIntelligence', () => synthesizeAccountIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'gtmCalendar', fn: () => synthIf('gtmCalendar', () => synthGtmCalendar(businessPacket, job.questionnaire)) },
+      { key: 'launchReadiness', fn: () => synthIf('launchReadiness', () => synthLaunchReadiness(businessPacket, job.questionnaire)) },
+      { key: 'messageTesting', fn: () => synthIf('messageTesting', () => synthMessageTesting(businessPacket, job.questionnaire)) },
+      { key: 'salesCollateral', fn: () => synthIf('salesCollateral', () => synthSalesCollateral(businessPacket, job.questionnaire)) },
+      { key: 'demandGenPlan', fn: () => synthIf('demandGenPlan', () => synthDemandGenPlan(businessPacket, job.questionnaire)) },
+      { key: 'channelActivation', fn: () => synthIf('channelActivation', () => synthChannelActivation(businessPacket, job.questionnaire)) },
+      { key: 'priceElasticityModel', fn: () => synthIf('priceElasticityModel', () => synthPriceElasticityModel(businessPacket, job.questionnaire)) },
+      { key: 'dynamicPricingEngine', fn: () => synthIf('dynamicPricingEngine', () => synthDynamicPricingEngine(businessPacket, job.questionnaire)) },
+      { key: 'discountImpactAnalysis', fn: () => synthIf('discountImpactAnalysis', () => synthDiscountImpactAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'bundleDesigner', fn: () => synthIf('bundleDesigner', () => synthBundleDesigner(businessPacket, job.questionnaire)) },
+      { key: 'competitivePriceTracker', fn: () => synthIf('competitivePriceTracker', () => synthCompetitivePriceTracker(businessPacket, job.questionnaire)) },
+      { key: 'pricingExperiment', fn: () => synthIf('pricingExperiment', () => synthPricingExperiment(businessPacket, job.questionnaire)) },
+      { key: 'kpiWatchlist', fn: () => synthIf('kpiWatchlist', () => synthKpiWatchlist(businessPacket, job.questionnaire)) },
+      { key: 'alertFramework', fn: () => synthIf('alertFramework', () => synthAlertFramework(businessPacket, job.questionnaire)) },
+      { key: 'anomalyDetection', fn: () => synthIf('anomalyDetection', () => synthAnomalyDetection(businessPacket, job.questionnaire)) },
+      { key: 'trendForecast', fn: () => synthIf('trendForecast', () => synthTrendForecast(businessPacket, job.questionnaire)) },
+      { key: 'dashboardDesign', fn: () => synthIf('dashboardDesign', () => synthDashboardDesign(businessPacket, job.questionnaire)) },
+      { key: 'insightsCatalog', fn: () => synthIf('insightsCatalog', () => synthInsightsCatalog(businessPacket, job.questionnaire)) },
+      { key: 'ideaPipeline', fn: () => synthIf('ideaPipeline', () => synthIdeaPipeline(businessPacket, job.questionnaire)) },
+      { key: 'innovationScoring', fn: () => synthIf('innovationScoring', () => synthInnovationScoring(businessPacket, job.questionnaire)) },
+      { key: 'experimentBoard', fn: () => synthIf('experimentBoard', () => synthExperimentBoard(businessPacket, job.questionnaire)) },
+      { key: 'patentAnalysis', fn: () => synthIf('patentAnalysis', () => synthPatentAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'disruptionPlaybook', fn: () => synthIf('disruptionPlaybook', () => synthDisruptionPlaybook(businessPacket, job.questionnaire)) },
+      { key: 'futureProofing', fn: () => synthIf('futureProofing', () => synthFutureProofing(businessPacket, job.questionnaire)) },
+      { key: 'revenueMixAnalysis', fn: () => synthIf('revenueMixAnalysis', () => synthRevenueMixAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'accountGrowthPlan', fn: () => synthIf('accountGrowthPlan', () => synthAccountGrowthPlan(businessPacket, job.questionnaire)) },
+      { key: 'contractOptimizer', fn: () => synthIf('contractOptimizer', () => synthContractOptimizer(businessPacket, job.questionnaire)) },
+      { key: 'usagePatternAnalysis', fn: () => synthIf('usagePatternAnalysis', () => synthUsagePatternAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'churnRecoveryPlan', fn: () => synthIf('churnRecoveryPlan', () => synthChurnRecoveryPlan(businessPacket, job.questionnaire)) },
+      { key: 'winbackProgram', fn: () => synthIf('winbackProgram', () => synthWinbackProgram(businessPacket, job.questionnaire)) },
+      { key: 'automationAudit', fn: () => synthIf('automationAudit', () => synthAutomationAudit(businessPacket, job.questionnaire)) },
+      { key: 'processDigitization', fn: () => synthIf('processDigitization', () => synthProcessDigitization(businessPacket, job.questionnaire)) },
+      { key: 'botDeploymentPlan', fn: () => synthIf('botDeploymentPlan', () => synthBotDeploymentPlan(businessPacket, job.questionnaire)) },
+      { key: 'workflowBenchmark', fn: () => synthIf('workflowBenchmark', () => synthWorkflowBenchmark(businessPacket, job.questionnaire)) },
+      { key: 'handoffEfficiency', fn: () => synthIf('handoffEfficiency', () => synthHandoffEfficiency(businessPacket, job.questionnaire)) },
+      { key: 'toolConsolidation', fn: () => synthIf('toolConsolidation', () => synthToolConsolidation(businessPacket, job.questionnaire)) },
+      { key: 'crisisCommunication', fn: () => synthIf('crisisCommunication', () => synthCrisisCommunication(businessPacket, job.questionnaire)) },
+      { key: 'internalComms', fn: () => synthIf('internalComms', () => synthInternalComms(businessPacket, job.questionnaire)) },
+      { key: 'investorNarrative', fn: () => synthIf('investorNarrative', () => synthInvestorNarrative(businessPacket, job.questionnaire)) },
+      { key: 'pressStrategy', fn: () => synthIf('pressStrategy', () => synthPressStrategy(businessPacket, job.questionnaire)) },
+      { key: 'thoughtLeadershipPlan', fn: () => synthIf('thoughtLeadershipPlan', () => synthThoughtLeadershipPlan(businessPacket, job.questionnaire)) },
+      { key: 'brandStoryArc', fn: () => synthIf('brandStoryArc', () => synthBrandStoryArc(businessPacket, job.questionnaire)) },
+      { key: 'masteryDashboard', fn: () => synthIf('masteryDashboard', () => synthMasteryDashboard(businessPacket, job.questionnaire)) },
+      { key: 'growthVelocityScore', fn: () => synthIf('growthVelocityScore', () => synthGrowthVelocityScore(businessPacket, job.questionnaire)) },
+      { key: 'operationalMaturity', fn: () => synthIf('operationalMaturity', () => synthOperationalMaturity(businessPacket, job.questionnaire)) },
+      { key: 'leadershipReadiness', fn: () => synthIf('leadershipReadiness', () => synthLeadershipReadiness(businessPacket, job.questionnaire)) },
+      { key: 'marketDominanceIndex', fn: () => synthIf('marketDominanceIndex', () => synthMarketDominanceIndex(businessPacket, job.questionnaire)) },
+      { key: 'futureReadiness', fn: () => synthIf('futureReadiness', () => synthFutureReadiness(businessPacket, job.questionnaire)) },
+      { key: 'aiAdoptionPotential', fn: () => synthIf('aiAdoptionPotential', () => synthAIAdoptionPotential(businessPacket, job.questionnaire)) },
+      { key: 'mlUseCaseIdentification', fn: () => synthIf('mlUseCaseIdentification', () => synthMLUseCaseIdentification(businessPacket, job.questionnaire)) },
+      { key: 'dataInfrastructureGapAnalysis', fn: () => synthIf('dataInfrastructureGapAnalysis', () => synthDataInfrastructureGapAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'automationROIModeling', fn: () => synthIf('automationROIModeling', () => synthAutomationROIModeling(businessPacket, job.questionnaire)) },
+      { key: 'aiTalentNeedsAssessment', fn: () => synthIf('aiTalentNeedsAssessment', () => synthAITalentNeedsAssessment(businessPacket, job.questionnaire)) },
+      { key: 'ethicalAIFramework', fn: () => synthIf('ethicalAIFramework', () => synthEthicalAIFramework(businessPacket, job.questionnaire)) },
+      { key: 'marketEntryScoring', fn: () => synthIf('marketEntryScoring', () => synthMarketEntryScoring(businessPacket, job.questionnaire)) },
+      { key: 'regulatoryLandscapeMapping', fn: () => synthIf('regulatoryLandscapeMapping', () => synthRegulatoryLandscapeMapping(businessPacket, job.questionnaire)) },
+      { key: 'culturalAdaptationStrategy', fn: () => synthIf('culturalAdaptationStrategy', () => synthCulturalAdaptationStrategy(businessPacket, job.questionnaire)) },
+      { key: 'logisticsExpansionAnalysis', fn: () => synthIf('logisticsExpansionAnalysis', () => synthLogisticsExpansionAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'localPartnershipStrategy', fn: () => synthIf('localPartnershipStrategy', () => synthLocalPartnershipStrategy(businessPacket, job.questionnaire)) },
+      { key: 'internationalPricingOptimization', fn: () => synthIf('internationalPricingOptimization', () => synthInternationalPricingOptimization(businessPacket, job.questionnaire)) },
+      { key: 'acquisitionFunnelIntelligence', fn: () => synthIf('acquisitionFunnelIntelligence', () => synthAcquisitionFunnelIntelligence(businessPacket, job.questionnaire)) },
+      { key: 'onboardingEffectivenessScore', fn: () => synthIf('onboardingEffectivenessScore', () => synthOnboardingEffectivenessScore(businessPacket, job.questionnaire)) },
+      { key: 'engagementScoringModel', fn: () => synthIf('engagementScoringModel', () => synthEngagementScoringModel(businessPacket, job.questionnaire)) },
+      { key: 'expansionRevenueOpportunities', fn: () => synthIf('expansionRevenueOpportunities', () => synthExpansionRevenueOpportunities(businessPacket, job.questionnaire)) },
+      { key: 'advocacyProgramDesign', fn: () => synthIf('advocacyProgramDesign', () => synthAdvocacyProgramDesign(businessPacket, job.questionnaire)) },
+      { key: 'lifetimeValueModeling', fn: () => synthIf('lifetimeValueModeling', () => synthLifetimeValueModeling(businessPacket, job.questionnaire)) },
+      { key: 'apiMonetizationStrategy', fn: () => synthIf('apiMonetizationStrategy', () => synthAPIMonetizationStrategy(businessPacket, job.questionnaire)) },
+      { key: 'platformEcosystemHealth', fn: () => synthIf('platformEcosystemHealth', () => synthPlatformEcosystemHealth(businessPacket, job.questionnaire)) },
+      { key: 'developerExperienceOptimization', fn: () => synthIf('developerExperienceOptimization', () => synthDeveloperExperienceOptimization(businessPacket, job.questionnaire)) },
+      { key: 'integrationMarketplaceAnalytics', fn: () => synthIf('integrationMarketplaceAnalytics', () => synthIntegrationMarketplaceAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'partnerEnablementProgram', fn: () => synthIf('partnerEnablementProgram', () => synthPartnerEnablementProgram(businessPacket, job.questionnaire)) },
+      { key: 'platformGovernanceFramework', fn: () => synthIf('platformGovernanceFramework', () => synthPlatformGovernanceFramework(businessPacket, job.questionnaire)) },
+      { key: 'demandForecastingEngine', fn: () => synthIf('demandForecastingEngine', () => synthDemandForecastingEngine(businessPacket, job.questionnaire)) },
+      { key: 'predictiveMaintenanceModeling', fn: () => synthIf('predictiveMaintenanceModeling', () => synthPredictiveMaintenanceModeling(businessPacket, job.questionnaire)) },
+      { key: 'churnPredictionModel', fn: () => synthIf('churnPredictionModel', () => synthChurnPredictionModel(businessPacket, job.questionnaire)) },
+      { key: 'leadScoringAI', fn: () => synthIf('leadScoringAI', () => synthLeadScoringAI(businessPacket, job.questionnaire)) },
+      { key: 'inventoryOptimizationAI', fn: () => synthIf('inventoryOptimizationAI', () => synthInventoryOptimizationAI(businessPacket, job.questionnaire)) },
+      { key: 'revenuePredictionModeling', fn: () => synthIf('revenuePredictionModeling', () => synthRevenuePredictionModeling(businessPacket, job.questionnaire)) },
+      { key: 'orgStructureAnalysis', fn: () => synthIf('orgStructureAnalysis', () => synthOrgStructureAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'spanOfControlOptimization', fn: () => synthIf('spanOfControlOptimization', () => synthSpanOfControlOptimization(businessPacket, job.questionnaire)) },
+      { key: 'decisionRightsMapping', fn: () => synthIf('decisionRightsMapping', () => synthDecisionRightsMapping(businessPacket, job.questionnaire)) },
+      { key: 'collaborationNetworkMapping', fn: () => synthIf('collaborationNetworkMapping', () => synthCollaborationNetworkMapping(businessPacket, job.questionnaire)) },
+      { key: 'roleOptimizationAnalysis', fn: () => synthIf('roleOptimizationAnalysis', () => synthRoleOptimizationAnalysis(businessPacket, job.questionnaire)) },
+      { key: 'successionPlanningFramework', fn: () => synthIf('successionPlanningFramework', () => synthSuccessionPlanningFramework(businessPacket, job.questionnaire)) },
+      { key: 'impactMeasurementDashboard', fn: () => synthIf('impactMeasurementDashboard', () => synthImpactMeasurementDashboard(businessPacket, job.questionnaire)) },
+      { key: 'esgReportingCompliance', fn: () => synthIf('esgReportingCompliance', () => synthESGReportingCompliance(businessPacket, job.questionnaire)) },
+      { key: 'stakeholderEngagementAnalytics', fn: () => synthIf('stakeholderEngagementAnalytics', () => synthStakeholderEngagementAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'communityInvestmentStrategy', fn: () => synthIf('communityInvestmentStrategy', () => synthCommunityInvestmentStrategy(businessPacket, job.questionnaire)) },
+      { key: 'diversityMetricsAnalytics', fn: () => synthIf('diversityMetricsAnalytics', () => synthDiversityMetricsAnalytics(businessPacket, job.questionnaire)) },
+      { key: 'greenOperationsOptimization', fn: () => synthIf('greenOperationsOptimization', () => synthGreenOperationsOptimization(businessPacket, job.questionnaire)) },
+      { key: 'knowledgeAuditAssessment', fn: () => synthIf('knowledgeAuditAssessment', () => synthKnowledgeAuditAssessment(businessPacket, job.questionnaire)) },
+      { key: 'expertiseMappingSystem', fn: () => synthIf('expertiseMappingSystem', () => synthExpertiseMappingSystem(businessPacket, job.questionnaire)) },
+      { key: 'documentationStrategyFramework', fn: () => synthIf('documentationStrategyFramework', () => synthDocumentationStrategyFramework(businessPacket, job.questionnaire)) },
+      { key: 'learningPathwaysDesign', fn: () => synthIf('learningPathwaysDesign', () => synthLearningPathwaysDesign(businessPacket, job.questionnaire)) },
+      { key: 'institutionalMemoryProtection', fn: () => synthIf('institutionalMemoryProtection', () => synthInstitutionalMemoryProtection(businessPacket, job.questionnaire)) },
+      { key: 'knowledgeTransferOptimization', fn: () => synthIf('knowledgeTransferOptimization', () => synthKnowledgeTransferOptimization(businessPacket, job.questionnaire)) },
+      { key: 'toolsAutomationPlan', fn: () => synthIf('toolsAutomationPlan', () => synthesizeToolsAutomation(businessPacket, job.questionnaire)) },
+    ];
+
+    // Batch executor: 15 concurrent Gemini calls per batch
+    const EXT_BATCH_SIZE = 15;
+    for (let i = 0; i < extTasks.length; i += EXT_BATCH_SIZE) {
+      const batch = extTasks.slice(i, i + EXT_BATCH_SIZE);
+      console.log(`[Pivot] Extended batch ${Math.floor(i / EXT_BATCH_SIZE) + 1}/${Math.ceil(extTasks.length / EXT_BATCH_SIZE)}: ${batch.map(t => t.key).join(', ')}`);
+      const settled = await Promise.allSettled(batch.map(t => t.fn()));
+      for (let j = 0; j < batch.length; j++) {
+        const s = settled[j];
+        if (s.status === "fulfilled" && s.value) {
+          deliverables = { ...deliverables, [batch[j].key]: s.value };
+        }
       }
-    }
-
-    // ── Step 4ab: Wave 11 intelligence (revenue waterfall, tech debt assessment) ──
-    if (!deliverables.revenueWaterfall || !deliverables.techDebtAssessment) {
-      try {
-        console.log("[Pivot] Synthesizing revenue waterfall + tech debt assessment...");
-        const [rw, td] = await Promise.allSettled([
-          synthIf('revenueWaterfall', () => synthesizeRevenueWaterfall(businessPacket, job.questionnaire)),
-          synthIf('techDebtAssessment', () => synthesizeTechDebtAssessment(businessPacket, job.questionnaire)),
-        ]);
-        if (rw.status === "fulfilled" && rw.value) deliverables = { ...deliverables, revenueWaterfall: rw.value };
-        if (td.status === "fulfilled" && td.value) deliverables = { ...deliverables, techDebtAssessment: td.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] RevenueWaterfall/TechDebtAssessment failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ac: Wave 11 intelligence (team performance, market entry strategy) ──
-    if (!deliverables.teamPerformance || !deliverables.marketEntryStrategy) {
-      try {
-        console.log("[Pivot] Synthesizing team performance + market entry strategy...");
-        const [tp, me] = await Promise.allSettled([
-          synthIf('teamPerformance', () => synthesizeTeamPerformance(businessPacket, job.questionnaire)),
-          synthIf('marketEntryStrategy', () => synthesizeMarketEntryStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, teamPerformance: tp.value };
-        if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, marketEntryStrategy: me.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] TeamPerformance/MarketEntryStrategy failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ad: Wave 12 intelligence (competitive intel feed, cash flow sensitivity) ──
-    if (!deliverables.competitiveIntelFeed || !deliverables.cashFlowSensitivity) {
-      try {
-        console.log("[Pivot] Synthesizing competitive intel feed + cash flow sensitivity...");
-        const [cif, cfs] = await Promise.allSettled([
-          synthIf('competitiveIntelFeed', () => synthesizeCompetitiveIntelFeed(businessPacket, job.questionnaire)),
-          synthIf('cashFlowSensitivity', () => synthesizeCashFlowSensitivity(businessPacket, job.questionnaire)),
-        ]);
-        if (cif.status === "fulfilled" && cif.value) deliverables = { ...deliverables, competitiveIntelFeed: cif.value };
-        if (cfs.status === "fulfilled" && cfs.value) deliverables = { ...deliverables, cashFlowSensitivity: cfs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CompetitiveIntelFeed/CashFlowSensitivity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ae: Wave 12 intelligence (digital maturity, acquisition funnel) ──
-    if (!deliverables.digitalMaturity || !deliverables.acquisitionFunnel) {
-      try {
-        console.log("[Pivot] Synthesizing digital maturity + acquisition funnel...");
-        const [dm, af] = await Promise.allSettled([
-          synthIf('digitalMaturity', () => synthesizeDigitalMaturity(businessPacket, job.questionnaire)),
-          synthIf('acquisitionFunnel', () => synthesizeAcquisitionFunnel(businessPacket, job.questionnaire)),
-        ]);
-        if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, digitalMaturity: dm.value };
-        if (af.status === "fulfilled" && af.value) deliverables = { ...deliverables, acquisitionFunnel: af.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] DigitalMaturity/AcquisitionFunnel failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4af: Wave 12 intelligence (strategic alignment, budget optimizer) ──
-    if (!deliverables.strategicAlignment || !deliverables.budgetOptimizer) {
-      try {
-        console.log("[Pivot] Synthesizing strategic alignment + budget optimizer...");
-        const [sa, bo] = await Promise.allSettled([
-          synthIf('strategicAlignment', () => synthesizeStrategicAlignment(businessPacket, job.questionnaire)),
-          synthIf('budgetOptimizer', () => synthesizeBudgetOptimizer(businessPacket, job.questionnaire)),
-        ]);
-        if (sa.status === "fulfilled" && sa.value) deliverables = { ...deliverables, strategicAlignment: sa.value };
-        if (bo.status === "fulfilled" && bo.value) deliverables = { ...deliverables, budgetOptimizer: bo.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] StrategicAlignment/BudgetOptimizer failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ag: Wave 13 intelligence (revenue drivers, margin optimization) ──
-    if (!deliverables.revenueDrivers || !deliverables.marginOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing revenue drivers + margin optimization...");
-        const [rd, mo] = await Promise.allSettled([
-          synthIf('revenueDrivers', () => synthesizeRevenueDrivers(businessPacket, job.questionnaire)),
-          synthIf('marginOptimization', () => synthesizeMarginOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, revenueDrivers: rd.value };
-        if (mo.status === "fulfilled" && mo.value) deliverables = { ...deliverables, marginOptimization: mo.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] RevenueDrivers/MarginOptimization failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ah: Wave 13 intelligence (demand forecasting, cohort analysis) ──
-    if (!deliverables.demandForecasting || !deliverables.cohortAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing demand forecasting + cohort analysis...");
-        const [df, ca] = await Promise.allSettled([
-          synthIf('demandForecasting', () => synthesizeDemandForecasting(businessPacket, job.questionnaire)),
-          synthIf('cohortAnalysis', () => synthesizeCohortAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (df.status === "fulfilled" && df.value) deliverables = { ...deliverables, demandForecasting: df.value };
-        if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, cohortAnalysis: ca.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] DemandForecasting/CohortAnalysis failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ai: Wave 13 intelligence (win/loss analysis, sales forecast) ──
-    if (!deliverables.winLossAnalysis || !deliverables.salesForecast) {
-      try {
-        console.log("[Pivot] Synthesizing win/loss analysis + sales forecast...");
-        const [wl, sf] = await Promise.allSettled([
-          synthIf('winLossAnalysis', () => synthesizeWinLossAnalysis(businessPacket, job.questionnaire)),
-          synthIf('salesForecast', () => synthesizeSalesForecast(businessPacket, job.questionnaire)),
-        ]);
-        if (wl.status === "fulfilled" && wl.value) deliverables = { ...deliverables, winLossAnalysis: wl.value };
-        if (sf.status === "fulfilled" && sf.value) deliverables = { ...deliverables, salesForecast: sf.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] WinLossAnalysis/SalesForecast failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4aj: Wave 14 intelligence (process efficiency, vendor risk) ──
-    if (!deliverables.processEfficiency || !deliverables.vendorRisk) {
-      try {
-        console.log("[Pivot] Synthesizing process efficiency + vendor risk...");
-        const [pe, vr] = await Promise.allSettled([
-          synthIf('processEfficiency', () => synthesizeProcessEfficiency(businessPacket, job.questionnaire)),
-          synthIf('vendorRisk', () => synthesizeVendorRisk(businessPacket, job.questionnaire)),
-        ]);
-        if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, processEfficiency: pe.value };
-        if (vr.status === "fulfilled" && vr.value) deliverables = { ...deliverables, vendorRisk: vr.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ProcessEfficiency/VendorRisk failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ak: Wave 14 intelligence (quality metrics, capacity planning) ──
-    if (!deliverables.qualityMetrics || !deliverables.capacityPlanning) {
-      try {
-        console.log("[Pivot] Synthesizing quality metrics + capacity planning...");
-        const [qm, cp] = await Promise.allSettled([
-          synthIf('qualityMetrics', () => synthesizeQualityMetrics(businessPacket, job.questionnaire)),
-          synthIf('capacityPlanning', () => synthesizeCapacityPlanning(businessPacket, job.questionnaire)),
-        ]);
-        if (qm.status === "fulfilled" && qm.value) deliverables = { ...deliverables, qualityMetrics: qm.value };
-        if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, capacityPlanning: cp.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] QualityMetrics/CapacityPlanning failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4al: Wave 14 intelligence (knowledge management, compliance scorecard) ──
-    if (!deliverables.knowledgeManagement || !deliverables.complianceScorecard) {
-      try {
-        console.log("[Pivot] Synthesizing knowledge management + compliance scorecard...");
-        const [km, cs] = await Promise.allSettled([
-          synthIf('knowledgeManagement', () => synthesizeKnowledgeManagement(businessPacket, job.questionnaire)),
-          synthIf('complianceScorecard', () => synthesizeComplianceScorecard(businessPacket, job.questionnaire)),
-        ]);
-        if (km.status === "fulfilled" && km.value) deliverables = { ...deliverables, knowledgeManagement: km.value };
-        if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, complianceScorecard: cs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] KnowledgeManagement/ComplianceScorecard failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4am: Wave 15 intelligence (market penetration, flywheel analysis) ──
-    if (!deliverables.marketPenetration || !deliverables.flywheelAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing market penetration + flywheel analysis...");
-        const [mp, fa] = await Promise.allSettled([
-          synthIf('marketPenetration', () => synthesizeMarketPenetration(businessPacket, job.questionnaire)),
-          synthIf('flywheelAnalysis', () => synthesizeFlywheelAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (mp.status === "fulfilled" && mp.value) deliverables = { ...deliverables, marketPenetration: mp.value };
-        if (fa.status === "fulfilled" && fa.value) deliverables = { ...deliverables, flywheelAnalysis: fa.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] MarketPenetration/FlywheelAnalysis failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4an: Wave 15 intelligence (partnerships strategy, international expansion) ──
-    if (!deliverables.partnershipsStrategy || !deliverables.internationalExpansion) {
-      try {
-        console.log("[Pivot] Synthesizing partnerships strategy + international expansion...");
-        const [ps, ie] = await Promise.allSettled([
-          synthIf('partnershipsStrategy', () => synthesizePartnershipsStrategy(businessPacket, job.questionnaire)),
-          synthIf('internationalExpansion', () => synthesizeInternationalExpansion(businessPacket, job.questionnaire)),
-        ]);
-        if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, partnershipsStrategy: ps.value };
-        if (ie.status === "fulfilled" && ie.value) deliverables = { ...deliverables, internationalExpansion: ie.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] PartnershipsStrategy/InternationalExpansion failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ao: Wave 15 intelligence (R&D effectiveness, brand equity) ──
-    if (!deliverables.rdEffectiveness || !deliverables.brandEquity) {
-      try {
-        console.log("[Pivot] Synthesizing R&D effectiveness + brand equity...");
-        const [rd, be] = await Promise.allSettled([
-          synthIf('rdEffectiveness', () => synthesizeRDEffectiveness(businessPacket, job.questionnaire)),
-          synthIf('brandEquity', () => synthesizeBrandEquity(businessPacket, job.questionnaire)),
-        ]);
-        if (rd.status === "fulfilled" && rd.value) deliverables = { ...deliverables, rdEffectiveness: rd.value };
-        if (be.status === "fulfilled" && be.value) deliverables = { ...deliverables, brandEquity: be.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] RDEffectiveness/BrandEquity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ap: Wave 16 intelligence (working capital, debt strategy) ──
-    if (!deliverables.workingCapital || !deliverables.debtStrategy) {
-      try {
-        console.log("[Pivot] Synthesizing working capital + debt strategy...");
-        const [wc, ds] = await Promise.allSettled([
-          synthIf('workingCapital', () => synthesizeWorkingCapital(businessPacket, job.questionnaire)),
-          synthIf('debtStrategy', () => synthesizeDebtStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (wc.status === "fulfilled" && wc.value) deliverables = { ...deliverables, workingCapital: wc.value };
-        if (ds.status === "fulfilled" && ds.value) deliverables = { ...deliverables, debtStrategy: ds.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] WorkingCapital/DebtStrategy failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4aq: Wave 16 intelligence (tax strategy, investor readiness) ──
-    if (!deliverables.taxStrategy || !deliverables.investorReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing tax strategy + investor readiness...");
-        const [ts, ir] = await Promise.allSettled([
-          synthIf('taxStrategy', () => synthesizeTaxStrategy(businessPacket, job.questionnaire)),
-          synthIf('investorReadiness', () => synthesizeInvestorReadiness(businessPacket, job.questionnaire)),
-        ]);
-        if (ts.status === "fulfilled" && ts.value) deliverables = { ...deliverables, taxStrategy: ts.value };
-        if (ir.status === "fulfilled" && ir.value) deliverables = { ...deliverables, investorReadiness: ir.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] TaxStrategy/InvestorReadiness failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ar: Wave 16 intelligence (M&A readiness, strategic roadmap) ──
-    if (!deliverables.maReadiness || !deliverables.strategicRoadmap) {
-      try {
-        console.log("[Pivot] Synthesizing M&A readiness + strategic roadmap...");
-        const [ma, sr] = await Promise.allSettled([
-          synthIf('maReadiness', () => synthesizeMAReadiness(businessPacket, job.questionnaire)),
-          synthIf('strategicRoadmap', () => synthesizeStrategicRoadmap(businessPacket, job.questionnaire)),
-        ]);
-        if (ma.status === "fulfilled" && ma.value) deliverables = { ...deliverables, maReadiness: ma.value };
-        if (sr.status === "fulfilled" && sr.value) deliverables = { ...deliverables, strategicRoadmap: sr.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] MAReadiness/StrategicRoadmap failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4as: Wave 17 intelligence (customer voice, referral engine) ──
-    if (!deliverables.customerVoice || !deliverables.referralEngine) {
-      try {
-        console.log("[Pivot] Synthesizing customer voice + referral engine...");
-        const [cv, re] = await Promise.allSettled([
-          synthIf('customerVoice', () => synthesizeCustomerVoice(businessPacket, job.questionnaire)),
-          synthIf('referralEngine', () => synthesizeReferralEngine(businessPacket, job.questionnaire)),
-        ]);
-        if (cv.status === "fulfilled" && cv.value) deliverables = { ...deliverables, customerVoice: cv.value };
-        if (re.status === "fulfilled" && re.value) deliverables = { ...deliverables, referralEngine: re.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CustomerVoice/ReferralEngine failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4at: Wave 17 intelligence (price sensitivity index, customer effort score) ──
-    if (!deliverables.priceSensitivityIndex || !deliverables.customerEffortScore) {
-      try {
-        console.log("[Pivot] Synthesizing price sensitivity index + customer effort score...");
-        const [psi, ces] = await Promise.allSettled([
-          synthIf('priceSensitivityIndex', () => synthesizePriceSensitivityIndex(businessPacket, job.questionnaire)),
-          synthIf('customerEffortScore', () => synthesizeCustomerEffortScore(businessPacket, job.questionnaire)),
-        ]);
-        if (psi.status === "fulfilled" && psi.value) deliverables = { ...deliverables, priceSensitivityIndex: psi.value };
-        if (ces.status === "fulfilled" && ces.value) deliverables = { ...deliverables, customerEffortScore: ces.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] PriceSensitivityIndex/CustomerEffortScore failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4au: Wave 17 intelligence (account expansion map, loyalty program design) ──
-    if (!deliverables.accountExpansionMap || !deliverables.loyaltyProgramDesign) {
-      try {
-        console.log("[Pivot] Synthesizing account expansion map + loyalty program design...");
-        const [aem, lpd] = await Promise.allSettled([
-          synthIf('accountExpansionMap', () => synthesizeAccountExpansionMap(businessPacket, job.questionnaire)),
-          synthIf('loyaltyProgramDesign', () => synthesizeLoyaltyProgramDesign(businessPacket, job.questionnaire)),
-        ]);
-        if (aem.status === "fulfilled" && aem.value) deliverables = { ...deliverables, accountExpansionMap: aem.value };
-        if (lpd.status === "fulfilled" && lpd.value) deliverables = { ...deliverables, loyaltyProgramDesign: lpd.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] AccountExpansionMap/LoyaltyProgramDesign failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4av: Wave 18 intelligence (competitive pricing matrix, market sentiment index) ──
-    if (!deliverables.competitivePricingMatrix || !deliverables.marketSentimentIndex) {
-      try {
-        console.log("[Pivot] Synthesizing competitive pricing matrix + market sentiment index...");
-        const [cpm, msi] = await Promise.allSettled([
-          synthIf('competitivePricingMatrix', () => synthesizeCompetitivePricingMatrix(businessPacket, job.questionnaire)),
-          synthIf('marketSentimentIndex', () => synthesizeMarketSentimentIndex(businessPacket, job.questionnaire)),
-        ]);
-        if (cpm.status === "fulfilled" && cpm.value) deliverables = { ...deliverables, competitivePricingMatrix: cpm.value };
-        if (msi.status === "fulfilled" && msi.value) deliverables = { ...deliverables, marketSentimentIndex: msi.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CompetitivePricingMatrix/MarketSentimentIndex failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4aw: Wave 18 intelligence (disruption radar, ecosystem map) ──
-    if (!deliverables.disruptionRadar || !deliverables.ecosystemMap) {
-      try {
-        console.log("[Pivot] Synthesizing disruption radar + ecosystem map...");
-        const [dr, em] = await Promise.allSettled([
-          synthIf('disruptionRadar', () => synthesizeDisruptionRadar(businessPacket, job.questionnaire)),
-          synthIf('ecosystemMap', () => synthesizeEcosystemMap(businessPacket, job.questionnaire)),
-        ]);
-        if (dr.status === "fulfilled" && dr.value) deliverables = { ...deliverables, disruptionRadar: dr.value };
-        if (em.status === "fulfilled" && em.value) deliverables = { ...deliverables, ecosystemMap: em.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] DisruptionRadar/EcosystemMap failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ax: Wave 18 intelligence (category creation, market velocity) ──
-    if (!deliverables.categoryCreation || !deliverables.marketVelocity) {
-      try {
-        console.log("[Pivot] Synthesizing category creation + market velocity...");
-        const [cc, mv] = await Promise.allSettled([
-          synthIf('categoryCreation', () => synthesizeCategoryCreation(businessPacket, job.questionnaire)),
-          synthIf('marketVelocity', () => synthesizeMarketVelocity(businessPacket, job.questionnaire)),
-        ]);
-        if (cc.status === "fulfilled" && cc.value) deliverables = { ...deliverables, categoryCreation: cc.value };
-        if (mv.status === "fulfilled" && mv.value) deliverables = { ...deliverables, marketVelocity: mv.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CategoryCreation/MarketVelocity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ay: Wave 19 intelligence (OKR cascade, meeting effectiveness) ──
-    if (!deliverables.okrCascade || !deliverables.meetingEffectiveness) {
-      try {
-        console.log("[Pivot] Synthesizing OKR cascade + meeting effectiveness...");
-        const [okr, me] = await Promise.allSettled([
-          synthIf('okrCascade', () => synthesizeOKRCascade(businessPacket, job.questionnaire)),
-          synthIf('meetingEffectiveness', () => synthesizeMeetingEffectiveness(businessPacket, job.questionnaire)),
-        ]);
-        if (okr.status === "fulfilled" && okr.value) deliverables = { ...deliverables, okrCascade: okr.value };
-        if (me.status === "fulfilled" && me.value) deliverables = { ...deliverables, meetingEffectiveness: me.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] OKRCascade/MeetingEffectiveness failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4az: Wave 19 intelligence (communication audit, decision velocity) ──
-    if (!deliverables.communicationAudit || !deliverables.decisionVelocity) {
-      try {
-        console.log("[Pivot] Synthesizing communication audit + decision velocity...");
-        const [ca, dv] = await Promise.allSettled([
-          synthIf('communicationAudit', () => synthesizeCommunicationAudit(businessPacket, job.questionnaire)),
-          synthIf('decisionVelocity', () => synthesizeDecisionVelocity(businessPacket, job.questionnaire)),
-        ]);
-        if (ca.status === "fulfilled" && ca.value) deliverables = { ...deliverables, communicationAudit: ca.value };
-        if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, decisionVelocity: dv.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CommunicationAudit/DecisionVelocity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ba: Wave 19 intelligence (resource optimizer, change management) ──
-    if (!deliverables.resourceOptimizer || !deliverables.changeManagement) {
-      try {
-        console.log("[Pivot] Synthesizing resource optimizer + change management...");
-        const [ro, cm] = await Promise.allSettled([
-          synthIf('resourceOptimizer', () => synthesizeResourceOptimizer(businessPacket, job.questionnaire)),
-          synthIf('changeManagement', () => synthesizeChangeManagement(businessPacket, job.questionnaire)),
-        ]);
-        if (ro.status === "fulfilled" && ro.value) deliverables = { ...deliverables, resourceOptimizer: ro.value };
-        if (cm.status === "fulfilled" && cm.value) deliverables = { ...deliverables, changeManagement: cm.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ResourceOptimizer/ChangeManagement failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bb: Wave 20 intelligence (cash reserve strategy, revenue quality score) ──
-    if (!deliverables.cashReserveStrategy || !deliverables.revenueQualityScore) {
-      try {
-        console.log("[Pivot] Synthesizing cash reserve strategy + revenue quality score...");
-        const [crs, rqs] = await Promise.allSettled([
-          synthIf('cashReserveStrategy', () => synthesizeCashReserveStrategy(businessPacket, job.questionnaire)),
-          synthIf('revenueQualityScore', () => synthesizeRevenueQualityScore(businessPacket, job.questionnaire)),
-        ]);
-        if (crs.status === "fulfilled" && crs.value) deliverables = { ...deliverables, cashReserveStrategy: crs.value };
-        if (rqs.status === "fulfilled" && rqs.value) deliverables = { ...deliverables, revenueQualityScore: rqs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CashReserveStrategy/RevenueQualityScore failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bc: Wave 20 intelligence (cost intelligence, financial modeling) ──
-    if (!deliverables.costIntelligence || !deliverables.financialModeling) {
-      try {
-        console.log("[Pivot] Synthesizing cost intelligence + financial modeling...");
-        const [ci, fm] = await Promise.allSettled([
-          synthIf('costIntelligence', () => synthesizeCostIntelligence(businessPacket, job.questionnaire)),
-          synthIf('financialModeling', () => synthesizeFinancialModeling(businessPacket, job.questionnaire)),
-        ]);
-        if (ci.status === "fulfilled" && ci.value) deliverables = { ...deliverables, costIntelligence: ci.value };
-        if (fm.status === "fulfilled" && fm.value) deliverables = { ...deliverables, financialModeling: fm.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CostIntelligence/FinancialModeling failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bd: Wave 20 intelligence (profitability map, capital allocation) ──
-    if (!deliverables.profitabilityMap || !deliverables.capitalAllocation) {
-      try {
-        console.log("[Pivot] Synthesizing profitability map + capital allocation...");
-        const [pm, cal] = await Promise.allSettled([
-          synthIf('profitabilityMap', () => synthesizeProfitabilityMap(businessPacket, job.questionnaire)),
-          synthIf('capitalAllocation', () => synthesizeCapitalAllocation(businessPacket, job.questionnaire)),
-        ]);
-        if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, profitabilityMap: pm.value };
-        if (cal.status === "fulfilled" && cal.value) deliverables = { ...deliverables, capitalAllocation: cal.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ProfitabilityMap/CapitalAllocation failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4be: Wave 21 intelligence (sales pipeline health, deal velocity) ──
-    if (!deliverables.salesPipelineHealth || !deliverables.dealVelocity) {
-      try {
-        console.log("[Pivot] Synthesizing sales pipeline health + deal velocity...");
-        const [sph, dv] = await Promise.allSettled([
-          synthIf('salesPipelineHealth', () => synthesizeSalesPipelineHealth(businessPacket, job.questionnaire)),
-          synthIf('dealVelocity', () => synthesizeDealVelocity(businessPacket, job.questionnaire)),
-        ]);
-        if (sph.status === "fulfilled" && sph.value) deliverables = { ...deliverables, salesPipelineHealth: sph.value };
-        if (dv.status === "fulfilled" && dv.value) deliverables = { ...deliverables, dealVelocity: dv.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] SalesPipelineHealth/DealVelocity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bf: Wave 21 intelligence (win rate optimizer, sales enablement) ──
-    if (!deliverables.winRateOptimizer || !deliverables.salesEnablement) {
-      try {
-        console.log("[Pivot] Synthesizing win rate optimizer + sales enablement...");
-        const [wro, se] = await Promise.allSettled([
-          synthIf('winRateOptimizer', () => synthesizeWinRateOptimizer(businessPacket, job.questionnaire)),
-          synthIf('salesEnablement', () => synthesizeSalesEnablement(businessPacket, job.questionnaire)),
-        ]);
-        if (wro.status === "fulfilled" && wro.value) deliverables = { ...deliverables, winRateOptimizer: wro.value };
-        if (se.status === "fulfilled" && se.value) deliverables = { ...deliverables, salesEnablement: se.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] WinRateOptimizer/SalesEnablement failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bg: Wave 21 intelligence (territory planning, quota intelligence) ──
-    if (!deliverables.territoryPlanning || !deliverables.quotaIntelligence) {
-      try {
-        console.log("[Pivot] Synthesizing territory planning + quota intelligence...");
-        const [tp, qi] = await Promise.allSettled([
-          synthIf('territoryPlanning', () => synthesizeTerritoryPlanning(businessPacket, job.questionnaire)),
-          synthIf('quotaIntelligence', () => synthesizeQuotaIntelligence(businessPacket, job.questionnaire)),
-        ]);
-        if (tp.status === "fulfilled" && tp.value) deliverables = { ...deliverables, territoryPlanning: tp.value };
-        if (qi.status === "fulfilled" && qi.value) deliverables = { ...deliverables, quotaIntelligence: qi.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] TerritoryPlanning/QuotaIntelligence failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bh: Wave 22 intelligence (feature prioritization, product usage analytics) ──
-    if (!deliverables.featurePrioritization || !deliverables.productUsageAnalytics) {
-      try {
-        console.log("[Pivot] Synthesizing feature prioritization + product usage analytics...");
-        const [fp, pua] = await Promise.allSettled([
-          synthIf('featurePrioritization', () => synthesizeFeaturePrioritization(businessPacket, job.questionnaire)),
-          synthIf('productUsageAnalytics', () => synthesizeProductUsageAnalytics(businessPacket, job.questionnaire)),
-        ]);
-        if (fp.status === "fulfilled" && fp.value) deliverables = { ...deliverables, featurePrioritization: fp.value };
-        if (pua.status === "fulfilled" && pua.value) deliverables = { ...deliverables, productUsageAnalytics: pua.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] FeaturePrioritization/ProductUsageAnalytics failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bi: Wave 22 intelligence (tech stack audit, API strategy) ──
-    if (!deliverables.techStackAudit || !deliverables.apiStrategy) {
-      try {
-        console.log("[Pivot] Synthesizing tech stack audit + API strategy...");
-        const [tsa, as_] = await Promise.allSettled([
-          synthIf('techStackAudit', () => synthesizeTechStackAudit(businessPacket, job.questionnaire)),
-          synthIf('apiStrategy', () => synthesizeApiStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (tsa.status === "fulfilled" && tsa.value) deliverables = { ...deliverables, techStackAudit: tsa.value };
-        if (as_.status === "fulfilled" && as_.value) deliverables = { ...deliverables, apiStrategy: as_.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] TechStackAudit/ApiStrategy failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bj: Wave 22 intelligence (platform scalability, user onboarding) ──
-    if (!deliverables.platformScalability || !deliverables.userOnboarding) {
-      try {
-        console.log("[Pivot] Synthesizing platform scalability + user onboarding...");
-        const [ps, uo] = await Promise.allSettled([
-          synthIf('platformScalability', () => synthesizePlatformScalability(businessPacket, job.questionnaire)),
-          synthIf('userOnboarding', () => synthesizeUserOnboarding(businessPacket, job.questionnaire)),
-        ]);
-        if (ps.status === "fulfilled" && ps.value) deliverables = { ...deliverables, platformScalability: ps.value };
-        if (uo.status === "fulfilled" && uo.value) deliverables = { ...deliverables, userOnboarding: uo.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] PlatformScalability/UserOnboarding failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bk: Wave 23 intelligence (employee engagement, talent acquisition funnel) ──
-    if (!deliverables.employeeEngagement || !deliverables.talentAcquisitionFunnel) {
-      try {
-        console.log("[Pivot] Synthesizing employee engagement + talent acquisition funnel...");
-        const [ee, taf] = await Promise.allSettled([
-          synthIf('employeeEngagement', () => synthesizeEmployeeEngagement(businessPacket, job.questionnaire)),
-          synthIf('talentAcquisitionFunnel', () => synthesizeTalentAcquisitionFunnel(businessPacket, job.questionnaire)),
-        ]);
-        if (ee.status === "fulfilled" && ee.value) deliverables = { ...deliverables, employeeEngagement: ee.value };
-        if (taf.status === "fulfilled" && taf.value) deliverables = { ...deliverables, talentAcquisitionFunnel: taf.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] EmployeeEngagement/TalentAcquisitionFunnel failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bl: Wave 23 intelligence (compensation benchmark, succession planning) ──
-    if (!deliverables.compensationBenchmark || !deliverables.successionPlanning) {
-      try {
-        console.log("[Pivot] Synthesizing compensation benchmark + succession planning...");
-        const [cb, sp] = await Promise.allSettled([
-          synthIf('compensationBenchmark', () => synthesizeCompensationBenchmark(businessPacket, job.questionnaire)),
-          synthIf('successionPlanning', () => synthesizeSuccessionPlanning(businessPacket, job.questionnaire)),
-        ]);
-        if (cb.status === "fulfilled" && cb.value) deliverables = { ...deliverables, compensationBenchmark: cb.value };
-        if (sp.status === "fulfilled" && sp.value) deliverables = { ...deliverables, successionPlanning: sp.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CompensationBenchmark/SuccessionPlanning failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bm: Wave 23 intelligence (diversity metrics, employer brand) ──
-    if (!deliverables.diversityMetrics || !deliverables.employerBrand) {
-      try {
-        console.log("[Pivot] Synthesizing diversity metrics + employer brand...");
-        const [dm, eb] = await Promise.allSettled([
-          synthIf('diversityMetrics', () => synthesizeDiversityMetrics(businessPacket, job.questionnaire)),
-          synthIf('employerBrand', () => synthesizeEmployerBrand(businessPacket, job.questionnaire)),
-        ]);
-        if (dm.status === "fulfilled" && dm.value) deliverables = { ...deliverables, diversityMetrics: dm.value };
-        if (eb.status === "fulfilled" && eb.value) deliverables = { ...deliverables, employerBrand: eb.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] DiversityMetrics/EmployerBrand failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bn: Wave 24 intelligence (data governance, analytics maturity) ──
-    if (!deliverables.dataGovernance || !deliverables.analyticsMaturity) {
-      try {
-        console.log("[Pivot] Synthesizing data governance + analytics maturity...");
-        const [dg, am] = await Promise.allSettled([
-          synthIf('dataGovernance', () => synthesizeDataGovernance(businessPacket, job.questionnaire)),
-          synthIf('analyticsMaturity', () => synthesizeAnalyticsMaturity(businessPacket, job.questionnaire)),
-        ]);
-        if (dg.status === "fulfilled" && dg.value) deliverables = { ...deliverables, dataGovernance: dg.value };
-        if (am.status === "fulfilled" && am.value) deliverables = { ...deliverables, analyticsMaturity: am.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] DataGovernance/AnalyticsMaturity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bo: Wave 24 intelligence (customer data platform, predictive modeling) ──
-    if (!deliverables.customerDataPlatform || !deliverables.predictiveModeling) {
-      try {
-        console.log("[Pivot] Synthesizing customer data platform + predictive modeling...");
-        const [cdp, pm] = await Promise.allSettled([
-          synthIf('customerDataPlatform', () => synthesizeCustomerDataPlatform(businessPacket, job.questionnaire)),
-          synthIf('predictiveModeling', () => synthesizePredictiveModeling(businessPacket, job.questionnaire)),
-        ]);
-        if (cdp.status === "fulfilled" && cdp.value) deliverables = { ...deliverables, customerDataPlatform: cdp.value };
-        if (pm.status === "fulfilled" && pm.value) deliverables = { ...deliverables, predictiveModeling: pm.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CustomerDataPlatform/PredictiveModeling failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bp: Wave 24 intelligence (reporting framework, data quality score) ──
-    if (!deliverables.reportingFramework || !deliverables.dataQualityScore) {
-      try {
-        console.log("[Pivot] Synthesizing reporting framework + data quality score...");
-        const [rf, dqs] = await Promise.allSettled([
-          synthIf('reportingFramework', () => synthesizeReportingFramework(businessPacket, job.questionnaire)),
-          synthIf('dataQualityScore', () => synthesizeDataQualityScore(businessPacket, job.questionnaire)),
-        ]);
-        if (rf.status === "fulfilled" && rf.value) deliverables = { ...deliverables, reportingFramework: rf.value };
-        if (dqs.status === "fulfilled" && dqs.value) deliverables = { ...deliverables, dataQualityScore: dqs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] ReportingFramework/DataQualityScore failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bq: Wave 25a intelligence (supply chain risk, inventory optimization) ──
-    if (!deliverables.supplyChainRisk || !deliverables.inventoryOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing supply chain risk + inventory optimization...");
-        const [scr, io] = await Promise.allSettled([
-          synthIf('supplyChainRisk', () => synthesizeSupplyChainRisk(businessPacket, job.questionnaire)),
-          synthIf('inventoryOptimization', () => synthesizeInventoryOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (scr.status === "fulfilled" && scr.value) deliverables = { ...deliverables, supplyChainRisk: scr.value };
-        if (io.status === "fulfilled" && io.value) deliverables = { ...deliverables, inventoryOptimization: io.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] SupplyChainRisk/InventoryOptimization failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4br: Wave 25b intelligence (vendor scorecard, operational efficiency) ──
-    if (!deliverables.vendorScorecard || !deliverables.operationalEfficiency) {
-      try {
-        console.log("[Pivot] Synthesizing vendor scorecard + operational efficiency...");
-        const [vs, oe] = await Promise.allSettled([
-          synthIf('vendorScorecard', () => synthesizeVendorScorecard(businessPacket, job.questionnaire)),
-          synthIf('operationalEfficiency', () => synthesizeOperationalEfficiency(businessPacket, job.questionnaire)),
-        ]);
-        if (vs.status === "fulfilled" && vs.value) deliverables = { ...deliverables, vendorScorecard: vs.value };
-        if (oe.status === "fulfilled" && oe.value) deliverables = { ...deliverables, operationalEfficiency: oe.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] VendorScorecard/OperationalEfficiency failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bs: Wave 25c intelligence (quality management, capacity planning) ──
-    if (!deliverables.qualityManagement || !deliverables.capacityPlanning) {
-      try {
-        console.log("[Pivot] Synthesizing quality management + capacity planning...");
-        const [qm, cp] = await Promise.allSettled([
-          synthIf('qualityManagement', () => synthesizeQualityManagement(businessPacket, job.questionnaire)),
-          synthIf('capacityPlanning', () => synthesizeCapacityPlanning(businessPacket, job.questionnaire)),
-        ]);
-        if (qm.status === "fulfilled" && qm.value) deliverables = { ...deliverables, qualityManagement: qm.value };
-        if (cp.status === "fulfilled" && cp.value) deliverables = { ...deliverables, capacityPlanning: cp.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] QualityManagement/CapacityPlanning failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bt: Wave 26a intelligence (customer journey map, nps analysis) ──
-    if (!deliverables.customerJourneyMap || !deliverables.npsAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing customer journey map + nps analysis...");
-        const [cjm, nps] = await Promise.allSettled([
-          synthIf('customerJourneyMap', () => synthesizeCustomerJourneyMap(businessPacket, job.questionnaire)),
-          synthIf('npsAnalysis', () => synthesizeNpsAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (cjm.status === "fulfilled" && cjm.value) deliverables = { ...deliverables, customerJourneyMap: cjm.value };
-        if (nps.status === "fulfilled" && nps.value) deliverables = { ...deliverables, npsAnalysis: nps.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] CustomerJourneyMap/NpsAnalysis failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bu: Wave 26b intelligence (support ticket intelligence, customer health score) ──
-    if (!deliverables.supportTicketIntelligence || !deliverables.customerHealthScore) {
-      try {
-        console.log("[Pivot] Synthesizing support ticket intelligence + customer health score...");
-        const [sti, chs] = await Promise.allSettled([
-          synthIf('supportTicketIntelligence', () => synthesizeSupportTicketIntelligence(businessPacket, job.questionnaire)),
-          synthIf('customerHealthScore', () => synthesizeCustomerHealthScore(businessPacket, job.questionnaire)),
-        ]);
-        if (sti.status === "fulfilled" && sti.value) deliverables = { ...deliverables, supportTicketIntelligence: sti.value };
-        if (chs.status === "fulfilled" && chs.value) deliverables = { ...deliverables, customerHealthScore: chs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] SupportTicketIntelligence/CustomerHealthScore failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bv: Wave 26c intelligence (voice of customer, customer segmentation) ──
-    if (!deliverables.voiceOfCustomer || !deliverables.customerSegmentation) {
-      try {
-        console.log("[Pivot] Synthesizing voice of customer + customer segmentation...");
-        const [voc, cs] = await Promise.allSettled([
-          synthIf('voiceOfCustomer', () => synthesizeVoiceOfCustomer(businessPacket, job.questionnaire)),
-          synthIf('customerSegmentation', () => synthesizeCustomerSegmentation(businessPacket, job.questionnaire)),
-        ]);
-        if (voc.status === "fulfilled" && voc.value) deliverables = { ...deliverables, voiceOfCustomer: voc.value };
-        if (cs.status === "fulfilled" && cs.value) deliverables = { ...deliverables, customerSegmentation: cs.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] VoiceOfCustomer/CustomerSegmentation failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bw: Wave 27a intelligence (innovation pipeline, ip portfolio) ──
-    if (!deliverables.innovationPipeline || !deliverables.ipPortfolio) {
-      try {
-        console.log("[Pivot] Synthesizing innovation pipeline + ip portfolio...");
-        const [ip, ipp] = await Promise.allSettled([
-          synthIf('innovationPipeline', () => synthesizeInnovationPipeline(businessPacket, job.questionnaire)),
-          synthIf('ipPortfolio', () => synthesizeIpPortfolio(businessPacket, job.questionnaire)),
-        ]);
-        if (ip.status === "fulfilled" && ip.value) deliverables = { ...deliverables, innovationPipeline: ip.value };
-        if (ipp.status === "fulfilled" && ipp.value) deliverables = { ...deliverables, ipPortfolio: ipp.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] InnovationPipeline/IpPortfolio failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bx: Wave 27b intelligence (rd efficiency, technology readiness) ──
-    if (!deliverables.rdEfficiency || !deliverables.technologyReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing rd efficiency + technology readiness...");
-        const [rde, tr] = await Promise.allSettled([
-          synthIf('rdEfficiency', () => synthesizeRdEfficiency(businessPacket, job.questionnaire)),
-          synthIf('technologyReadiness', () => synthesizeTechnologyReadiness(businessPacket, job.questionnaire)),
-        ]);
-        if (rde.status === "fulfilled" && rde.value) deliverables = { ...deliverables, rdEfficiency: rde.value };
-        if (tr.status === "fulfilled" && tr.value) deliverables = { ...deliverables, technologyReadiness: tr.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] RdEfficiency/TechnologyReadiness failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4by: Wave 27c intelligence (partnership ecosystem, mergers acquisitions) ──
-    if (!deliverables.partnershipEcosystem || !deliverables.mergersAcquisitions) {
-      try {
-        console.log("[Pivot] Synthesizing partnership ecosystem + mergers acquisitions...");
-        const [pe, ma] = await Promise.allSettled([
-          synthIf('partnershipEcosystem', () => synthesizePartnershipEcosystem(businessPacket, job.questionnaire)),
-          synthIf('mergersAcquisitions', () => synthesizeMergersAcquisitions(businessPacket, job.questionnaire)),
-        ]);
-        if (pe.status === "fulfilled" && pe.value) deliverables = { ...deliverables, partnershipEcosystem: pe.value };
-        if (ma.status === "fulfilled" && ma.value) deliverables = { ...deliverables, mergersAcquisitions: ma.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] PartnershipEcosystem/MergersAcquisitions failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4bz: Wave 28a intelligence (esg scorecard, carbon footprint) ──
-    if (!deliverables.esgScorecard || !deliverables.carbonFootprint) {
-      try {
-        console.log("[Pivot] Synthesizing esg scorecard + carbon footprint...");
-        const [esg, cf] = await Promise.allSettled([
-          synthIf('esgScorecard', () => synthesizeEsgScorecard(businessPacket, job.questionnaire)),
-          synthIf('carbonFootprint', () => synthesizeCarbonFootprint(businessPacket, job.questionnaire)),
-        ]);
-        if (esg.status === "fulfilled" && esg.value) deliverables = { ...deliverables, esgScorecard: esg.value };
-        if (cf.status === "fulfilled" && cf.value) deliverables = { ...deliverables, carbonFootprint: cf.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] EsgScorecard/CarbonFootprint failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4ca: Wave 28b intelligence (regulatory compliance, business continuity) ──
-    if (!deliverables.regulatoryCompliance || !deliverables.businessContinuity) {
-      try {
-        console.log("[Pivot] Synthesizing regulatory compliance + business continuity...");
-        const [rc, bc] = await Promise.allSettled([
-          synthIf('regulatoryCompliance', () => synthesizeRegulatoryCompliance(businessPacket, job.questionnaire)),
-          synthIf('businessContinuity', () => synthesizeBusinessContinuity(businessPacket, job.questionnaire)),
-        ]);
-        if (rc.status === "fulfilled" && rc.value) deliverables = { ...deliverables, regulatoryCompliance: rc.value };
-        if (bc.status === "fulfilled" && bc.value) deliverables = { ...deliverables, businessContinuity: bc.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] RegulatoryCompliance/BusinessContinuity failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4cb: Wave 28c intelligence (ethics framework, social impact) ──
-    if (!deliverables.ethicsFramework || !deliverables.socialImpact) {
-      try {
-        console.log("[Pivot] Synthesizing ethics framework + social impact...");
-        const [ef, si] = await Promise.allSettled([
-          synthIf('ethicsFramework', () => synthesizeEthicsFramework(businessPacket, job.questionnaire)),
-          synthIf('socialImpact', () => synthesizeSocialImpact(businessPacket, job.questionnaire)),
-        ]);
-        if (ef.status === "fulfilled" && ef.value) deliverables = { ...deliverables, ethicsFramework: ef.value };
-        if (si.status === "fulfilled" && si.value) deliverables = { ...deliverables, socialImpact: si.value };
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) {
-        console.warn("[Pivot] EthicsFramework/SocialImpact failed (non-fatal):", e);
-      }
-    }
-
-    // ── Step 4cc: Deal Pipeline + Sales Forecasting ──
-    if (!deliverables.dealPipeline || !deliverables.salesForecasting) {
-      try {
-        const [dp, sf] = await Promise.allSettled([
-          synthesizeDealPipeline(businessPacket, job.questionnaire),
-          synthesizeSalesForecasting(businessPacket, job.questionnaire),
-        ]);
-        if (dp.status === "fulfilled" && dp.value) deliverables.dealPipeline = dp.value;
-        if (sf.status === "fulfilled" && sf.value) deliverables.salesForecasting = sf.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cc failed:", e); }
-    }
-
-    // ── Step 4cd: Account-Based Marketing + Sales Enablement ──
-    if (!deliverables.accountBasedMarketing || !deliverables.salesEnablement) {
-      try {
-        const [abm, se] = await Promise.allSettled([
-          synthesizeAccountBasedMarketing(businessPacket, job.questionnaire),
-          synthesizeSalesEnablement(businessPacket, job.questionnaire),
-        ]);
-        if (abm.status === "fulfilled" && abm.value) deliverables.accountBasedMarketing = abm.value;
-        if (se.status === "fulfilled" && se.value) deliverables.salesEnablement = se.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cd failed:", e); }
-    }
-
-    // ── Step 4ce: Revenue Attribution + Commission Optimization ──
-    if (!deliverables.revenueAttribution || !deliverables.commissionOptimization) {
-      try {
-        const [ra, co] = await Promise.allSettled([
-          synthesizeRevenueAttribution(businessPacket, job.questionnaire),
-          synthesizeCommissionOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (ra.status === "fulfilled" && ra.value) deliverables.revenueAttribution = ra.value;
-        if (co.status === "fulfilled" && co.value) deliverables.commissionOptimization = co.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ce failed:", e); }
-    }
-
-    // ── Step 4cf: Product-Market Fit + Feature Prioritization ──
-    if (!deliverables.productMarketFit || !deliverables.featurePrioritization) {
-      try {
-        const [pmf, fp] = await Promise.allSettled([
-          synthesizeProductMarketFit(businessPacket, job.questionnaire),
-          synthesizeFeaturePrioritization(businessPacket, job.questionnaire),
-        ]);
-        if (pmf.status === "fulfilled" && pmf.value) deliverables.productMarketFit = pmf.value;
-        if (fp.status === "fulfilled" && fp.value) deliverables.featurePrioritization = fp.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cf failed:", e); }
-    }
-
-    // ── Step 4cg: User Onboarding + Product Analytics ──
-    if (!deliverables.userOnboarding || !deliverables.productAnalytics) {
-      try {
-        const [uo, pa] = await Promise.allSettled([
-          synthesizeUserOnboarding(businessPacket, job.questionnaire),
-          synthesizeProductAnalytics(businessPacket, job.questionnaire),
-        ]);
-        if (uo.status === "fulfilled" && uo.value) deliverables.userOnboarding = uo.value;
-        if (pa.status === "fulfilled" && pa.value) deliverables.productAnalytics = pa.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cg failed:", e); }
-    }
-
-    // ── Step 4ch: Market Timing + Competitive Response ──
-    if (!deliverables.marketTiming || !deliverables.competitiveResponse) {
-      try {
-        const [mt, cr] = await Promise.allSettled([
-          synthesizeMarketTiming(businessPacket, job.questionnaire),
-          synthesizeCompetitiveResponse(businessPacket, job.questionnaire),
-        ]);
-        if (mt.status === "fulfilled" && mt.value) deliverables.marketTiming = mt.value;
-        if (cr.status === "fulfilled" && cr.value) deliverables.competitiveResponse = cr.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ch failed:", e); }
-    }
-
-    // ── Step 4ci: Scenario Planning + Capital Structure ──
-    if (!deliverables.scenarioPlanning || !deliverables.capitalStructure) {
-      try {
-        const [sp, cs] = await Promise.allSettled([
-          synthesizeScenarioPlanning(businessPacket, job.questionnaire),
-          synthesizeCapitalStructure(businessPacket, job.questionnaire),
-        ]);
-        if (sp.status === "fulfilled" && sp.value) deliverables.scenarioPlanning = sp.value;
-        if (cs.status === "fulfilled" && cs.value) deliverables.capitalStructure = cs.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ci failed:", e); }
-    }
-
-    // ── Step 4cj: Working Capital + Tax Strategy ──
-    if (!deliverables.workingCapital || !deliverables.taxStrategy) {
-      try {
-        const [wc, ts] = await Promise.allSettled([
-          synthesizeWorkingCapital(businessPacket, job.questionnaire),
-          synthesizeTaxStrategy(businessPacket, job.questionnaire),
-        ]);
-        if (wc.status === "fulfilled" && wc.value) deliverables.workingCapital = wc.value;
-        if (ts.status === "fulfilled" && ts.value) deliverables.taxStrategy = ts.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cj failed:", e); }
-    }
-
-    // ── Step 4ck: Fundraising Readiness + Exit Strategy ──
-    if (!deliverables.fundraisingReadiness || !deliverables.exitStrategy) {
-      try {
-        const [fr, es] = await Promise.allSettled([
-          synthesizeFundraisingReadiness(businessPacket, job.questionnaire),
-          synthesizeExitStrategy(businessPacket, job.questionnaire),
-        ]);
-        if (fr.status === "fulfilled" && fr.value) deliverables.fundraisingReadiness = fr.value;
-        if (es.status === "fulfilled" && es.value) deliverables.exitStrategy = es.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ck failed:", e); }
-    }
-
-    // ── Step 4cl: Talent Acquisition + Employee Engagement ──
-    if (!deliverables.talentAcquisition || !deliverables.employeeEngagement) {
-      try {
-        const [ta, ee] = await Promise.allSettled([
-          synthesizeTalentAcquisition(businessPacket, job.questionnaire),
-          synthesizeEmployeeEngagement(businessPacket, job.questionnaire),
-        ]);
-        if (ta.status === "fulfilled" && ta.value) deliverables.talentAcquisition = ta.value;
-        if (ee.status === "fulfilled" && ee.value) deliverables.employeeEngagement = ee.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cl failed:", e); }
-    }
-
-    // ── Step 4cm: Compensation Benchmark + Succession Planning ──
-    if (!deliverables.compensationBenchmark || !deliverables.successionPlanning) {
-      try {
-        const [cb, spl] = await Promise.allSettled([
-          synthesizeCompensationBenchmark(businessPacket, job.questionnaire),
-          synthesizeSuccessionPlanning(businessPacket, job.questionnaire),
-        ]);
-        if (cb.status === "fulfilled" && cb.value) deliverables.compensationBenchmark = cb.value;
-        if (spl.status === "fulfilled" && spl.value) deliverables.successionPlanning = spl.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cm failed:", e); }
-    }
-
-    // ── Step 4cn: Diversity & Inclusion + Culture Assessment ──
-    if (!deliverables.diversityInclusion || !deliverables.cultureAssessment) {
-      try {
-        const [di, ca] = await Promise.allSettled([
-          synthesizeDiversityInclusion(businessPacket, job.questionnaire),
-          synthesizeCultureAssessment(businessPacket, job.questionnaire),
-        ]);
-        if (di.status === "fulfilled" && di.value) deliverables.diversityInclusion = di.value;
-        if (ca.status === "fulfilled" && ca.value) deliverables.cultureAssessment = ca.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cn failed:", e); }
-    }
-
-    // ── Step 4co: Market Entry Playbook + Partner Channel Strategy ──
-    if (!deliverables.marketEntryPlaybook || !deliverables.partnerChannelStrategy) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMarketEntryPlaybook(businessPacket, job.questionnaire),
-          synthesizePartnerChannelStrategy(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.marketEntryPlaybook = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.partnerChannelStrategy = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4co failed:", e); }
-    }
-
-    // ── Step 4cp: Acquisition Integration + International Readiness ──
-    if (!deliverables.acquisitionIntegration || !deliverables.internationalReadiness) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAcquisitionIntegration(businessPacket, job.questionnaire),
-          synthesizeInternationalReadiness(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.acquisitionIntegration = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.internationalReadiness = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cp failed:", e); }
-    }
-
-    // ── Step 4cq: Revenue Model Analysis + Growth Experiments ──
-    if (!deliverables.revenueModelAnalysis || !deliverables.growthExperiments) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRevenueModelAnalysis(businessPacket, job.questionnaire),
-          synthesizeGrowthExperiments(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.revenueModelAnalysis = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.growthExperiments = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cq failed:", e); }
-    }
-
-    // ── Step 4cr: Customer Acquisition Cost + Lifetime Value Optimization ──
-    if (!deliverables.customerAcquisitionCost || !deliverables.lifetimeValueOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCustomerAcquisitionCost(businessPacket, job.questionnaire),
-          synthesizeLifetimeValueOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.customerAcquisitionCost = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.lifetimeValueOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cr failed:", e); }
-    }
-
-    // ── Step 4cs: Churn Prediction + Net Revenue Retention ──
-    if (!deliverables.churnPrediction || !deliverables.netRevenueRetention) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeChurnPrediction(businessPacket, job.questionnaire),
-          synthesizeNetRevenueRetention(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.churnPrediction = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.netRevenueRetention = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cs failed:", e); }
-    }
-
-    // ── Step 4ct: Customer Advocacy + Feedback Loop ──
-    if (!deliverables.customerAdvocacy || !deliverables.feedbackLoop) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCustomerAdvocacy(businessPacket, job.questionnaire),
-          synthesizeFeedbackLoop(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.customerAdvocacy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.feedbackLoop = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ct failed:", e); }
-    }
-
-    // ── Step 4cu: Process Automation + Cost Benchmark ──
-    if (!deliverables.processAutomation || !deliverables.costBenchmark) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeProcessAutomation(businessPacket, job.questionnaire),
-          synthesizeCostBenchmark(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.processAutomation = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.costBenchmark = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cu failed:", e); }
-    }
-
-    // ── Step 4cv: Vendor Negotiation + Scalability Assessment ──
-    if (!deliverables.vendorNegotiation || !deliverables.scalabilityAssessment) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeVendorNegotiation(businessPacket, job.questionnaire),
-          synthesizeScalabilityAssessment(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.vendorNegotiation = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.scalabilityAssessment = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cv failed:", e); }
-    }
-
-    // ── Step 4cw: Incident Readiness + Operational Risk ──
-    if (!deliverables.incidentReadiness || !deliverables.operationalRisk) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeIncidentReadiness(businessPacket, job.questionnaire),
-          synthesizeOperationalRisk(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.incidentReadiness = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.operationalRisk = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cw failed:", e); }
-    }
-
-    // ── Step 4cx: Data Strategy + AI Use Cases ──
-    if (!deliverables.dataStrategy || !deliverables.aiUseCases) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDataStrategy(businessPacket, job.questionnaire),
-          synthesizeAiUseCases(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.dataStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.aiUseCases = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cx failed:", e); }
-    }
-
-    // ── Step 4cy: Analytics Roadmap + Data Privacy ──
-    if (!deliverables.analyticsRoadmap || !deliverables.dataPrivacy) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAnalyticsRoadmap(businessPacket, job.questionnaire),
-          synthesizeDataPrivacy(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.analyticsRoadmap = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.dataPrivacy = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cy failed:", e); }
-    }
-
-    // ── Step 4cz: MLOps Readiness + Digital Transformation ──
-    if (!deliverables.mlOpsReadiness || !deliverables.digitalTransformation) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMlOpsReadiness(businessPacket, job.questionnaire),
-          synthesizeDigitalTransformation(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.mlOpsReadiness = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.digitalTransformation = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4cz failed:", e); }
-    }
-
-    // ── Step 4da: Revenue Ops + Billing Optimization ──
-    if (!deliverables.revenueOps || !deliverables.billingOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRevenueOps(businessPacket, job.questionnaire),
-          synthesizeBillingOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.revenueOps = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.billingOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4da failed:", e); }
-    }
-
-    // ── Step 4db: Contract Intelligence + Commission Tracking ──
-    if (!deliverables.contractIntelligence || !deliverables.commissionTracking) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeContractIntelligence(businessPacket, job.questionnaire),
-          synthesizeCommissionTracking(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.contractIntelligence = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.commissionTracking = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4db failed:", e); }
-    }
-
-    // ── Step 4dc: Revenue Recognition + Subscription Health ──
-    if (!deliverables.revenueRecognition || !deliverables.subscriptionHealth) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRevenueRecognition(businessPacket, job.questionnaire),
-          synthesizeSubscriptionHealth(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.revenueRecognition = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.subscriptionHealth = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dc failed:", e); }
-    }
-
-    // ── Step 4dd: Product Roadmap Health + Tech Debt Prioritization ──
-    if (!deliverables.productRoadmapHealth || !deliverables.techDebtPrioritization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeProductRoadmapHealth(businessPacket, job.questionnaire),
-          synthesizeTechDebtPrioritization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.productRoadmapHealth = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.techDebtPrioritization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dd failed:", e); }
-    }
-
-    // ── Step 4de: Release Velocity + Bug Trend Analysis ──
-    if (!deliverables.releaseVelocity || !deliverables.bugTrendAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeReleaseVelocity(businessPacket, job.questionnaire),
-          synthesizeBugTrendAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.releaseVelocity = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.bugTrendAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4de failed:", e); }
-    }
-
-    // ── Step 4df: API Performance + User Experience Score ──
-    if (!deliverables.apiPerformance || !deliverables.userExperienceScore) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeApiPerformance(businessPacket, job.questionnaire),
-          synthesizeUserExperienceScore(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.apiPerformance = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.userExperienceScore = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4df failed:", e); }
-    }
-
-    // ── Step 4dg: Workforce Planning + Skills Gap Analysis ──
-    if (!deliverables.workforcePlanning || !deliverables.skillsGapAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeWorkforcePlanning(businessPacket, job.questionnaire),
-          synthesizeSkillsGapAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.workforcePlanning = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.skillsGapAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dg failed:", e); }
-    }
-
-    // ── Step 4dh: Remote Work Effectiveness + Team Velocity ──
-    if (!deliverables.remoteWorkEffectiveness || !deliverables.teamVelocity) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRemoteWorkEffectiveness(businessPacket, job.questionnaire),
-          synthesizeTeamVelocity(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.remoteWorkEffectiveness = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.teamVelocity = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dh failed:", e); }
-    }
-
-    // ── Step 4di: Burnout Risk + Learning & Development ──
-    if (!deliverables.burnoutRisk || !deliverables.learningDevelopment) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeBurnoutRisk(businessPacket, job.questionnaire),
-          synthesizeLearningDevelopment(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.burnoutRisk = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.learningDevelopment = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4di failed:", e); }
-    }
-
-    // ── Step 4dj: Regulatory Risk + Contract Management ──
-    if (!deliverables.regulatoryRisk || !deliverables.contractManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRegulatoryRisk(businessPacket, job.questionnaire),
-          synthesizeContractManagement(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.regulatoryRisk = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.contractManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dj failed:", e); }
-    }
-
-    // ── Step 4dk: IP Strategy + Legal Spend Analysis ──
-    if (!deliverables.ipStrategy || !deliverables.legalSpendAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeIpStrategy(businessPacket, job.questionnaire),
-          synthesizeLegalSpendAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.ipStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.legalSpendAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dk failed:", e); }
-    }
-
-    // ── Step 4dl: Policy Compliance + Audit Readiness ──
-    if (!deliverables.policyCompliance || !deliverables.auditReadiness) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePolicyCompliance(businessPacket, job.questionnaire),
-          synthesizeAuditReadiness(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.policyCompliance = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.auditReadiness = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dl failed:", e); }
-    }
-
-    // ── Step 4dm: Sales Methodology + Pipeline Velocity ──
-    if (!deliverables.salesMethodology || !deliverables.pipelineVelocity) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeSalesMethodology(businessPacket, job.questionnaire),
-          synthesizePipelineVelocity(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.salesMethodology = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.pipelineVelocity = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dm failed:", e); }
-    }
-
-    // ── Step 4dn: Deal Qualification + Sales Coaching ──
-    if (!deliverables.dealQualification || !deliverables.salesCoaching) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDealQualification(businessPacket, job.questionnaire),
-          synthesizeSalesCoaching(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.dealQualification = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.salesCoaching = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dn failed:", e); }
-    }
-
-    // ── Step 4do: Account Planning + Competitive Battlecards ──
-    if (!deliverables.accountPlanning || !deliverables.competitiveBattlecards) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAccountPlanning(businessPacket, job.questionnaire),
-          synthesizeCompetitiveBattlecards(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.accountPlanning = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.competitiveBattlecards = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4do failed:", e); }
-    }
-
-    // ── Step 4dp: Cash Burn Analysis + Revenue Per Employee ──
-    if (!deliverables.cashBurnAnalysis || !deliverables.revenuePerEmployee) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCashBurnAnalysis(businessPacket, job.questionnaire),
-          synthesizeRevenuePerEmployee(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.cashBurnAnalysis = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.revenuePerEmployee = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dp failed:", e); }
-    }
-
-    // ── Step 4dq: Financial Benchmarking + Investment Portfolio ──
-    if (!deliverables.financialBenchmarking || !deliverables.investmentPortfolio) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeFinancialBenchmarking(businessPacket, job.questionnaire),
-          synthesizeInvestmentPortfolio(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.financialBenchmarking = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.investmentPortfolio = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dq failed:", e); }
-    }
-
-    // ── Step 4dr: Cost Allocation Model + Margin Waterfall ──
-    if (!deliverables.costAllocationModel || !deliverables.marginWaterfall) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCostAllocationModel(businessPacket, job.questionnaire),
-          synthesizeMarginWaterfall(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.costAllocationModel = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.marginWaterfall = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dr failed:", e); }
-    }
-
-    // ── Step 4ds: Customer Onboarding Metrics + Health Score Model ──
-    if (!deliverables.customerOnboardingMetrics || !deliverables.healthScoreModel) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCustomerOnboardingMetrics(businessPacket, job.questionnaire),
-          synthesizeHealthScoreModel(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.customerOnboardingMetrics = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.healthScoreModel = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ds failed:", e); }
-    }
-
-    // ── Step 4dt: CS Expansion Playbook + Renewal Forecasting ──
-    if (!deliverables.csExpansionPlaybook || !deliverables.renewalForecasting) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCsExpansionPlaybook(businessPacket, job.questionnaire),
-          synthesizeRenewalForecasting(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.csExpansionPlaybook = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.renewalForecasting = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dt failed:", e); }
-    }
-
-    // ── Step 4du: CS Operations + Customer Milestones ──
-    if (!deliverables.csOperations || !deliverables.customerMilestones) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCsOperations(businessPacket, job.questionnaire),
-          synthesizeCustomerMilestones(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.csOperations = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.customerMilestones = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4du failed:", e); }
-    }
-
-    // ── Step 4dv: OKR Framework + Strategic Pillars ──
-    if (!deliverables.okrFramework || !deliverables.strategicPillars) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeOkrFramework(businessPacket, job.questionnaire),
-          synthesizeStrategicPillars(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.okrFramework = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.strategicPillars = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dv failed:", e); }
-    }
-
-    // ── Step 4dw: Competitive Positioning + Market Share Analysis ──
-    if (!deliverables.competitivePositioning || !deliverables.marketShareAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCompetitivePositioning(businessPacket, job.questionnaire),
-          synthesizeMarketShareAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.competitivePositioning = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.marketShareAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dw failed:", e); }
-    }
-
-    // ── Step 4dx: Growth Corridors + Value Prop Canvas ──
-    if (!deliverables.growthCorridors || !deliverables.valuePropCanvas) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeGrowthCorridors(businessPacket, job.questionnaire),
-          synthesizeValuePropCanvas(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.growthCorridors = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.valuePropCanvas = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dx failed:", e); }
-    }
-
-    // ── Step 4dy: Competitive Monitoring + Market Trend Radar ──
-    if (!deliverables.competitiveMonitoring || !deliverables.marketTrendRadar) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCompetitiveMonitoring(businessPacket, job.questionnaire),
-          synthesizeMarketTrendRadar(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.competitiveMonitoring = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.marketTrendRadar = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dy failed:", e); }
-    }
-
-    // ── Step 4dz: Industry Benchmark Index + Customer Intel Platform ──
-    if (!deliverables.industryBenchmarkIndex || !deliverables.customerIntelPlatform) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeIndustryBenchmarkIndex(businessPacket, job.questionnaire),
-          synthesizeCustomerIntelPlatform(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.industryBenchmarkIndex = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.customerIntelPlatform = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4dz failed:", e); }
-    }
-
-    // ── Step 4ea: Price Sensitivity Model + Demand Signal Analysis ──
-    if (!deliverables.priceSensitivityModel || !deliverables.demandSignalAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePriceSensitivityModel(businessPacket, job.questionnaire),
-          synthesizeDemandSignalAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.priceSensitivityModel = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.demandSignalAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ea failed:", e); }
-    }
-
-    // ── Step 4eb: Digital Maturity Index + Cloud Migration Readiness ──
-    if (!deliverables.digitalMaturityIndex || !deliverables.cloudMigrationReadiness) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDigitalMaturityIndex(businessPacket, job.questionnaire),
-          synthesizeCloudMigrationReadiness(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.digitalMaturityIndex = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.cloudMigrationReadiness = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4eb failed:", e); }
-    }
-
-    // ── Step 4ec: Automation ROI + Digital Workplace ──
-    if (!deliverables.automationRoi || !deliverables.digitalWorkplace) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAutomationRoi(businessPacket, job.questionnaire),
-          synthesizeDigitalWorkplace(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.automationRoi = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.digitalWorkplace = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ec failed:", e); }
-    }
-
-    // ── Step 4ed: Cybersecurity Posture + Tech Vendor Consolidation ──
-    if (!deliverables.cybersecurityPosture || !deliverables.techVendorConsolidation) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCybersecurityPosture(businessPacket, job.questionnaire),
-          synthesizeTechVendorConsolidation(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.cybersecurityPosture = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.techVendorConsolidation = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ed failed:", e); }
-    }
-
-    // ── Step 4ee: Revenue Source Mapping + Channel Mix Optimization ──
-    if (!deliverables.revenueSourceMapping || !deliverables.channelMixOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRevenueSourceMapping(businessPacket, job.questionnaire),
-          synthesizeChannelMixOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.revenueSourceMapping = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.channelMixOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ee failed:", e); }
-    }
-
-    // ── Step 4ef: Cross-Sell Engine + Price Optimization Model ──
-    if (!deliverables.crossSellEngine || !deliverables.priceOptimizationModel) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCrossSellEngine(businessPacket, job.questionnaire),
-          synthesizePriceOptimizationModel(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.crossSellEngine = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.priceOptimizationModel = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ef failed:", e); }
-    }
-
-    // ── Step 4eg: Promotion Effectiveness + Revenue Health Index ──
-    if (!deliverables.promotionEffectiveness || !deliverables.revenueHealthIndex) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePromotionEffectiveness(businessPacket, job.questionnaire),
-          synthesizeRevenueHealthIndex(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.promotionEffectiveness = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.revenueHealthIndex = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4eg failed:", e); }
-    }
-
-    // ── Step 4eh: Organizational Network + Decision Efficiency ──
-    if (!deliverables.organizationalNetwork || !deliverables.decisionEfficiency) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeOrganizationalNetwork(businessPacket, job.questionnaire),
-          synthesizeDecisionEfficiency(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.organizationalNetwork = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.decisionEfficiency = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4eh failed:", e); }
-    }
-
-    // ── Step 4ei: Meeting Efficiency + Knowledge Capital ──
-    if (!deliverables.meetingEfficiency || !deliverables.knowledgeCapital) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMeetingEfficiency(businessPacket, job.questionnaire),
-          synthesizeKnowledgeCapital(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.meetingEfficiency = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.knowledgeCapital = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ei failed:", e); }
-    }
-
-    // ── Step 4ej: Change Management Score + Culture Alignment ──
-    if (!deliverables.changeManagementScore || !deliverables.cultureAlignment) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeChangeManagementScore(businessPacket, job.questionnaire),
-          synthesizeCultureAlignment(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.changeManagementScore = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.cultureAlignment = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ej failed:", e); }
-    }
-
-    // ── Step 4ek: Partner Performance + Ecosystem Mapping ──
-    if (!deliverables.partnerPerformance || !deliverables.ecosystemMapping) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePartnerPerformance(businessPacket, job.questionnaire),
-          synthesizeEcosystemMapping(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.partnerPerformance = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.ecosystemMapping = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ek failed:", e); }
-    }
-
-    // ── Step 4el: Alliance Strategy + Channel Partner Health ──
-    if (!deliverables.allianceStrategy || !deliverables.channelPartnerHealth) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAllianceStrategy(businessPacket, job.questionnaire),
-          synthesizeChannelPartnerHealth(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.allianceStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.channelPartnerHealth = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4el failed:", e); }
-    }
-
-    // ── Step 4em: Co-Selling Pipeline + Integration Marketplace ──
-    if (!deliverables.coSellingPipeline || !deliverables.integrationMarketplace) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCoSellingPipeline(businessPacket, job.questionnaire),
-          synthesizeIntegrationMarketplace(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.coSellingPipeline = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.integrationMarketplace = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4em failed:", e); }
-    }
-
-    // ── Step 4en: Brand Equity Index + Sentiment Dashboard ──
-    if (!deliverables.brandEquityIndex || !deliverables.sentimentDashboard) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeBrandEquityIndex(businessPacket, job.questionnaire),
-          synthesizeSentimentDashboard(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.brandEquityIndex = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.sentimentDashboard = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4en failed:", e); }
-    }
-
-    // ── Step 4eo: Media Share of Voice + Crisis Comms Readiness ──
-    if (!deliverables.mediaShareOfVoice || !deliverables.crisisCommsReadiness) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMediaShareOfVoice(businessPacket, job.questionnaire),
-          synthesizeCrisisCommsReadiness(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.mediaShareOfVoice = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.crisisCommsReadiness = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4eo failed:", e); }
-    }
-
-    // ── Step 4ep: Thought Leadership + Brand Consistency ──
-    if (!deliverables.thoughtLeadership || !deliverables.brandConsistency) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeThoughtLeadership(businessPacket, job.questionnaire),
-          synthesizeBrandConsistency(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.thoughtLeadership = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.brandConsistency = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ep failed:", e); }
-    }
-
-    // ── Step 4eq: Monetization Model + Free Trial Conversion ──
-    if (!deliverables.monetizationModel || !deliverables.freeTrialConversion) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMonetizationModel(businessPacket, job.questionnaire),
-          synthesizeFreeTrialConversion(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.monetizationModel = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.freeTrialConversion = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4eq failed:", e); }
-    }
-
-    // ── Step 4er: Usage-Based Pricing + Bundle Optimization ──
-    if (!deliverables.usageBasedPricing || !deliverables.bundleOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeUsageBasedPricing(businessPacket, job.questionnaire),
-          synthesizeBundleOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.usageBasedPricing = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.bundleOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4er failed:", e); }
-    }
-
-    // ── Step 4es: Discount Discipline + Revenue Leakage Detection ──
-    if (!deliverables.discountDiscipline || !deliverables.revenueLeakageDetection) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDiscountDiscipline(businessPacket, job.questionnaire),
-          synthesizeRevenueLeakageDetection(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.discountDiscipline = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.revenueLeakageDetection = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4es failed:", e); }
-    }
-
-    // ── Step 4et: Customer Academy + Content Engagement ──
-    if (!deliverables.customerAcademy || !deliverables.contentEngagement) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCustomerAcademy(businessPacket, job.questionnaire),
-          synthesizeContentEngagement(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.customerAcademy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.contentEngagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4et failed:", e); }
-    }
-
-    // ── Step 4eu: Community Health + Certification Program ──
-    if (!deliverables.communityHealth || !deliverables.certificationProgram) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCommunityHealth(businessPacket, job.questionnaire),
-          synthesizeCertificationProgram(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.communityHealth = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.certificationProgram = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4eu failed:", e); }
-    }
-
-    // ── Step 4ev: Self-Service Adoption + Support Deflection ──
-    if (!deliverables.selfServiceAdoption || !deliverables.supportDeflection) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeSelfServiceAdoption(businessPacket, job.questionnaire),
-          synthesizeSupportDeflection(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.selfServiceAdoption = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.supportDeflection = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ev failed:", e); }
-    }
-
-    // ── Step 4ew: Investor Deck + Funding Timeline ──
-    if (!deliverables.investorDeck || !deliverables.fundingTimeline) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeInvestorDeck(businessPacket, job.questionnaire),
-          synthesizeFundingTimeline(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.investorDeck = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.fundingTimeline = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ew failed:", e); }
-    }
-
-    // ── Step 4ex: Valuation Model + Cap Table Management ──
-    if (!deliverables.valuationModel || !deliverables.capTableManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeValuationModel(businessPacket, job.questionnaire),
-          synthesizeCapTableManagement(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.valuationModel = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.capTableManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ex failed:", e); }
-    }
-
-    // ── Step 4ey: Investor Communication + Board Reporting ──
-    if (!deliverables.investorCommunication || !deliverables.boardReporting) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeInvestorCommunication(businessPacket, job.questionnaire),
-          synthesizeBoardReporting(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.investorCommunication = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.boardReporting = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ey failed:", e); }
-    }
-
-    // ── Step 4ez: Geo Expansion Strategy + Local Market Entry ──
-    if (!deliverables.geoExpansionStrategy || !deliverables.localMarketEntry) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeGeoExpansionStrategy(businessPacket, job.questionnaire),
-          synthesizeLocalMarketEntry(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.geoExpansionStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.localMarketEntry = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ez failed:", e); }
-    }
-
-    // ── Step 4fa: Market Regulations + Partner Localization ──
-    if (!deliverables.marketRegulations || !deliverables.partnerLocalization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMarketRegulations(businessPacket, job.questionnaire),
-          synthesizePartnerLocalization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.marketRegulations = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.partnerLocalization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fa failed:", e); }
-    }
-
-    // ── Step 4fb: Cultural Adaptation + Expansion ROI ──
-    if (!deliverables.culturalAdaptation || !deliverables.expansionRoi) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCulturalAdaptation(businessPacket, job.questionnaire),
-          synthesizeExpansionRoi(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.culturalAdaptation = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.expansionRoi = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fb failed:", e); }
-    }
-
-    // ── Step 4fc: Product-Led Metrics + Activation Funnel ──
-    if (!deliverables.productLedMetrics || !deliverables.activationFunnel) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeProductLedMetrics(businessPacket, job.questionnaire),
-          synthesizeActivationFunnel(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.productLedMetrics = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.activationFunnel = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fc failed:", e); }
-    }
-
-    // ── Step 4fd: Feature Adoption + Virality ──
-    if (!deliverables.featureAdoption || !deliverables.virality) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeFeatureAdoption(businessPacket, job.questionnaire),
-          synthesizeVirality(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.featureAdoption = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.virality = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fd failed:", e); }
-    }
-
-    // ── Step 4fe: Product Qualified Leads + Time to Value ──
-    if (!deliverables.productQualifiedLeads || !deliverables.timeToValue) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeProductQualifiedLeads(businessPacket, job.questionnaire),
-          synthesizeTimeToValue(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.productQualifiedLeads = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.timeToValue = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fe failed:", e); }
-    }
-
-    // ── Step 4ff: AI Readiness Score + ML Use Case Priority ──
-    if (!deliverables.aiReadinessScore || !deliverables.mlUseCasePriority) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAiReadinessScore(businessPacket, job.questionnaire),
-          synthesizeMlUseCasePriority(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.aiReadinessScore = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.mlUseCasePriority = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ff failed:", e); }
-    }
-
-    // ── Step 4fg: Data Infrastructure + AI Talent Gap ──
-    if (!deliverables.dataInfrastructure || !deliverables.aiTalentGap) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDataInfrastructure(businessPacket, job.questionnaire),
-          synthesizeAiTalentGap(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.dataInfrastructure = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.aiTalentGap = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fg failed:", e); }
-    }
-
-    // ── Step 4fh: Ethical AI Framework + AI ROI Projection ──
-    if (!deliverables.ethicalAiFramework || !deliverables.aiRoiProjection) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeEthicalAiFramework(businessPacket, job.questionnaire),
-          synthesizeAiRoiProjection(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.ethicalAiFramework = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.aiRoiProjection = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fh failed:", e); }
-    }
-
-    // ── Wave 57 — Customer Advocacy ──
-
-    // ── Step 4fi: Advocacy Program + Referral Mechanism ──
-    if (!deliverables.advocacyProgram || !deliverables.referralMechanism) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeAdvocacyProgram(businessPacket, job.questionnaire),
-          synthesizeReferralMechanism(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.advocacyProgram = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.referralMechanism = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fi failed:", e); }
-    }
-
-    // ── Step 4fj: Testimonial Pipeline + Case Study Factory ──
-    if (!deliverables.testimonialPipeline || !deliverables.caseStudyFactory) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeTestimonialPipeline(businessPacket, job.questionnaire),
-          synthesizeCaseStudyFactory(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.testimonialPipeline = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.caseStudyFactory = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fj failed:", e); }
-    }
-
-    // ── Step 4fk: Customer Advisory Board + NPS Action Plan ──
-    if (!deliverables.customerAdvisoryBoard || !deliverables.npsActionPlan) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeCustomerAdvisoryBoard(businessPacket, job.questionnaire),
-          synthesizeNpsActionPlan(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.customerAdvisoryBoard = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.npsActionPlan = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fk failed:", e); }
-    }
-
-    // ── Wave 58 — Operational Finance ──
-
-    // ── Step 4fl: Procurement Efficiency + Expense Management ──
-    if (!deliverables.procurementEfficiency || !deliverables.expenseManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeProcurementEfficiency(businessPacket, job.questionnaire),
-          synthesizeExpenseManagement(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.procurementEfficiency = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.expenseManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fl failed:", e); }
-    }
-
-    // ── Step 4fm: Invoice Automation + Payment Optimization ──
-    if (!deliverables.invoiceAutomation || !deliverables.paymentOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeInvoiceAutomation(businessPacket, job.questionnaire),
-          synthesizePaymentOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.invoiceAutomation = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.paymentOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fm failed:", e); }
-    }
-
-    // ── Step 4fn: Financial Controls + Treasury Management ──
-    if (!deliverables.financialControls || !deliverables.treasuryManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeFinancialControls(businessPacket, job.questionnaire),
-          synthesizeTreasuryManagement(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.financialControls = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.treasuryManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fn failed:", e); }
-    }
-
-    // ── Wave 59 — Growth Marketing ──
-
-    // ── Step 4fo: Demand Gen Engine + Content Marketing ROI ──
-    if (!deliverables.demandGenEngine || !deliverables.contentMarketingRoi) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDemandGenEngine(businessPacket, job.questionnaire),
-          synthesizeContentMarketingRoi(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.demandGenEngine = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.contentMarketingRoi = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fo failed:", e); }
-    }
-
-    // ── Step 4fp: SEO Strategy + Paid Media Optimization ──
-    if (!deliverables.seoStrategy || !deliverables.paidMediaOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeSeoStrategy(businessPacket, job.questionnaire),
-          synthesizePaidMediaOptimization(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.seoStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.paidMediaOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fp failed:", e); }
-    }
-
-    // ── Step 4fq: Event ROI + Influencer Strategy ──
-    if (!deliverables.eventRoi || !deliverables.influencerStrategy) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeEventRoi(businessPacket, job.questionnaire),
-          synthesizeInfluencerStrategy(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.eventRoi = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.influencerStrategy = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fq failed:", e); }
-    }
-
-    // ── Wave 60 — Platform Strategy ──
-
-    // ── Step 4fr: Platform Economics + Developer Experience ──
-    if (!deliverables.platformEconomics || !deliverables.developerExperience) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePlatformEconomics(businessPacket, job.questionnaire),
-          synthesizeDeveloperExperience(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.platformEconomics = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.developerExperience = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fr failed:", e); }
-    }
-
-    // ── Step 4fs: API Monetization + Marketplace Strategy ──
-    if (!deliverables.apiMonetization || !deliverables.marketplaceStrategy) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeApiMonetization(businessPacket, job.questionnaire),
-          synthesizeMarketplaceStrategy(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.apiMonetization = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.marketplaceStrategy = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fs failed:", e); }
-    }
-
-    // ── Step 4ft: Platform Governance + Platform Network Dynamics ──
-    if (!deliverables.platformGovernance || !deliverables.platformNetworkDynamics) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePlatformGovernance(businessPacket, job.questionnaire),
-          synthesizePlatformNetworkDynamics(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.platformGovernance = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.platformNetworkDynamics = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ft failed:", e); }
-    }
-
-    // ── Step 4fu: Contract Lifecycle + Compliance Automation ──
-    if (!deliverables.contractLifecycle || !deliverables.complianceAutomation) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeContractLifecycle(businessPacket, job.questionnaire),
-          synthesizeComplianceAutomation(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.contractLifecycle = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.complianceAutomation = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fu failed:", e); }
-    }
-
-    // ── Step 4fv: Legal Risk Register + IP Audit ──
-    if (!deliverables.legalRiskRegister || !deliverables.intellectualPropertyAudit) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeLegalRiskRegister(businessPacket, job.questionnaire),
-          synthesizeIntellectualPropertyAudit(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.legalRiskRegister = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.intellectualPropertyAudit = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fv failed:", e); }
-    }
-
-    // ── Step 4fw: Regulatory Calendar + Privacy Compliance ──
-    if (!deliverables.regulatoryCalendar || !deliverables.privacyCompliance) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeRegulatoryCalendar(businessPacket, job.questionnaire),
-          synthesizePrivacyCompliance(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.regulatoryCalendar = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.privacyCompliance = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fw failed:", e); }
-    }
-
-    // ── Step 4fx: Data Warehouse Strategy + BI Dashboard Design ──
-    if (!deliverables.dataWarehouseStrategy || !deliverables.biDashboardDesign) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeDataWarehouseStrategy(businessPacket, job.questionnaire),
-          synthesizeBiDashboardDesign(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.dataWarehouseStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.biDashboardDesign = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fx failed:", e); }
-    }
-
-    // ── Step 4fy: Predictive Model Catalog + Data Lineage Map ──
-    if (!deliverables.predictiveModelCatalog || !deliverables.dataLineageMap) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePredictiveModelCatalog(businessPacket, job.questionnaire),
-          synthesizeDataLineageMap(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.predictiveModelCatalog = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.dataLineageMap = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fy failed:", e); }
-    }
-
-    // ── Step 4fz: Metrics Dictionary + Analytics Governance ──
-    if (!deliverables.metricsDictionary || !deliverables.analyticsGovernance) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeMetricsDictionary(businessPacket, job.questionnaire),
-          synthesizeAnalyticsGovernance(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.metricsDictionary = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.analyticsGovernance = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4fz failed:", e); }
-    }
-
-    // ── Step 4ga: Employee Journey + Workplace Wellness ──
-    if (!deliverables.employeeJourney || !deliverables.workplaceWellness) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeEmployeeJourney(businessPacket, job.questionnaire),
-          synthesizeWorkplaceWellness(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.employeeJourney = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.workplaceWellness = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ga failed:", e); }
-    }
-
-    // ── Step 4gb: Learning Pathways + Performance Framework ──
-    if (!deliverables.learningPathways || !deliverables.performanceFramework) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeLearningPathways(businessPacket, job.questionnaire),
-          synthesizePerformanceFramework(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.learningPathways = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.performanceFramework = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gb failed:", e); }
-    }
-
-    // ── Step 4gc: Pay Equity Analysis + DEI Benchmark ──
-    if (!deliverables.payEquityAnalysis || !deliverables.deiBenchmark) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePayEquityAnalysis(businessPacket, job.questionnaire),
-          synthesizeDeiBenchmark(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.payEquityAnalysis = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.deiBenchmark = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gc failed:", e); }
-    }
-
-    // ── Step 4gd: Business Model Canvas + Revenue Model Design ──
-    if (!deliverables.businessModelCanvas || !deliverables.revenueModelDesign) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeBusinessModelCanvas(businessPacket, job.questionnaire),
-          synthesizeRevenueModelDesign(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.businessModelCanvas = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.revenueModelDesign = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gd failed:", e); }
-    }
-
-    // ── Step 4ge: Value Chain Optimization + Cost Structure Analysis ──
-    if (!deliverables.valueChainOptimization || !deliverables.costStructureAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizeValueChainOptimization(businessPacket, job.questionnaire),
-          synthesizeCostStructureAnalysis(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.valueChainOptimization = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.costStructureAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ge failed:", e); }
-    }
-
-    // ── Step 4gf: Partnership Model + Growth Lever Assessment ──
-    if (!deliverables.partnershipModel || !deliverables.growthLeverAssessment) {
-      try {
-        const [a, b] = await Promise.allSettled([
-          synthesizePartnershipModel(businessPacket, job.questionnaire),
-          synthesizeGrowthLeverAssessment(businessPacket, job.questionnaire),
-        ]);
-        if (a.status === "fulfilled" && a.value) deliverables.partnershipModel = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.growthLeverAssessment = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gf failed:", e); }
-    }
-
-    // ── Step 4gg: Vendor Management + Supply Chain Visibility ──
-    if (!deliverables.vendorManagement || !deliverables.supplyChainVisibility) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeVendorManagement(businessPacket, job.questionnaire), synthesizeSupplyChainVisibility(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.vendorManagement = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.supplyChainVisibility = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gg failed:", e); }
-    }
-
-    // ── Step 4gh: Sustainable Sourcing + Facility Optimization ──
-    if (!deliverables.sustainableSourcing || !deliverables.facilityOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeSustainableSourcing(businessPacket, job.questionnaire), synthesizeFacilityOptimization(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.sustainableSourcing = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.facilityOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gh failed:", e); }
-    }
-
-    // ── Step 4gi: Fleet Management + Customer Success ──
-    if (!deliverables.fleetManagement || !deliverables.customerSuccess) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeFleetManagement(businessPacket, job.questionnaire), synthesizeCustomerSuccess(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.fleetManagement = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.customerSuccess = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gi failed:", e); }
-    }
-
-    // ── Step 4gj: Crisis Management + Operational Resilience ──
-    if (!deliverables.crisisManagement || !deliverables.operationalResilience) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeCrisisManagement(businessPacket, job.questionnaire), synthesizeOperationalResilience(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.crisisManagement = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.operationalResilience = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gj failed:", e); }
-    }
-
-    // ── Step 4gk: Stakeholder Mapping + Digital Presence ──
-    if (!deliverables.stakeholderMapping || !deliverables.digitalPresence) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeStakeholderMapping(businessPacket, job.questionnaire), synthesizeDigitalPresence(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.stakeholderMapping = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.digitalPresence = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gk failed:", e); }
-    }
-
-    // ── Step 4gl: Channel Strategy + Account Management ──
-    if (!deliverables.channelStrategy || !deliverables.accountManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeChannelStrategy(businessPacket, job.questionnaire), synthesizeAccountManagement(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.channelStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.accountManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gl failed:", e); }
-    }
-
-    // ── Step 4gm: Fundraising Strategy + Cap Table Management ──
-    if (!deliverables.fundraisingStrategy || !deliverables.captableManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeFundraisingStrategy(businessPacket, job.questionnaire), synthesizeCaptableManagement(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.fundraisingStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.captableManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gm failed:", e); }
-    }
-
-    // ── Step 4gn: Exit Planning + Board Governance ──
-    if (!deliverables.exitPlanning || !deliverables.boardGovernance) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeExitPlanning(businessPacket, job.questionnaire), synthesizeBoardGovernance(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.exitPlanning = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.boardGovernance = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gn failed:", e); }
-    }
-
-    // ── Step 4go: Recruitment Funnel + Employer Branding ──
-    if (!deliverables.recruitmentFunnel || !deliverables.employerBranding) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeRecruitmentFunnel(businessPacket, job.questionnaire), synthesizeEmployerBranding(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.recruitmentFunnel = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.employerBranding = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4go failed:", e); }
-    }
-
-    // ── Step 4gp: Team Topology + Onboarding Optimization ──
-    if (!deliverables.teamTopology || !deliverables.onboardingOptimization) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeTeamTopology(businessPacket, job.questionnaire), synthesizeOnboardingOptimization(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.teamTopology = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.onboardingOptimization = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gp failed:", e); }
-    }
-
-    // ── Step 4gq: Meeting Culture + Document Management ──
-    if (!deliverables.meetingCulture || !deliverables.documentManagement) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeMeetingCulture(businessPacket, job.questionnaire), synthesizeDocumentManagement(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.meetingCulture = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.documentManagement = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gq failed:", e); }
-    }
-
-    // ── Step 4gr: Workflow Automation + Quality Assurance ──
-    if (!deliverables.workflowAutomation || !deliverables.qualityAssurance) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeWorkflowAutomation(businessPacket, job.questionnaire), synthesizeQualityAssurance(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.workflowAutomation = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.qualityAssurance = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gr failed:", e); }
-    }
-
-    // ── Step 4gs: Incident Response + Access Control ──
-    if (!deliverables.incidentResponse || !deliverables.accessControl) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeIncidentResponse(businessPacket, job.questionnaire), synthesizeAccessControl(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.incidentResponse = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.accessControl = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gs failed:", e); }
-    }
-
-    // ── Step 4gt: Audit Trail + Penetration Testing ──
-    if (!deliverables.auditTrail || !deliverables.penetrationTesting) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeAuditTrail(businessPacket, job.questionnaire), synthesizePenetrationTesting(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.auditTrail = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.penetrationTesting = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gt failed:", e); }
-    }
-
-    // ── Step 4gu: Security Awareness + Data Classification ──
-    if (!deliverables.securityAwareness || !deliverables.dataClassification) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeSecurityAwareness(businessPacket, job.questionnaire), synthesizeDataClassification(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.securityAwareness = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.dataClassification = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gu failed:", e); }
-    }
-
-    // ── Step 4gv: API Design + Microservices Architecture ──
-    if (!deliverables.apiDesign || !deliverables.microservicesArchitecture) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeApiDesign(businessPacket, job.questionnaire), synthesizeMicroservicesArchitecture(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.apiDesign = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.microservicesArchitecture = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gv failed:", e); }
-    }
-
-    // ── Step 4gw: Cloud Optimization + DevOps Maturity ──
-    if (!deliverables.cloudOptimization || !deliverables.devopsMaturity) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeCloudOptimization(businessPacket, job.questionnaire), synthesizeDevopsMaturity(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.cloudOptimization = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.devopsMaturity = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gw failed:", e); }
-    }
-
-    // ── Step 4gx: System Monitoring + Code Quality ──
-    if (!deliverables.systemMonitoring || !deliverables.codeQuality) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeSystemMonitoring(businessPacket, job.questionnaire), synthesizeCodeQuality(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.systemMonitoring = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.codeQuality = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gx failed:", e); }
-    }
-
-    // ── Step 4gy: Customer Lifetime Value + Sentiment Analysis ──
-    if (!deliverables.customerLifetimeValue || !deliverables.sentimentAnalysis) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeCustomerLifetimeValue(businessPacket, job.questionnaire), synthesizeSentimentAnalysis(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.customerLifetimeValue = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.sentimentAnalysis = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gy failed:", e); }
-    }
-
-    // ── Step 4gz: Support Ticket Analysis + Segment Profitability ──
-    if (!deliverables.supportTicketAnalysis || !deliverables.segmentProfitability) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeSupportTicketAnalysis(businessPacket, job.questionnaire), synthesizeSegmentProfitability(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.supportTicketAnalysis = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.segmentProfitability = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4gz failed:", e); }
-    }
-
-    // ── Step 4ha: Referral Analytics + Customer Health Dashboard ──
-    if (!deliverables.referralAnalytics || !deliverables.customerHealthDashboard) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeReferralAnalytics(businessPacket, job.questionnaire), synthesizeCustomerHealthDashboard(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.referralAnalytics = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.customerHealthDashboard = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ha failed:", e); }
-    }
-
-    // ── Step 4hb: Innovation Portfolio + Contingency Planning ──
-    if (!deliverables.innovationPortfolio || !deliverables.contingencyPlanning) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeInnovationPortfolio(businessPacket, job.questionnaire), synthesizeContingencyPlanning(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.innovationPortfolio = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.contingencyPlanning = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hb failed:", e); }
-    }
-
-    // ── Step 4hc: Operating Rhythm + Cross-Functional Sync ──
-    if (!deliverables.operatingRhythm || !deliverables.crossFunctionalSync) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeOperatingRhythm(businessPacket, job.questionnaire), synthesizeCrossFunctionalSync(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.operatingRhythm = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.crossFunctionalSync = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hc failed:", e); }
-    }
-
-    // ── Step 4hd: Ward Room Strategy + Revenue Intelligence ──
-    if (!deliverables.wardRoomStrategy || !deliverables.revenueIntelligence) {
-      try {
-        const [a, b] = await Promise.allSettled([synthesizeWardRoomStrategy(businessPacket, job.questionnaire), synthesizeRevenueIntelligence(businessPacket, job.questionnaire)]);
-        if (a.status === "fulfilled" && a.value) deliverables.wardRoomStrategy = a.value;
-        if (b.status === "fulfilled" && b.value) deliverables.revenueIntelligence = b.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hd failed:", e); }
-    }
-
-    // ── Step 4he+4hf: Market Research + Competitor Tracking (Wave 73) ──
-    if (!deliverables.marketResearch || !deliverables.competitorTracking) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('marketResearch', () => synthesizeMarketResearch(businessPacket, job.questionnaire)),
-          synthIf('competitorTracking', () => synthesizeCompetitorTracking(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.marketResearch = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.competitorTracking = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4he+4hf failed:", e); }
-    }
-
-    // ── Step 4hg+4hh: Industry Trends + Social Listening (Wave 73) ──
-    if (!deliverables.industryTrends || !deliverables.socialListening) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('industryTrends', () => synthesizeIndustryTrends(businessPacket, job.questionnaire)),
-          synthIf('socialListening', () => synthesizeSocialListening(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.industryTrends = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.socialListening = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hg+4hh failed:", e); }
-    }
-
-    // ── Step 4hi+4hj: UX Research + Web Analytics (Wave 73) ──
-    if (!deliverables.uxResearch || !deliverables.webAnalytics) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('uxResearch', () => synthesizeUxResearch(businessPacket, job.questionnaire)),
-          synthIf('webAnalytics', () => synthesizeWebAnalytics(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.uxResearch = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.webAnalytics = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hi+4hj failed:", e); }
-    }
-
-    // ── Step 4hk+4hl: Email Marketing + Conversion Optimization (Wave 74) ──
-    if (!deliverables.emailMarketing || !deliverables.conversionOptimization) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('emailMarketing', () => synthesizeEmailMarketing(businessPacket, job.questionnaire)),
-          synthIf('conversionOptimization', () => synthesizeConversionOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.emailMarketing = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.conversionOptimization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hk+4hl failed:", e); }
-    }
-
-    // ── Step 4hm+4hn: A/B Testing Framework + Marketing Attribution (Wave 74) ──
-    if (!deliverables.abTestingFramework || !deliverables.marketingAttribution) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('abTestingFramework', () => synthesizeAbTestingFramework(businessPacket, job.questionnaire)),
-          synthIf('marketingAttribution', () => synthesizeMarketingAttribution(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.abTestingFramework = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.marketingAttribution = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hm+4hn failed:", e); }
-    }
-
-    // ── Step 4ho+4hp: Content Calendar + Social Media Calendar (Wave 74) ──
-    if (!deliverables.contentCalendar || !deliverables.socialMediaCalendar) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('contentCalendar', () => synthesizeContentCalendar(businessPacket, job.questionnaire)),
-          synthIf('socialMediaCalendar', () => synthesizeSocialMediaCalendar(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.contentCalendar = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.socialMediaCalendar = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ho+4hp failed:", e); }
-    }
-
-    // ── Step 4hq+4hr: Budget Planning + Revenue Forecasting (Wave 75) ──
-    if (!deliverables.budgetPlanning || !deliverables.revenueForecasting) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('budgetPlanning', () => synthesizeBudgetPlanning(businessPacket, job.questionnaire)),
-          synthIf('revenueForecasting', () => synthesizeRevenueForecasting(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.budgetPlanning = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.revenueForecasting = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hq+4hr failed:", e); }
-    }
-
-    // ── Step 4hs+4ht: Cash Management + Credit Management (Wave 75) ──
-    if (!deliverables.cashManagement || !deliverables.creditManagement) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('cashManagement', () => synthesizeCashManagement(businessPacket, job.questionnaire)),
-          synthIf('creditManagement', () => synthesizeCreditManagement(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.cashManagement = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.creditManagement = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hs+4ht failed:", e); }
-    }
-
-    // ── Step 4hu+4hv: Debt Structure + Financial Reporting (Wave 75) ──
-    if (!deliverables.debtStructure || !deliverables.financialReporting) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('debtStructure', () => synthesizeDebtStructure(businessPacket, job.questionnaire)),
-          synthIf('financialReporting', () => synthesizeFinancialReporting(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.debtStructure = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.financialReporting = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hu+4hv failed:", e); }
-    }
-
-    // ── Step 4hw+4hx: Carbon Reduction + Circular Economy (Wave 76) ──
-    if (!deliverables.carbonReduction || !deliverables.circularEconomy) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('carbonReduction', () => synthesizeCarbonReduction(businessPacket, job.questionnaire)),
-          synthIf('circularEconomy', () => synthesizeCircularEconomy(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.carbonReduction = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.circularEconomy = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hw+4hx failed:", e); }
-    }
-
-    // ── Step 4hy+4hz: Community Impact + Water Management (Wave 76) ──
-    if (!deliverables.communityImpact || !deliverables.waterManagement) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('communityImpact', () => synthesizeCommunityImpact(businessPacket, job.questionnaire)),
-          synthIf('waterManagement', () => synthesizeWaterManagement(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.communityImpact = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.waterManagement = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4hy+4hz failed:", e); }
-    }
-
-    // ── Step 4ia+4ib: Waste Reduction + Sustainable Innovation (Wave 76) ──
-    if (!deliverables.wasteReduction || !deliverables.sustainableInnovation) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('wasteReduction', () => synthesizeWasteReduction(businessPacket, job.questionnaire)),
-          synthIf('sustainableInnovation', () => synthesizeSustainableInnovation(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.wasteReduction = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.sustainableInnovation = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ia+4ib failed:", e); }
-    }
-
-    // ── Step 4ic+4id: Talent Pipeline + Leadership Development (Wave 77) ──
-    if (!deliverables.talentPipeline || !deliverables.leadershipDevelopment) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('talentPipeline', () => synthesizeTalentPipeline(businessPacket, job.questionnaire)),
-          synthIf('leadershipDevelopment', () => synthesizeLeadershipDevelopment(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.talentPipeline = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.leadershipDevelopment = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ic+4id failed:", e); }
-    }
-
-    // ── Step 4ie+4if: Succession Readiness + Compensation Strategy (Wave 77) ──
-    if (!deliverables.successionReadiness || !deliverables.compensationStrategy) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('successionReadiness', () => synthesizeSuccessionReadiness(businessPacket, job.questionnaire)),
-          synthIf('compensationStrategy', () => synthesizeCompensationStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.successionReadiness = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.compensationStrategy = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ie+4if failed:", e); }
-    }
-
-    // ── Step 4ig+4ih: Workforce Analytics + Org Effectiveness (Wave 77) ──
-    if (!deliverables.workforceAnalytics || !deliverables.orgEffectiveness) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('workforceAnalytics', () => synthesizeWorkforceAnalytics(businessPacket, job.questionnaire)),
-          synthIf('orgEffectiveness', () => synthesizeOrgEffectiveness(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.workforceAnalytics = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.orgEffectiveness = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ig+4ih failed:", e); }
-    }
-
-    // ── Step 4ii+4ij: Sales Motion Design + Deal Analytics (Wave 78) ──
-    if (!deliverables.salesMotionDesign || !deliverables.dealAnalytics) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('salesMotionDesign', () => synthesizeSalesMotionDesign(businessPacket, job.questionnaire)),
-          synthIf('dealAnalytics', () => synthesizeDealAnalytics(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.salesMotionDesign = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.dealAnalytics = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ii+4ij failed:", e); }
-    }
-
-    // ── Step 4ik+4il: Territory Optimization + Sales Compensation (Wave 78) ──
-    if (!deliverables.territoryOptimization || !deliverables.salesCompensation) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('territoryOptimization', () => synthesizeTerritoryOptimization(businessPacket, job.questionnaire)),
-          synthIf('salesCompensation', () => synthesizeSalesCompensation(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.territoryOptimization = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.salesCompensation = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ik+4il failed:", e); }
-    }
-
-    // ── Step 4im+4in: Revenue Prediction + Account Penetration (Wave 78) ──
-    if (!deliverables.revenuePrediction || !deliverables.accountPenetration) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('revenuePrediction', () => synthesizeRevenuePrediction(businessPacket, job.questionnaire)),
-          synthIf('accountPenetration', () => synthesizeAccountPenetration(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.revenuePrediction = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.accountPenetration = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4im+4in failed:", e); }
-    }
-
-    // ── Step 4io+4ip: Product Vision + Feature Roadmap (Wave 79) ──
-    if (!deliverables.productVision || !deliverables.featureRoadmap) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('productVision', () => synthesizeProductVision(businessPacket, job.questionnaire)),
-          synthIf('featureRoadmap', () => synthesizeFeatureRoadmap(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.productVision = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.featureRoadmap = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4io+4ip failed:", e); }
-    }
-
-    // ── Step 4iq+4ir: PMF Assessment + User Activation (Wave 79) ──
-    if (!deliverables.pmfAssessment || !deliverables.userActivation) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('pmfAssessment', () => synthesizePmfAssessment(businessPacket, job.questionnaire)),
-          synthIf('userActivation', () => synthesizeUserActivation(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.pmfAssessment = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.userActivation = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4iq+4ir failed:", e); }
-    }
-
-    // ── Step 4is+4it: Product Insights + Release Strategy (Wave 79) ──
-    if (!deliverables.productInsights || !deliverables.releaseStrategy) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('productInsights', () => synthesizeProductInsights(businessPacket, job.questionnaire)),
-          synthIf('releaseStrategy', () => synthesizeReleaseStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.productInsights = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.releaseStrategy = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4is+4it failed:", e); }
-    }
-
-    // ── Step 4iu+4iv: Brand Position Map + Brand Valuation (Wave 80) ──
-    if (!deliverables.brandPositionMap || !deliverables.brandValuation) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('brandPositionMap', () => synthesizeBrandPositionMap(businessPacket, job.questionnaire)),
-          synthIf('brandValuation', () => synthesizeBrandValuation(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.brandPositionMap = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.brandValuation = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4iu+4iv failed:", e); }
-    }
-
-    // ── Step 4iw+4ix: Brand Hierarchy + Reputation Analysis (Wave 80) ──
-    if (!deliverables.brandHierarchy || !deliverables.reputationAnalysis) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('brandHierarchy', () => synthesizeBrandHierarchy(businessPacket, job.questionnaire)),
-          synthIf('reputationAnalysis', () => synthesizeReputationAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.brandHierarchy = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.reputationAnalysis = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4iw+4ix failed:", e); }
-    }
-
-    // ── Step 4iy+4iz: Messaging Framework + Visual Branding (Wave 80) ──
-    if (!deliverables.messagingFramework || !deliverables.visualBranding) {
-      try {
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('messagingFramework', () => synthesizeMessagingFramework(businessPacket, job.questionnaire)),
-          synthIf('visualBranding', () => synthesizeVisualBranding(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.messagingFramework = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.visualBranding = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4iy+4iz failed:", e); }
-    }
-
-    // ── Step 4ja+4jb: Growth Playbook + Revenue Run Rate (Wave 81) ──
-    if (!deliverables.growthPlaybook || !deliverables.revenueRunRate) {
-      try {
-        console.log("[Pivot] Synthesizing growthPlaybook + revenueRunRate...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('growthPlaybook', () => synthesizeGrowthPlaybook(businessPacket, job.questionnaire)),
-          synthIf('revenueRunRate', () => synthesizeRevenueRunRate(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.growthPlaybook = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.revenueRunRate = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ja+4jb failed:", e); }
-    }
-
-    // ── Step 4jc+4jd: Break-Even Model + Operating Leverage Index (Wave 81) ──
-    if (!deliverables.breakEvenModel || !deliverables.operatingLeverageIndex) {
-      try {
-        console.log("[Pivot] Synthesizing breakEvenModel + operatingLeverageIndex...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('breakEvenModel', () => synthesizeBreakEvenModel(businessPacket, job.questionnaire)),
-          synthIf('operatingLeverageIndex', () => synthesizeOperatingLeverageIndex(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.breakEvenModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.operatingLeverageIndex = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jc+4jd failed:", e); }
-    }
-
-    // ── Step 4je+4jf: Gross Margin Analysis + Funding Scenario Model (Wave 81) ──
-    if (!deliverables.grossMarginAnalysis || !deliverables.fundingScenarioModel) {
-      try {
-        console.log("[Pivot] Synthesizing grossMarginAnalysis + fundingScenarioModel...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('grossMarginAnalysis', () => synthesizeGrossMarginAnalysis(businessPacket, job.questionnaire)),
-          synthIf('fundingScenarioModel', () => synthesizeFundingScenarioModel(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.grossMarginAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.fundingScenarioModel = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4je+4jf failed:", e); }
-    }
-
-    // ── Step 4jg+4jh: Competitive Wargame + Market Disruption Model (Wave 82) ──
-    if (!deliverables.competitiveWargame || !deliverables.marketDisruptionModel) {
-      try {
-        console.log("[Pivot] Synthesizing competitiveWargame + marketDisruptionModel...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('competitiveWargame', () => synthesizeCompetitiveWargame(businessPacket, job.questionnaire)),
-          synthIf('marketDisruptionModel', () => synthesizeMarketDisruptionModel(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.competitiveWargame = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.marketDisruptionModel = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jg+4jh failed:", e); }
-    }
-
-    // ── Step 4ji+4jj: First Mover Analysis + Defensibility Audit (Wave 82) ──
-    if (!deliverables.firstMoverAnalysis || !deliverables.defensibilityAudit) {
-      try {
-        console.log("[Pivot] Synthesizing firstMoverAnalysis + defensibilityAudit...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('firstMoverAnalysis', () => synthesizeFirstMoverAnalysis(businessPacket, job.questionnaire)),
-          synthIf('defensibilityAudit', () => synthesizeDefensibilityAudit(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.firstMoverAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.defensibilityAudit = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ji+4jj failed:", e); }
-    }
-
-    // ── Step 4jk+4jl: Pivot Readiness + Competitive Timing Model (Wave 82) ──
-    if (!deliverables.pivotReadiness || !deliverables.competitiveTimingModel) {
-      try {
-        console.log("[Pivot] Synthesizing pivotReadiness + competitiveTimingModel...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('pivotReadiness', () => synthesizePivotReadiness(businessPacket, job.questionnaire)),
-          synthIf('competitiveTimingModel', () => synthesizeCompetitiveTimingModel(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.pivotReadiness = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.competitiveTimingModel = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jk+4jl failed:", e); }
-    }
-
-    // ── Step 4jm+4jn: Customer Maturity Model + Expansion Signals (Wave 83) ──
-    if (!deliverables.customerMaturityModel || !deliverables.expansionSignals) {
-      try {
-        console.log("[Pivot] Synthesizing customerMaturityModel + expansionSignals...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('customerMaturityModel', () => synthesizeCustomerMaturityModel(businessPacket, job.questionnaire)),
-          synthIf('expansionSignals', () => synthesizeExpansionSignals(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.customerMaturityModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.expansionSignals = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jm+4jn failed:", e); }
-    }
-
-    // ── Step 4jo+4jp: Adoption Scorecard + Stakeholder Sentiment (Wave 83) ──
-    if (!deliverables.adoptionScorecard || !deliverables.stakeholderSentiment) {
-      try {
-        console.log("[Pivot] Synthesizing adoptionScorecard + stakeholderSentiment...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('adoptionScorecard', () => synthesizeAdoptionScorecard(businessPacket, job.questionnaire)),
-          synthIf('stakeholderSentiment', () => synthesizeStakeholderSentiment(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.adoptionScorecard = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.stakeholderSentiment = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jo+4jp failed:", e); }
-    }
-
-    // ── Step 4jq+4jr: Value Realization + Renewal Playbook (Wave 83) ──
-    if (!deliverables.valueRealization || !deliverables.renewalPlaybook) {
-      try {
-        console.log("[Pivot] Synthesizing valueRealization + renewalPlaybook...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('valueRealization', () => synthesizeValueRealization(businessPacket, job.questionnaire)),
-          synthIf('renewalPlaybook', () => synthesizeRenewalPlaybook(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.valueRealization = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.renewalPlaybook = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jq+4jr failed:", e); }
-    }
-
-    // ── Step 4js+4jt: Business Model Innovation + Monetization Experiment (Wave 84) ──
-    if (!deliverables.businessModelInnovation || !deliverables.monetizationExperiment) {
-      try {
-        console.log("[Pivot] Synthesizing businessModelInnovation + monetizationExperiment...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('businessModelInnovation', () => synthesizeBusinessModelInnovation(businessPacket, job.questionnaire)),
-          synthIf('monetizationExperiment', () => synthesizeMonetizationExperiment(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.businessModelInnovation = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.monetizationExperiment = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4js+4jt failed:", e); }
-    }
-
-    // ── Step 4ju+4jv: Pricing Architecture + Revenue Stream Map (Wave 84) ──
-    if (!deliverables.pricingArchitecture || !deliverables.revenueStreamMap) {
-      try {
-        console.log("[Pivot] Synthesizing pricingArchitecture + revenueStreamMap...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('pricingArchitecture', () => synthesizePricingArchitecture(businessPacket, job.questionnaire)),
-          synthIf('revenueStreamMap', () => synthesizeRevenueStreamMap(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.pricingArchitecture = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.revenueStreamMap = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ju+4jv failed:", e); }
-    }
-
-    // ── Step 4jw+4jx: Cost Driver Analysis + Value Capture (Wave 84) ──
-    if (!deliverables.costDriverAnalysis || !deliverables.valueCapture) {
-      try {
-        console.log("[Pivot] Synthesizing costDriverAnalysis + valueCapture...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('costDriverAnalysis', () => synthesizeCostDriverAnalysis(businessPacket, job.questionnaire)),
-          synthIf('valueCapture', () => synthesizeValueCapture(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.costDriverAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.valueCapture = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jw+4jx failed:", e); }
-    }
-
-    // ── Step 4jy+4jz: Revenue Process Map + Billing Health Check (Wave 85) ──
-    if (!deliverables.revenueProcessMap || !deliverables.billingHealthCheck) {
-      try {
-        console.log("[Pivot] Synthesizing revenueProcessMap + billingHealthCheck...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('revenueProcessMap', () => synthesizeRevenueProcessMap(businessPacket, job.questionnaire)),
-          synthIf('billingHealthCheck', () => synthesizeBillingHealthCheck(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.revenueProcessMap = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.billingHealthCheck = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4jy+4jz failed:", e); }
-    }
-
-    // ── Step 4ka+4kb: Quote-to-Close Analysis + Revenue Leak Detector (Wave 85) ──
-    if (!deliverables.quoteToCloseAnalysis || !deliverables.revenueLeakDetector) {
-      try {
-        console.log("[Pivot] Synthesizing quoteToCloseAnalysis + revenueLeakDetector...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('quoteToCloseAnalysis', () => synthesizeQuoteToCloseAnalysis(businessPacket, job.questionnaire)),
-          synthIf('revenueLeakDetector', () => synthesizeRevenueLeakDetector(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.quoteToCloseAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.revenueLeakDetector = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ka+4kb failed:", e); }
-    }
-
-    // ── Step 4kc+4kd: Forecast Accuracy Model + Deal Desk Optimization (Wave 85) ──
-    if (!deliverables.forecastAccuracyModel || !deliverables.dealDeskOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing forecastAccuracyModel + dealDeskOptimization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('forecastAccuracyModel', () => synthesizeForecastAccuracyModel(businessPacket, job.questionnaire)),
-          synthIf('dealDeskOptimization', () => synthesizeDealDeskOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.forecastAccuracyModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.dealDeskOptimization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4kc+4kd failed:", e); }
-    }
-
-    // ── Step 4ke+4kf: Talent Market Intel + Employee Lifecycle Map (Wave 86) ──
-    if (!deliverables.talentMarketIntel || !deliverables.employeeLifecycleMap) {
-      try {
-        console.log("[Pivot] Synthesizing talentMarketIntel + employeeLifecycleMap...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('talentMarketIntel', () => synthesizeTalentMarketIntel(businessPacket, job.questionnaire)),
-          synthIf('employeeLifecycleMap', () => synthesizeEmployeeLifecycleMap(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.talentMarketIntel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.employeeLifecycleMap = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ke+4kf failed:", e); }
-    }
-
-    // ── Step 4kg+4kh: Skills Inventory + Team Dynamics Analysis (Wave 86) ──
-    if (!deliverables.skillsInventory || !deliverables.teamDynamicsAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing skillsInventory + teamDynamicsAnalysis...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('skillsInventory', () => synthesizeSkillsInventory(businessPacket, job.questionnaire)),
-          synthIf('teamDynamicsAnalysis', () => synthesizeTeamDynamicsAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.skillsInventory = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.teamDynamicsAnalysis = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4kg+4kh failed:", e); }
-    }
-
-    // ── Step 4ki+4kj: Hybrid Work Model + Compensation Philosophy (Wave 86) ──
-    if (!deliverables.hybridWorkModel || !deliverables.compensationPhilosophy) {
-      try {
-        console.log("[Pivot] Synthesizing hybridWorkModel + compensationPhilosophy...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('hybridWorkModel', () => synthesizeHybridWorkModel(businessPacket, job.questionnaire)),
-          synthIf('compensationPhilosophy', () => synthesizeCompensationPhilosophy(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.hybridWorkModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.compensationPhilosophy = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ki+4kj failed:", e); }
-    }
-
-    // ── Step 4kk+4kl: Data Maturity Assessment + Insights Prioritization (Wave 87) ──
-    if (!deliverables.dataMaturityAssessment || !deliverables.insightsPrioritization) {
-      try {
-        console.log("[Pivot] Synthesizing dataMaturityAssessment + insightsPrioritization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('dataMaturityAssessment', () => synthesizeDataMaturityAssessment(businessPacket, job.questionnaire)),
-          synthIf('insightsPrioritization', () => synthesizeInsightsPrioritization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.dataMaturityAssessment = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.insightsPrioritization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4kk+4kl failed:", e); }
-    }
-
-    // ── Step 4km+4kn: Experiment Velocity + Decision Intelligence (Wave 87) ──
-    if (!deliverables.experimentVelocity || !deliverables.decisionIntelligence) {
-      try {
-        console.log("[Pivot] Synthesizing experimentVelocity + decisionIntelligence...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('experimentVelocity', () => synthesizeExperimentVelocity(businessPacket, job.questionnaire)),
-          synthIf('decisionIntelligence', () => synthesizeDecisionIntelligence(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.experimentVelocity = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.decisionIntelligence = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4km+4kn failed:", e); }
-    }
-
-    // ── Step 4ko+4kp: Feedback Intelligence + Benchmarking Engine (Wave 87) ──
-    if (!deliverables.feedbackIntelligence || !deliverables.benchmarkingEngine) {
-      try {
-        console.log("[Pivot] Synthesizing feedbackIntelligence + benchmarkingEngine...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('feedbackIntelligence', () => synthesizeFeedbackIntelligence(businessPacket, job.questionnaire)),
-          synthIf('benchmarkingEngine', () => synthesizeBenchmarkingEngine(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.feedbackIntelligence = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.benchmarkingEngine = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ko+4kp failed:", e); }
-    }
-
-    // ── Step 4kq+4kr: Partner Value Map + Co-Innovation Pipeline (Wave 88) ──
-    if (!deliverables.partnerValueMap || !deliverables.coInnovationPipeline) {
-      try {
-        console.log("[Pivot] Synthesizing partnerValueMap + coInnovationPipeline...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('partnerValueMap', () => synthesizePartnerValueMap(businessPacket, job.questionnaire)),
-          synthIf('coInnovationPipeline', () => synthesizeCoInnovationPipeline(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.partnerValueMap = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.coInnovationPipeline = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4kq+4kr failed:", e); }
-    }
-
-    // ── Step 4ks+4kt: Ecosystem Revenue + Alliance Scorecard (Wave 88) ──
-    if (!deliverables.ecosystemRevenue || !deliverables.allianceScorecard) {
-      try {
-        console.log("[Pivot] Synthesizing ecosystemRevenue + allianceScorecard...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('ecosystemRevenue', () => synthesizeEcosystemRevenue(businessPacket, job.questionnaire)),
-          synthIf('allianceScorecard', () => synthesizeAllianceScorecard(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.ecosystemRevenue = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.allianceScorecard = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ks+4kt failed:", e); }
-    }
-
-    // ── Step 4ku+4kv: Partner Enablement Plan + Marketplace Readiness (Wave 88) ──
-    if (!deliverables.partnerEnablementPlan || !deliverables.marketplaceReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing partnerEnablementPlan + marketplaceReadiness...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('partnerEnablementPlan', () => synthesizePartnerEnablementPlan(businessPacket, job.questionnaire)),
-          synthIf('marketplaceReadiness', () => synthesizeMarketplaceReadiness(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.partnerEnablementPlan = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.marketplaceReadiness = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ku+4kv failed:", e); }
-    }
-
-    // ── Step 4kw+4kx: Strategy Execution + Initiative Tracking (Wave 89) ──
-    if (!deliverables.strategyExecution || !deliverables.initiativeTracking) {
-      try {
-        console.log("[Pivot] Synthesizing strategyExecution + initiativeTracking...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('strategyExecution', () => synthesizeStrategyExecution(businessPacket, job.questionnaire)),
-          synthIf('initiativeTracking', () => synthesizeInitiativeTracking(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.strategyExecution = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.initiativeTracking = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4kw+4kx failed:", e); }
-    }
-
-    // ── Step 4ky+4kz: Resource Allocation Model + Strategic Betting (Wave 89) ──
-    if (!deliverables.resourceAllocationModel || !deliverables.strategicBetting) {
-      try {
-        console.log("[Pivot] Synthesizing resourceAllocationModel + strategicBetting...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('resourceAllocationModel', () => synthesizeResourceAllocationModel(businessPacket, job.questionnaire)),
-          synthIf('strategicBetting', () => synthesizeStrategicBetting(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.resourceAllocationModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.strategicBetting = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ky+4kz failed:", e); }
-    }
-
-    // ── Step 4la+4lb: Execution Cadence + Alignment Index (Wave 89) ──
-    if (!deliverables.executionCadence || !deliverables.alignmentIndex) {
-      try {
-        console.log("[Pivot] Synthesizing executionCadence + alignmentIndex...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('executionCadence', () => synthesizeExecutionCadence(businessPacket, job.questionnaire)),
-          synthIf('alignmentIndex', () => synthesizeAlignmentIndex(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.executionCadence = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.alignmentIndex = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4la+4lb failed:", e); }
-    }
-
-    // ── Step 4lc+4ld: Market Signal Radar + Competitor Move Tracker (Wave 90) ──
-    if (!deliverables.marketSignalRadar || !deliverables.competitorMoveTracker) {
-      try {
-        console.log("[Pivot] Synthesizing marketSignalRadar + competitorMoveTracker...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('marketSignalRadar', () => synthesizeMarketSignalRadar(businessPacket, job.questionnaire)),
-          synthIf('competitorMoveTracker', () => synthesizeCompetitorMoveTracker(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.marketSignalRadar = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.competitorMoveTracker = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lc+4ld failed:", e); }
-    }
-
-    // ── Step 4le+4lf: Customer Voice Aggregator + Industry Convergence Map (Wave 90) ──
-    if (!deliverables.customerVoiceAggregator || !deliverables.industryConvergenceMap) {
-      try {
-        console.log("[Pivot] Synthesizing customerVoiceAggregator + industryConvergenceMap...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('customerVoiceAggregator', () => synthesizeCustomerVoiceAggregator(businessPacket, job.questionnaire)),
-          synthIf('industryConvergenceMap', () => synthesizeIndustryConvergenceMap(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.customerVoiceAggregator = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.industryConvergenceMap = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4le+4lf failed:", e); }
-    }
-
-    // ── Step 4lg+4lh: Emerging Tech Radar + Regulatory Horizon (Wave 90) ──
-    if (!deliverables.emergingTechRadar || !deliverables.regulatoryHorizon) {
-      try {
-        console.log("[Pivot] Synthesizing emergingTechRadar + regulatoryHorizon...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('emergingTechRadar', () => synthesizeEmergingTechRadar(businessPacket, job.questionnaire)),
-          synthIf('regulatoryHorizon', () => synthesizeRegulatoryHorizon(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.emergingTechRadar = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.regulatoryHorizon = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lg+4lh failed:", e); }
-    }
-
-    // ── Step 4li+4lj: Cash Flow Forecaster + Profit Driver Tree (Wave 91) ──
-    if (!deliverables.cashFlowForecaster || !deliverables.profitDriverTree) {
-      try {
-        console.log("[Pivot] Synthesizing cashFlowForecaster + profitDriverTree...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('cashFlowForecaster', () => synthesizeCashFlowForecaster(businessPacket, job.questionnaire)),
-          synthIf('profitDriverTree', () => synthesizeProfitDriverTree(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.cashFlowForecaster = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.profitDriverTree = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4li+4lj failed:", e); }
-    }
-
-    // ── Step 4lk+4ll: Revenue Quality Index + Financial Resilience Score (Wave 91) ──
-    if (!deliverables.revenueQualityIndex || !deliverables.financialResilienceScore) {
-      try {
-        console.log("[Pivot] Synthesizing revenueQualityIndex + financialResilienceScore...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('revenueQualityIndex', () => synthesizeRevenueQualityIndex(businessPacket, job.questionnaire)),
-          synthIf('financialResilienceScore', () => synthesizeFinancialResilienceScore(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.revenueQualityIndex = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.financialResilienceScore = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lk+4ll failed:", e); }
-    }
-
-    // ── Step 4lm+4ln: Working Capital Optimizer + Investment Readiness Gate (Wave 91) ──
-    if (!deliverables.workingCapitalOptimizer || !deliverables.investmentReadinessGate) {
-      try {
-        console.log("[Pivot] Synthesizing workingCapitalOptimizer + investmentReadinessGate...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('workingCapitalOptimizer', () => synthesizeWorkingCapitalOptimizer(businessPacket, job.questionnaire)),
-          synthIf('investmentReadinessGate', () => synthesizeInvestmentReadinessGate(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.workingCapitalOptimizer = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.investmentReadinessGate = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lm+4ln failed:", e); }
-    }
-
-    // ── Step 4lo+4lp: Customer DNA Profile + Propensity Model (Wave 92) ──
-    if (!deliverables.customerDnaProfile || !deliverables.propensityModel) {
-      try {
-        console.log("[Pivot] Synthesizing customerDnaProfile + propensityModel...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('customerDnaProfile', () => synthesizeCustomerDnaProfile(businessPacket, job.questionnaire)),
-          synthIf('propensityModel', () => synthesizePropensityModel(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.customerDnaProfile = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.propensityModel = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lo+4lp failed:", e); }
-    }
-
-    // ── Step 4lq+4lr: Churn Early Warning + Customer Effort Optimizer (Wave 92) ──
-    if (!deliverables.churnEarlyWarning || !deliverables.customerEffortOptimizer) {
-      try {
-        console.log("[Pivot] Synthesizing churnEarlyWarning + customerEffortOptimizer...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('churnEarlyWarning', () => synthesizeChurnEarlyWarning(businessPacket, job.questionnaire)),
-          synthIf('customerEffortOptimizer', () => synthesizeCustomerEffortOptimizer(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.churnEarlyWarning = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.customerEffortOptimizer = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lq+4lr failed:", e); }
-    }
-
-    // ── Step 4ls+4lt: Loyalty Driver + Account Intelligence (Wave 92) ──
-    if (!deliverables.loyaltyDriver || !deliverables.accountIntelligence) {
-      try {
-        console.log("[Pivot] Synthesizing loyaltyDriver + accountIntelligence...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('loyaltyDriver', () => synthesizeLoyaltyDriver(businessPacket, job.questionnaire)),
-          synthIf('accountIntelligence', () => synthesizeAccountIntelligence(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.loyaltyDriver = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.accountIntelligence = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ls+4lt failed:", e); }
-    }
-
-    // ── Step 4lu+4lv: GTM Calendar + Launch Readiness (Wave 93) ──
-    if (!deliverables.gtmCalendar || !deliverables.launchReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing gtmCalendar + launchReadiness...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('gtmCalendar', () => synthGtmCalendar(businessPacket, job.questionnaire)),
-          synthIf('launchReadiness', () => synthLaunchReadiness(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.gtmCalendar = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.launchReadiness = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lu+4lv failed:", e); }
-    }
-
-    // ── Step 4lw+4lx: Message Testing + Sales Collateral (Wave 93) ──
-    if (!deliverables.messageTesting || !deliverables.salesCollateral) {
-      try {
-        console.log("[Pivot] Synthesizing messageTesting + salesCollateral...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('messageTesting', () => synthMessageTesting(businessPacket, job.questionnaire)),
-          synthIf('salesCollateral', () => synthSalesCollateral(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.messageTesting = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.salesCollateral = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4lw+4lx failed:", e); }
-    }
-
-    // ── Step 4ly+4lz: Demand Gen Plan + Channel Activation (Wave 93) ──
-    if (!deliverables.demandGenPlan || !deliverables.channelActivation) {
-      try {
-        console.log("[Pivot] Synthesizing demandGenPlan + channelActivation...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('demandGenPlan', () => synthDemandGenPlan(businessPacket, job.questionnaire)),
-          synthIf('channelActivation', () => synthChannelActivation(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.demandGenPlan = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.channelActivation = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ly+4lz failed:", e); }
-    }
-
-    // ── Step 4ma+4mb: Price Elasticity Model + Dynamic Pricing Engine (Wave 94) ──
-    if (!deliverables.priceElasticityModel || !deliverables.dynamicPricingEngine) {
-      try {
-        console.log("[Pivot] Synthesizing priceElasticityModel + dynamicPricingEngine...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('priceElasticityModel', () => synthPriceElasticityModel(businessPacket, job.questionnaire)),
-          synthIf('dynamicPricingEngine', () => synthDynamicPricingEngine(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.priceElasticityModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.dynamicPricingEngine = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ma+4mb failed:", e); }
-    }
-
-    // ── Step 4mc+4md: Discount Impact Analysis + Bundle Designer (Wave 94) ──
-    if (!deliverables.discountImpactAnalysis || !deliverables.bundleDesigner) {
-      try {
-        console.log("[Pivot] Synthesizing discountImpactAnalysis + bundleDesigner...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('discountImpactAnalysis', () => synthDiscountImpactAnalysis(businessPacket, job.questionnaire)),
-          synthIf('bundleDesigner', () => synthBundleDesigner(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.discountImpactAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.bundleDesigner = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mc+4md failed:", e); }
-    }
-
-    // ── Step 4me+4mf: Competitive Price Tracker + Pricing Experiment (Wave 94) ──
-    if (!deliverables.competitivePriceTracker || !deliverables.pricingExperiment) {
-      try {
-        console.log("[Pivot] Synthesizing competitivePriceTracker + pricingExperiment...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('competitivePriceTracker', () => synthCompetitivePriceTracker(businessPacket, job.questionnaire)),
-          synthIf('pricingExperiment', () => synthPricingExperiment(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.competitivePriceTracker = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.pricingExperiment = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4me+4mf failed:", e); }
-    }
-
-    // ── Step 4mg+4mh: KPI Watchlist + Alert Framework (Wave 95) ──
-    if (!deliverables.kpiWatchlist || !deliverables.alertFramework) {
-      try {
-        console.log("[Pivot] Synthesizing kpiWatchlist + alertFramework...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('kpiWatchlist', () => synthKpiWatchlist(businessPacket, job.questionnaire)),
-          synthIf('alertFramework', () => synthAlertFramework(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.kpiWatchlist = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.alertFramework = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mg+4mh failed:", e); }
-    }
-
-    // ── Step 4mi+4mj: Anomaly Detection + Trend Forecast (Wave 95) ──
-    if (!deliverables.anomalyDetection || !deliverables.trendForecast) {
-      try {
-        console.log("[Pivot] Synthesizing anomalyDetection + trendForecast...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('anomalyDetection', () => synthAnomalyDetection(businessPacket, job.questionnaire)),
-          synthIf('trendForecast', () => synthTrendForecast(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.anomalyDetection = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.trendForecast = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mi+4mj failed:", e); }
-    }
-
-    // ── Step 4mk+4ml: Dashboard Design + Insights Catalog (Wave 95) ──
-    if (!deliverables.dashboardDesign || !deliverables.insightsCatalog) {
-      try {
-        console.log("[Pivot] Synthesizing dashboardDesign + insightsCatalog...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('dashboardDesign', () => synthDashboardDesign(businessPacket, job.questionnaire)),
-          synthIf('insightsCatalog', () => synthInsightsCatalog(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.dashboardDesign = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.insightsCatalog = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mk+4ml failed:", e); }
-    }
-
-    // ── Step 4mm+4mn: Idea Pipeline + Innovation Scoring (Wave 96) ──
-    if (!deliverables.ideaPipeline || !deliverables.innovationScoring) {
-      try {
-        console.log("[Pivot] Synthesizing ideaPipeline + innovationScoring...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('ideaPipeline', () => synthIdeaPipeline(businessPacket, job.questionnaire)),
-          synthIf('innovationScoring', () => synthInnovationScoring(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.ideaPipeline = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.innovationScoring = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mm+4mn failed:", e); }
-    }
-
-    // ── Step 4mo+4mp: Experiment Board + Patent Analysis (Wave 96) ──
-    if (!deliverables.experimentBoard || !deliverables.patentAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing experimentBoard + patentAnalysis...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('experimentBoard', () => synthExperimentBoard(businessPacket, job.questionnaire)),
-          synthIf('patentAnalysis', () => synthPatentAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.experimentBoard = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.patentAnalysis = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mo+4mp failed:", e); }
-    }
-
-    // ── Step 4mq+4mr: Disruption Playbook + Future Proofing (Wave 96) ──
-    if (!deliverables.disruptionPlaybook || !deliverables.futureProofing) {
-      try {
-        console.log("[Pivot] Synthesizing disruptionPlaybook + futureProofing...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('disruptionPlaybook', () => synthDisruptionPlaybook(businessPacket, job.questionnaire)),
-          synthIf('futureProofing', () => synthFutureProofing(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.disruptionPlaybook = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.futureProofing = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mq+4mr failed:", e); }
-    }
-
-    // ── Step 4ms+4mt: Revenue Mix Analysis + Account Growth Plan (Wave 97) ──
-    if (!deliverables.revenueMixAnalysis || !deliverables.accountGrowthPlan) {
-      try {
-        console.log("[Pivot] Synthesizing revenueMixAnalysis + accountGrowthPlan...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('revenueMixAnalysis', () => synthRevenueMixAnalysis(businessPacket, job.questionnaire)),
-          synthIf('accountGrowthPlan', () => synthAccountGrowthPlan(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.revenueMixAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.accountGrowthPlan = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ms+4mt failed:", e); }
-    }
-
-    // ── Step 4mu+4mv: Contract Optimizer + Usage Pattern Analysis (Wave 97) ──
-    if (!deliverables.contractOptimizer || !deliverables.usagePatternAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing contractOptimizer + usagePatternAnalysis...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('contractOptimizer', () => synthContractOptimizer(businessPacket, job.questionnaire)),
-          synthIf('usagePatternAnalysis', () => synthUsagePatternAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.contractOptimizer = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.usagePatternAnalysis = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mu+4mv failed:", e); }
-    }
-
-    // ── Step 4mw+4mx: Churn Recovery Plan + Winback Program (Wave 97) ──
-    if (!deliverables.churnRecoveryPlan || !deliverables.winbackProgram) {
-      try {
-        console.log("[Pivot] Synthesizing churnRecoveryPlan + winbackProgram...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('churnRecoveryPlan', () => synthChurnRecoveryPlan(businessPacket, job.questionnaire)),
-          synthIf('winbackProgram', () => synthWinbackProgram(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.churnRecoveryPlan = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.winbackProgram = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4mw+4mx failed:", e); }
-    }
-
-    // ── Step 4my+4mz: Automation Audit + Process Digitization (Wave 98) ──
-    if (!deliverables.automationAudit || !deliverables.processDigitization) {
-      try {
-        console.log("[Pivot] Synthesizing automationAudit + processDigitization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('automationAudit', () => synthAutomationAudit(businessPacket, job.questionnaire)),
-          synthIf('processDigitization', () => synthProcessDigitization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.automationAudit = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.processDigitization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4my+4mz failed:", e); }
-    }
-
-    // ── Step 4na+4nb: Bot Deployment Plan + Workflow Benchmark (Wave 98) ──
-    if (!deliverables.botDeploymentPlan || !deliverables.workflowBenchmark) {
-      try {
-        console.log("[Pivot] Synthesizing botDeploymentPlan + workflowBenchmark...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('botDeploymentPlan', () => synthBotDeploymentPlan(businessPacket, job.questionnaire)),
-          synthIf('workflowBenchmark', () => synthWorkflowBenchmark(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.botDeploymentPlan = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.workflowBenchmark = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4na+4nb failed:", e); }
-    }
-
-    // ── Step 4nc+4nd: Handoff Efficiency + Tool Consolidation (Wave 98) ──
-    if (!deliverables.handoffEfficiency || !deliverables.toolConsolidation) {
-      try {
-        console.log("[Pivot] Synthesizing handoffEfficiency + toolConsolidation...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('handoffEfficiency', () => synthHandoffEfficiency(businessPacket, job.questionnaire)),
-          synthIf('toolConsolidation', () => synthToolConsolidation(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.handoffEfficiency = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.toolConsolidation = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4nc+4nd failed:", e); }
-    }
-
-    // ── Step 4ne+4nf: Crisis Communication + Internal Comms (Wave 99) ──
-    if (!deliverables.crisisCommunication || !deliverables.internalComms) {
-      try {
-        console.log("[Pivot] Synthesizing crisisCommunication + internalComms...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('crisisCommunication', () => synthCrisisCommunication(businessPacket, job.questionnaire)),
-          synthIf('internalComms', () => synthInternalComms(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.crisisCommunication = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.internalComms = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ne+4nf failed:", e); }
-    }
-
-    // ── Step 4ng+4nh: Investor Narrative + Press Strategy (Wave 99) ──
-    if (!deliverables.investorNarrative || !deliverables.pressStrategy) {
-      try {
-        console.log("[Pivot] Synthesizing investorNarrative + pressStrategy...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('investorNarrative', () => synthInvestorNarrative(businessPacket, job.questionnaire)),
-          synthIf('pressStrategy', () => synthPressStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.investorNarrative = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.pressStrategy = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ng+4nh failed:", e); }
-    }
-
-    // ── Step 4ni+4nj: Thought Leadership Plan + Brand Story Arc (Wave 99) ──
-    if (!deliverables.thoughtLeadershipPlan || !deliverables.brandStoryArc) {
-      try {
-        console.log("[Pivot] Synthesizing thoughtLeadershipPlan + brandStoryArc...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('thoughtLeadershipPlan', () => synthThoughtLeadershipPlan(businessPacket, job.questionnaire)),
-          synthIf('brandStoryArc', () => synthBrandStoryArc(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.thoughtLeadershipPlan = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.brandStoryArc = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ni+4nj failed:", e); }
-    }
-
-    // ── Step 4nk+4nl: Mastery Dashboard + Growth Velocity Score (Wave 100) ──
-    if (!deliverables.masteryDashboard || !deliverables.growthVelocityScore) {
-      try {
-        console.log("[Pivot] Synthesizing masteryDashboard + growthVelocityScore...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('masteryDashboard', () => synthMasteryDashboard(businessPacket, job.questionnaire)),
-          synthIf('growthVelocityScore', () => synthGrowthVelocityScore(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.masteryDashboard = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.growthVelocityScore = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4nk+4nl failed:", e); }
-    }
-
-    // ── Step 4nm+4nn: Operational Maturity + Leadership Readiness (Wave 100) ──
-    if (!deliverables.operationalMaturity || !deliverables.leadershipReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing operationalMaturity + leadershipReadiness...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('operationalMaturity', () => synthOperationalMaturity(businessPacket, job.questionnaire)),
-          synthIf('leadershipReadiness', () => synthLeadershipReadiness(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.operationalMaturity = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.leadershipReadiness = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4nm+4nn failed:", e); }
-    }
-
-    // ── Step 4no+4np: Market Dominance Index + Future Readiness (Wave 100) ──
-    if (!deliverables.marketDominanceIndex || !deliverables.futureReadiness) {
-      try {
-        console.log("[Pivot] Synthesizing marketDominanceIndex + futureReadiness...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('marketDominanceIndex', () => synthMarketDominanceIndex(businessPacket, job.questionnaire)),
-          synthIf('futureReadiness', () => synthFutureReadiness(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.marketDominanceIndex = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.futureReadiness = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4no+4np failed:", e); }
-    }
-
-    // ── Step 4nq+4nr: AI Adoption Potential + ML Use Case Identification (Wave 101) ──
-    if (!deliverables.aiAdoptionPotential || !deliverables.mlUseCaseIdentification) {
-      try {
-        console.log("[Pivot] Synthesizing aiAdoptionPotential + mlUseCaseIdentification...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('aiAdoptionPotential', () => synthAIAdoptionPotential(businessPacket, job.questionnaire)),
-          synthIf('mlUseCaseIdentification', () => synthMLUseCaseIdentification(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.aiAdoptionPotential = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.mlUseCaseIdentification = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4nq+4nr failed:", e); }
-    }
-
-    // ── Step 4ns+4nt: Data Infrastructure Gap Analysis + Automation ROI Modeling (Wave 101) ──
-    if (!deliverables.dataInfrastructureGapAnalysis || !deliverables.automationROIModeling) {
-      try {
-        console.log("[Pivot] Synthesizing dataInfrastructureGapAnalysis + automationROIModeling...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('dataInfrastructureGapAnalysis', () => synthDataInfrastructureGapAnalysis(businessPacket, job.questionnaire)),
-          synthIf('automationROIModeling', () => synthAutomationROIModeling(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.dataInfrastructureGapAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.automationROIModeling = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ns+4nt failed:", e); }
-    }
-
-    // ── Step 4nu+4nv: AI Talent Needs Assessment + Ethical AI Framework (Wave 101) ──
-    if (!deliverables.aiTalentNeedsAssessment || !deliverables.ethicalAIFramework) {
-      try {
-        console.log("[Pivot] Synthesizing aiTalentNeedsAssessment + ethicalAIFramework...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('aiTalentNeedsAssessment', () => synthAITalentNeedsAssessment(businessPacket, job.questionnaire)),
-          synthIf('ethicalAIFramework', () => synthEthicalAIFramework(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.aiTalentNeedsAssessment = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.ethicalAIFramework = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4nu+4nv failed:", e); }
-    }
-
-    // ── Step 4nw+4nx: Market Entry Scoring + Regulatory Landscape Mapping (Wave 102) ──
-    if (!deliverables.marketEntryScoring || !deliverables.regulatoryLandscapeMapping) {
-      try {
-        console.log("[Pivot] Synthesizing marketEntryScoring + regulatoryLandscapeMapping...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('marketEntryScoring', () => synthMarketEntryScoring(businessPacket, job.questionnaire)),
-          synthIf('regulatoryLandscapeMapping', () => synthRegulatoryLandscapeMapping(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.marketEntryScoring = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.regulatoryLandscapeMapping = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4nw+4nx failed:", e); }
-    }
-
-    // ── Step 4ny+4nz: Cultural Adaptation Strategy + Logistics Expansion Analysis (Wave 102) ──
-    if (!deliverables.culturalAdaptationStrategy || !deliverables.logisticsExpansionAnalysis) {
-      try {
-        console.log("[Pivot] Synthesizing culturalAdaptationStrategy + logisticsExpansionAnalysis...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('culturalAdaptationStrategy', () => synthCulturalAdaptationStrategy(businessPacket, job.questionnaire)),
-          synthIf('logisticsExpansionAnalysis', () => synthLogisticsExpansionAnalysis(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.culturalAdaptationStrategy = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.logisticsExpansionAnalysis = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ny+4nz failed:", e); }
-    }
-
-    // ── Step 4oa+4ob: Local Partnership Strategy + International Pricing Optimization (Wave 102) ──
-    if (!deliverables.localPartnershipStrategy || !deliverables.internationalPricingOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing localPartnershipStrategy + internationalPricingOptimization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('localPartnershipStrategy', () => synthLocalPartnershipStrategy(businessPacket, job.questionnaire)),
-          synthIf('internationalPricingOptimization', () => synthInternationalPricingOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.localPartnershipStrategy = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.internationalPricingOptimization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oa+4ob failed:", e); }
-    }
-
-    // ── Step 4oc+4od: Acquisition Funnel Intelligence + Onboarding Effectiveness Score (Wave 103) ──
-    if (!deliverables.acquisitionFunnelIntelligence || !deliverables.onboardingEffectivenessScore) {
-      try {
-        console.log("[Pivot] Synthesizing acquisitionFunnelIntelligence + onboardingEffectivenessScore...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('acquisitionFunnelIntelligence', () => synthAcquisitionFunnelIntelligence(businessPacket, job.questionnaire)),
-          synthIf('onboardingEffectivenessScore', () => synthOnboardingEffectivenessScore(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.acquisitionFunnelIntelligence = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.onboardingEffectivenessScore = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oc+4od failed:", e); }
-    }
-
-    // ── Step 4oe+4of: Engagement Scoring Model + Expansion Revenue Opportunities (Wave 103) ──
-    if (!deliverables.engagementScoringModel || !deliverables.expansionRevenueOpportunities) {
-      try {
-        console.log("[Pivot] Synthesizing engagementScoringModel + expansionRevenueOpportunities...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('engagementScoringModel', () => synthEngagementScoringModel(businessPacket, job.questionnaire)),
-          synthIf('expansionRevenueOpportunities', () => synthExpansionRevenueOpportunities(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.engagementScoringModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.expansionRevenueOpportunities = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oe+4of failed:", e); }
-    }
-
-    // ── Step 4og+4oh: Advocacy Program Design + Lifetime Value Modeling (Wave 103) ──
-    if (!deliverables.advocacyProgramDesign || !deliverables.lifetimeValueModeling) {
-      try {
-        console.log("[Pivot] Synthesizing advocacyProgramDesign + lifetimeValueModeling...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('advocacyProgramDesign', () => synthAdvocacyProgramDesign(businessPacket, job.questionnaire)),
-          synthIf('lifetimeValueModeling', () => synthLifetimeValueModeling(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.advocacyProgramDesign = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.lifetimeValueModeling = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4og+4oh failed:", e); }
-    }
-
-    // ── Step 4oi+4oj: API Monetization Strategy + Platform Ecosystem Health (Wave 104) ──
-    if (!deliverables.apiMonetizationStrategy || !deliverables.platformEcosystemHealth) {
-      try {
-        console.log("[Pivot] Synthesizing apiMonetizationStrategy + platformEcosystemHealth...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('apiMonetizationStrategy', () => synthAPIMonetizationStrategy(businessPacket, job.questionnaire)),
-          synthIf('platformEcosystemHealth', () => synthPlatformEcosystemHealth(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.apiMonetizationStrategy = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.platformEcosystemHealth = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oi+4oj failed:", e); }
-    }
-
-    // ── Step 4ok+4ol: Developer Experience Optimization + Integration Marketplace Analytics (Wave 104) ──
-    if (!deliverables.developerExperienceOptimization || !deliverables.integrationMarketplaceAnalytics) {
-      try {
-        console.log("[Pivot] Synthesizing developerExperienceOptimization + integrationMarketplaceAnalytics...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('developerExperienceOptimization', () => synthDeveloperExperienceOptimization(businessPacket, job.questionnaire)),
-          synthIf('integrationMarketplaceAnalytics', () => synthIntegrationMarketplaceAnalytics(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.developerExperienceOptimization = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.integrationMarketplaceAnalytics = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ok+4ol failed:", e); }
-    }
-
-    // ── Step 4om+4on: Partner Enablement Program + Platform Governance Framework (Wave 104) ──
-    if (!deliverables.partnerEnablementProgram || !deliverables.platformGovernanceFramework) {
-      try {
-        console.log("[Pivot] Synthesizing partnerEnablementProgram + platformGovernanceFramework...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('partnerEnablementProgram', () => synthPartnerEnablementProgram(businessPacket, job.questionnaire)),
-          synthIf('platformGovernanceFramework', () => synthPlatformGovernanceFramework(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.partnerEnablementProgram = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.platformGovernanceFramework = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4om+4on failed:", e); }
-    }
-
-    // ── Step 4oo+4op: Demand Forecasting Engine + Predictive Maintenance Modeling (Wave 105) ──
-    if (!deliverables.demandForecastingEngine || !deliverables.predictiveMaintenanceModeling) {
-      try {
-        console.log("[Pivot] Synthesizing demandForecastingEngine + predictiveMaintenanceModeling...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('demandForecastingEngine', () => synthDemandForecastingEngine(businessPacket, job.questionnaire)),
-          synthIf('predictiveMaintenanceModeling', () => synthPredictiveMaintenanceModeling(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.demandForecastingEngine = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.predictiveMaintenanceModeling = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oo+4op failed:", e); }
-    }
-
-    // ── Step 4oq+4or: Churn Prediction Model + Lead Scoring AI (Wave 105) ──
-    if (!deliverables.churnPredictionModel || !deliverables.leadScoringAI) {
-      try {
-        console.log("[Pivot] Synthesizing churnPredictionModel + leadScoringAI...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('churnPredictionModel', () => synthChurnPredictionModel(businessPacket, job.questionnaire)),
-          synthIf('leadScoringAI', () => synthLeadScoringAI(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.churnPredictionModel = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.leadScoringAI = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oq+4or failed:", e); }
-    }
-
-    // ── Step 4os+4ot: Inventory Optimization AI + Revenue Prediction Modeling (Wave 105) ──
-    if (!deliverables.inventoryOptimizationAI || !deliverables.revenuePredictionModeling) {
-      try {
-        console.log("[Pivot] Synthesizing inventoryOptimizationAI + revenuePredictionModeling...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('inventoryOptimizationAI', () => synthInventoryOptimizationAI(businessPacket, job.questionnaire)),
-          synthIf('revenuePredictionModeling', () => synthRevenuePredictionModeling(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.inventoryOptimizationAI = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.revenuePredictionModeling = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4os+4ot failed:", e); }
-    }
-
-    // ── Step 4ou+4ov: Org Structure Analysis + Span of Control Optimization (Wave 106) ──
-    if (!deliverables.orgStructureAnalysis || !deliverables.spanOfControlOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing orgStructureAnalysis + spanOfControlOptimization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('orgStructureAnalysis', () => synthOrgStructureAnalysis(businessPacket, job.questionnaire)),
-          synthIf('spanOfControlOptimization', () => synthSpanOfControlOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.orgStructureAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.spanOfControlOptimization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ou+4ov failed:", e); }
-    }
-
-    // ── Step 4ow+4ox: Decision Rights Mapping + Collaboration Network Mapping (Wave 106) ──
-    if (!deliverables.decisionRightsMapping || !deliverables.collaborationNetworkMapping) {
-      try {
-        console.log("[Pivot] Synthesizing decisionRightsMapping + collaborationNetworkMapping...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('decisionRightsMapping', () => synthDecisionRightsMapping(businessPacket, job.questionnaire)),
-          synthIf('collaborationNetworkMapping', () => synthCollaborationNetworkMapping(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.decisionRightsMapping = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.collaborationNetworkMapping = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4ow+4ox failed:", e); }
-    }
-
-    // ── Step 4oy+4oz: Role Optimization Analysis + Succession Planning Framework (Wave 106) ──
-    if (!deliverables.roleOptimizationAnalysis || !deliverables.successionPlanningFramework) {
-      try {
-        console.log("[Pivot] Synthesizing roleOptimizationAnalysis + successionPlanningFramework...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('roleOptimizationAnalysis', () => synthRoleOptimizationAnalysis(businessPacket, job.questionnaire)),
-          synthIf('successionPlanningFramework', () => synthSuccessionPlanningFramework(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.roleOptimizationAnalysis = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.successionPlanningFramework = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4oy+4oz failed:", e); }
-    }
-
-    // ── Step 4pa+4pb: Impact Measurement Dashboard + ESG Reporting Compliance (Wave 107) ──
-    if (!deliverables.impactMeasurementDashboard || !deliverables.esgReportingCompliance) {
-      try {
-        console.log("[Pivot] Synthesizing impactMeasurementDashboard + esgReportingCompliance...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('impactMeasurementDashboard', () => synthImpactMeasurementDashboard(businessPacket, job.questionnaire)),
-          synthIf('esgReportingCompliance', () => synthESGReportingCompliance(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.impactMeasurementDashboard = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.esgReportingCompliance = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4pa+4pb failed:", e); }
-    }
-
-    // ── Step 4pc+4pd: Stakeholder Engagement Analytics + Community Investment Strategy (Wave 107) ──
-    if (!deliverables.stakeholderEngagementAnalytics || !deliverables.communityInvestmentStrategy) {
-      try {
-        console.log("[Pivot] Synthesizing stakeholderEngagementAnalytics + communityInvestmentStrategy...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('stakeholderEngagementAnalytics', () => synthStakeholderEngagementAnalytics(businessPacket, job.questionnaire)),
-          synthIf('communityInvestmentStrategy', () => synthCommunityInvestmentStrategy(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.stakeholderEngagementAnalytics = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.communityInvestmentStrategy = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4pc+4pd failed:", e); }
-    }
-
-    // ── Step 4pe+4pf: Diversity Metrics Analytics + Green Operations Optimization (Wave 107) ──
-    if (!deliverables.diversityMetricsAnalytics || !deliverables.greenOperationsOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing diversityMetricsAnalytics + greenOperationsOptimization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('diversityMetricsAnalytics', () => synthDiversityMetricsAnalytics(businessPacket, job.questionnaire)),
-          synthIf('greenOperationsOptimization', () => synthGreenOperationsOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.diversityMetricsAnalytics = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.greenOperationsOptimization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4pe+4pf failed:", e); }
-    }
-
-    // ── Step 4pg+4ph: Knowledge Audit Assessment + Expertise Mapping System (Wave 108) ──
-    if (!deliverables.knowledgeAuditAssessment || !deliverables.expertiseMappingSystem) {
-      try {
-        console.log("[Pivot] Synthesizing knowledgeAuditAssessment + expertiseMappingSystem...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('knowledgeAuditAssessment', () => synthKnowledgeAuditAssessment(businessPacket, job.questionnaire)),
-          synthIf('expertiseMappingSystem', () => synthExpertiseMappingSystem(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.knowledgeAuditAssessment = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.expertiseMappingSystem = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4pg+4ph failed:", e); }
-    }
-
-    // ── Step 4pi+4pj: Documentation Strategy Framework + Learning Pathways Design (Wave 108) ──
-    if (!deliverables.documentationStrategyFramework || !deliverables.learningPathwaysDesign) {
-      try {
-        console.log("[Pivot] Synthesizing documentationStrategyFramework + learningPathwaysDesign...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('documentationStrategyFramework', () => synthDocumentationStrategyFramework(businessPacket, job.questionnaire)),
-          synthIf('learningPathwaysDesign', () => synthLearningPathwaysDesign(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.documentationStrategyFramework = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.learningPathwaysDesign = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4pi+4pj failed:", e); }
-    }
-
-    // ── Step 4pk+4pl: Institutional Memory Protection + Knowledge Transfer Optimization (Wave 108) ──
-    if (!deliverables.institutionalMemoryProtection || !deliverables.knowledgeTransferOptimization) {
-      try {
-        console.log("[Pivot] Synthesizing institutionalMemoryProtection + knowledgeTransferOptimization...");
-        const [r1, r2] = await Promise.allSettled([
-          synthIf('institutionalMemoryProtection', () => synthInstitutionalMemoryProtection(businessPacket, job.questionnaire)),
-          synthIf('knowledgeTransferOptimization', () => synthKnowledgeTransferOptimization(businessPacket, job.questionnaire)),
-        ]);
-        if (r1.status === "fulfilled" && r1.value) deliverables.institutionalMemoryProtection = r1.value;
-        if (r2.status === "fulfilled" && r2.value) deliverables.knowledgeTransferOptimization = r2.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Step 4pk+4pl failed:", e); }
-    }
-
-    // ── Tools & Automation Plan ──
-    if (!deliverables.toolsAutomationPlan) {
-      try {
-        console.log("[Pivot] Synthesizing Tools & Automation Plan...");
-        const [tap] = await Promise.allSettled([
-          synthIf('toolsAutomationPlan', () => synthesizeToolsAutomation(businessPacket, job.questionnaire)),
-        ]);
-        if (tap.status === "fulfilled" && tap.value) deliverables.toolsAutomationPlan = tap.value;
-        await updateJobTracked(runId, { deliverables });
-      } catch (e) { console.warn("Tools & Automation Plan failed:", e); }
+      _extStep += batch.length;
+      deliverables = { ...deliverables, _progress: { completed: _extStep, total: extTasks.length, currentStep: 'Refining analysis', startedAt: _extStarted } };
+      await updateJob(runId, { deliverables });
     }
 
   return deliverables;
@@ -4797,6 +1113,67 @@ export async function runPipeline(runId: string): Promise<void> {
           if (integrationCtx.records.length > 0) {
             businessPacket.integrationData = integrationCtx;
             console.log(`[Pivot] Loaded integration data from ${integrationCtx.providers.length} providers: ${integrationCtx.providers.join(', ')} (${integrationCtx.records.length} records)`);
+
+            // Extract verified financial facts from integration data (Stripe revenue, customer counts, etc.)
+            const integrationFacts = extractFinancialFactsFromIntegrations(integrationCtx);
+            if (integrationFacts.length > 0) {
+              if (!businessPacket.financialFacts) businessPacket.financialFacts = [];
+              businessPacket.financialFacts.push(...integrationFacts);
+              console.log(`[Pivot] Extracted ${integrationFacts.length} financial facts from integrations: ${integrationFacts.map(f => f.label).join(', ')}`);
+
+              // Also populate keyMetrics from integration data if not already set
+              for (const fact of integrationFacts) {
+                if (fact.label.includes('Total Revenue') && !businessPacket.keyMetrics.cashPosition) {
+                  businessPacket.keyMetrics.cashPosition = fact.value;
+                }
+                if (fact.label.includes('Monthly Revenue') && !businessPacket.keyMetrics.estimatedMonthlyRevenue) {
+                  businessPacket.keyMetrics.estimatedMonthlyRevenue = fact.value;
+                }
+                if (fact.label.includes('Cash Collected') && !businessPacket.keyMetrics.cashPosition) {
+                  businessPacket.keyMetrics.cashPosition = fact.value;
+                }
+              }
+            }
+
+            // Extract org intelligence: people, roles, org structure from Slack, Gmail, GitHub, etc.
+            const orgIntel = extractOrgIntelligence(integrationCtx);
+            if (orgIntel.people.length > 0 || orgIntel.insights.length > 0) {
+              businessPacket.orgIntelligence = orgIntel;
+              console.log(`[Pivot] Org intelligence: ${orgIntel.people.length} people, ${orgIntel.orgStructure?.departments?.length || 0} departments, ${orgIntel.insights.length} insights`);
+
+              // Populate employee count from org intelligence if not set
+              if (!businessPacket.keyMetrics.employeeCount && orgIntel.orgStructure?.teamSize) {
+                businessPacket.keyMetrics.employeeCount = orgIntel.orgStructure.teamSize;
+              }
+
+              // Add org intelligence as a category dossier so synthesis can use it
+              const peopleSummary = orgIntel.people.slice(0, 30).map(p => {
+                const tags = [p.isEmployee ? 'employee' : '', p.isClient ? 'client' : '', p.isContractor ? 'contractor' : ''].filter(Boolean).join('/');
+                return `${p.name}${p.role ? ' (' + p.role + ')' : ''} [${tags}] — found in ${p.sources.join(', ')}${p.email ? ' — ' + p.email : ''}`;
+              });
+              businessPacket.categoryDossiers.push({
+                category: 'Org Intelligence (from Connected Integrations)',
+                keyFacts: [
+                  `Team size: ${orgIntel.orgStructure?.teamSize || 'unknown'} employees`,
+                  `Departments: ${orgIntel.orgStructure?.departments?.join(', ') || 'unknown'}`,
+                  `Key roles: ${orgIntel.orgStructure?.keyRoles?.join(', ') || 'unknown'}`,
+                  `Communication style: ${orgIntel.communicationPatterns?.collaborationStyle || 'unknown'}`,
+                  `Primary channels: ${orgIntel.communicationPatterns?.primaryChannels?.slice(0, 5).join(', ') || 'unknown'}`,
+                  ...orgIntel.insights,
+                  '--- PEOPLE ---',
+                  ...peopleSummary,
+                  `--- CLIENTS (${orgIntel.clientRelationships?.length || 0}) ---`,
+                  ...(orgIntel.clientRelationships?.slice(0, 15).map(c => `${c.name}${c.contactPerson ? ' (' + c.contactPerson + ')' : ''} — ${c.recentActivity || 'no recent activity'}`) || []),
+                ],
+                criticalIssues: [],
+                financialAmounts: {},
+              });
+
+              // Update top customers from real client data
+              if (orgIntel.clientRelationships && orgIntel.clientRelationships.length > 0) {
+                businessPacket.keyMetrics.topCustomers = orgIntel.clientRelationships.slice(0, 10).map(c => c.name);
+              }
+            }
           }
         } catch (e) {
           console.warn('[Pivot] Failed to collect integration data:', e);
@@ -5027,32 +1404,20 @@ export async function runPipeline(runId: string): Promise<void> {
       }
     }
 
-    // KPI identification
-    if (!deliverables.kpiReport) {
-      try {
-        console.log("[Pivot] Identifying KPIs...");
-        const kpiReport = await synthesizeKPIs(businessPacket, job.questionnaire);
-        if (kpiReport) {
-          deliverables = { ...deliverables, kpiReport };
-          await updateJob(runId, { deliverables });
-        }
-      } catch (e) {
-        console.warn("[Pivot] KPI synthesis failed (non-fatal):", e);
+    // KPIs + Health Checklist in parallel (independent)
+    {
+      console.log("[Pivot] Running KPIs + Health Checklist in parallel...");
+      const [kpiResult, checklistResult] = await Promise.allSettled([
+        !deliverables.kpiReport ? synthesizeKPIs(businessPacket, job.questionnaire) : Promise.resolve(null),
+        !deliverables.healthChecklist ? synthesizeHealthChecklist(businessPacket, job.questionnaire) : Promise.resolve(null),
+      ]);
+      if (kpiResult.status === "fulfilled" && kpiResult.value) {
+        deliverables = { ...deliverables, kpiReport: kpiResult.value };
       }
-    }
-
-    // Health checklist
-    if (!deliverables.healthChecklist) {
-      try {
-        console.log("[Pivot] Generating business health checklist...");
-        const healthChecklist = await synthesizeHealthChecklist(businessPacket, job.questionnaire);
-        if (healthChecklist) {
-          deliverables = { ...deliverables, healthChecklist };
-          await updateJob(runId, { deliverables });
-        }
-      } catch (e) {
-        console.warn("[Pivot] Health checklist failed (non-fatal):", e);
+      if (checklistResult.status === "fulfilled" && checklistResult.value) {
+        deliverables = { ...deliverables, healthChecklist: checklistResult.value };
       }
+      await updateJob(runId, { deliverables });
     }
 
     // 30-day roadmap (depends on other deliverables for context)
@@ -5134,8 +1499,8 @@ export async function runPipeline(runId: string): Promise<void> {
         { key: 'scenarioStressTest', fn: () => synthIf('scenarioStressTest', () => synthesizeScenarioStressTest(bp, q)) },
       ];
 
-      // Run in batches of 12 for faster synthesis throughput
-      const BATCH_SIZE = 12;
+      // Run in batches of 18 for faster synthesis throughput
+      const BATCH_SIZE = 18;
       for (let i = 0; i < waveTasks.length; i += BATCH_SIZE) {
         const batch = waveTasks.slice(i, i + BATCH_SIZE);
         console.log(`[Pivot] Wave batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(waveTasks.length / BATCH_SIZE)}: ${batch.map(t => t.key).join(', ')}`);

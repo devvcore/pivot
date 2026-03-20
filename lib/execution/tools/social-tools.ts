@@ -29,10 +29,10 @@ async function checkConnection(orgId: string, provider: string): Promise<boolean
   }
 }
 
-function connectionRequiredResult(provider: string, displayName: string): ToolResult {
+function connectionRequiredResult(provider: string): ToolResult {
   return {
     success: false,
-    output: `⚠️ ${displayName} is not connected. The user needs to connect their ${displayName} account before you can post on their behalf.\n\nPlease ask the user to connect ${displayName} by clicking the ${displayName} logo in the connection panel, or direct them to Settings → Integrations → Connect ${displayName}.`,
+    output: `[connect:${provider}]`,
     cost: 0,
   };
 }
@@ -72,7 +72,7 @@ const postToLinkedIn: Tool = {
 
     const connected = await checkConnection(context.orgId, 'linkedin');
     if (!connected) {
-      return connectionRequiredResult('linkedin', 'LinkedIn');
+      return connectionRequiredResult('linkedin');
     }
 
     try {
@@ -134,7 +134,7 @@ const postToTwitter: Tool = {
 
     const connected = await checkConnection(context.orgId, 'twitter');
     if (!connected) {
-      return connectionRequiredResult('twitter', 'X (Twitter)');
+      return connectionRequiredResult('twitter');
     }
 
     try {
@@ -193,7 +193,7 @@ const postToInstagram: Tool = {
 
     const connected = await checkConnection(context.orgId, 'instagram');
     if (!connected) {
-      return connectionRequiredResult('instagram', 'Instagram');
+      return connectionRequiredResult('instagram');
     }
 
     try {
@@ -246,7 +246,7 @@ const postToFacebook: Tool = {
 
     const connected = await checkConnection(context.orgId, 'facebook');
     if (!connected) {
-      return connectionRequiredResult('facebook', 'Facebook');
+      return connectionRequiredResult('facebook');
     }
 
     try {
@@ -255,7 +255,7 @@ const postToFacebook: Tool = {
       let targetPageId: string | undefined = pageId;
       if (!targetPageId) {
         const pages = await getFacebookPages(context.orgId);
-        if (pages && Array.isArray(pages) && pages.length > 0) {
+        if (pages && Array.isArray(pages) && pages.length > 0 && pages[0]?.id) {
           targetPageId = pages[0].id;
         } else {
           return {
@@ -294,18 +294,19 @@ const checkServiceConnection: Tool = {
   name: 'check_connection',
   description: 'Check if a specific service (LinkedIn, Twitter, Instagram, Facebook, YouTube, GitHub, Gmail, Slack, etc.) is connected for this organization. Use this before attempting to post or take actions on external services.',
   parameters: {
-    service: {
+    provider: {
       type: 'string',
-      description: 'The service to check.',
-      enum: ['linkedin', 'twitter', 'instagram', 'facebook', 'youtube', 'github', 'gmail', 'slack', 'hubspot', 'jira', 'notion', 'google_sheets'],
+      description: 'The service/provider to check (e.g., "linkedin", "github", "gmail").',
+      enum: ['linkedin', 'twitter', 'instagram', 'facebook', 'youtube', 'github', 'gmail', 'slack', 'hubspot', 'jira', 'notion', 'google_sheets', 'google_calendar', 'stripe', 'salesforce', 'quickbooks'],
     },
   },
-  required: ['service'],
+  required: ['provider'],
   category: 'system',
   costTier: 'free',
 
   async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
-    const service = String(args.service ?? '');
+    // Accept both "provider" and "service" parameter names for compatibility
+    const service = String(args.provider ?? args.service ?? '');
     if (!service) {
       return { success: false, output: 'Service name is required.' };
     }
@@ -315,13 +316,13 @@ const checkServiceConnection: Tool = {
     if (connected) {
       return {
         success: true,
-        output: `✅ ${service} is connected and ready to use.`,
+        output: `✅ ${service} is connected and ready to use. You can call the ${service} action tools now.`,
         cost: 0,
       };
     } else {
       return {
         success: true,
-        output: `❌ ${service} is NOT connected. The user needs to connect ${service} before you can take actions on their behalf. Ask them to connect it via Settings → Integrations.`,
+        output: `${service} is not connected. Include [connect:${service}] in your response so the user can connect it. You should still CREATE your content/deliverable — just note that you can't publish it yet. The user gets the content regardless of connection status.`,
         cost: 0,
       };
     }

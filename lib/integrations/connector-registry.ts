@@ -57,6 +57,15 @@ const PROVIDER_ENV_KEYS: Record<IntegrationProvider, string[]> = {
   instagram: ['COMPOSIO_AUTH_INSTAGRAM'],
   facebook: ['COMPOSIO_AUTH_FACEBOOK'],
   youtube: ['COMPOSIO_AUTH_YOUTUBE'],
+  paypal: ['COMPOSIO_AUTH_PAYPAL'],
+  square: ['COMPOSIO_AUTH_SQUARE'],
+  xero: ['COMPOSIO_AUTH_XERO'],
+  freshbooks: ['COMPOSIO_AUTH_FRESHBOOKS'],
+  plaid: ['PLAID_CLIENT_ID', 'PLAID_SECRET'],
+  mercury: ['COMPOSIO_AUTH_MERCURY'],
+  wave: ['COMPOSIO_AUTH_WAVE'],
+  brex: ['COMPOSIO_AUTH_BREX'],
+  gusto: ['COMPOSIO_AUTH_GUSTO'],
 };
 
 // ─── Token Refresh ───────────────────────────────────────────────────────────
@@ -116,14 +125,20 @@ async function refreshAccessToken(
       return null;
     }
 
-    const data: OAuthTokenResponse = await res.json();
+    let data: OAuthTokenResponse;
+    try {
+      data = await res.json();
+    } catch {
+      console.error(`Token refresh: invalid JSON response for ${integration.provider}`);
+      return null;
+    }
     const expiresAt = new Date(
       Date.now() + data.expires_in * 1000,
     ).toISOString();
 
     // Update stored tokens
     const supabase = createAdminClient();
-    await supabase
+    const { error: updateError } = await supabase
       .from('integrations')
       .update({
         access_token: data.access_token,
@@ -132,6 +147,9 @@ async function refreshAccessToken(
         updated_at: new Date().toISOString(),
       })
       .eq('id', integration.id);
+    if (updateError) {
+      console.error(`Token refresh: DB update failed for ${integration.provider}:`, updateError.message);
+    }
 
     return { accessToken: data.access_token, expiresAt };
   } catch (err) {

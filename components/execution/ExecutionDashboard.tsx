@@ -44,31 +44,8 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { authFetch } from "@/lib/auth-fetch";
 import ConnectionPrompt from "./ConnectionPrompt";
-
-/**
- * Authenticated fetch: retries once after refreshing the Supabase session on 401.
- * This handles the common case where the JWT expires mid-session.
- * If refresh fails, redirects to login.
- */
-async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const res = await fetch(input, init);
-  if (res.status === 401) {
-    // Try refreshing the session
-    const sb = createClient();
-    const { error } = await sb.auth.refreshSession();
-    if (!error) {
-      // Retry the request with the refreshed session cookies
-      return fetch(input, init);
-    }
-    // Refresh failed — session is truly expired. Redirect to login.
-    if (typeof window !== 'undefined') {
-      window.location.href = '/?expired=1';
-    }
-  }
-  return res;
-}
 
 /* ── Agent name map ── */
 const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; color: string }> = {
@@ -81,25 +58,25 @@ const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; c
   codebot: { name: "CodeBot", emoji: "C", role: "Engineering & Code", color: "bg-orange-500" },
 };
 
-/* ── Detect "not connected" messages and extract the provider ── */
-function extractDisconnectedProvider(content: string): string | null {
-  if (!/not connected|Connect.*via Settings|Connect.*Integrations/i.test(content)) return null;
-  const map: [RegExp, string][] = [
-    [/gmail/i, "gmail"],
-    [/google calendar/i, "google_calendar"],
-    [/google sheets/i, "google_sheets"],
-    [/slack/i, "slack"],
-    [/linkedin/i, "linkedin"],
-    [/twitter/i, "twitter"],
-    [/github/i, "github"],
-    [/notion/i, "notion"],
-    [/jira/i, "jira"],
-    [/hubspot/i, "hubspot"],
-  ];
-  for (const [re, provider] of map) {
-    if (re.test(content)) return provider;
+/* ── Parse [connect:provider] markers from agent output ── */
+const CONNECT_MARKER_RE = /\[connect:([a-z_]+)\]/g;
+
+function splitConnectMarkers(content: string): Array<{ type: "text"; value: string } | { type: "connect"; provider: string }> {
+  const parts: Array<{ type: "text"; value: string } | { type: "connect"; provider: string }> = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(CONNECT_MARKER_RE.source, "g");
+  while ((match = re.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", value: content.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: "connect", provider: match[1] });
+    lastIndex = re.lastIndex;
   }
-  return null;
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", value: content.slice(lastIndex) });
+  }
+  return parts;
 }
 
 /* ── Chat message types ── */
@@ -455,7 +432,7 @@ export function ExecutionDashboard({
           break;
         case "tool_result":
           // Update the last tool_use message with the result
-          const lastTool = msgs.findLast(m => m.type === "tool_use" && m.toolName === (data.tool ?? ""));
+          const lastTool = [...msgs].reverse().find(m => m.type === "tool_use" && m.toolName === (data.tool ?? ""));
           if (lastTool) {
             lastTool.toolResult = data.outputSummary ?? "";
           }
@@ -667,11 +644,24 @@ export function ExecutionDashboard({
         // Process oldest first for chronological ordering
         const chronologicalTasks = [...tasks].reverse();
 
-        for (const task of chronologicalTasks) {
-          // Fetch full details + events
-          const detailRes = await authFetch(`/api/execution/tasks/${task.id}`);
-          if (!detailRes.ok) continue;
-          const { task: fullTask, events: dbEvents } = await detailRes.json();
+        // ── Parallel fetch: load all task details at once instead of sequential N+1 ──
+        const detailResults = await Promise.all(
+          chronologicalTasks.map(async (task) => {
+            try {
+              const detailRes = await authFetch(`/api/execution/tasks/${task.id}`);
+              if (!detailRes.ok) return null;
+              return await detailRes.json();
+            } catch { return null; }
+          })
+        );
+
+        // Build conversation map during the same loop (no second fetch round)
+        const convoMap = new Map<string, Conversation>();
+
+        for (let i = 0; i < chronologicalTasks.length; i++) {
+          const detail = detailResults[i];
+          if (!detail) continue;
+          const { task: fullTask, events: dbEvents } = detail;
 
           // Find session_start event for user message and batch context
           const sessionStartEvent = (dbEvents ?? []).find(
@@ -679,6 +669,18 @@ export function ExecutionDashboard({
           );
           const userMessage = sessionStartEvent?.data?.userMessage ?? fullTask.title;
           const batchId = sessionStartEvent?.data?.batchId;
+
+          // Build conversation map (reuse data from same fetch — no duplicate API calls)
+          const convoId = sessionStartEvent?.data?.conversationId || `legacy-${fullTask.id}`;
+          if (!convoMap.has(convoId)) {
+            convoMap.set(convoId, {
+              id: convoId,
+              title: (userMessage ?? fullTask.title ?? "").slice(0, 60),
+              timestamp: new Date(fullTask.created_at).getTime(),
+              taskIds: [],
+            });
+          }
+          convoMap.get(convoId)!.taskIds.push(fullTask.id);
 
           // For batch tasks, only show one user message per batch
           const shouldShowUserMsg = !batchId || !seenBatchIds.has(batchId);
@@ -758,28 +760,8 @@ export function ExecutionDashboard({
           // Resume polling for in-progress tasks
           if (!isTerminalStatus(fullTask.status)) {
             restoredActiveAgents.add(agentId);
-            // Use setTimeout to avoid calling pollTask during render
             setTimeout(() => pollTask(fullTask.id, agentId, userMsgId), 100);
           }
-        }
-
-        // Build conversation list from hydrated tasks
-        const convoMap = new Map<string, Conversation>();
-        for (const task of chronologicalTasks) {
-          const detailRes2 = await authFetch(`/api/execution/tasks/${task.id}`).catch(() => null);
-          const sessionEvt = (await detailRes2?.json().catch(() => null))?.events?.find(
-            (e: any) => e.event_type === "session_start"
-          );
-          const convoId = sessionEvt?.data?.conversationId || `legacy-${task.id}`;
-          if (!convoMap.has(convoId)) {
-            convoMap.set(convoId, {
-              id: convoId,
-              title: (sessionEvt?.data?.userMessage ?? task.title ?? "").slice(0, 60),
-              timestamp: new Date(task.created_at).getTime(),
-              taskIds: [],
-            });
-          }
-          convoMap.get(convoId)!.taskIds.push(task.id);
         }
         // Set the most recent conversation as current, rest as history
         const allConvos = [...convoMap.values()].sort((a, b) => b.timestamp - a.timestamp);
@@ -858,15 +840,25 @@ export function ExecutionDashboard({
     setCurrentConvoId(convo.id);
     setShowSidebar(false);
 
-    // Load the conversation's messages from task IDs
+    // Load the conversation's messages from task IDs (parallel fetch)
     const restoredMessages: ChatMessage[] = [];
     let restoredCostCents = 0;
 
-    for (const taskId of convo.taskIds) {
+    const detailResults = await Promise.all(
+      convo.taskIds.map(async (taskId) => {
+        try {
+          const detailRes = await authFetch(`/api/execution/tasks/${taskId}`);
+          if (!detailRes.ok) return null;
+          return await detailRes.json();
+        } catch { return null; }
+      })
+    );
+
+    for (let idx = 0; idx < convo.taskIds.length; idx++) {
+      const detail = detailResults[idx];
+      if (!detail) continue;
       try {
-        const detailRes = await authFetch(`/api/execution/tasks/${taskId}`);
-        if (!detailRes.ok) continue;
-        const { task: fullTask, events: dbEvents } = await detailRes.json();
+        const { task: fullTask, events: dbEvents } = detail;
 
         const sessionStartEvent = (dbEvents ?? []).find(
           (e: any) => e.event_type === "session_start"
@@ -1031,6 +1023,15 @@ export function ExecutionDashboard({
         }
       }
 
+      // ── Build conversation context for follow-up awareness ──
+      // Include enough of agent output so follow-ups like "post this to instagram" work
+      const recentContext = messages
+        .filter(m => m.type === "user" || m.type === "output")
+        .slice(-8)  // last 4 exchanges (user + agent)
+        .map(m => m.type === "user" ? `User: ${m.content?.slice(0, 400)}` : `Agent (${m.agentName ?? 'assistant'}): ${m.content?.slice(0, 3000)}`)
+        .join('\n');
+      const contextBlock = recentContext ? `\n\n--- CONVERSATION CONTEXT (previous messages in this session) ---\n${recentContext}\n--- END CONTEXT ---\nIMPORTANT: Use the context above. If the user references something from a previous message (e.g. "post this", "send that", "use those numbers"), find it in the context. Do NOT create new content if the user is asking you to USE existing content.` : '';
+
       const isMultiTask = detectMultiTask(msg);
 
       if (isMultiTask) {
@@ -1038,7 +1039,7 @@ export function ExecutionDashboard({
         const res = await authFetch("/api/execution/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orgId, message: msg, costCeiling: 0.50, conversationId: currentConvoId, ...(attachments.length > 0 && { attachments }) }),
+          body: JSON.stringify({ orgId, message: msg + contextBlock, costCeiling: 0.50, conversationId: currentConvoId, ...(attachments.length > 0 && { attachments }) }),
         });
 
         if (!res.ok) {
@@ -1077,13 +1078,16 @@ export function ExecutionDashboard({
           pollTask(task.id, resolvedAgent, userMsgId);
         }
       } else {
-        // ── Single task path (existing logic) ──
+        // ── Single task path ──
+        // Append conversation context to the task description so the agent has follow-up awareness
+        const taskTitle = msg || `Post uploaded image${attachments.length > 1 ? 's' : ''}`;
         const res = await authFetch("/api/execution/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             orgId,
-            title: msg || `Post uploaded image${attachments.length > 1 ? 's' : ''}`,
+            title: taskTitle,
+            description: contextBlock || undefined,
             agentId: "auto",
             priority: "medium",
             costCeiling: 0.50,
@@ -1449,17 +1453,8 @@ export function ExecutionDashboard({
               const agentId = msg.agentId ?? "strategist";
               const initial = AGENT_NAMES[agentId]?.emoji ?? "A";
               const agentColor = AGENT_NAMES[agentId]?.color ?? "bg-emerald-500";
-              const disconnectedProvider = extractDisconnectedProvider(msg.content);
-              return (
-                <div key={msg.id} className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-white`}>
-                      {initial}
-                    </div>
-                    <div className="max-w-[85%] min-w-0">
-                      <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
-                      <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                        <div className="prose prose-sm prose-zinc max-w-none
+              const contentParts = splitConnectMarkers(msg.content);
+              const proseClasses = `prose prose-sm prose-zinc max-w-none
                           prose-headings:text-zinc-900 prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
                           prose-h2:text-base prose-h3:text-sm
                           prose-p:text-sm prose-p:text-zinc-700 prose-p:leading-relaxed prose-p:my-1.5
@@ -1469,25 +1464,37 @@ export function ExecutionDashboard({
                           prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:before:content-none prose-code:after:content-none
                           prose-table:text-sm prose-th:text-left prose-th:text-zinc-600 prose-th:font-medium prose-th:pb-1 prose-td:py-1
                           prose-hr:my-3 prose-hr:border-zinc-200
-                          prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-                        ">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline`;
+              return (
+                <div key={msg.id} className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-white`}>
+                      {initial}
+                    </div>
+                    <div className="max-w-[85%] min-w-0">
+                      <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
+                      <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                        <div className={proseClasses}>
+                          {contentParts.map((part, idx) =>
+                            part.type === "text" ? (
+                              <ReactMarkdown key={idx}>{part.value}</ReactMarkdown>
+                            ) : (
+                              <div key={idx} className="my-2">
+                                <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
+                              </div>
+                            )
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
-                  {disconnectedProvider && (
-                    <div className="pl-9">
-                      <ConnectionPrompt orgId={orgId} filterServices={[disconnectedProvider]} compact={true} />
-                    </div>
-                  )}
                 </div>
               );
             }
 
             /* ── Error ── */
             if (msg.type === "error") {
-              const disconnectedProvider = extractDisconnectedProvider(msg.content);
+              const errorParts = splitConnectMarkers(msg.content);
               return (
                 <div key={msg.id} className="space-y-2">
                   <div className="flex items-start gap-2">
@@ -1495,14 +1502,17 @@ export function ExecutionDashboard({
                       <AlertCircle className="w-3.5 h-3.5 text-red-500" />
                     </div>
                     <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%]">
-                      <p className="text-sm text-red-700">{msg.content}</p>
+                      {errorParts.map((part, idx) =>
+                        part.type === "text" ? (
+                          <p key={idx} className="text-sm text-red-700">{part.value}</p>
+                        ) : (
+                          <div key={idx} className="my-2">
+                            <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
-                  {disconnectedProvider && (
-                    <div className="pl-9">
-                      <ConnectionPrompt orgId={orgId} filterServices={[disconnectedProvider]} compact={true} />
-                    </div>
-                  )}
                 </div>
               );
             }

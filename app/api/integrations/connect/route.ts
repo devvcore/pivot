@@ -17,7 +17,7 @@ const ALL_PROVIDERS: IntegrationProvider[] = [
   'quickbooks', 'salesforce', 'hubspot', 'stripe', 'jira', 'github',
   'google_analytics', 'google_sheets', 'notion', 'linear',
   'asana', 'google_calendar', 'microsoft_teams', 'airtable',
-  'linkedin', 'twitter',
+  'linkedin', 'twitter', 'instagram', 'facebook', 'youtube',
 ];
 
 // Providers that can use manual OAuth (have configs in oauth.ts)

@@ -30,7 +30,7 @@ async function checkGitHubConnection(orgId: string): Promise<boolean> {
 
 const GITHUB_NOT_CONNECTED: ToolResult = {
   success: false,
-  output: '⚠️ GitHub is not connected. The user needs to connect their GitHub account before you can take actions on their behalf.\n\nAsk the user to connect GitHub via Settings → Integrations → Connect GitHub.',
+  output: '[connect:github]',
   cost: 0,
 };
 

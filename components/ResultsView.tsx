@@ -77,11 +77,11 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 }
 
 function ConfidenceBanner({ provenance }: { provenance: NonNullable<MVPDeliverables["dataProvenance"]> }) {
-  const hasWarnings = provenance.warnings.length > 0;
-  const hasGaps = provenance.coverageGaps.length > 0;
+  const hasWarnings = (provenance.warnings?.length ?? 0) > 0;
+  const hasGaps = (provenance.coverageGaps?.length ?? 0) > 0;
   if (!hasWarnings && !hasGaps) return null;
 
-  const severity = provenance.warnings.length > 2 ? "high" : hasWarnings ? "medium" : "low";
+  const severity = (provenance.warnings?.length ?? 0) > 2 ? "high" : hasWarnings ? "medium" : "low";
   const colors = severity === "high"
     ? "bg-red-50 border-red-200 text-red-800"
     : severity === "medium"
@@ -98,7 +98,7 @@ function ConfidenceBanner({ provenance }: { provenance: NonNullable<MVPDeliverab
             : "Data coverage notes"}
         </span>
         <span className="text-[9px] font-mono opacity-60 ml-auto">
-          {provenance.financialFactCount} verified facts from {provenance.documentSources.length} documents
+          {provenance.financialFactCount} verified facts from {provenance.documentSources?.length ?? 0} document{(provenance.documentSources?.length ?? 0) !== 1 ? 's' : ''}{provenance.integrationProviderCount ? ` + ${provenance.integrationProviderCount} connected integration${provenance.integrationProviderCount !== 1 ? 's' : ''}` : ''}
         </span>
       </div>
       {hasWarnings && (
@@ -271,7 +271,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
   const rawWeeklyModel = (ci as any)?.weeklyProjections || (ci as any)?.weekly_model || [];
   // Normalize weekly projections: ensure numeric values, consistent field names, handle "null" strings
   const weeklyModel = (rawWeeklyModel as any[]).map((entry: any) => ({
-    week: typeof entry.week === "string" ? parseInt(entry.week, 10) : (entry.week ?? 0),
+    week: typeof entry.week === "string" ? (parseInt(entry.week, 10) || 0) : (entry.week ?? 0),
     label: entry.label ?? `Week ${entry.week ?? 0}`,
     openingBalance: parseFloat(entry.openingBalance ?? entry.opening_balance ?? 0) || 0,
     inflows: parseFloat(entry.inflows ?? 0) || 0,

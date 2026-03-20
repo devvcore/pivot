@@ -68,6 +68,7 @@ export interface DataProvenance {
   financialFactCount: number;        // how many facts came from docs
   warnings: string[];                // conflicts or suspicious values
   coverageGaps: string[];            // what data was missing
+  integrationProviderCount?: number; // how many integrations contributed data
 }
 
 export interface ClaimValidation {
@@ -119,6 +120,43 @@ export interface BusinessPacket {
   financialFacts?: FinancialFact[];    // verified facts from source documents
   identity?: CompanyIdentity;          // anchored company identity
   integrationData?: IntegrationContext; // data from connected tools (Composio)
+  orgIntelligence?: OrgIntelligence;   // AI-extracted people, roles, org structure from integrations
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Org Intelligence — AI-extracted from Slack, Gmail, GitHub, etc.
+// ─────────────────────────────────────────────────────────────────────────────
+export interface OrgIntelligence {
+  people: {
+    name: string;
+    email?: string;
+    role?: string;
+    department?: string;
+    isEmployee: boolean;
+    isClient: boolean;
+    isContractor: boolean;
+    communicationFrequency?: 'high' | 'medium' | 'low';
+    sources: string[]; // where we found them: 'slack', 'gmail', 'github', etc.
+  }[];
+  orgStructure?: {
+    departments: string[];
+    teamSize: number;
+    keyRoles: string[];
+    hierarchy?: string; // e.g. "flat", "hierarchical"
+  };
+  communicationPatterns?: {
+    primaryChannels: string[];
+    activeHours?: string;
+    meetingFrequency?: string;
+    collaborationStyle?: string;
+  };
+  clientRelationships?: {
+    name: string;
+    contactPerson?: string;
+    communicationFrequency?: string;
+    recentActivity?: string;
+  }[];
+  insights: string[]; // key business insights extracted from communication data
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ async function generateWithGemini(prompt: string): Promise<string> {
   const response = await ai.models.generateContent({
     model: FLASH_MODEL,
     contents: prompt,
-    config: { temperature: 0.3, maxOutputTokens: 4000 },
+    config: { temperature: 0.1, maxOutputTokens: 8192 },
   });
   return response.text ?? '';
 }
@@ -55,11 +55,15 @@ const queryAnalysis: Tool = {
 
     // List all available sections
     if (section === 'list_sections') {
-      return {
-        success: true,
-        output: `Available analysis sections (${availableSections.length}):\n${availableSections.map(s => `  - ${s}`).join('\n')}\n\nUse any of these section names with the query_analysis tool to retrieve data.`,
-        cost: 0,
-      };
+      const publicSections = availableSections.filter(s => !s.startsWith('__'));
+      const hasIntegration = !!deliverables.__integrationData;
+      const integrationProviders = (deliverables.__integrationProviders as string[]) ?? [];
+      let output = `Available analysis sections (${publicSections.length}):\n${publicSections.map(s => `  - ${s}`).join('\n')}`;
+      if (hasIntegration) {
+        output += `\n\n** LIVE INTEGRATION DATA also available from: ${integrationProviders.join(', ')} **\nUse query_analysis(section: "search", query: "...") to find integration metrics.`;
+      }
+      output += `\n\nUse any of these section names with the query_analysis tool to retrieve data.`;
+      return { success: true, output, cost: 0 };
     }
 
     // Search across all sections
@@ -71,13 +75,20 @@ const queryAnalysis: Tool = {
       // Gather summaries from all sections for Gemini to search through
       const sectionSummaries: string[] = [];
       for (const key of availableSections) {
+        if (key.startsWith('__')) continue; // skip internal keys
         const data = deliverables[key];
         const serialized = JSON.stringify(data);
-        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 500)}`);
+        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 2000)}`);
+      }
+
+      // Include integration data if present
+      const integrationData = deliverables.__integrationData;
+      if (integrationData && typeof integrationData === 'string') {
+        sectionSummaries.push(`[LIVE INTEGRATION DATA]:\n${(integrationData as string).slice(0, 4000)}`);
       }
 
       const answer = await generateWithGemini(
-        `You have access to a business analysis with these sections:\n\n${sectionSummaries.join('\n\n')}\n\nAnswer this question using the most relevant data: ${query}\n\nBe specific and cite which sections the data comes from.`
+        `You have access to a business analysis with these sections:\n\n${sectionSummaries.join('\n\n')}\n\nAnswer this question using the most relevant data: ${query}\n\nRULES:\n- Be specific and cite which sections the data comes from.\n- If integration data is available, prefer REAL metrics over estimates.\n- If the data does NOT contain the answer, say exactly: "This specific metric is not available in the analysis data." Do NOT invent, estimate, or fabricate numbers.\n- NEVER create fake expense breakdowns, revenue allocations, or financial categories that don't exist in the data.`
       );
 
       return {
@@ -121,7 +132,7 @@ const queryAnalysis: Tool = {
     if (query) {
       // Use Gemini to answer the specific question against this data
       const answer = await generateWithGemini(
-        `Given this business analysis data:\n\n${serialized.slice(0, 6000)}\n\nAnswer this question concisely: ${query}`
+        `Given this business analysis data:\n\n${serialized.slice(0, 24000)}\n\nAnswer this question concisely: ${query}\n\nIMPORTANT: Only use numbers and facts from the data above. If the answer is not in the data, say "This information is not available in the analysis data." NEVER invent numbers.`
       );
       return {
         success: true,
@@ -131,8 +142,8 @@ const queryAnalysis: Tool = {
     }
 
     // Return raw section data (truncated if very large)
-    const truncated = serialized.length > 4000
-      ? serialized.slice(0, 4000) + '\n\n[... truncated — ask a specific question for targeted data]'
+    const truncated = serialized.length > 24000
+      ? serialized.slice(0, 24000) + '\n\n[... truncated — ask a specific question for targeted data]'
       : serialized;
 
     return {
@@ -205,7 +216,7 @@ For line/bar/area: [{name: "label", value: number}, ...]
 For pie: [{name: "category", value: number}, ...]
 For radar: [{subject: "dimension", value: number, fullMark: 100}, ...]
 
-If the exact data is not available, create reasonable estimates based on the context.
+If the exact data is not in the analysis, return an empty array []. Do NOT invent or estimate values.
 Output ONLY the JSON array, no explanation.`;
 
       try {
@@ -215,14 +226,11 @@ Output ONLY the JSON array, no explanation.`;
         if (jsonMatch) {
           chartData = JSON.parse(jsonMatch[0]);
         }
-      } catch {
-        // Fallback to placeholder data
-        chartData = [
-          { name: 'Q1', value: 100 },
-          { name: 'Q2', value: 120 },
-          { name: 'Q3', value: 140 },
-          { name: 'Q4', value: 160 },
-        ];
+      } catch (err) {
+        return {
+          success: false,
+          output: `Could not generate chart data for "${metric}". The requested metric may not exist in the analysis data. Try a different metric or provide custom data points.`,
+        };
       }
     } else if (dataSource === 'projection') {
       // Generate projection data
@@ -239,11 +247,11 @@ Make the projections realistic based on any business context available.`;
         if (jsonMatch) {
           chartData = JSON.parse(jsonMatch[0]);
         }
-      } catch {
-        chartData = Array.from({ length: 12 }, (_, i) => ({
-          name: new Date(2026, i).toLocaleString('default', { month: 'short' }),
-          value: Math.round(10000 + i * 1000 + Math.random() * 500),
-        }));
+      } catch (err) {
+        return {
+          success: false,
+          output: `Could not generate projection data for "${metric}". Provide custom data points or try a different metric.`,
+        };
       }
     }
 
@@ -333,7 +341,7 @@ Include:
 7. **Recommendations** (prioritized action items)
 8. **Appendix** (methodology notes, data sources)
 
-Use concrete numbers from the analysis data. If exact data is not available, note it as "estimated" and provide reasonable ranges.`;
+Use concrete numbers from the analysis data. If a specific metric is NOT in the data, say "Data not available" — do NOT estimate or fabricate numbers. Only show numbers that exist in the business data above.`;
 
     const content = await generateWithGemini(prompt);
 
@@ -539,6 +547,123 @@ Note: Benchmarks are AI-generated estimates based on publicly available industry
   },
 };
 
+// ── Integration Data Tool ────────────────────────────────────────────────────
+
+const queryIntegrationData: Tool = {
+  name: 'query_integration_data',
+  description: 'Query LIVE data from connected integrations (Stripe, Slack, Gmail, etc.). Returns real data pulled from the user\'s connected services. Use this for real-time metrics like Stripe revenue, Slack channels, Gmail activity. Known record types: stripe: payments, customers, charges_overview, customers_overview; slack: channel_list, team_overview; gmail: emails, recent_activity, profile.',
+  parameters: {
+    provider: {
+      type: 'string',
+      description: 'Integration provider to query (e.g., "stripe", "slack", "gmail"). Leave empty to list all available providers.',
+    },
+    record_type: {
+      type: 'string',
+      description: 'Type of record to retrieve (e.g., "payments", "channel_list"). Leave empty to get all records for a provider (RECOMMENDED when unsure).',
+    },
+  },
+  required: [],
+  category: 'data',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const provider = args.provider ? String(args.provider).toLowerCase() : '';
+    const recordType = args.record_type ? String(args.record_type) : '';
+
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+
+      let query = supabase
+        .from('integration_data')
+        .select('provider, record_type, data, created_at')
+        .eq('org_id', context.orgId);
+
+      if (provider) query = query.eq('provider', provider);
+
+      const { data: records, error } = await query;
+
+      if (error) {
+        return { success: false, output: `Failed to query integration data: ${error.message}` };
+      }
+
+      if (!records || records.length === 0) {
+        return {
+          success: false,
+          output: provider
+            ? `No live data found for "${provider}". The service may not be connected or no data has been synced yet. Use check_connection to verify.`
+            : 'No integration data available. No services are connected yet.',
+        };
+      }
+
+      // Filter by record type if specified (with fuzzy fallback)
+      let filtered = records;
+      if (recordType) {
+        const exact = records.filter(r => r.record_type === recordType);
+        if (exact.length > 0) {
+          // Also include overview/summary records for context
+          const overviewRecords = records.filter(r =>
+            r.provider === exact[0].provider &&
+            r.record_type !== recordType &&
+            (r.record_type.includes('overview') || r.record_type.includes('summary') || r.record_type.includes('profile'))
+          );
+          filtered = [...overviewRecords, ...exact];
+        }
+        // If no exact match, keep all records for the provider
+      }
+
+      // Format output - intelligently summarize large datasets
+      const providers = [...new Set(filtered.map(r => r.provider))];
+      let output = `Live integration data from: ${providers.join(', ')}\n`;
+      output += `Available record types: ${records.map(r => r.provider + '/' + r.record_type).join(', ')}\n\n`;
+
+      for (const record of filtered) {
+        let rawData: Record<string, unknown>;
+        try {
+          const parsed = typeof record.data === 'string' ? JSON.parse(record.data) : record.data;
+          rawData = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed as Record<string, unknown> : { data: parsed };
+        } catch {
+          rawData = { data: record.data };
+        }
+        output += `## ${record.provider} / ${record.record_type}\n`;
+        output += `Synced: ${record.created_at}\n`;
+
+        // For large array datasets (payments, customers), provide structured summary
+        const innerWrapper = rawData.data as Record<string, unknown> | undefined;
+        const innerData = (innerWrapper as Record<string, unknown>)?.data ?? rawData.data;
+        if (Array.isArray(innerData) && innerData.length > 5) {
+          // Summarize: count, first/last items, key aggregates
+          output += `Total records: ${innerData.length}\n\n`;
+          // Show all items but limit field depth
+          // Show all fields but truncate deeply nested objects to keep output manageable
+          const summarized = innerData.map((item: Record<string, unknown>) => {
+            const slim: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(item)) {
+              // Skip deeply nested objects (metadata, internal fields) but keep everything else
+              if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+                slim[k] = '[object]';
+              } else {
+                slim[k] = v;
+              }
+            }
+            return slim;
+          });
+          const summaryStr = JSON.stringify(summarized, null, 1);
+          output += summaryStr.slice(0, 8000) + (summaryStr.length > 8000 ? '\n[... more records available]' : '') + '\n\n';
+        } else {
+          // Small data: show full
+          const dataStr = JSON.stringify(rawData, null, 1);
+          output += dataStr.slice(0, 5000) + (dataStr.length > 5000 ? '\n[... truncated]' : '') + '\n\n';
+        }
+      }
+
+      return { success: true, output };
+    } catch (err) {
+      return { success: false, output: `Integration query error: ${err instanceof Error ? err.message : 'unknown error'}` };
+    }
+  },
+};
+
 // ── Register ──────────────────────────────────────────────────────────────────
 
 export const dataTools: Tool[] = [
@@ -547,5 +672,6 @@ export const dataTools: Tool[] = [
   createReport,
   trendAnalysis,
   benchmarkComparison,
+  queryIntegrationData,
 ];
 registerTools(dataTools);

@@ -1,6 +1,6 @@
 "use client";
 
-import { formatLabel } from "@/lib/utils";
+import { formatLabel, humanizeValue } from "@/lib/utils";
 
 interface KeyValueGridProps {
   data: Record<string, unknown>;
@@ -16,7 +16,7 @@ function formatValue(val: unknown): string {
     return val.toLocaleString();
   }
   if (typeof val === "boolean") return val ? "Yes" : "No";
-  return String(val);
+  return humanizeValue(String(val));
 }
 
 // formatLabel imported from @/lib/utils
