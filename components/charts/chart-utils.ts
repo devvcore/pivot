@@ -27,8 +27,9 @@ export const EFFORT_COLORS: Record<string, string> = {
 };
 
 export const PIE_PALETTE = [
-  "#18181b", "#3b82f6", "#f59e0b", "#ef4444",
-  "#22c55e", "#8b5cf6", "#ec4899", "#71717a",
+  "#3b82f6", "#18181b", "#f59e0b", "#ef4444",
+  "#22c55e", "#8b5cf6", "#ec4899", "#06b6d4",
+  "#f97316", "#6366f1", "#14b8a6", "#e11d48",
 ];
 
 export function parseDollarString(s: string): number {
@@ -54,6 +55,21 @@ export function formatDollar(value: number): string {
 
 export const TOOLTIP_STYLE = {
   fontSize: 11,
-  borderRadius: 8,
+  borderRadius: 10,
   border: "1px solid #e4e4e7",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  padding: "8px 12px",
 };
+
+/** Standard chart margins that prevent label cutoff */
+export const CHART_MARGINS = {
+  standard: { top: 8, right: 12, bottom: 16, left: 8 },
+  withYLabel: { top: 8, right: 12, bottom: 16, left: 20 },
+  horizontal: { top: 8, right: 20, bottom: 8, left: 12 },
+};
+
+/** Standard axis tick style */
+export const AXIS_TICK = { fontSize: 10, fill: "#71717a" };
+
+/** Standard gridline style */
+export const GRID_STYLE = { strokeDasharray: "3 3", stroke: "#e4e4e7" };

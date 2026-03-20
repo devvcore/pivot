@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { GraduationCap, Send, Loader2, X, MessageCircle, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import ReactMarkdown from "react-markdown";
 import type { NavigateAction } from "./AgentChat";
+import { ProjectionChart, parseTextToChartData } from "./charts/ProjectionChart";
 import ConnectionPrompt from "./execution/ConnectionPrompt";
 
 interface CoachChatProps {
@@ -17,6 +19,44 @@ interface CoachChatProps {
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+/** Extract projection JSON from <!--PROJECTION:{...}--> markers */
+function extractProjection(content: string): { text: string; projection: any | null } {
+  const match = content.match(/<!--PROJECTION:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      const projection = JSON.parse(match[1]);
+      const text = content.replace(/<!--PROJECTION:[\s\S]*?-->/, "").trim();
+      return { text, projection };
+    } catch {
+      return { text: content, projection: null };
+    }
+  }
+  // Fallback: detect text-based projections
+  const hasKeywords = /(?:projection|forecast|scenario|week\s*\d|month\s*\d|opening\s*balance|closing\s*balance)/i.test(content);
+  if (hasKeywords) {
+    const parsed = parseTextToChartData(content);
+    if (parsed && parsed.length >= 2) {
+      const first = parsed[0].baseline;
+      const last = parsed[parsed.length - 1].projected;
+      return {
+        text: content,
+        projection: {
+          title: "Projection",
+          subtitle: "Parsed from analysis",
+          dataPoints: parsed,
+          metrics: {
+            currentValue: first,
+            projectedValue: last,
+            changePercent: first > 0 ? Math.round(((last - first) / first) * 100) : 0,
+            timeframe: `${parsed.length} periods`,
+          },
+        },
+      };
+    }
+  }
+  return { text: content, projection: null };
 }
 
 /** Extract navigation JSON from <!--NAVIGATE:{...}--> markers in message text */
@@ -198,15 +238,21 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
               )}
 
               {messages.map((msg, i) => {
-                const { text: displayText, navigation: navAction } = msg.role === "assistant"
+                // Parse navigation + projection markers from assistant messages
+                const isAssistant = msg.role === "assistant";
+                const { text: navText, navigation: navAction } = isAssistant
                   ? extractNavigation(msg.content)
                   : { text: msg.content, navigation: null };
+                const { text: displayText, projection } = isAssistant
+                  ? extractProjection(navText)
+                  : { text: navText, projection: null };
+
                 return (
                   <div
                     key={i}
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    <div className="max-w-[85%]">
+                    <div className={`${msg.role === "user" ? "max-w-[85%]" : "max-w-[95%] w-full"}`}>
                       <div
                         className={`rounded-2xl px-3.5 py-2.5 text-sm ${
                           msg.role === "user"
@@ -214,8 +260,21 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
                             : "bg-zinc-100 text-zinc-800"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
+                        {isAssistant ? (
+                          <div className="prose prose-sm prose-zinc max-w-none [&_p]:mb-1.5 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mt-2 [&_ul]:my-1 [&_li]:my-0 [&_table]:text-xs">
+                            <ReactMarkdown>{displayText}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
+                        )}
                       </div>
+                      {/* Interactive projection chart */}
+                      {projection && (
+                        <div className="mt-2">
+                          <ProjectionChart data={projection} />
+                        </div>
+                      )}
+                      {/* Navigation button */}
                       {navAction && onNavigate && (
                         <button
                           onClick={() => onNavigate(navAction)}
@@ -225,7 +284,8 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
                           Go to {navAction.label}
                         </button>
                       )}
-                      {msg.role === "assistant" && (() => {
+                      {/* Connection prompt for disconnected services */}
+                      {isAssistant && (() => {
                         const provider = extractDisconnectedProvider(msg.content);
                         if (!provider) return null;
                         return (

@@ -293,7 +293,7 @@ function DraggableDot(props: any) {
       {/* Visible dot */}
       <circle
         cx={cx} cy={cy}
-        r={dragging ? 6 : hovered && isFuture ? 5 : 3}
+        r={dragging ? 7 : hovered && isFuture ? 6 : 4}
         fill={dragging ? "#1d4ed8" : CHART_COLORS.accent}
         stroke="#fff"
         strokeWidth={2}
@@ -650,9 +650,9 @@ export function ProjectionChart({ data, narrative }: Props) {
       )}
 
       {/* Chart */}
-      <div className="px-2">
-        <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={animatedPoints} margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
+      <div className="px-3">
+        <ResponsiveContainer width="100%" height={240}>
+          <ComposedChart data={animatedPoints} margin={{ left: 8, right: 12, bottom: 16, top: 8 }}>
             <defs>
               <linearGradient id="scenarioBand" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.08} />
@@ -664,7 +664,7 @@ export function ProjectionChart({ data, narrative }: Props) {
               </linearGradient>
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
             <XAxis
               dataKey="month"
               tick={{ fontSize: 9, fill: "#a1a1aa" }}

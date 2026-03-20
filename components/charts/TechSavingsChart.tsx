@@ -53,10 +53,10 @@ export function TechSavingsChart({ recommendations, overlay, onDismissOverlay }:
         <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
           Potential Savings by Migration
         </h3>
-        <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
-          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-            <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
-            <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
+        <ResponsiveContainer width="100%" height={Math.max(220, data.length * 44)}>
+          <BarChart data={data} layout="vertical" margin={{ left: 12, right: 20, top: 8, bottom: 8 }}>
+            <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10, fill: "#52525b" }} tickFormatter={(v: string) => v.length > 20 ? v.slice(0, 18) + "…" : v} axisLine={false} tickLine={false} />
             <Tooltip
               formatter={(v) => formatDollar(Number(v ?? 0))}
               contentStyle={TOOLTIP_STYLE}

@@ -41,10 +41,10 @@ export default function WaterfallChart({ items, nameKey, valueKey }: WaterfallCh
   });
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-        <XAxis dataKey="name" fontSize={11} tick={{ fill: "#71717a" }} angle={-30} textAnchor="end" height={60} />
-        <YAxis tickFormatter={formatDollar} fontSize={11} tick={{ fill: "#71717a" }} />
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#52525b" }} angle={-25} textAnchor="end" height={70} axisLine={{ stroke: "#e4e4e7" }} tickLine={false} />
+        <YAxis tickFormatter={formatDollar} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
         <Tooltip formatter={((v: number) => formatDollar(v)) as any} contentStyle={TOOLTIP_STYLE} />
         <ReferenceLine y={0} stroke="#d4d4d8" />
         <Bar dataKey="start" stackId="stack" fill="transparent" />

@@ -32,15 +32,15 @@ export default function FunnelChart({ stages, nameKey, valueKey }: FunnelChartPr
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
-      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 40, top: 5, bottom: 5 }}>
-        <XAxis type="number" fontSize={11} tick={{ fill: "#71717a" }} />
-        <YAxis type="category" dataKey="name" width={180} fontSize={10} tick={{ fill: "#71717a" }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
+    <ResponsiveContainer width="100%" height={Math.max(220, data.length * 44)}>
+      <BarChart data={data} layout="vertical" margin={{ left: 12, right: 48, top: 8, bottom: 8 }}>
+        <XAxis type="number" tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+        <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10, fill: "#52525b" }} tickFormatter={(v: string) => v.length > 20 ? v.slice(0, 18) + "…" : v} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-          <LabelList dataKey="value" position="right" fontSize={11} fill="#71717a" />
+        <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
+          <LabelList dataKey="value" position="right" fontSize={11} fill="#52525b" fontWeight={600} />
           {data.map((_, i) => (
-            <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} opacity={1 - i * 0.08} />
+            <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} opacity={1 - i * 0.06} />
           ))}
         </Bar>
       </BarChart>

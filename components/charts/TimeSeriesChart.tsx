@@ -36,11 +36,11 @@ export default function TimeSeriesChart({ data, xKey, yKeys, isCurrency }: TimeS
   if (yks.length === 0) return null;
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <AreaChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-        <XAxis dataKey={xk} fontSize={11} tick={{ fill: "#71717a" }} />
-        <YAxis tickFormatter={isCurrency ? formatDollar : undefined} fontSize={11} tick={{ fill: "#71717a" }} />
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 16, left: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+        <XAxis dataKey={xk} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={{ stroke: "#e4e4e7" }} tickLine={false} />
+        <YAxis tickFormatter={isCurrency ? formatDollar : undefined} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
         <Tooltip
           formatter={((v: number) => isCurrency ? formatDollar(v) : v.toLocaleString()) as any}
           contentStyle={TOOLTIP_STYLE}

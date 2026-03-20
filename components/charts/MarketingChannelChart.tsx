@@ -58,10 +58,10 @@ export function MarketingChannelChart({ channels, socialStrategy, overlay, onDis
             <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
               Recommended Channels (by priority)
             </h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={channelData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={Math.max(220, channelData.length * 40)}>
+              <BarChart data={channelData} layout="vertical" margin={{ left: 12, right: 20, top: 8, bottom: 8 }}>
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
+                <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10, fill: "#52525b" }} tickFormatter={(v: string) => v.length > 20 ? v.slice(0, 18) + "…" : v} axisLine={false} tickLine={false} />
                 <Tooltip
                   formatter={(_v, _name, props) =>
                     [`Effort: ${(props?.payload as Record<string, unknown>)?.effort ?? ""}`, "Priority"]

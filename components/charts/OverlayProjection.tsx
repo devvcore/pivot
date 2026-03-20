@@ -75,14 +75,14 @@ export function OverlayProjection({ data, onDismiss }: OverlayProjectionProps) {
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={160}>
-        <ComposedChart data={chartPoints} margin={{ left: 5, right: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
-          <XAxis dataKey="month" tick={{ fontSize: 9 }} tickFormatter={(v) => String(v).split(" ")[0]?.slice(0, 3) ?? v} />
-          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => formatDollar(v)} />
+      <ResponsiveContainer width="100%" height={180}>
+        <ComposedChart data={chartPoints} margin={{ top: 8, right: 12, bottom: 16, left: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+          <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#a1a1aa" }} tickFormatter={(v) => String(v).split(" ")[0]?.slice(0, 3) ?? v} axisLine={{ stroke: "#e4e4e7" }} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "#a1a1aa" }} tickFormatter={(v) => formatDollar(v)} axisLine={false} tickLine={false} />
           <Tooltip formatter={(v) => formatDollar(Number(v ?? 0))} contentStyle={TOOLTIP_STYLE} />
           <Area type="monotone" dataKey="baseline" fill="#f4f4f5" stroke={CHART_COLORS.muted} strokeDasharray="5 5" fillOpacity={0.3} name="Baseline" />
-          <Line type="monotone" dataKey="projected" stroke={CHART_COLORS.accent} strokeWidth={2} dot={{ r: 2, fill: CHART_COLORS.accent }} name="Projected" />
+          <Line type="monotone" dataKey="projected" stroke={CHART_COLORS.accent} strokeWidth={2.5} dot={{ r: 3.5, fill: CHART_COLORS.accent, stroke: "#fff", strokeWidth: 1.5 }} name="Projected" />
         </ComposedChart>
       </ResponsiveContainer>
       {(data.insight || data.totalImpact) && (

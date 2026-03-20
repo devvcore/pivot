@@ -33,12 +33,12 @@ export default function RankedBarsChart({ items, nameKey, valueKey, isCurrency }
   })).sort((a, b) => b.value - a.value);
 
   return (
-    <ResponsiveContainer width="100%" height={Math.max(200, data.length * 36)}>
-      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-        <XAxis type="number" tickFormatter={isCurrency ? formatDollar : undefined} fontSize={11} />
-        <YAxis type="category" dataKey="name" width={180} fontSize={10} tick={{ fill: "#71717a" }} tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v} />
+    <ResponsiveContainer width="100%" height={Math.max(220, data.length * 40)}>
+      <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20, top: 8, bottom: 8 }}>
+        <XAxis type="number" tickFormatter={isCurrency ? formatDollar : undefined} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+        <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 10, fill: "#52525b" }} tickFormatter={(v: string) => v.length > 22 ? v.slice(0, 20) + "…" : v} axisLine={false} tickLine={false} />
         <Tooltip formatter={((v: number) => isCurrency ? formatDollar(v) : v.toLocaleString()) as any} contentStyle={TOOLTIP_STYLE} />
-        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+        <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
           {data.map((_, i) => (
             <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
           ))}

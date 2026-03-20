@@ -3,7 +3,7 @@
 
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
-  ComposedChart, Bar, Line,
+  ComposedChart, Bar, Line, CartesianGrid,
 } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, formatDollar } from "./chart-utils";
 
@@ -85,10 +85,11 @@ export function CashFlowChart({ projections, overlay }: Props) {
           Cash Balance Trend
           {overlay && <span className="text-blue-500 ml-2">+ Projection</span>}
         </h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={mergedData} margin={{ left: 5, right: 5 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-            <YAxis tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
+        <ResponsiveContainer width="100%" height={240}>
+          <ComposedChart data={mergedData} margin={{ top: 8, right: 12, bottom: 16, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={{ stroke: "#e4e4e7" }} tickLine={false} />
+            <YAxis tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <Tooltip
               formatter={(v, name) => [formatDollar(Number(v ?? 0)), String(name)]}
               contentStyle={TOOLTIP_STYLE}
@@ -110,7 +111,7 @@ export function CashFlowChart({ projections, overlay }: Props) {
                 stroke="#3b82f6"
                 strokeWidth={2}
                 strokeDasharray="6 3"
-                dot={{ r: 2, fill: "#3b82f6" }}
+                dot={{ r: 3, fill: "#3b82f6", stroke: "#fff", strokeWidth: 1.5 }}
                 name="Projected"
                 connectNulls
               />
@@ -124,10 +125,11 @@ export function CashFlowChart({ projections, overlay }: Props) {
         <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
           Inflows vs Outflows
         </h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={mergedData} margin={{ left: 5, right: 5 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-            <YAxis tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 9 }} />
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={mergedData} margin={{ top: 8, right: 12, bottom: 16, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={{ stroke: "#e4e4e7" }} tickLine={false} />
+            <YAxis tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
             <Tooltip
               formatter={(v, name) => [formatDollar(Number(v ?? 0)), String(name)]}
               contentStyle={TOOLTIP_STYLE}

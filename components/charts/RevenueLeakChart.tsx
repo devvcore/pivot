@@ -56,10 +56,10 @@ export function RevenueLeakChart({ items, overlay, onDismissOverlay }: Props) {
           <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] mb-4">
             Revenue Leaks by Amount
           </h3>
-          <ResponsiveContainer width="100%" height={Math.max(220, barData.length * 36)}>
-            <BarChart data={barData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
-              <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 10 }} />
-              <YAxis type="category" dataKey="name" width={200} tick={{ fontSize: 9 }} tickFormatter={(v: string) => v.length > 30 ? v.slice(0, 28) + "…" : v} />
+          <ResponsiveContainer width="100%" height={Math.max(240, barData.length * 40)}>
+            <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 20, top: 8, bottom: 8 }}>
+              <XAxis type="number" tickFormatter={(v) => formatDollar(v)} tick={{ fontSize: 10, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 10, fill: "#52525b" }} tickFormatter={(v: string) => v.length > 24 ? v.slice(0, 22) + "…" : v} axisLine={false} tickLine={false} />
               <Tooltip
                 formatter={(v) => formatDollar(Number(v ?? 0))}
                 contentStyle={TOOLTIP_STYLE}
