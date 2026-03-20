@@ -1416,7 +1416,7 @@ export function ExecutionDashboard({
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 font-sans flex">
       {/* ── Sidebar (conversation history) ── */}
       {showSidebar && (
-        <div className="w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-50 shadow-lg">
+        <div className="w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-50">
           <div className="p-3 border-b border-zinc-100">
             <button
               onClick={handleNewChat}
@@ -2089,7 +2089,7 @@ export function ExecutionDashboard({
               e.stopPropagation();
               addFiles(e.dataTransfer.files);
             }}
-            className="flex items-end gap-2 bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/5 px-3 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
+            className="flex items-end gap-2 bg-white border border-zinc-200 rounded-xl shadow-sm px-3 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
           >
             {/* Hidden file input */}
             <input

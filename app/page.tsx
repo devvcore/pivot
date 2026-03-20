@@ -207,6 +207,13 @@ export default function Home() {
       orgName={user?.organizationName || "Pivot"}
       orgLogoUrl={orgLogoUrl}
     >
+      {showOnboarding && user && (
+        <OnboardingWizard
+          orgId={user.organizationId}
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
+
       <AnimatePresence mode="wait">
         <motion.div
           key={view + (runId || "") + user.id}

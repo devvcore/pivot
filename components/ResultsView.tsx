@@ -45,7 +45,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "dashboard",
     label: "Health & Overview",
     icon: TrendingUp,
-    color: "from-emerald-500 to-teal-600",
+    color: "bg-emerald-600",
     borderColor: "border-emerald-200 hover:border-emerald-400",
     getSummary: (d) => {
       const hs = d.healthScore as any;
@@ -60,7 +60,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "financial",
     label: "Financial Intelligence",
     icon: DollarSign,
-    color: "from-blue-500 to-indigo-600",
+    color: "bg-blue-600",
     borderColor: "border-blue-200 hover:border-blue-400",
     getSummary: (d) => {
       const ci = d.cashIntelligence as any;
@@ -73,7 +73,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "customers",
     label: "Customers & Revenue",
     icon: Users,
-    color: "from-violet-500 to-purple-600",
+    color: "bg-violet-600",
     borderColor: "border-violet-200 hover:border-violet-400",
     getSummary: (d) => {
       const arc = d.atRiskCustomers as any;
@@ -87,7 +87,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "market",
     label: "Market & Competition",
     icon: Target,
-    color: "from-amber-500 to-orange-600",
+    color: "bg-amber-600",
     borderColor: "border-amber-200 hover:border-amber-400",
     getSummary: (d) => {
       const comp = d.competitorAnalysis as any;
@@ -101,7 +101,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "growth",
     label: "Growth & Strategy",
     icon: Sparkles,
-    color: "from-rose-500 to-pink-600",
+    color: "bg-rose-600",
     borderColor: "border-rose-200 hover:border-rose-400",
     getSummary: (d) => {
       const ap = d.actionPlan as any;
@@ -115,7 +115,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "marketing",
     label: "Marketing & Brand",
     icon: Megaphone,
-    color: "from-cyan-500 to-sky-600",
+    color: "bg-cyan-600",
     borderColor: "border-cyan-200 hover:border-cyan-400",
     getSummary: (d) => {
       const bh = d.brandHealth as any;
@@ -128,7 +128,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "operations",
     label: "Operations & Team",
     icon: Zap,
-    color: "from-lime-500 to-green-600",
+    color: "bg-lime-600",
     borderColor: "border-lime-200 hover:border-lime-400",
     getSummary: (d) => {
       const hp = d.hiringPlan as any;
@@ -142,7 +142,7 @@ const CATEGORIES: CategoryDef[] = [
     chapterId: "risk",
     label: "Risk & Compliance",
     icon: ShieldAlert,
-    color: "from-red-500 to-rose-600",
+    color: "bg-red-600",
     borderColor: "border-red-200 hover:border-red-400",
     getSummary: (d) => {
       const ir = d.issuesRegister as any;
