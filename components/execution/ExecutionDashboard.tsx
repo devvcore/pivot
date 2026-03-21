@@ -275,6 +275,19 @@ function ThinkingSteps({ steps, isComplete }: { steps: ChatMessage[]; isComplete
 /* ── Parse [connect:provider] markers from agent output ── */
 const CONNECT_MARKER_RE = /\[connect:([a-z_]+)\]/g;
 
+/** Extract and render data:image URLs as actual images */
+function extractInlineImages(content: string): { text: string; images: string[] } {
+  const imageRe = /data:image\/[a-z]+;base64,[A-Za-z0-9+/=]{100,}/g;
+  const images: string[] = [];
+  const text = content.replace(imageRe, (match) => {
+    images.push(match);
+    return ''; // Remove from text
+  });
+  // Also clean up "Image Data URL:" labels that precede the data URL
+  const cleaned = text.replace(/Image Data URL:\s*/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+  return { text: cleaned, images };
+}
+
 function splitConnectMarkers(content: string): Array<{ type: "text"; value: string } | { type: "connect"; provider: string }> {
   const parts: Array<{ type: "text"; value: string } | { type: "connect"; provider: string }> = [];
   let lastIndex = 0;
@@ -1999,7 +2012,9 @@ export function ExecutionDashboard({
               const agentRole = AGENT_NAMES[agentId]?.role ?? "Agent";
 
               // Extract source citations and clean the content
-              const { cleanContent, sources } = extractSourceCitations(msg.content);
+              // Extract inline images (data:image/... URLs) and render them as actual images
+              const { text: textWithoutImages, images: inlineImages } = extractInlineImages(msg.content);
+              const { cleanContent, sources } = extractSourceCitations(textWithoutImages);
 
               // Apply connect marker parsing on the citation-cleaned content
               const contentParts = splitConnectMarkers(cleanContent);
@@ -2066,6 +2081,14 @@ export function ExecutionDashboard({
                             {/* Sources panel inside document */}
                             <SourcesPanel sources={sources} />
                           </div>
+                          {/* Generated images */}
+                          {inlineImages.length > 0 && (
+                            <div className="px-4 py-3 space-y-2">
+                              {inlineImages.map((src, imgIdx) => (
+                                <img key={imgIdx} src={src} alt="Generated content" className="w-full max-w-md rounded-lg border border-zinc-200" />
+                              ))}
+                            </div>
+                          )}
                           {/* Download bar */}
                           <div className="px-4 py-2 bg-zinc-50/80 border-t border-zinc-100">
                             <ArtifactDownloadBar content={msg.content} title={docTitle} />
@@ -2085,6 +2108,14 @@ export function ExecutionDashboard({
                               )
                             )}
                           </div>
+                          {/* Generated images */}
+                          {inlineImages.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {inlineImages.map((src, imgIdx) => (
+                                <img key={imgIdx} src={src} alt="Generated content" className="w-full max-w-md rounded-lg border border-zinc-200" />
+                              ))}
+                            </div>
+                          )}
                           {/* Sources panel inside bubble */}
                           <SourcesPanel sources={sources} />
                           <ArtifactDownloadBar content={msg.content} title={docTitle} />

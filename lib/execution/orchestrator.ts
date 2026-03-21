@@ -917,6 +917,14 @@ Output ONLY a JSON array of strings, no other text. Example:
         // Record for procedure learning
         toolCallHistory.push({ name, args: args as Record<string, unknown> });
 
+        // Emit human-readable status message (Manus-style)
+        const statusMsg = this.getToolStatusMessage(name, args as Record<string, unknown>);
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'status', {
+          message: statusMsg,
+          tool: name,
+          phase: 'working',
+        });
+
         // Execute the tool
         let toolResult: ToolResult;
         try {
@@ -949,6 +957,15 @@ Output ONLY a JSON array of strings, no other text. Example:
           success: toolResult.success,
           artifactCount: toolResult.artifacts?.length ?? 0,
           round,
+        });
+
+        // Emit completion status (Manus-style)
+        const doneMsg = this.getToolDoneMessage(name, toolResult.success, outputStr);
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'status', {
+          message: doneMsg,
+          tool: name,
+          phase: 'done',
+          success: toolResult.success,
         });
 
         // Annotate failed tool results so agent knows to try alternatives
@@ -1883,6 +1900,69 @@ Example: research task needing both web search and Stripe data:
     } catch {
       return null;
     }
+  }
+
+  /** Human-readable status message for tool execution start (Manus-style) */
+  private getToolStatusMessage(toolName: string, args: Record<string, unknown>): string {
+    const query = String(args.query ?? args.search ?? args.text ?? args.title ?? '').slice(0, 60);
+    const provider = String(args.provider ?? '');
+    const to = String(args.to ?? args.email ?? '');
+    const url = String(args.url ?? '');
+
+    const messages: Record<string, string> = {
+      'query_analysis': `Searching business data${query ? `: "${query}"` : ''}...`,
+      'query_integration_data': `Pulling live data${provider ? ` from ${provider}` : ''}...`,
+      'web_search': `Searching the web${query ? ` for "${query}"` : ''}...`,
+      'scrape_website': `Reading ${url || 'website'}...`,
+      'send_email': `Sending email${to ? ` to ${to}` : ''}...`,
+      'send_slack_message': 'Sending Slack message...',
+      'post_to_linkedin': 'Posting to LinkedIn...',
+      'post_to_twitter': 'Posting to Twitter...',
+      'post_to_instagram': 'Posting to Instagram...',
+      'post_to_facebook': 'Posting to Facebook...',
+      'post_to_tiktok': 'Posting to TikTok...',
+      'generate_media': 'Creating image...',
+      'generate_image_batch': 'Generating images...',
+      'research_brand': `Researching brand${url ? ` at ${url}` : ''}...`,
+      'get_social_analytics': `Analyzing social media${provider ? ` (${provider})` : ''} engagement...`,
+      'search_crm': `Searching CRM${query ? ` for "${query}"` : ''}...`,
+      'get_contact_details': 'Loading contact details...',
+      'update_contact_stage': 'Updating pipeline...',
+      'get_pipeline_summary': 'Loading pipeline overview...',
+      'suggest_followups': 'Finding follow-up opportunities...',
+      'create_jira_ticket': 'Creating Jira ticket...',
+      'github_create_issue': 'Creating GitHub issue...',
+      'write_to_google_sheets': 'Writing to Google Sheets...',
+      'create_slide_deck': 'Building presentation...',
+      'create_pivot_ticket': 'Creating ticket...',
+      'list_pivot_tickets': 'Loading project board...',
+    };
+
+    return messages[toolName] ?? `Working on ${toolName.replace(/_/g, ' ')}...`;
+  }
+
+  /** Human-readable status message for tool completion (Manus-style) */
+  private getToolDoneMessage(toolName: string, success: boolean, output: string): string {
+    if (!success) return `Couldn't complete ${toolName.replace(/_/g, ' ')}`;
+
+    // Extract key info from output for rich completion messages
+    const lines = output.slice(0, 500);
+    if (toolName === 'query_integration_data' && lines.includes('customers')) {
+      const match = lines.match(/(\d+)\s*customers/);
+      return match ? `Found ${match[1]} customers` : 'Data loaded';
+    }
+    if (toolName === 'web_search') return 'Search complete';
+    if (toolName === 'send_email') return 'Email sent ✓';
+    if (toolName.startsWith('post_to_')) return 'Posted ✓';
+    if (toolName === 'generate_media') return 'Image created ✓';
+    if (toolName === 'search_crm') {
+      const match = lines.match(/(\d+)\s*contacts/);
+      return match ? `Found ${match[1]} contacts` : 'CRM searched';
+    }
+    if (toolName === 'query_analysis') return 'Data found';
+    if (toolName === 'scrape_website') return 'Page analyzed';
+
+    return 'Done ✓';
   }
 
   private buildTaskPrompt(task: ExecutionTask, executionPlan?: string | null): string {

@@ -509,7 +509,8 @@ export default function ConnectionPrompt({
   const handleConnect = async (provider: string) => {
     setConnecting(provider);
     try {
-      const res = await fetch("/api/integrations/connect", {
+      const { authFetch } = await import("@/lib/auth-fetch");
+      const res = await authFetch("/api/integrations/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider, orgId }),
