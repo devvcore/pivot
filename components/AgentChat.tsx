@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, X, Bot, Globe, BarChart3, Search, MessageCircle, ChevronDown, TrendingUp, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import ReactMarkdown from "react-markdown";
 import type { ChatMessage } from "@/lib/types";
 import { ProjectionChart, parseTextToChartData } from "./charts/ProjectionChart";
 
@@ -235,8 +236,10 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false, onNavigat
                 const { text, projection } = extractProjection(navStripped);
                 return (
                   <>
-                    <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm">
-                      {text}
+                    <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm">
+                      <div className="prose prose-sm prose-zinc max-w-none [&_p]:mb-1.5 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-semibold [&_ul]:my-1 [&_li]:my-0 [&_table]:text-xs">
+                        <ReactMarkdown>{text}</ReactMarkdown>
+                      </div>
                     </div>
                     {navAction && onNavigate && (
                       <button

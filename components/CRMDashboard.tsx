@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -210,7 +211,7 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/crm/pipeline?orgId=${encodeURIComponent(orgId)}`);
+      const res = await authFetch(`/api/crm/pipeline?orgId=${encodeURIComponent(orgId)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setContacts(Array.isArray(data) ? data : []);
@@ -228,7 +229,7 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
     try {
       const params = new URLSearchParams({ orgId });
       if (provider) params.set("provider", provider);
-      await fetch(`/api/crm/pipeline?${params.toString()}&sync=1`, { method: "POST" });
+      await authFetch(`/api/crm/pipeline?${params.toString()}&sync=1`, { method: "POST" });
       await fetchContacts();
     } catch {
       // sync failed — fetchContacts will handle error state
@@ -240,7 +241,7 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
     // Fetch real timeline from API
     let timeline: TimelineEntry[] = [];
     try {
-      const res = await fetch(`/api/crm/timeline?orgId=${encodeURIComponent(orgId)}&contactId=${encodeURIComponent(c.id)}`);
+      const res = await authFetch(`/api/crm/timeline?orgId=${encodeURIComponent(orgId)}&contactId=${encodeURIComponent(c.id)}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) timeline = data;

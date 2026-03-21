@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { NavigateAction } from "./AgentChat";
+import ReactMarkdown from "react-markdown";
 import {
   ArrowLeft, Download, AlertCircle, TrendingUp, DollarSign, Users, Target,
   ShieldAlert, Sparkles, ChevronRight, BarChart3, Check, Share2, Zap, ExternalLink, Loader2,
@@ -16,7 +18,6 @@ import type { Job, MVPDeliverables } from "@/lib/types";
 import { formatLabel } from "@/lib/utils";
 import { CHAPTERS, getPopulatedChapters } from "@/lib/chapters";
 import ChapterView from "./ChapterView";
-import { AgentChatButton, type NavigateAction } from "./AgentChat";
 import { CoachChatButton } from "./CoachChat";
 import { ReuploadDrawer } from "./ReuploadDrawer";
 import { ShareModal } from "./ShareModal";
@@ -1212,7 +1213,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
                         {(ci.recommendations || []).map((a: any, i: number) => (
                           <li key={i} className="flex gap-3 text-sm text-zinc-700 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
                             <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                            <span>{typeof a === "string" ? a : JSON.stringify(a)}</span>
+                            <span className="prose prose-sm prose-zinc max-w-none inline"><ReactMarkdown>{typeof a === "string" ? a : JSON.stringify(a)}</ReactMarkdown></span>
                           </li>
                         ))}
                       </ul>
@@ -1770,7 +1771,7 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
       {/* ── Floating Ask Pivvy Button ──────────────────────────────────────── */}
       <button
         onClick={() => setPivvyOpen(!pivvyOpen)}
-        className="fixed bottom-6 right-24 z-40 w-12 h-12 bg-zinc-900 text-white rounded-full shadow-sm hover:bg-zinc-800 transition-colors flex items-center justify-center"
+        className="hidden"
         title="Ask Pivvy"
       >
         {pivvyOpen ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
@@ -1796,11 +1797,6 @@ export function ResultsView({ runId, onBack, onNewRun, onReprocess, onExecute }:
       <CoachChatButton
         orgId={job.questionnaire.orgId ?? "default-org"}
         runId={runId}
-        onNavigate={handleAgentNavigate}
-      />
-      <AgentChatButton
-        orgId={job.questionnaire.orgId ?? "default-org"}
-        orgName={job.questionnaire.organizationName}
         onNavigate={handleAgentNavigate}
       />
     </div>

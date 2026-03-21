@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -178,7 +179,7 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/pm/tickets?orgId=${encodeURIComponent(orgId)}`);
+      const res = await authFetch(`/api/pm/tickets?orgId=${encodeURIComponent(orgId)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setTickets(Array.isArray(data) ? data : []);
