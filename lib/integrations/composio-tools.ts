@@ -36,6 +36,7 @@ export const COMPOSIO_TOOLKIT_MAP: Record<IntegrationProvider, string> = {
   instagram: 'INSTAGRAM',
   facebook: 'FACEBOOK',
   youtube: 'YOUTUBE',
+  tiktok: 'TIKTOK',
   paypal: 'PAYPAL',
   square: 'SQUARE',
   xero: 'XERO',
@@ -130,6 +131,7 @@ function toolNameToProvider(toolName: string): string | null {
   if (upper.startsWith('INSTAGRAM_')) return 'instagram';
   if (upper.startsWith('FACEBOOK_')) return 'facebook';
   if (upper.startsWith('YOUTUBE_')) return 'youtube';
+  if (upper.startsWith('TIKTOK_')) return 'tiktok';
   if (upper.startsWith('HUBSPOT_')) return 'hubspot';
   if (upper.startsWith('SALESFORCE_')) return 'salesforce';
   if (upper.startsWith('NOTION_')) return 'notion';

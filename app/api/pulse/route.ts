@@ -97,19 +97,25 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Resolve org
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("org_id")
-    .eq("user_id", auth.user.id)
-    .limit(1)
-    .single();
+  // Resolve org — accept query param or look up via ownership
+  const qsOrgId = request.nextUrl.searchParams.get("orgId");
+  let orgId: string;
 
-  if (!membership) {
-    return NextResponse.json({ error: "No organization found" }, { status: 404 });
+  if (qsOrgId) {
+    orgId = qsOrgId;
+  } else {
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("owner_user_id", auth.user.id)
+      .limit(1)
+      .single();
+
+    if (!org) {
+      return NextResponse.json({ error: "No organization found" }, { status: 404 });
+    }
+    orgId = org.id;
   }
-
-  const orgId = membership.org_id;
 
   // Check cache
   const cached = cache.get(orgId);

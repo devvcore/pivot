@@ -58,7 +58,10 @@ export const OUTFITS: Record<string, Outfit> = {
       'query_integration_data',
       'get_social_analytics',
       'generate_media',
+      'generate_image_batch',
+      'stitch_images_to_video',
       'research_brand',
+      'post_to_tiktok',
       // CRM tools (for personalized outreach)
       'search_crm',
       'get_contact_details',
@@ -417,6 +420,11 @@ Objection Handling:
       'post_to_twitter',
       'post_to_instagram',
       'post_to_facebook',
+      'post_to_tiktok',
+      'generate_media',
+      'generate_image_batch',
+      'stitch_images_to_video',
+      'research_brand',
       'create_slide_deck',
     ],
     systemPromptExtension: `GROWTH MODE — Experiments, funnel optimization, channel scaling.

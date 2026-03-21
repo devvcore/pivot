@@ -127,19 +127,18 @@ async function notifyHighSeverity(
   if (critical.length === 0) return;
 
   // Look up org owner email for notifications
-  const { data: members } = await supabase
-    .from('organization_members')
-    .select('user_id')
-    .eq('org_id', orgId)
-    .eq('role', 'owner')
-    .limit(1);
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('owner_user_id')
+    .eq('id', orgId)
+    .single();
 
-  if (!members || members.length === 0) return;
+  if (!org?.owner_user_id) return;
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('email')
-    .eq('id', members[0].user_id)
+    .eq('id', org.owner_user_id)
     .single();
 
   if (!profile?.email) return;

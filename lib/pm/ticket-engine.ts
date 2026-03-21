@@ -262,6 +262,10 @@ export async function listTickets(
 /**
  * Auto-generate tickets from business analysis deliverables.
  * Parses action items, strategic initiatives, and health checklist items.
+ *
+ * Ported from Ultron's ticket-writer: each ticket includes acceptance criteria,
+ * architecture notes with primary + alternative approaches, complexity sizing,
+ * and explicit dependency ordering.
  */
 export async function generateTicketsFromAnalysis(
   orgId: string,
@@ -287,18 +291,29 @@ export async function generateTicketsFromAnalysis(
 
   if (parts.length === 0) return [];
 
-  const prompt = `You are a project manager. Extract actionable tickets from this business analysis.
+  // Check for existing tickets to avoid duplicates (Ultron pattern)
+  const { tickets: existingTickets } = await listTickets(orgId, { status: ['backlog', 'todo', 'in_progress', 'review'], limit: 100 });
+  const existingTitles = existingTickets.map(t => t.title).join(', ');
+
+  const prompt = `You are a senior technical project manager. Extract actionable tickets from this business analysis.
+Each ticket must be SPECIFIC and SELF-CONTAINED — someone should be able to act on it immediately without asking follow-up questions.
 
 ANALYSIS DATA:
 ${parts.join('\n\n')}
 
+${existingTitles ? `EXISTING TICKETS (DO NOT DUPLICATE):\n${existingTitles}\n\nOnly create NEW tickets for work not already covered above.\n` : ''}
 Return a JSON array of tickets. Each ticket:
 {
-  "title": "Short actionable title (imperative verb)",
-  "description": "What needs to be done and why",
+  "title": "Short actionable title (imperative verb + noun)",
+  "description": "What needs to be done and WHY (include business context so the person understands the purpose)",
+  "acceptanceCriteria": ["specific testable condition 1", "specific testable condition 2"],
+  "architectureNotes": "Primary approach — detailed implementation steps, specific tools/services to use",
+  "alternativeApproach": "Alternative approach — equally actionable but using different tools/methods, with tradeoffs noted",
   "priority": "critical" | "high" | "medium" | "low",
   "type": "task" | "feature" | "epic",
+  "complexity": "S" | "M" | "L" | "XL",
   "estimated_hours": number or null,
+  "dependencies": ["title of ticket that must be done first"],
   "tags": ["relevant", "tags"],
   "labels": ["domain-label"]
 }
@@ -307,16 +322,27 @@ Rules:
 - Extract 5-15 concrete tickets, not vague goals
 - Title must start with a verb: "Implement...", "Set up...", "Research...", "Fix..."
 - Priority based on business impact + urgency
+- Complexity: S (hours), M (1-2 days), L (3-5 days), XL (1+ week, should be broken down)
 - Estimated hours should be realistic (2-40h range)
+- Acceptance criteria must be TESTABLE — not "works correctly" but specific measurable conditions
+- Architecture notes: be exact about tools, APIs, services, and steps
+- Alternative approach: a genuinely different path (not just "do it manually")
+- Dependencies: reference other ticket titles that must be completed first
+- Order tickets: foundation first, then core work, then integrations, then polish
 - Tags: use domain keywords. Labels: use category like "strategy", "ops", "marketing", "finance", "hr", "engineering"`;
 
   const raw = await callGemini(prompt);
   let ticketDefs: Array<{
     title: string;
     description?: string;
+    acceptanceCriteria?: string[];
+    architectureNotes?: string;
+    alternativeApproach?: string;
     priority?: TicketPriority;
     type?: TicketType;
+    complexity?: string;
     estimated_hours?: number;
+    dependencies?: string[];
     tags?: string[];
     labels?: string[];
   }>;
@@ -331,8 +357,28 @@ Rules:
   const created: Ticket[] = [];
   for (const def of ticketDefs.slice(0, 20)) {
     if (!def.title) continue;
+
+    // Build enriched description with acceptance criteria, architecture, and alternative
+    const descParts: string[] = [];
+    if (def.description) descParts.push(def.description);
+    if (def.acceptanceCriteria?.length) {
+      descParts.push('\n**Acceptance Criteria:**\n' + def.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n'));
+    }
+    if (def.architectureNotes) {
+      descParts.push('\n**Implementation (Primary):**\n' + def.architectureNotes);
+    }
+    if (def.alternativeApproach) {
+      descParts.push('\n**Alternative Approach:**\n' + def.alternativeApproach);
+    }
+    if (def.dependencies?.length) {
+      descParts.push('\n**Dependencies:** ' + def.dependencies.join(', '));
+    }
+    if (def.complexity) {
+      descParts.push(`\n**Complexity:** ${def.complexity}`);
+    }
+
     try {
-      const ticket = await createTicket(orgId, def.title, def.description, {
+      const ticket = await createTicket(orgId, def.title, descParts.join('\n'), {
         priority: def.priority ?? 'medium',
         type: def.type ?? 'task',
         estimated_hours: (def.estimated_hours ?? undefined) as number | undefined,
@@ -351,6 +397,8 @@ Rules:
 
 /**
  * Extract actionable items from conversation messages and create tickets.
+ * Enhanced with Ultron patterns: acceptance criteria, dedup, and adaptive status
+ * (if a task was completed via alternative means, it's still marked done).
  */
 export async function generateTicketsFromConversation(
   orgId: string,
@@ -361,17 +409,25 @@ export async function generateTicketsFromConversation(
     .join('\n')
     .slice(0, 6000);
 
+  // Check for existing tickets to avoid duplicates
+  const { tickets: existingTickets } = await listTickets(orgId, { status: ['backlog', 'todo', 'in_progress', 'review'], limit: 100 });
+  const existingTitles = existingTickets.map(t => t.title).join(', ');
+
   const prompt = `You are a project manager. Extract actionable tasks from this conversation and return them as tickets.
+Each ticket must be SELF-CONTAINED — someone should be able to act on it without reading the conversation.
 
 CONVERSATION:
 ${conversationText}
 
+${existingTitles ? `EXISTING TICKETS (DO NOT DUPLICATE):\n${existingTitles}\n\nOnly create tickets for NEW work not already covered.\n` : ''}
 Return a JSON array of tickets. Each ticket:
 {
-  "title": "Short actionable title (imperative verb)",
-  "description": "What needs to be done, with context from the conversation",
+  "title": "Short actionable title (imperative verb + noun)",
+  "description": "What needs to be done and WHY, with enough context to act without reading the conversation",
+  "acceptanceCriteria": ["specific testable condition 1", "specific testable condition 2"],
   "priority": "critical" | "high" | "medium" | "low",
   "type": "task" | "bug" | "feature",
+  "complexity": "S" | "M" | "L",
   "tags": ["relevant", "tags"]
 }
 
@@ -379,16 +435,21 @@ Rules:
 - Only extract ACTIONABLE items (things someone needs to do)
 - Ignore greetings, questions, and status updates
 - Title must start with a verb
-- Include enough context in description so someone can act on it without reading the conversation
+- Acceptance criteria: specific, testable conditions (not "works correctly")
+- Complexity: S (hours), M (1-2 days), L (3-5 days)
+- If conversation indicates a feature was completed via alternative approach (e.g., no-code tool), mark status as "done" with a note
 - Return empty array [] if no actionable items found`;
 
   const raw = await callGemini(prompt);
   let ticketDefs: Array<{
     title: string;
     description?: string;
+    acceptanceCriteria?: string[];
     priority?: TicketPriority;
     type?: TicketType;
+    complexity?: string;
     tags?: string[];
+    status?: string;
   }>;
 
   try {
@@ -401,10 +462,25 @@ Rules:
   const created: Ticket[] = [];
   for (const def of ticketDefs.slice(0, 15)) {
     if (!def.title) continue;
+
+    // Build enriched description
+    const descParts: string[] = [];
+    if (def.description) descParts.push(def.description);
+    if (def.acceptanceCriteria?.length) {
+      descParts.push('\n**Acceptance Criteria:**\n' + def.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n'));
+    }
+    if (def.complexity) {
+      descParts.push(`\n**Complexity:** ${def.complexity}`);
+    }
+
+    // Adaptive status: if conversation says it's done, create as done
+    const resolvedStatus: TicketStatus = def.status === 'done' ? 'done' : 'backlog';
+
     try {
-      const ticket = await createTicket(orgId, def.title, def.description, {
+      const ticket = await createTicket(orgId, def.title, descParts.join('\n'), {
         priority: def.priority ?? 'medium',
         type: def.type ?? 'task',
+        status: resolvedStatus,
         source: 'conversation',
         source_message: conversationText.slice(0, 500),
         tags: def.tags ?? [],

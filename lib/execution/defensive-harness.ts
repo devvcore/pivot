@@ -401,6 +401,468 @@ export function detectHallucinatedResponse(
   return false;
 }
 
+// ── 6. Text-Based Tool Call Recovery ─────────────────────────────────────────
+// Ported from BetterBot's text-tool-recovery.js
+// When models (especially via OpenRouter proxying) emit tool calls as text
+// instead of structured function calls, parse them into proper call objects.
+
+interface RecoveredToolCall {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+}
+
+interface RecoveryResult {
+  cleanText: string;
+  toolCalls: RecoveredToolCall[] | null;
+}
+
+let recoveryCounter = 0;
+
+/**
+ * Attempt to extract tool calls from text content when the model returned
+ * no structured function calls but the text contains tool-call-like patterns.
+ *
+ * Patterns detected:
+ * 1. <function=name>{"arg": "val"}</function>
+ * 2. <tool_call>{"name": "...", "arguments": {...}}</tool_call>
+ * 3. ```tool_call\n{json}\n``` or ```json\n{json with name field}\n```
+ *
+ * Only recovers calls for tools actually available in the current outfit.
+ */
+export function recoverToolCallsFromText(
+  responseText: string,
+  availableTools: string[]
+): RecoveryResult {
+  if (!responseText || availableTools.length === 0) {
+    return { cleanText: responseText, toolCalls: null };
+  }
+
+  const offeredTools = new Set(availableTools);
+  const toolCalls: RecoveredToolCall[] = [];
+  let cleanText = responseText;
+
+  // Pattern 1: <function=name>{json}</function>
+  const funcPattern = /<function=(\w+)>([\s\S]*?)<\/function>/g;
+  let match: RegExpExecArray | null;
+  while ((match = funcPattern.exec(responseText)) !== null) {
+    const [fullMatch, name, argsStr] = match;
+    if (!offeredTools.has(name)) continue;
+    try {
+      const args = JSON.parse(argsStr.trim()) as Record<string, unknown>;
+      toolCalls.push({ id: `recover_${++recoveryCounter}`, name, args });
+      cleanText = cleanText.replace(fullMatch, '').trim();
+    } catch { /* malformed JSON, skip */ }
+  }
+
+  // Pattern 2: <tool_call>{json with name+arguments}</tool_call>
+  const toolCallPattern = /<tool_call>([\s\S]*?)<\/tool_call>/g;
+  while ((match = toolCallPattern.exec(responseText)) !== null) {
+    const [fullMatch, body] = match;
+    try {
+      const parsed = JSON.parse(body.trim()) as Record<string, unknown>;
+      const name = (parsed.name || parsed.function) as string | undefined;
+      let args = (parsed.arguments || parsed.args || parsed.input || {}) as Record<string, unknown> | string;
+      if (name && offeredTools.has(name)) {
+        const resolvedArgs = typeof args === 'string' ? JSON.parse(args) as Record<string, unknown> : args;
+        toolCalls.push({ id: `recover_${++recoveryCounter}`, name, args: resolvedArgs });
+        cleanText = cleanText.replace(fullMatch, '').trim();
+      }
+    } catch { /* skip */ }
+  }
+
+  // Pattern 3: ```tool_call\n{json}\n``` or ```json\n{json with name field}\n```
+  const codeBlockPattern = /```(?:tool_call|json)\s*\n([\s\S]*?)\n```/g;
+  while ((match = codeBlockPattern.exec(responseText)) !== null) {
+    const [fullMatch, body] = match;
+    try {
+      const parsed = JSON.parse(body.trim()) as Record<string, unknown>;
+      const name = (parsed.name || parsed.function || parsed.tool) as string | undefined;
+      let args = (parsed.arguments || parsed.args || parsed.input || parsed.parameters || {}) as Record<string, unknown> | string;
+      if (name && offeredTools.has(name)) {
+        const resolvedArgs = typeof args === 'string' ? JSON.parse(args) as Record<string, unknown> : args;
+        toolCalls.push({ id: `recover_${++recoveryCounter}`, name, args: resolvedArgs });
+        cleanText = cleanText.replace(fullMatch, '').trim();
+      }
+    } catch { /* skip */ }
+  }
+
+  return {
+    cleanText: cleanText || '',
+    toolCalls: toolCalls.length > 0 ? toolCalls : null,
+  };
+}
+
+// ── 7. Session Repair — Message Array Validation ────────────────────────────
+// Ported from BetterBot's session-repair.js (7-phase pipeline)
+// Validates and fixes the Gemini conversation history before sending to LLM.
+// Catches orphaned function responses, empty messages, missing responses,
+// duplicate results, and consecutive same-role messages.
+
+interface GeminiMessage {
+  role: string;
+  parts: unknown[];
+}
+
+/**
+ * Extract function call names/IDs from a model message's parts.
+ */
+function getFunctionCallNames(msg: GeminiMessage): string[] {
+  const names: string[] = [];
+  if (msg.role !== 'model') return names;
+  for (const part of msg.parts) {
+    const p = part as Record<string, unknown>;
+    if (p.functionCall) {
+      const fc = p.functionCall as Record<string, unknown>;
+      if (fc.name) names.push(fc.name as string);
+    }
+  }
+  return names;
+}
+
+/**
+ * Check if a model message has function calls.
+ */
+function hasFunctionCalls(msg: GeminiMessage): boolean {
+  return getFunctionCallNames(msg).length > 0;
+}
+
+/**
+ * Get function response names from a user message's parts.
+ */
+function getFunctionResponseNames(msg: GeminiMessage): string[] {
+  const names: string[] = [];
+  if (msg.role !== 'user') return names;
+  for (const part of msg.parts) {
+    const p = part as Record<string, unknown>;
+    if (p.functionResponse) {
+      const fr = p.functionResponse as Record<string, unknown>;
+      if (fr.name) names.push(fr.name as string);
+    }
+  }
+  return names;
+}
+
+/**
+ * Check if a message is effectively empty (no text, no function calls/responses).
+ */
+function isEmptyGeminiMessage(msg: GeminiMessage): boolean {
+  if (hasFunctionCalls(msg)) return false;
+  if (getFunctionResponseNames(msg).length > 0) return false;
+  if (!Array.isArray(msg.parts) || msg.parts.length === 0) return true;
+  for (const part of msg.parts) {
+    const p = part as Record<string, unknown>;
+    if (typeof p.text === 'string' && (p.text as string).trim().length > 0) return false;
+    if (p.functionCall || p.functionResponse) return false;
+  }
+  return true;
+}
+
+/**
+ * Repair a Gemini conversation history before sending to the API.
+ * Fixes:
+ * - Empty messages (removes them)
+ * - Orphaned function responses (removes if no matching call)
+ * - Missing function responses (inserts synthetic error)
+ * - Consecutive same-role messages (merges text parts)
+ *
+ * Returns { messages, repairs } where repairs describes each fix applied.
+ */
+export function repairConversationHistory(
+  messages: GeminiMessage[]
+): { messages: GeminiMessage[]; repairs: string[] } {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return { messages: [], repairs: [] };
+  }
+
+  const repairs: string[] = [];
+  let msgs = JSON.parse(JSON.stringify(messages)) as GeminiMessage[];
+
+  // Phase 1: Collect all function call names from model messages
+  const allCallNames = new Set<string>();
+  for (const msg of msgs) {
+    for (const name of getFunctionCallNames(msg)) {
+      allCallNames.add(name);
+    }
+  }
+
+  // Phase 2: Remove orphaned function responses
+  msgs = msgs.filter(msg => {
+    if (msg.role !== 'user') return true;
+    const frNames = getFunctionResponseNames(msg);
+    if (frNames.length === 0) return true;
+    // Check if this user message has ONLY function responses (no text)
+    const hasText = msg.parts.some(p => {
+      const part = p as Record<string, unknown>;
+      return typeof part.text === 'string' && (part.text as string).trim().length > 0;
+    });
+    if (hasText) return true;
+    // Pure function response message — keep only if all names have matching calls
+    const orphaned = frNames.filter(n => !allCallNames.has(n));
+    if (orphaned.length > 0 && orphaned.length === frNames.length) {
+      repairs.push(`removed orphaned function response message (names: ${orphaned.join(', ')})`);
+      return false;
+    }
+    return true;
+  });
+
+  // Phase 3: Drop empty messages
+  msgs = msgs.filter(msg => {
+    if (isEmptyGeminiMessage(msg)) {
+      repairs.push(`removed empty ${msg.role} message`);
+      return false;
+    }
+    return true;
+  });
+
+  // Phase 4: Insert synthetic error responses for unmatched function calls
+  const responseNames = new Set<string>();
+  for (const msg of msgs) {
+    for (const name of getFunctionResponseNames(msg)) {
+      responseNames.add(name);
+    }
+  }
+
+  const expanded: GeminiMessage[] = [];
+  for (const msg of msgs) {
+    expanded.push(msg);
+    if (msg.role !== 'model') continue;
+    const callNames = getFunctionCallNames(msg);
+    const missing = callNames.filter(n => !responseNames.has(n));
+    if (missing.length === 0) continue;
+    // Insert synthetic error responses
+    const syntheticParts = missing.map(name => ({
+      functionResponse: {
+        name,
+        response: { output: 'Error: tool execution was interrupted' },
+      },
+    }));
+    expanded.push({ role: 'user', parts: syntheticParts });
+    for (const name of missing) {
+      repairs.push(`inserted synthetic error response for function call: ${name}`);
+      responseNames.add(name);
+    }
+  }
+  msgs = expanded;
+
+  // Phase 5: Merge consecutive same-role text-only messages
+  if (msgs.length > 1) {
+    const merged: GeminiMessage[] = [msgs[0]];
+    for (let i = 1; i < msgs.length; i++) {
+      const msg = msgs[i];
+      const prev = merged[merged.length - 1];
+      if (msg.role === prev.role && !hasFunctionCalls(prev) && !hasFunctionCalls(msg)
+          && getFunctionResponseNames(prev).length === 0 && getFunctionResponseNames(msg).length === 0) {
+        // Both are pure text same-role — merge
+        prev.parts = [...prev.parts, ...msg.parts];
+        repairs.push(`merged consecutive ${msg.role} messages`);
+      } else {
+        merged.push(msg);
+      }
+    }
+    msgs = merged;
+  }
+
+  // Phase 6: Ensure alternating user/model structure (Gemini requirement)
+  if (msgs.length > 1) {
+    const validated: GeminiMessage[] = [msgs[0]];
+    for (let i = 1; i < msgs.length; i++) {
+      const msg = msgs[i];
+      const prev = validated[validated.length - 1];
+      if (msg.role === prev.role) {
+        // Insert placeholder of opposite role
+        const placeholder: GeminiMessage = msg.role === 'user'
+          ? { role: 'model', parts: [{ text: '[continued]' }] }
+          : { role: 'user', parts: [{ text: '[continued]' }] };
+        validated.push(placeholder);
+        repairs.push(`inserted placeholder ${placeholder.role} message to maintain alternation`);
+      }
+      validated.push(msg);
+    }
+    msgs = validated;
+  }
+
+  return { messages: msgs, repairs };
+}
+
+// ── 8. Context Budget — Smart Truncation ────────────────────────────────────
+// Ported from BetterBot's context-budget.js
+// Dynamic context window management with head/tail preservation.
+
+const CHARS_PER_TOKEN = 4;
+const GEMINI_CONTEXT_WINDOW = 1_000_000; // Gemini Flash/Pro
+
+/**
+ * Smart truncation: keep head + tail of a string, insert a marker in the middle.
+ * Preserves the beginning (often contains structure) and end (often contains the answer).
+ */
+export function smartTruncate(str: string, maxChars: number): string {
+  if (str.length <= maxChars) return str;
+  const headChars = Math.min(500, Math.floor(maxChars * 0.2));
+  const tailChars = maxChars - headChars - 80;
+  const head = str.slice(0, headChars);
+  const tail = str.slice(-tailChars);
+  const dropped = str.length - headChars - tailChars;
+  return `${head}\n\n[... ${dropped} chars trimmed ...]\n\n${tail}`;
+}
+
+/**
+ * Estimate the total character count of a Gemini conversation history.
+ */
+function estimateHistoryChars(messages: GeminiMessage[]): number {
+  let total = 0;
+  for (const msg of messages) {
+    for (const part of msg.parts) {
+      const p = part as Record<string, unknown>;
+      if (typeof p.text === 'string') total += (p.text as string).length;
+      if (p.functionCall) total += JSON.stringify(p.functionCall).length;
+      if (p.functionResponse) {
+        const fr = p.functionResponse as Record<string, unknown>;
+        const resp = fr.response as Record<string, unknown> | undefined;
+        const output = resp?.output;
+        if (typeof output === 'string') total += output.length;
+        else total += JSON.stringify(resp ?? {}).length;
+      }
+    }
+  }
+  return total;
+}
+
+/**
+ * Get the length of function response output in a message.
+ */
+function getFunctionResponseChars(msg: GeminiMessage): number {
+  let total = 0;
+  if (msg.role !== 'user') return total;
+  for (const part of msg.parts) {
+    const p = part as Record<string, unknown>;
+    if (p.functionResponse) {
+      const fr = p.functionResponse as Record<string, unknown>;
+      const resp = fr.response as Record<string, unknown> | undefined;
+      const output = resp?.output;
+      if (typeof output === 'string') total += output.length;
+    }
+  }
+  return total;
+}
+
+/**
+ * Compact function response outputs in a message to a max char limit.
+ * Mutates in place. Returns true if any truncation occurred.
+ */
+function compactFunctionResponses(msg: GeminiMessage, maxChars: number): boolean {
+  if (msg.role !== 'user') return false;
+  let changed = false;
+  for (const part of msg.parts) {
+    const p = part as Record<string, unknown>;
+    if (p.functionResponse) {
+      const fr = p.functionResponse as Record<string, unknown>;
+      const resp = fr.response as Record<string, unknown> | undefined;
+      if (resp && typeof resp.output === 'string' && resp.output.length > maxChars) {
+        resp.output = smartTruncate(resp.output, maxChars);
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+interface ContextGuardResult {
+  trimmed: boolean;
+  stage?: number;
+  resetRequired?: boolean;
+}
+
+/**
+ * Guard context budget before an LLM call. Mutates the messages array in place.
+ *
+ * Layer 1: If total tool result content exceeds 75% of remaining headroom,
+ * compact the oldest tool results to 2K chars each, keeping the last 3 untouched.
+ *
+ * Layer 2: Progressive overflow recovery:
+ *   Stage 1 — keep last 10 messages, prepend trimmed-context summary
+ *   Stage 2 — keep last 4 messages
+ *   Stage 3 — truncate ALL function responses to 2K chars
+ *   Stage 4 — return resetRequired flag
+ */
+export function guardContextBudget(
+  messages: GeminiMessage[],
+  systemPromptChars: number = 8000
+): ContextGuardResult {
+  const contextChars = GEMINI_CONTEXT_WINDOW * CHARS_PER_TOKEN;
+  const responseBuffer = 4096 * CHARS_PER_TOKEN;
+  const headroom = contextChars - systemPromptChars - responseBuffer;
+
+  if (headroom <= 0) {
+    return { trimmed: true, stage: 4, resetRequired: true };
+  }
+
+  // --- Layer 1: Headroom guard on tool results ---
+  const toolResultThreshold = Math.floor(headroom * 0.75);
+  let totalToolChars = 0;
+  const toolResultIndices: number[] = [];
+
+  for (let i = 0; i < messages.length; i++) {
+    const chars = getFunctionResponseChars(messages[i]);
+    if (chars > 0) {
+      totalToolChars += chars;
+      toolResultIndices.push(i);
+    }
+  }
+
+  let trimmed = false;
+
+  if (totalToolChars > toolResultThreshold && toolResultIndices.length > 1) {
+    const keepRecent = Math.min(3, toolResultIndices.length - 1);
+    const compactCount = toolResultIndices.length - keepRecent;
+    for (let j = 0; j < compactCount; j++) {
+      const idx = toolResultIndices[j];
+      if (compactFunctionResponses(messages[idx], 2000)) {
+        trimmed = true;
+      }
+    }
+  }
+
+  // --- Layer 2: Overflow recovery ---
+  let totalChars = estimateHistoryChars(messages);
+
+  if (totalChars <= headroom) {
+    return { trimmed };
+  }
+
+  // Stage 1: Keep last 10 messages
+  if (messages.length > 10) {
+    const removed = messages.length - 10;
+    const summary: GeminiMessage = { role: 'user', parts: [{ text: `[Older context: ${removed} messages trimmed]` }] };
+    messages.splice(0, removed, summary);
+    trimmed = true;
+    totalChars = estimateHistoryChars(messages);
+    if (totalChars <= headroom) return { trimmed, stage: 1 };
+  }
+
+  // Stage 2: Keep last 4 messages
+  if (messages.length > 4) {
+    const removed = messages.length - 4;
+    const summary: GeminiMessage = { role: 'user', parts: [{ text: `[Older context: ${removed} messages trimmed]` }] };
+    messages.splice(0, removed, summary);
+    trimmed = true;
+    totalChars = estimateHistoryChars(messages);
+    if (totalChars <= headroom) return { trimmed, stage: 2 };
+  }
+
+  // Stage 3: Truncate ALL function responses to 2K chars
+  for (const msg of messages) {
+    if (compactFunctionResponses(msg, 2000)) {
+      trimmed = true;
+    }
+  }
+  totalChars = estimateHistoryChars(messages);
+  if (totalChars <= headroom) return { trimmed, stage: 3 };
+
+  // Stage 4: Nothing left — signal reset needed
+  return { trimmed: true, stage: 4, resetRequired: true };
+}
+
 // ── Harness Integration Helper ──────────────────────────────────────────────
 
 /**

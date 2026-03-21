@@ -22,7 +22,7 @@ import { OUTFITS, getOutfitSystemPrompt } from './outfits';
 import { globalRegistry, createCostTracker, type ToolContext, type ToolResult } from './tools/index';
 import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLessons, extractFactsFromOutput } from './agent-memory';
 import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedureAsContext, type Procedure } from './procedures';
-import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory } from './defensive-harness';
+import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory, recoverToolCallsFromText, repairConversationHistory, guardContextBudget, smartTruncate } from './defensive-harness';
 import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, type Directive } from './directives';
 import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
 
@@ -683,6 +683,28 @@ Output ONLY a JSON array of strings, no other text. Example:
     const toolSigCounts = new Map<string, number>();   // tool_name+args -> count
 
     for (let round = 0; round < maxRounds; round++) {
+      // Session repair: fix orphaned responses, empty messages, alternation issues
+      const { messages: repairedHistory, repairs } = repairConversationHistory(conversationHistory);
+      if (repairs.length > 0) {
+        console.warn(`[SessionRepair] Round ${round}: ${repairs.join('; ')}`);
+        conversationHistory.length = 0;
+        conversationHistory.push(...repairedHistory);
+      }
+
+      // Context budget guard: compress old tool results if approaching context limit
+      const budgetResult = guardContextBudget(conversationHistory, systemPrompt.length);
+      if (budgetResult.trimmed) {
+        console.warn(`[ContextBudget] Round ${round}: trimmed (stage ${budgetResult.stage ?? 0})`);
+        if (budgetResult.resetRequired) {
+          // Context is too large even after aggressive trimming — force final response
+          conversationHistory.push({
+            role: 'user',
+            parts: [{ text: 'SYSTEM: Context budget exhausted. Write your FINAL response NOW with the data you have.' }],
+          });
+          maxRounds = round + 2;
+        }
+      }
+
       const response = await ai.models.generateContent({
         model: FLASH_MODEL,
         contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
@@ -748,10 +770,32 @@ Output ONLY a JSON array of strings, no other text. Example:
         parts,
       });
 
-      // If no function calls, this is the final response
+      // If no function calls, try to recover tool calls from text
+      // (models sometimes emit tool calls as text instead of structured calls)
       if (functionCalls.length === 0) {
-        finalResponse = textContent;
-        break;
+        const recovery = recoverToolCallsFromText(textContent, outfit.tools);
+        if (recovery.toolCalls && recovery.toolCalls.length > 0) {
+          console.warn(`[TextToolRecovery] Recovered ${recovery.toolCalls.length} tool call(s) from text`);
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+            phase: 'text_tool_recovery',
+            recoveredCalls: recovery.toolCalls.map(tc => tc.name),
+            round,
+          });
+          // Replace the model message with cleaned text + proper function calls
+          conversationHistory.pop(); // Remove the text-only model message
+          const recoveredParts: unknown[] = [];
+          if (recovery.cleanText.trim()) {
+            recoveredParts.push({ text: recovery.cleanText });
+          }
+          for (const tc of recovery.toolCalls) {
+            recoveredParts.push({ functionCall: { name: tc.name, args: tc.args } });
+            functionCalls.push({ functionCall: { name: tc.name, args: tc.args } });
+          }
+          conversationHistory.push({ role: 'model', parts: recoveredParts });
+        } else {
+          finalResponse = textContent;
+          break;
+        }
       }
 
       // Execute function calls
@@ -1719,24 +1763,79 @@ INLINE CONNECTIONS — MANDATORY:
   }
 
   /**
-   * Generate a lightweight execution plan for STANDARD/HEAVY tasks.
-   * Helps the agent think before acting — inspired by Claude Code's internal reasoning.
+   * Generate a structured execution plan for STANDARD/HEAVY tasks.
+   * Ported from BetterBot's planner: supports parallel step groups and
+   * skip_remaining/replace_remaining plan modifications.
+   *
+   * Steps in the same group can run in parallel; higher groups wait for lower ones.
+   * The final output step must always be in its own group (the highest number).
    */
   private async generatePlan(task: ExecutionTask): Promise<string | null> {
-    const prompt = `You are planning tool usage for an AI agent task. Output a brief plan (3-5 bullet points) listing:
-1. What information do I need? (and which tool to get it)
-2. What is the deliverable? (exact format: email, table, analysis, etc.)
-3. What's my tool call sequence? (ordered list, max 4 calls)
+    const prompt = `You are planning tool usage for an AI agent. Create a step-by-step plan with parallel groups.
+
+Rules:
+- 2-6 steps. Keep plans SHORT. Don't over-plan.
+- Each step is ONE action — a tool call or a synthesis step.
+- Each step has a "group" number (starting at 1). Steps in the SAME group run IN PARALLEL.
+- Steps in a higher group wait for all lower groups to finish first.
+- Use parallel groups when steps are independent (e.g. checking Stripe AND searching web at the same time).
+- The LAST step must be "Write deliverable" with the highest group number.
+- If any step depends on another's result, put it in a HIGHER group.
 
 Task: "${task.title}"
 Description: "${task.description}"
-Available tools: query_analysis, query_integration_data, web_search, scrape_website, send_email, post_to_linkedin, post_to_twitter, write_to_google_sheets, create_jira_ticket, github_create_issue
+Available tools: query_analysis, query_integration_data, web_search, scrape_website, send_email, post_to_linkedin, post_to_twitter, post_to_instagram, post_to_facebook, write_to_google_sheets, create_jira_ticket, github_create_issue
 
-Output ONLY the bullet-point plan, nothing else. Be specific.`;
+Respond with ONLY a JSON object:
+{"steps": [{"description": "...", "tool": "tool_name_or_null", "group": 1}, ...]}
+
+Example: research task needing both web search and Stripe data:
+{"steps": [
+  {"description": "Search web for industry benchmarks", "tool": "web_search", "group": 1},
+  {"description": "Pull live Stripe revenue data", "tool": "query_integration_data", "group": 1},
+  {"description": "Query analysis report for company context", "tool": "query_analysis", "group": 1},
+  {"description": "Write comprehensive analysis with all gathered data", "tool": null, "group": 2}
+]}`;
 
     try {
-      const plan = await quickGenerate(prompt);
-      return plan.trim();
+      const result = await quickGenerate(prompt);
+      // Parse JSON from response
+      let parsed: { steps: Array<{ description: string; tool?: string; group: number }> };
+      try {
+        const jsonStr = result.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        parsed = JSON.parse(jsonStr) as typeof parsed;
+      } catch {
+        // Try to extract JSON from response
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return result.trim(); // Fall back to raw text plan
+        parsed = JSON.parse(jsonMatch[0]) as typeof parsed;
+      }
+
+      if (!parsed.steps || parsed.steps.length === 0) return null;
+
+      // Format as readable plan with parallel group annotations
+      const groups = new Map<number, typeof parsed.steps>();
+      for (const step of parsed.steps) {
+        const g = step.group || 1;
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g)!.push(step);
+      }
+
+      const lines: string[] = [];
+      const sortedGroups = [...groups.keys()].sort((a, b) => a - b);
+      for (const groupNum of sortedGroups) {
+        const groupSteps = groups.get(groupNum)!;
+        if (groupSteps.length > 1) {
+          lines.push(`[PARALLEL GROUP ${groupNum}]`);
+          for (const step of groupSteps) {
+            lines.push(`  - ${step.description}${step.tool ? ` (${step.tool})` : ''}`);
+          }
+        } else {
+          lines.push(`[STEP ${groupNum}] ${groupSteps[0].description}${groupSteps[0].tool ? ` (${groupSteps[0].tool})` : ''}`);
+        }
+      }
+
+      return lines.join('\n');
     } catch {
       return null;
     }

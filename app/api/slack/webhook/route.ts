@@ -24,6 +24,9 @@ import {
   type SlackBlock,
 } from "@/lib/slack/block-kit";
 
+// Incremental processing — cheap per-message intelligence (ported from Ultron)
+import { processMessageIncrementally } from "@/lib/slack/incremental-processor";
+
 // Deduplicate events (Slack retries within 3s)
 const recentEventIds = new Map<string, number>();
 const EVENT_DEDUP_TTL_MS = 30_000;
@@ -163,6 +166,9 @@ async function handleDirectMessage(
       ...updatedHistory,
       { role: "assistant" as const, content: reply, ts: String(Date.now() / 1000) },
     ]);
+
+    // Run incremental processing in the background (learn from every DM)
+    runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
   } catch (err) {
     console.error("[Slack DM] Pivvy error:", err);
     await sendSlackText(orgId, channel, "Sorry, I ran into an issue. Please try again.", threadTs);
@@ -231,6 +237,9 @@ async function handleAppMention(
 }
 
 // ── Channel Message Handling (Client Interaction Mode) ───────────────────────
+// Ported from Ultron's client-facing agent: uses a 2-step approach:
+// 1. Cheap LLM call to decide "respond" or "silent" (avoids noisy false positives from regex)
+// 2. If respond: run full Pivvy with context
 
 async function handleChannelMessage(
   event: Record<string, any>,
@@ -253,21 +262,39 @@ async function handleChannelMessage(
   const slackUserId: string = event.user;
   if (!text || !slackUserId) return;
 
-  // Skip very short messages, reactions, or non-questions
+  // Skip very short messages
   if (text.length < 10) return;
-
-  // Only respond to messages that look like questions or requests
-  const looksLikeQuestion = /\?|how|what|when|where|why|can you|could you|help|issue|problem|update|status/i.test(text);
-  if (!looksLikeQuestion) return;
 
   const threadTs = event.thread_ts ?? event.ts;
 
+  // Step 1: LLM-based respond/silent decision (ported from Ultron client-facing.ts)
+  // This replaces the simple regex check with a smarter classifier.
+  const shouldRespond = await shouldRespondToMessage(text);
+  if (!shouldRespond) {
+    // Still run incremental processing for learning, even when not responding
+    runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
+    return;
+  }
+
+  // Step 2: Load thread context and respond
+  const history = await getConversationHistory(orgId, channel, threadTs);
+  const updatedHistory = [
+    ...history,
+    { role: "user" as const, content: text, ts: event.ts },
+  ].slice(-10);
+
   try {
     const { runBusinessAgent } = await import("@/lib/agent/business-agent");
+    const chatMessages = updatedHistory.map(m => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+      timestamp: parseFloat(m.ts) * 1000 || Date.now(),
+    }));
+
     const result = await runBusinessAgent({
       orgId,
-      messages: [],
-      message: `[A team member or client asked in Slack channel]: ${text}\n\nRespond helpfully as a knowledgeable team member. Be concise. Do not reveal you are AI unless directly asked.`,
+      messages: chatMessages.slice(0, -1),
+      message: `[A team member or client asked in Slack channel]: ${text}\n\nRespond helpfully as a knowledgeable team member. Be concise (2-4 sentences max). Do not reveal you are AI unless directly asked.`,
     });
 
     const reply = result.message;
@@ -278,9 +305,58 @@ async function handleChannelMessage(
 
     // Always reply in thread
     await sendSlackBlocks(orgId, channel, blocks, fallback, threadTs);
+
+    // Save conversation context
+    await saveConversation(orgId, channel, threadTs, slackUserId, [
+      ...updatedHistory,
+      { role: "assistant" as const, content: reply, ts: String(Date.now() / 1000) },
+    ]);
+
+    // Run incremental processing in the background
+    runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
   } catch (err) {
     console.error("[Slack Channel] Client interaction error:", err);
     // Silently fail in client interaction mode — don't spam the channel
+  }
+}
+
+/**
+ * LLM-based respond/silent decision (ported from Ultron's client-facing agent).
+ * Cheap call (~50 tokens) to decide if this message warrants a response.
+ * Much better than regex — handles context like "ok", "sounds good", sarcasm, etc.
+ */
+async function shouldRespondToMessage(text: string): Promise<boolean> {
+  // Fast path: obvious non-responses
+  const trivial = /^(ok|okay|k|sure|thanks|thx|ty|lol|haha|👍|🙏|✅|💯|yep|yup|yes|no|np|sounds good|got it|cool|nice)$/i;
+  if (trivial.test(text.trim())) return false;
+
+  // Fast path: obvious questions or requests
+  if (text.includes('?')) return true;
+
+  try {
+    const { GoogleGenAI } = await import("@google/genai");
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      // Fallback to regex if no API key
+      return /how|what|when|where|why|can you|could you|help|issue|problem|update|status/i.test(text);
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Message: "${text.slice(0, 300)}"\n\nShould a project manager respond to this? Output ONLY "respond" or "silent".`,
+      config: {
+        temperature: 0,
+        maxOutputTokens: 10,
+        thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: 'You decide if a message needs a response. Output ONLY "respond" or "silent". Respond if: they ask a question, describe a feature, express a concern, request an update, report a problem, or say something needing acknowledgment. Silent if: it is just "ok", "sounds good", "thanks", a thumbs up, internal chatter, or clearly does not need a response.',
+      },
+    });
+
+    return (response.text ?? '').trim().toLowerCase().includes('respond');
+  } catch {
+    // Fallback to regex on LLM failure
+    return /\?|how|what|when|where|why|can you|could you|help|issue|problem|update|status/i.test(text);
   }
 }
 
@@ -496,6 +572,36 @@ async function processSlashTasks(orgId: string, responseUrl: string): Promise<vo
       response_type: "ephemeral",
       text: "Failed to load task data. Please try again.",
     });
+  }
+}
+
+// ── Incremental Processing (ported from Ultron incremental-processor.ts) ─────
+// Runs on every message, even when Pivvy doesn't respond. Cheap ~$0.001 per msg.
+
+async function runIncrementalProcessing(
+  orgId: string,
+  text: string,
+  slackUserId: string,
+  channel: string,
+): Promise<void> {
+  try {
+    const result = await processMessageIncrementally(orgId, {
+      content: text,
+      author: slackUserId,
+      channel,
+    });
+
+    if (result.factsLearned.length > 0) {
+      console.log(`[Slack Incremental] Learned ${result.factsLearned.length} facts from ${slackUserId}`);
+    }
+    if (result.ticketUpdates.length > 0) {
+      console.log(`[Slack Incremental] Updated ${result.ticketUpdates.length} tickets`);
+    }
+    if (result.shouldTriggerFullAnalysis) {
+      console.log(`[Slack Incremental] Full analysis recommended for org ${orgId}`);
+    }
+  } catch (err) {
+    console.warn("[Slack Incremental] Background processing failed:", err instanceof Error ? err.message : err);
   }
 }
 

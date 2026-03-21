@@ -4,9 +4,14 @@
  * After each successful task, the orchestrator can save lessons.
  * Before each task, relevant memories are loaded into context.
  * Memories decay over time if unused.
+ *
+ * Enhanced with Ultron's memory-extractor pattern: LLM-based silent fact
+ * extraction that categorizes facts (client, technical, decision, constraint,
+ * contact) instead of relying purely on regex.
  */
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { GoogleGenAI } from '@google/genai';
 
 export interface AgentMemory {
   id: string;
@@ -168,6 +173,7 @@ export function extractLessons(
 /**
  * Silent fact extraction from task output — learns business context without announcing.
  * Extracts client names, project details, dollar amounts, and key decisions.
+ * Uses regex for fast extraction (runs on every task output).
  */
 export function extractFactsFromOutput(
   output: string,
@@ -207,4 +213,129 @@ export function extractFactsFromOutput(
   }
 
   return facts.slice(0, 5);
+}
+
+// ── LLM-powered memory extraction (ported from Ultron memory-extractor.ts) ──
+// Uses Gemini to extract structured facts from conversations and task outputs.
+// Runs silently after task completion — never announces itself.
+
+export type MemoryCategory = 'client' | 'technical' | 'decision' | 'constraint' | 'contact' | 'fact';
+
+export interface ExtractedFact {
+  category: MemoryCategory;
+  key: string;
+  value: string;
+  confidence: 'high' | 'medium';
+}
+
+const MEMORY_EXTRACTION_PROMPT = `You are a silent memory extraction system. Read the text and extract KEY FACTS worth remembering about this business/project.
+
+Extract facts in these categories:
+- "client" — client preferences, communication style, expectations, personality
+- "technical" — their current tech stack, platforms they use, integrations, APIs
+- "decision" — decisions that have been confirmed/agreed upon
+- "constraint" — budget numbers, deadlines, team size, platform limitations
+- "contact" — key people mentioned, their roles, their responsibilities
+- "fact" — any other important business/project facts
+
+Rules:
+- Only extract CONCRETE facts, not opinions or speculation
+- Each fact should be a single clear statement
+- Skip generic/obvious things — only save what's specific to THIS business
+- Don't extract things that are just small talk or off-topic
+- Maximum 5 facts per extraction
+
+Output JSON array:
+[
+  { "category": "...", "key": "short_unique_identifier", "value": "the fact", "confidence": "high|medium" }
+]
+
+If there are no important facts to extract, output an empty array: []`;
+
+/**
+ * LLM-powered silent memory extraction from conversation messages or task output.
+ * More thorough than regex — catches nuanced facts about the business.
+ * Returns extracted facts that can be saved via saveAgentMemory.
+ */
+export async function extractMemoriesWithLLM(
+  text: string,
+  contextLabel?: string,
+): Promise<ExtractedFact[]> {
+  if (!text || text.length < 50) return [];
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return [];
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `${contextLabel ? `Context: ${contextLabel}\n\n` : ''}Extract key facts from this text:\n\n${text.slice(0, 4000)}`,
+      config: {
+        temperature: 0.1,
+        maxOutputTokens: 1024,
+        responseMimeType: 'application/json',
+        thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: MEMORY_EXTRACTION_PROMPT,
+      },
+    });
+
+    const raw = response.text ?? '[]';
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const validCategories: MemoryCategory[] = ['client', 'technical', 'decision', 'constraint', 'contact', 'fact'];
+
+    return parsed
+      .filter((f: Record<string, unknown>) => f.key && f.value)
+      .slice(0, 5)
+      .map((f: Record<string, unknown>) => ({
+        category: validCategories.includes(f.category as MemoryCategory) ? f.category as MemoryCategory : 'fact',
+        key: String(f.key),
+        value: String(f.value),
+        confidence: f.confidence === 'medium' ? 'medium' as const : 'high' as const,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Extract and persist memories from text (conversation or task output).
+ * Combines regex-based fast extraction with LLM-based deep extraction.
+ * Returns the number of facts saved.
+ */
+export async function extractAndSaveMemories(
+  orgId: string,
+  agentId: string,
+  text: string,
+  contextLabel?: string,
+  sourceTaskId?: string,
+): Promise<number> {
+  // Fast regex extraction
+  const regexFacts = extractFactsFromOutput(text, contextLabel ?? 'task');
+
+  // LLM extraction (runs in parallel conceptually, but we await it)
+  const llmFacts = await extractMemoriesWithLLM(text, contextLabel);
+
+  let saved = 0;
+
+  // Save regex facts
+  for (const fact of regexFacts) {
+    await saveAgentMemory(orgId, agentId, fact, 'context', sourceTaskId);
+    saved++;
+  }
+
+  // Save LLM facts (with category mapping)
+  for (const fact of llmFacts) {
+    const memType: AgentMemory['memoryType'] =
+      fact.category === 'decision' ? 'lesson' :
+      fact.category === 'client' || fact.category === 'contact' ? 'preference' :
+      'context';
+
+    await saveAgentMemory(orgId, agentId, `[${fact.category}] ${fact.key}: ${fact.value}`, memType, sourceTaskId);
+    saved++;
+  }
+
+  return saved;
 }

@@ -8,7 +8,7 @@ export type IntegrationProvider =
   | 'quickbooks' | 'salesforce' | 'hubspot' | 'stripe' | 'jira' | 'github'
   | 'google_analytics' | 'google_sheets' | 'notion' | 'linear'
   | 'asana' | 'google_calendar' | 'microsoft_teams' | 'airtable'
-  | 'linkedin' | 'twitter' | 'instagram' | 'facebook' | 'youtube'
+  | 'linkedin' | 'twitter' | 'instagram' | 'facebook' | 'youtube' | 'tiktok'
   | 'paypal' | 'square' | 'xero' | 'freshbooks' | 'plaid' | 'mercury'
   | 'wave' | 'brex' | 'gusto';
 

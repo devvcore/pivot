@@ -323,7 +323,7 @@ const checkServiceConnection: Tool = {
     provider: {
       type: 'string',
       description: 'The service/provider to check (e.g., "linkedin", "github", "gmail").',
-      enum: ['linkedin', 'twitter', 'instagram', 'facebook', 'youtube', 'github', 'gmail', 'slack', 'hubspot', 'jira', 'notion', 'google_sheets', 'google_calendar', 'stripe', 'salesforce', 'quickbooks'],
+      enum: ['linkedin', 'twitter', 'instagram', 'facebook', 'youtube', 'tiktok', 'github', 'gmail', 'slack', 'hubspot', 'jira', 'notion', 'google_sheets', 'google_calendar', 'stripe', 'salesforce', 'quickbooks'],
     },
   },
   required: ['provider'],
@@ -351,6 +351,186 @@ const checkServiceConnection: Tool = {
         output: `${service} is not connected. Include [connect:${service}] in your response so the user can connect it. You should still CREATE your content/deliverable — just note that you can't publish it yet. The user gets the content regardless of connection status.`,
         cost: 0,
       };
+    }
+  },
+};
+
+// ── Post to TikTok ──────────────────────────────────────────────────────────
+// Ported from windmill-satisfying-videos/tiktok_post_video.py
+// Uses TikTok Content Posting API v2 (Direct Post)
+// Docs: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+
+const postToTikTok: Tool = {
+  name: 'post_to_tiktok',
+  description: 'Upload and publish a video to the user\'s TikTok account. Uses TikTok Content Posting API v2 (Direct Post). Requires a TikTok OAuth access token stored via Composio. The video must be provided as a base64-encoded MP4 (from generate_media or stitch_images_to_video). Creates a real TikTok post.',
+  parameters: {
+    video_data_url: {
+      type: 'string',
+      description: 'Base64-encoded video as a data URL (data:video/mp4;base64,...) or raw base64 string.',
+    },
+    title: {
+      type: 'string',
+      description: 'Video caption with hashtags (max 2200 characters). Include relevant hashtags for reach.',
+    },
+    privacy_level: {
+      type: 'string',
+      description: 'Video privacy level.',
+      enum: ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'],
+    },
+  },
+  required: ['video_data_url', 'title'],
+  category: 'marketing',
+  costTier: 'free',
+
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
+    const videoInput = String(args.video_data_url ?? '');
+    const title = String(args.title ?? '').slice(0, 2200);
+    const privacyLevel = String(args.privacy_level ?? 'SELF_ONLY');
+
+    if (!videoInput) {
+      return { success: false, output: 'video_data_url is required. Generate a video first with generate_media or stitch_images_to_video.' };
+    }
+    if (!title) {
+      return { success: false, output: 'Title/caption is required.' };
+    }
+
+    // Check TikTok connection
+    const connected = await checkConnection(context.orgId, 'tiktok');
+    if (!connected) {
+      return connectionRequiredResult('tiktok');
+    }
+
+    try {
+      // Get TikTok access token from Composio
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: integration } = await supabase
+        .from('integrations')
+        .select('access_token, composio_connected_account_id')
+        .eq('org_id', context.orgId)
+        .eq('provider', 'tiktok')
+        .eq('status', 'connected')
+        .maybeSingle();
+
+      if (!integration?.access_token) {
+        return { success: false, output: 'TikTok access token not found. Please reconnect TikTok. [connect:tiktok]' };
+      }
+
+      const accessToken = integration.access_token;
+
+      // Extract base64 video bytes
+      let videoBase64 = videoInput;
+      const dataUrlMatch = videoInput.match(/^data:video\/\w+;base64,(.+)$/);
+      if (dataUrlMatch) {
+        videoBase64 = dataUrlMatch[1];
+      }
+      const videoBytes = Buffer.from(videoBase64, 'base64');
+      const videoSize = videoBytes.length;
+
+      // Step 1: Initialize direct post upload
+      const initResp = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify({
+          post_info: {
+            title,
+            privacy_level: privacyLevel,
+            disable_duet: false,
+            disable_comment: false,
+            disable_stitch: false,
+          },
+          source_info: {
+            source: 'FILE_UPLOAD',
+            video_size: videoSize,
+            chunk_size: videoSize,
+            total_chunk_count: 1,
+          },
+        }),
+      });
+
+      const initData = await initResp.json() as {
+        error?: { code?: string; message?: string; log_id?: string };
+        data?: { publish_id?: string; upload_url?: string };
+      };
+      const errorCode = initData.error?.code ?? '';
+
+      if (errorCode !== 'ok') {
+        const errorMsg = initData.error?.message ?? 'Unknown error';
+        return { success: false, output: `TikTok upload init failed: ${errorMsg} (code: ${errorCode})` };
+      }
+
+      const publishId = initData.data?.publish_id;
+      const uploadUrl = initData.data?.upload_url;
+
+      if (!publishId || !uploadUrl) {
+        return { success: false, output: 'TikTok init response missing publish_id or upload_url.' };
+      }
+
+      // Step 2: Upload video bytes (single chunk)
+      const uploadResp = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Content-Length': String(videoSize),
+          'Content-Range': `bytes 0-${videoSize - 1}/${videoSize}`,
+        },
+        body: videoBytes,
+      });
+
+      if (!uploadResp.ok) {
+        const uploadErr = await uploadResp.text().catch(() => '');
+        return { success: false, output: `TikTok video upload failed: HTTP ${uploadResp.status} — ${uploadErr.slice(0, 200)}` };
+      }
+
+      // Step 3: Poll for publish status (max 10 attempts, 5s apart = 50s timeout)
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const statusResp = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: JSON.stringify({ publish_id: publishId }),
+        });
+
+        const statusData = await statusResp.json() as {
+          error?: { code?: string; message?: string };
+          data?: { status?: string; fail_reason?: string };
+        };
+        const statusError = statusData.error?.code ?? '';
+
+        if (statusError !== 'ok') {
+          return { success: false, output: `TikTok status check failed: ${statusData.error?.message ?? 'Unknown'}` };
+        }
+
+        const status = statusData.data?.status ?? '';
+
+        if (status === 'PUBLISH_COMPLETE') {
+          return {
+            success: true,
+            output: `TikTok video published successfully!\n\nCaption: "${title.slice(0, 200)}${title.length > 200 ? '...' : ''}"\nPrivacy: ${privacyLevel}\nPublish ID: ${publishId}`,
+            cost: 0,
+          };
+        } else if (status === 'FAILED' || status === 'PUBLISH_FAILED') {
+          const failReason = statusData.data?.fail_reason ?? 'Unknown';
+          return { success: false, output: `TikTok publish failed: ${failReason}` };
+        }
+        // PROCESSING_UPLOAD or PROCESSING_DOWNLOAD — keep polling
+      }
+
+      return {
+        success: true,
+        output: `TikTok video upload submitted (publish_id: ${publishId}). The video is still processing on TikTok's side — it should appear on the account within a few minutes.\n\nCaption: "${title.slice(0, 200)}${title.length > 200 ? '...' : ''}"`,
+        cost: 0,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, output: `TikTok post failed: ${message}` };
     }
   },
 };
@@ -472,5 +652,5 @@ const getSocialAnalytics: Tool = {
 
 // ── Register ──────────────────────────────────────────────────────────────────
 
-export const socialTools: Tool[] = [postToLinkedIn, postToTwitter, postToInstagram, postToFacebook, getSocialAnalytics, checkServiceConnection];
+export const socialTools: Tool[] = [postToLinkedIn, postToTwitter, postToInstagram, postToFacebook, postToTikTok, getSocialAnalytics, checkServiceConnection];
 registerTools(socialTools);

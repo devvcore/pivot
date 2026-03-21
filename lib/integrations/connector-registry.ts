@@ -57,6 +57,7 @@ const PROVIDER_ENV_KEYS: Record<IntegrationProvider, string[]> = {
   instagram: ['COMPOSIO_AUTH_INSTAGRAM'],
   facebook: ['COMPOSIO_AUTH_FACEBOOK'],
   youtube: ['COMPOSIO_AUTH_YOUTUBE'],
+  tiktok: ['COMPOSIO_AUTH_TIKTOK'],
   paypal: ['COMPOSIO_AUTH_PAYPAL'],
   square: ['COMPOSIO_AUTH_SQUARE'],
   xero: ['COMPOSIO_AUTH_XERO'],

@@ -10,6 +10,27 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
+/** Resolve orgId from query param or organization ownership */
+async function resolveOrgId(
+  request: NextRequest,
+  userId: string,
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<string | null> {
+  // 1. Accept orgId from query param
+  const qsOrgId = request.nextUrl.searchParams.get('orgId');
+  if (qsOrgId) return qsOrgId;
+
+  // 2. Look up organization owned by this user
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('owner_user_id', userId)
+    .limit(1)
+    .single();
+
+  return org?.id ?? null;
+}
+
 // ── GET: list alerts ─────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
@@ -18,19 +39,10 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Look up org for this user
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('org_id')
-    .eq('user_id', auth.user.id)
-    .limit(1)
-    .single();
-
-  if (!membership) {
+  const orgId = await resolveOrgId(request, auth.user.id, supabase);
+  if (!orgId) {
     return NextResponse.json({ error: 'No organization found' }, { status: 404 });
   }
-
-  const orgId = membership.org_id;
 
   // Parse query params
   const url = new URL(request.url);
@@ -83,19 +95,10 @@ export async function PATCH(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Look up org for this user
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('org_id')
-    .eq('user_id', auth.user.id)
-    .limit(1)
-    .single();
-
-  if (!membership) {
+  const orgId = await resolveOrgId(request, auth.user.id, supabase);
+  if (!orgId) {
     return NextResponse.json({ error: 'No organization found' }, { status: 404 });
   }
-
-  const orgId = membership.org_id;
 
   let body: { alertIds?: string[]; markAllRead?: boolean };
   try {
