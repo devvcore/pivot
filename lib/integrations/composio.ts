@@ -73,28 +73,38 @@ const TOOLKIT_SLUGS: Partial<Record<IntegrationProvider, string>> = {
   google_sheets: 'googlesheets',
   google_calendar: 'googlecalendar',
   microsoft_teams: 'microsoftteams',
+  instagram: 'instagram_basic',
+  facebook: 'meta_facebook',
+  tiktok: 'tiktok',
 };
 
 /** Fetch a Composio-managed default auth config for a toolkit via REST API */
 async function findDefaultAuthConfig(provider: IntegrationProvider): Promise<string | null> {
   const apiKey = process.env.COMPOSIO_API_KEY;
   if (!apiKey) return null;
-  const slug = TOOLKIT_SLUGS[provider] ?? provider;
+  const slugs = [TOOLKIT_SLUGS[provider] ?? provider];
+  // Add alternate slugs for providers that may have different names in Composio
+  if (provider === 'instagram') slugs.push('meta_instagram', 'instagram');
+  if (provider === 'facebook') slugs.push('facebook', 'meta_facebook');
+  if (provider === 'youtube') slugs.push('youtube', 'google_youtube');
+
+  for (const slug of slugs) {
   try {
     const res = await fetch(
       `https://backend.composio.dev/api/v3/auth_configs?toolkit_slug=${encodeURIComponent(slug)}&is_composio_managed=true&limit=1`,
       { headers: { 'x-api-key': apiKey }, signal: AbortSignal.timeout(8000) },
     );
-    if (!res.ok) return null;
+    if (!res.ok) continue;
     const data = await res.json();
     const items = data?.items ?? data?.data ?? [];
     if (items.length > 0 && items[0].id) {
-      console.log(`[composio] Found Composio-managed auth config for ${provider}: ${items[0].id}`);
+      console.log(`[composio] Found Composio-managed auth config for ${provider} (slug: ${slug}): ${items[0].id}`);
       return items[0].id;
     }
   } catch (e) {
-    console.warn(`[composio] Could not find default auth config for ${provider}:`, e);
+    console.warn(`[composio] Could not find auth config for ${provider} (slug: ${slug}):`, e);
   }
+  } // end for loop
   return null;
 }
 
