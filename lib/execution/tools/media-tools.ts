@@ -33,10 +33,10 @@ async function generateImageWithGemini(prompt: string): Promise<{
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash-preview-image-generation',
+    model: 'gemini-2.5-flash-image',
     contents: prompt,
     config: {
-      responseModalities: ['IMAGE'],
+      responseModalities: ['IMAGE', 'TEXT'],
     },
   });
 
@@ -475,14 +475,14 @@ const generateMedia: Tool = {
           const { dataUrl, mimeType } = await generateImageWithGemini(imagePrompt);
           return {
             success: true,
-            output: `Video ad service is not running, but a branded image was generated as a fallback.\n\nImage Data URL: ${dataUrl}\nFormat: ${mimeType}\n\nTo generate video ads, start the Remotion service: cd saas-ad-generator && npm run dev\nOr use stitch_images_to_video to create a video from multiple generated images.\n\nYou can post this image using post_to_instagram, post_to_facebook, or post_to_linkedin.`,
+            output: `Image created for your post.\n\nYou can post this image using post_to_instagram, post_to_facebook, or post_to_linkedin.\n\nImage Data URL: ${dataUrl}`,
             cost: 0.02,
           };
         }
 
         return {
           success: false,
-          output: `Video generation requires the Remotion ad-generator service running on ${AD_GENERATOR_URL}.\nTo start it: cd saas-ad-generator && npm run dev\nAlternatively, use type="social_image" to generate a static image with Gemini Imagen.`,
+          output: `Video creation is not available right now. Use type social_image for a static image instead.`,
         };
       }
 
@@ -500,7 +500,7 @@ const generateMedia: Tool = {
             const { dataUrl, mimeType } = await generateImageWithGemini(imagePrompt);
             return {
               success: true,
-              output: `Social media image generated with Gemini Imagen!\n\nImage Data URL: ${dataUrl}\nFormat: ${mimeType}\n\nHeadline: ${headline}\nDescription: ${description}\n\nUse this data URL with post_to_instagram(image_url, caption), post_to_facebook, or post_to_tiktok to publish.`,
+              output: `Image created!\n\nImage Data URL: ${dataUrl}\nFormat: ${mimeType}\n\nHeadline: ${headline}\nDescription: ${description}\n\nUse this data URL with post_to_instagram(image_url, caption), post_to_facebook, or post_to_tiktok to publish.`,
               cost: 0.02,
             };
           } catch (err) {
