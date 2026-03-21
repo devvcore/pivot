@@ -44,6 +44,8 @@ const strategist: AgentDefinition = {
     'Resource allocation recommendations',
     'Risk assessment for strategic decisions',
     'Milestone and KPI definition',
+    'Sales pipeline review and CRM management',
+    'Client outreach strategy and follow-up planning',
   ],
   modelPreference: 'deep',
   costBudget: { perTask: 0.10, daily: 1.00 },
@@ -56,11 +58,12 @@ STYLE: Talk like a strategic advisor, not a report generator. Be direct, confide
 TOOL STRATEGY:
 1. If analysis data exists, call query_analysis(list_sections) + 1-2 targeted searches. Done.
 2. If the task involves live metrics, call query_integration_data() to see Stripe/Gmail/Slack data.
-3. If no data exists, use the task description as your primary context. Extract every detail.
-4. CREATE YOUR STRATEGIC PLAN using what you found. Don't wait for perfect data.
-5. If web_search fails, try scrape_website once, then write with what you have.
-6. NEVER repeat a failed tool call. NEVER call the same tool 3+ times.
-7. Before ANY tool call: "Can I answer with what I have?" If yes, WRITE.
+3. For sales/pipeline tasks: search_crm → get_contact_details → suggest_followups. Use get_pipeline_summary for overview.
+4. If no data exists, use the task description as your primary context. Extract every detail.
+5. CREATE YOUR STRATEGIC PLAN using what you found. Don't wait for perfect data.
+6. If web_search fails, try scrape_website once, then write with what you have.
+7. NEVER repeat a failed tool call. NEVER call the same tool 3+ times.
+8. Before ANY tool call: "Can I answer with what I have?" If yes, WRITE.
 
 ERROR RECOVERY:
 - Tool fails → try ONE alternative → write your answer with available data.
@@ -95,6 +98,9 @@ const marketer: AgentDefinition = {
     'SEO audit and optimization',
     'Competitor marketing analysis',
     'Brand voice and messaging',
+    'AI image and video generation for social content',
+    'Social analytics and performance insights',
+    'CRM-powered personalized outreach',
   ],
   modelPreference: 'default',
   costBudget: { perTask: 0.05, daily: 0.50 },
@@ -109,6 +115,8 @@ HOW TO CREATE CONTENT — CRITICAL:
 - Your response text IS the deliverable. Write the actual content in your message.
 - Use ## Platform headers (## LinkedIn, ## Twitter, ## Instagram), > blockquotes for post text, **bold** for key phrases.
 - Include hashtags, hooks, CTAs — everything the user needs to copy and use.
+- For visual content: call generate_media to create AI images/graphics. Call generate_image_batch + stitch_images_to_video for video content.
+- For personalized outreach: use search_crm and get_contact_details to pull real client data into emails.
 
 TOOL STRATEGY:
 1. If creating social content → call get_social_analytics(platform) FIRST to see what posts perform best, engagement rates, best times, top hashtags.
@@ -159,9 +167,10 @@ STYLE: Lead with the headline number. Present tables with bold key figures. Expl
 TOOL STRATEGY:
 1. If the task involves real financials (revenue, expenses, payments): call query_integration_data(provider: "stripe") FIRST.
 2. Call query_analysis for business report data (burn rate, runway, etc.) if analysis data exists.
-3. If no data sources are available, use the numbers from the task description directly to build your model.
-4. CREATE THE FINANCIAL DELIVERABLE. Use markdown tables, bold key figures, clean formatting.
-5. One round of data gathering, then WRITE. NEVER call the same tool twice.
+3. For market benchmarks or industry pricing: call web_search to get current data.
+4. If no data sources are available, use the numbers from the task description directly to build your model.
+5. CREATE THE FINANCIAL DELIVERABLE. Use markdown tables, bold key figures, clean formatting.
+6. One round of data gathering, then WRITE. NEVER call the same tool twice.
 
 DATA INTEGRITY — ABSOLUTE RULE:
 - ONLY use numbers from: tool output, the user's own words, or clearly labeled industry benchmarks.
@@ -243,6 +252,8 @@ const operator: AgentDefinition = {
     'Project planning with Gantt-chart-ready data',
     'Vendor evaluation and comparison',
     'Operational efficiency analysis',
+    'Internal ticket management (create, assign, track)',
+    'CRM pipeline management and client operations',
   ],
   modelPreference: 'default',
   costBudget: { perTask: 0.05, daily: 0.40 },
@@ -256,7 +267,9 @@ TOOL STRATEGY:
 1. Call query_analysis to check health checklist and operational data.
 2. Create the deliverable directly — one data-gathering round, then WRITE.
 3. After creating plans → call create_jira_ticket or write_to_google_sheets directly. They check connections internally.
-4. If not connected, the tool returns [connect:provider] — include it verbatim in your response.
+4. For internal tracking: use create_ticket, list_tickets, update_ticket, assign_ticket for project management.
+5. For client operations: search_crm → get_pipeline_summary for pipeline health.
+6. If not connected, the tool returns [connect:provider] — include it verbatim in your response.
 
 CONNECTION HANDLING:
 - Action tools (create_jira_ticket, write_to_google_sheets, send_email) check connections internally.
@@ -431,6 +444,11 @@ export function getAgentForCategory(category: string): AgentDefinition {
     strategy: 'strategist',
     planning: 'strategist',
     coordination: 'strategist',
+    sales: 'strategist',
+    pipeline: 'strategist',
+    proposal: 'strategist',
+    outreach: 'strategist',
+    crm: 'strategist',
     code: 'codebot',
     github: 'codebot',
     engineering: 'codebot',

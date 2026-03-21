@@ -131,14 +131,17 @@ Email Benchmarks:
       'read_emails',
       'reply_to_email',
       'query_integration_data',
+      'web_search',
+      'create_calendar_event',
     ],
     systemPromptExtension: `FINANCE MODE — Financial analysis, budgets, projections.
 
 TOOL FALLBACK HIERARCHY:
 1. Live financial data: query_integration_data(provider: "stripe") → query_integration_data(provider: "quickbooks")
 2. Analysis data: query_analysis(search) → query_analysis(specific section)
-3. Export: write_to_google_sheets (checks connection internally — returns [connect:google_sheets] if not connected)
-4. If no financial data found: say "I don't have financial data from your connected tools" and ask the user.
+3. Market research: web_search for industry benchmarks, competitor pricing, market rates
+4. Export: write_to_google_sheets (checks connection internally — returns [connect:google_sheets] if not connected)
+5. If no financial data found: say "I don't have financial data from your connected tools" and ask the user.
 
 CONTENT-FIRST WORKFLOW:
 1. Create the full financial deliverable (budget, projection, report) in your response FIRST.
@@ -342,7 +345,7 @@ Vendor Evaluation Criteria:
 
   sales: {
     name: 'sales',
-    description: 'Sales execution outfit — sales content, proposals, competitive handling',
+    description: 'Sales execution outfit — sales content, proposals, competitive handling, CRM pipeline',
     tools: [
       'create_document',
       'create_spreadsheet',
@@ -358,26 +361,49 @@ Vendor Evaluation Criteria:
       'create_hubspot_contact',
       'create_slide_deck',
       'write_to_google_sheets',
+      'read_emails',
+      'reply_to_email',
+      'search_emails',
+      'send_slack_message',
+      'create_calendar_event',
+      'query_integration_data',
+      'get_social_analytics',
+      // CRM tools (full pipeline management)
+      'search_crm',
+      'get_contact_details',
+      'update_contact_stage',
+      'add_contact_note',
+      'create_contact',
+      'suggest_followups',
+      'get_pipeline_summary',
     ],
-    systemPromptExtension: `SALES MODE — Proposals, battle cards, email sequences, pipeline support.
+    systemPromptExtension: `SALES MODE — Proposals, battle cards, email sequences, pipeline management, CRM.
 
 TOOL FALLBACK HIERARCHY:
 1. Company data: query_analysis(search, "sales playbook") → query_analysis(search, "competitive analysis")
-2. Research: web_search → scrape_website (1 attempt each) → write with available data
-3. CRM: create_hubspot_contact (checks connection internally — returns [connect:hubspot] if not connected)
-4. Social: post_to_linkedin (checks connection internally — returns [connect:linkedin] if not connected)
-5. Export: write_to_google_sheets (checks connection internally — returns [connect:google_sheets] if not connected)
+2. Live data: query_integration_data(provider: "stripe") for revenue, query_integration_data(provider: "salesforce") or query_integration_data(provider: "hubspot") for pipeline
+3. CRM: search_crm → get_contact_details → suggest_followups → update_contact_stage for pipeline management
+4. Research: web_search → scrape_website (1 attempt each) → write with available data
+5. Outreach: send_email, post_to_linkedin, create_hubspot_contact (check connections internally)
+6. Export: write_to_google_sheets (checks connection internally — returns [connect:google_sheets] if not connected)
 
 CONTENT-FIRST WORKFLOW:
 1. Create the sales deliverable grounded in company data FIRST in your response.
 2. AFTER writing, call action tools directly for publishing/export. They handle connection checks internally.
 3. Do NOT call check_connection — action tools handle it automatically.
 
+CRM WORKFLOW:
+- For "follow up with leads": search_crm → get_contact_details → suggest_followups → draft personalized emails
+- For "update pipeline": search_crm → update_contact_stage with notes
+- For "add prospect": create_contact with all known details, then add_contact_note
+- For "pipeline review": get_pipeline_summary → analyze conversion, suggest actions
+
 GUIDELINES:
 - Use actual value propositions and differentiators from analysis data.
 - ROI calculations must use real numbers, not fabricated metrics.
 - Email sequences: Day 1, Day 3, Day 7, Day 14 cadence.
-- Ground competitive analysis in real data, not assumptions.`,
+- Ground competitive analysis in real data, not assumptions.
+- Personalize EVERY outreach with real client data from CRM and integrations.`,
     domainKnowledge: `Sales Frameworks:
 - MEDDIC: Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion
 - SPIN Selling: Situation, Problem, Implication, Need-payoff questions
@@ -426,21 +452,31 @@ Objection Handling:
       'stitch_images_to_video',
       'research_brand',
       'create_slide_deck',
+      'get_social_analytics',
+      'query_integration_data',
+      'send_email',
+      'send_slack_message',
+      'write_to_google_sheets',
+      'create_spreadsheet',
     ],
     systemPromptExtension: `GROWTH MODE — Experiments, funnel optimization, channel scaling.
 
 TOOL FALLBACK HIERARCHY:
 1. Company data: query_analysis(search, "growth") → query_analysis(search, "KPIs")
-2. Research: web_search → scrape_website → write with available data
-3. Social: post_to_linkedin / post_to_twitter / post_to_instagram / post_to_facebook (check connections internally)
-4. Content: create_social_post, create_landing_page, create_email_campaign
+2. Live metrics: query_integration_data(provider: "stripe") for revenue trends, query_integration_data(provider: "google_analytics") for traffic
+3. Social analytics: get_social_analytics(platform) for engagement data before creating content
+4. Research: web_search → scrape_website → write with available data
+5. Social: post_to_linkedin / post_to_twitter / post_to_instagram / post_to_facebook (check connections internally)
+6. Content: create_social_post, create_landing_page, create_email_campaign
+7. Export: write_to_google_sheets for experiment trackers and results
 
 CONTENT-FIRST WORKFLOW:
-1. Analyze current growth data from analysis.
-2. Design experiments with ICE scores, success metrics, and test plans.
-3. WRITE your content/strategy directly in your response FIRST.
-4. AFTER writing, call posting tools directly. They handle connection checks internally.
-5. Do NOT call check_connection — action tools handle it automatically.
+1. Pull live metrics with query_integration_data + get_social_analytics to ground strategy in real data.
+2. Analyze current growth data from analysis.
+3. Design experiments with ICE scores, success metrics, and test plans.
+4. WRITE your content/strategy directly in your response FIRST.
+5. AFTER writing, call posting tools directly. They handle connection checks internally.
+6. Do NOT call check_connection — action tools handle it automatically.
 
 PRINCIPLES:
 - Every recommendation must be testable as an experiment.
@@ -490,11 +526,17 @@ Growth Benchmarks (SaaS):
       'write_to_google_sheets',
       'read_emails',
       'search_emails',
+      'send_email',
+      'reply_to_email',
       'send_slack_message',
       'query_integration_data',
-      // CRM tools (for client research)
+      // CRM tools (for client research + sales support)
       'search_crm',
       'get_contact_details',
+      'add_contact_note',
+      'create_contact',
+      'suggest_followups',
+      'get_pipeline_summary',
     ],
     systemPromptExtension: `RESEARCH MODE — Web research, market analysis, competitive intelligence.
 
@@ -561,10 +603,13 @@ Trend Analysis:
       'github_list_issues',
       'github_list_prs',
       'send_slack_message',
+      'send_email',
       'create_jira_ticket',
       'create_slide_deck',
       'read_emails',
       'reply_to_email',
+      'search_emails',
+      'write_to_google_sheets',
       'query_integration_data',
     ],
     systemPromptExtension: `CODEBOT MODE — GitHub actions, code quality, engineering metrics.
