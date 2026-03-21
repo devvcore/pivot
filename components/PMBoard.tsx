@@ -195,22 +195,56 @@ export function PMBoard({ orgId, onBack }: PMBoardProps) {
   const handleGenerateFromAnalysis = async () => {
     setGenerating(true);
     try {
-      const res = await fetch(`/api/pm/generate?orgId=${encodeURIComponent(orgId)}`, { method: "POST" });
+      const res = await authFetch(`/api/pm/tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId, generateFrom: "analysis" }),
+      });
       if (res.ok) {
-        await fetchTickets();
+        const data = await res.json();
+        const count = data.count ?? data.tickets?.length ?? 0;
+        if (count > 0) await fetchTickets();
       }
     } catch {
-      // generation failed
+      // generation failed silently
     }
     setGenerating(false);
   };
 
-  const handleCreateTicket = () => {
-    // Placeholder — would open a ticket creation form or modal
+  const handleCreateTicket = async () => {
+    const title = prompt("Ticket title:");
+    if (!title) return;
+    try {
+      await authFetch(`/api/pm/tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId, title, priority: "medium" }),
+      });
+      await fetchTickets();
+    } catch { /* silent */ }
   };
 
-  const handleAssignToAgent = (ticket: Ticket) => {
-    // Would dispatch to execution system
+  const handleAssignToAgent = async (ticket: Ticket) => {
+    try {
+      await authFetch(`/api/execution/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgId,
+          title: ticket.title,
+          description: ticket.description ?? ticket.title,
+          agentId: "auto",
+          priority: ticket.priority,
+        }),
+      });
+      // Update ticket status
+      await authFetch(`/api/pm/tickets`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id, status: "in_progress", assigned_agent: "auto" }),
+      });
+      await fetchTickets();
+    } catch { /* silent */ }
   };
 
   // Filtering

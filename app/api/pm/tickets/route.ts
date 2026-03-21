@@ -76,6 +76,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ tickets, count: tickets.length });
     }
 
+    // Auto-generate tickets from business analysis
+    if (body.generateFrom === 'analysis') {
+      const { generateTicketsFromAnalysis } = await import('@/lib/pm/ticket-engine');
+      // Load latest analysis
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const supabase = createAdminClient();
+      const { data: job } = await supabase
+        .from('jobs')
+        .select('results_json')
+        .eq('organization_id', orgId)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!job?.results_json) {
+        return NextResponse.json({ error: 'No completed analysis found. Run an analysis first.' }, { status: 404 });
+      }
+
+      const tickets = await generateTicketsFromAnalysis(orgId, job.results_json as Record<string, unknown>);
+      return NextResponse.json({ tickets, count: tickets.length }, { status: 201 });
+    }
+
     // Standard ticket creation
     if (!body.title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 });

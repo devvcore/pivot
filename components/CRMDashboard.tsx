@@ -227,9 +227,11 @@ export function CRMDashboard({ orgId, onBack, onExecute }: CRMDashboardProps) {
   const handleSync = async (provider?: string) => {
     setSyncing(true);
     try {
-      const params = new URLSearchParams({ orgId });
-      if (provider) params.set("provider", provider);
-      await authFetch(`/api/crm/pipeline?${params.toString()}&sync=1`, { method: "POST" });
+      await authFetch(`/api/crm/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId, provider }),
+      });
       await fetchContacts();
     } catch {
       // sync failed — fetchContacts will handle error state
