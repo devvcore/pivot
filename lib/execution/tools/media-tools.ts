@@ -500,8 +500,13 @@ const generateMedia: Tool = {
             const { dataUrl, mimeType } = await generateImageWithGemini(imagePrompt);
             return {
               success: true,
-              output: `Image created!\n\nImage Data URL: ${dataUrl}\nFormat: ${mimeType}\n\nHeadline: ${headline}\nDescription: ${description}\n\nUse this data URL with post_to_instagram(image_url, caption), post_to_facebook, or post_to_tiktok to publish.`,
+              output: `Image created! The image is attached as an artifact below.\n\nHeadline: ${headline}\nDescription: ${description}`,
               cost: 0.02,
+              artifacts: [{
+                type: 'image',
+                name: `social-image-${Date.now()}.${mimeType === 'image/jpeg' ? 'jpg' : 'png'}`,
+                content: dataUrl,
+              }],
             };
           } catch (err) {
             console.warn('[generate_media] Gemini Imagen failed:', err instanceof Error ? err.message : err);

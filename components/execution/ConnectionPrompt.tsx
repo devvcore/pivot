@@ -509,8 +509,7 @@ export default function ConnectionPrompt({
   const handleConnect = async (provider: string) => {
     setConnecting(provider);
     try {
-      const { authFetch } = await import("@/lib/auth-fetch");
-      const res = await authFetch("/api/integrations/connect", {
+      const res = await fetch("/api/integrations/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider, orgId }),
@@ -519,7 +518,13 @@ export default function ConnectionPrompt({
       const data = await res.json();
 
       if (data.redirectUrl) {
-        window.open(data.redirectUrl, "_blank", "width=600,height=700");
+        // Try popup first, fall back to same-tab redirect if popup blocked
+        const popup = window.open(data.redirectUrl, "_blank", "width=600,height=700");
+        if (!popup || popup.closed) {
+          // Popup was blocked — redirect in same tab
+          window.location.href = data.redirectUrl;
+          return;
+        }
         // Poll for connection status — fetch fresh list each time to avoid stale closure
         const interval = setInterval(async () => {
           try {

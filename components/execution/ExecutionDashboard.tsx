@@ -679,6 +679,7 @@ function ArtifactDownloadBar({ content, title }: { content: string; title: strin
 /* ── Artifact card ── */
 function ArtifactCard({ artifact }: { artifact: { name: string; type: string; content: string } }) {
   const [copied, setCopied] = useState(false);
+  const isImage = artifact.type === 'image' || artifact.content?.startsWith('data:image/');
 
   const handleCopy = () => {
     navigator.clipboard.writeText(artifact.content);
@@ -687,21 +688,42 @@ function ArtifactCard({ artifact }: { artifact: { name: string; type: string; co
   };
 
   const handleDownload = () => {
-    const blob = new Blob([artifact.content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = artifact.name;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (isImage) {
+      const a = document.createElement("a");
+      a.href = artifact.content;
+      a.download = artifact.name;
+      a.click();
+    } else {
+      const blob = new Blob([artifact.content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = artifact.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
+
+  // Image artifacts render as actual images
+  if (isImage) {
+    return (
+      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+        <img src={artifact.content} alt={artifact.name} className="w-full max-w-lg" />
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-zinc-100">
+          <FileOutput className="w-3.5 h-3.5 text-teal-600" />
+          <span className="text-xs text-zinc-600 truncate flex-1">{artifact.name}</span>
+          <button onClick={handleDownload} className="text-[10px] font-mono text-teal-600 hover:text-teal-800 transition-colors">Download</button>
+        </div>
+      </div>
+    );
+  }
 
   const preview = artifact.content.split("\n").slice(0, 4).join("\n");
 
   return (
     <div className="bg-white border border-zinc-200 rounded-xl p-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2">
-        <FileOutput className="w-4 h-4 text-emerald-500" />
+        <FileOutput className="w-4 h-4 text-teal-600" />
         <span className="text-xs font-medium text-zinc-900 truncate flex-1">{artifact.name}</span>
         <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded uppercase">{artifact.type}</span>
       </div>
