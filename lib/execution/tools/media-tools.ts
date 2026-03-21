@@ -76,14 +76,16 @@ function buildImagePrompt(args: {
   targetAudience: string;
   brandColor: string;
   tone: string;
+  brandNotes?: string;
+  brandColors?: string[];
 }): string {
-  const toneGuide: Record<string, string> = {
-    professional: 'clean corporate design with structured layout, subtle gradients',
-    casual: 'friendly warm design with rounded shapes and approachable feel',
-    bold: 'high-contrast dramatic design with strong typography and vivid colors',
-    playful: 'colorful energetic design with dynamic shapes and fun elements',
-    minimal: 'minimalist design with lots of whitespace and simple geometric elements',
-  };
+  const colorPalette = args.brandColors && args.brandColors.length > 0
+    ? `Color palette: ${args.brandColors.join(', ')}. Use these EXACT colors.`
+    : `Primary brand color: ${args.brandColor}`;
+
+  const brandContext = args.brandNotes
+    ? `Brand notes: ${args.brandNotes.slice(0, 200)}`
+    : '';
 
   return [
     `Create a professional social media post image (1080x1080px square format).`,
@@ -91,15 +93,16 @@ function buildImagePrompt(args: {
     `Headline text on the image: "${args.headline}"`,
     `Topic/context: ${args.description}`,
     `Target audience: ${args.targetAudience}`,
-    `Primary brand color: ${args.brandColor}`,
-    `Design style: ${toneGuide[args.tone] ?? toneGuide.professional}`,
+    colorPalette,
+    brandContext,
     ``,
-    `Requirements:`,
-    `- Modern, high-quality social media graphic`,
+    `CRITICAL REQUIREMENTS:`,
+    `- Use ONLY the brand colors specified above. Do NOT use purple, blue gradients, or generic tech colors.`,
+    `- The company name is in the description — use it on the image. Do NOT invent a different brand name.`,
+    `- Modern, high-quality social media graphic with warm, earthy, professional feel`,
     `- The headline text must be clearly readable and prominent`,
-    `- Use the brand color as the primary accent color`,
-    `- Include subtle design elements that relate to the topic`,
     `- No stock photo look — make it feel designed and intentional`,
+    `- Do NOT add any fake logos, brand names, or "Solutions Hub" type text`,
     `- Suitable for Instagram, LinkedIn, and Facebook posts`,
   ].join('\n');
 }
@@ -435,8 +438,15 @@ const generateMedia: Tool = {
             .limit(1)
             .maybeSingle();
           if (memory?.content) {
-            const colorMatch = memory.content.match(/#[0-9a-fA-F]{6}/);
-            if (colorMatch) resolvedBrandColor = colorMatch[0];
+            // Extract ALL hex colors from brand memory
+            const allColors = memory.content.match(/#[0-9a-fA-F]{6}/g) ?? [];
+            // Use the warm/accent color, not the darkest one
+            resolvedBrandColor = allColors.length > 2 ? allColors[2] : allColors[0] ?? brandColor;
+            // Also extract brand name and style notes for the image prompt
+            const brandNotes = memory.content;
+            // Store for later use in image prompt
+            (context as unknown as Record<string, unknown>).__brandNotes = brandNotes;
+            (context as unknown as Record<string, unknown>).__brandColors = allColors;
           }
         } catch { /* no memory available */ }
       }
@@ -507,6 +517,8 @@ const generateMedia: Tool = {
             targetAudience,
             brandColor: resolvedBrandColor,
             tone,
+            brandNotes: (context as unknown as Record<string, unknown>).__brandNotes as string | undefined,
+            brandColors: (context as unknown as Record<string, unknown>).__brandColors as string[] | undefined,
           });
           const { dataUrl, mimeType } = await generateImageWithGemini(imagePrompt);
           return {
