@@ -1880,7 +1880,62 @@ export function ExecutionDashboard({
           )}
 
           {/* Messages */}
-          {messages.map((msg) => {
+          {messages.map((msg, msgIndex) => {
+            /* ── Skip thinking/tool_use — rendered as ThinkingSteps above output ── */
+            if (msg.type === "thinking" || msg.type === "tool_use") {
+              // Check if a later output message exists for this task
+              const hasLaterOutput = messages.slice(msgIndex + 1).some(
+                m => m.type === "output" && m.taskId === msg.taskId
+              );
+              // If an output follows, skip (ThinkingSteps will render them)
+              // If no output yet (still in progress), render inline
+              if (hasLaterOutput) return null;
+
+              // Still in progress — show as live thinking step
+              if (msg.type === "thinking") {
+                const phase = msg.content?.toLowerCase() ?? "";
+                const isPlanning = phase.includes("plan");
+                const isExecuting = phase.includes("execut") || phase.includes("start");
+                const isReviewing = phase.includes("review");
+                const icon = isPlanning ? "📋" : isExecuting ? "⚡" : isReviewing ? "🔍" : "💭";
+                return (
+                  <div key={msg.id} className="flex items-center gap-2 pl-2 my-1">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50/50 border border-violet-100 rounded-full">
+                      <span className="text-xs">{icon}</span>
+                      <span className="text-[11px] text-violet-600 font-medium">{msg.content}</span>
+                      <Loader2 className="w-3 h-3 animate-spin text-violet-400" />
+                    </div>
+                  </div>
+                );
+              }
+              // In-progress tool_use
+              const toolName = msg.toolName ?? "unknown";
+              const isDone = !!msg.toolResult;
+              const label = getThinkingLabel(toolName, isDone);
+              return (
+                <div key={msg.id} className="pl-9 my-0.5">
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    {isDone ? (
+                      <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+                    ) : (
+                      <Loader2 className="w-3 h-3 text-indigo-400 animate-spin shrink-0" />
+                    )}
+                    <span className={`text-[11px] ${isDone ? "text-zinc-500" : "text-indigo-600"}`}>
+                      {label}
+                    </span>
+                    {isDone && msg.toolResult && (() => {
+                      const summary = getToolResultSummary(toolName, msg.toolResult);
+                      return summary ? (
+                        <span className="text-[10px] text-zinc-400 ml-1 truncate max-w-[200px]">
+                          — {summary}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              );
+            }
+
             /* ── User message ── */
             if (msg.type === "user") {
               return (
@@ -1931,70 +1986,18 @@ export function ExecutionDashboard({
               );
             }
 
-            /* ── Thinking / progress indicator — rich status with phase ── */
-            if (msg.type === "thinking") {
-              const phase = msg.content?.toLowerCase() ?? "";
-              const isPlanning = phase.includes("plan");
-              const isExecuting = phase.includes("execut") || phase.includes("start");
-              const isReviewing = phase.includes("review");
-              const icon = isPlanning ? "📋" : isExecuting ? "⚡" : isReviewing ? "🔍" : "💭";
-              return (
-                <div key={msg.id} className="flex items-center gap-2 pl-2 my-1">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50/50 border border-violet-100 rounded-full">
-                    <span className="text-xs">{icon}</span>
-                    <span className="text-[11px] text-violet-600 font-medium">{msg.content}</span>
-                    <Loader2 className="w-3 h-3 animate-spin text-violet-400" />
-                  </div>
-                </div>
-              );
-            }
-
-            /* ── Tool use — show what the agent is doing ── */
-            if (msg.type === "tool_use") {
-              const toolName = msg.toolName ?? "unknown";
-              const isComplete = !!msg.toolResult;
-              const label = toolName === "query_analysis" ? "Searching business data" :
-                toolName === "query_integration_data" ? "Pulling live data" :
-                toolName === "web_search" ? "Searching the web" :
-                toolName === "scrape_website" ? "Reading website" :
-                toolName === "send_email" ? "Sending email" :
-                toolName === "post_to_linkedin" ? "Posting to LinkedIn" :
-                toolName === "post_to_instagram" ? "Posting to Instagram" :
-                toolName === "post_to_twitter" ? "Posting to Twitter" :
-                toolName === "generate_media" ? "Creating media content" :
-                toolName === "get_social_analytics" ? "Analyzing social engagement" :
-                toolName === "create_jira_ticket" ? "Creating Jira ticket" :
-                toolName === "github_create_issue" ? "Creating GitHub issue" :
-                toolName === "write_to_google_sheets" ? "Writing to Sheets" :
-                `Using ${formatLabel(toolName)}`;
-              return (
-                <div key={msg.id} className="pl-4 my-1">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${
-                    isComplete ? "bg-emerald-50/50 border border-emerald-100" : "bg-indigo-50/50 border border-indigo-100"
-                  }`}>
-                    {isComplete ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    ) : (
-                      <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin shrink-0" />
-                    )}
-                    <span className={isComplete ? "text-emerald-700" : "text-indigo-700"}>
-                      {label}
-                    </span>
-                    {isComplete && msg.toolResult && (
-                      <span className="text-[10px] text-emerald-500 ml-auto">Done</span>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-
             /* ── Agent output ── */
             if (msg.type === "output") {
               const agentId = msg.agentId ?? "strategist";
               const initial = AGENT_NAMES[agentId]?.emoji ?? "A";
               const agentColor = AGENT_NAMES[agentId]?.color ?? "bg-emerald-500";
               const agentRole = AGENT_NAMES[agentId]?.role ?? "Agent";
-              const contentParts = splitConnectMarkers(msg.content);
+
+              // Extract source citations and clean the content
+              const { cleanContent, sources } = extractSourceCitations(msg.content);
+
+              // Apply connect marker parsing on the citation-cleaned content
+              const contentParts = splitConnectMarkers(cleanContent);
               const detected = detectArtifacts(msg.content);
               const isDocument = detected.isReport || detected.hasTable || msg.content.length > 600;
               const proseClasses = `prose prose-sm prose-zinc max-w-none
@@ -2013,8 +2016,18 @@ export function ExecutionDashboard({
               const titleMatch = msg.content.match(/^#+\s+(.+)$/m);
               const docTitle = titleMatch?.[1] ?? `${msg.agentName ?? agentRole} Output`;
 
+              // Gather preceding thinking/tool_use steps for this task
+              const taskSteps = messages.filter(
+                m => m.taskId === msg.taskId && (m.type === "thinking" || m.type === "tool_use")
+              );
+
               return (
-                <div key={msg.id} className="space-y-2">
+                <div key={msg.id} className="space-y-1">
+                  {/* Thinking steps (collapsible reasoning) */}
+                  {taskSteps.length > 0 && (
+                    <ThinkingSteps steps={taskSteps} isComplete={true} />
+                  )}
+
                   <div className="flex items-start gap-2">
                     <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold text-white`}>
                       {initial}
@@ -2045,6 +2058,8 @@ export function ExecutionDashboard({
                                 )
                               )}
                             </div>
+                            {/* Sources panel inside document */}
+                            <SourcesPanel sources={sources} />
                           </div>
                           {/* Download bar */}
                           <div className="px-4 py-2 bg-zinc-50/80 border-t border-zinc-100">
@@ -2065,6 +2080,8 @@ export function ExecutionDashboard({
                               )
                             )}
                           </div>
+                          {/* Sources panel inside bubble */}
+                          <SourcesPanel sources={sources} />
                           <ArtifactDownloadBar content={msg.content} title={docTitle} />
                         </div>
                       )}
