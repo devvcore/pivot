@@ -102,16 +102,24 @@ export function noPlaceholders(): QualityCheck {
     name: 'No bracket placeholders',
     dimension: 'relevance',
     check: (r) => {
-      // Catch [Client Name], [Your Name], [mention project], [insert X], etc.
-      // But allow [from Stripe], [connect:X], [source: X] which are valid markers
+      // Catch ANY bracket that looks like a placeholder or template
+      // Only allow: [from X] (source citations), [connect:X] (connection markers)
       const brackets = r.match(/\[[^\]]{3,}\]/g) ?? [];
       const badBrackets = brackets.filter(b => {
         const lower = b.toLowerCase();
-        return !lower.startsWith('[from ') && !lower.startsWith('[connect:') &&
-               !lower.startsWith('[source:') && !lower.startsWith('[industry') &&
-               !lower.includes('estimated') &&
-               (lower.includes('name') || lower.includes('project') || lower.includes('insert') ||
-                lower.includes('mention') || lower.includes('your ') || lower.includes('client'));
+        // These are valid, structured markers — allow them
+        if (lower.startsWith('[from ')) return false;
+        if (lower.startsWith('[connect:')) return false;
+        if (lower.startsWith('[source:')) return false;
+        // Everything else with placeholder-like content is bad
+        return (
+          lower.includes('name') || lower.includes('project') || lower.includes('insert') ||
+          lower.includes('mention') || lower.includes('your ') || lower.includes('client') ||
+          lower.includes('company') || lower.includes('website') || lower.includes('e.g.') ||
+          lower.includes('benchmark') || lower.includes('estimated') || lower.includes('placeholder') ||
+          lower.includes('specify') || lower.includes('enter ') || lower.includes('fill in') ||
+          lower.includes('tbd') || lower.includes('example')
+        );
       });
       return badBrackets.length === 0;
     },
