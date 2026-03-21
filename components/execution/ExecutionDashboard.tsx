@@ -1206,9 +1206,10 @@ export function ExecutionDashboard({
         return;
       }
 
-      // Short messages or conversational → route to Pivvy chat for fast, direct response
-      const isConversational = msg.trim().length < 20 || /^(hi|hey|hello|yo|sup|what|how|who|why|when|where|can you|do you|tell me|show me|help)/i.test(msg.trim());
-      if (isConversational) {
+      // DEFAULT: Route to Pivvy for conversational back-and-forth
+      // Only skip Pivvy for explicit NEW task creation (long + action-oriented + no recent agent output)
+      const isNewTask = msg.trim().length > 60 && /^(create|build|write|draft|research|analyze|generate|make|send|post|design|develop)/i.test(msg.trim()) && !messages.some(m => m.type === "output" && Date.now() - m.timestamp < 120000);
+      if (!isNewTask) {
         try {
           const recentCtx = messages
             .filter(m => m.type === "user" || m.type === "output")
