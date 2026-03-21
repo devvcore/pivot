@@ -1412,9 +1412,14 @@ export function ExecutionDashboard({
         return;
       }
 
-      // DEFAULT: Route to Pivvy for conversational back-and-forth
-      // Only skip Pivvy for explicit NEW task creation (long + action-oriented + no recent agent output)
-      const isNewTask = msg.trim().length > 60 && /^(create|build|write|draft|research|analyze|generate|make|send|post|design|develop)/i.test(msg.trim()) && !messages.some(m => m.type === "output" && Date.now() - m.timestamp < 120000);
+      // Route decision: task → orchestrator, conversation → Pivvy
+      // ANY message starting with an action verb is a TASK, regardless of length
+      const actionVerbStart = /^(create|build|write|draft|research|analyze|generate|make|send|post|design|develop|pull|check|scrape|search|find|get|show|list|export|update|fix|run|deploy|set up|schedule|plan|prepare|review|audit|compare|track|monitor|optimize)/i.test(msg.trim());
+      // Short replies to previous output are conversational ("make it shorter", "yes", "change the tone")
+      const isFollowUp = messages.some(m => m.type === "output" && Date.now() - m.timestamp < 120000) && msg.trim().length < 40 && !actionVerbStart;
+      // Questions are conversational ("what's my MRR?", "how are we doing?")
+      const isQuestion = /^(what|how|who|why|when|where|which|is |are |do |does |can |could |should |would |tell me|show me|help)/i.test(msg.trim()) && !actionVerbStart;
+      const isNewTask = actionVerbStart || (msg.trim().length > 30 && !isFollowUp && !isQuestion);
       if (!isNewTask) {
         try {
           const recentCtx = messages
