@@ -73,8 +73,6 @@ const TOOLKIT_SLUGS: Partial<Record<IntegrationProvider, string>> = {
   google_sheets: 'googlesheets',
   google_calendar: 'googlecalendar',
   microsoft_teams: 'microsoftteams',
-  instagram: 'instagram_basic',
-  facebook: 'meta_facebook',
   tiktok: 'tiktok',
 };
 
@@ -98,8 +96,14 @@ async function findDefaultAuthConfig(provider: IntegrationProvider): Promise<str
     const data = await res.json();
     const items = data?.items ?? data?.data ?? [];
     if (items.length > 0 && items[0].id) {
-      console.log(`[composio] Found Composio-managed auth config for ${provider} (slug: ${slug}): ${items[0].id}`);
-      return items[0].id;
+      // Verify the config name actually contains the provider name (prevent cross-provider matches)
+      const configName = String(items[0].app_name ?? items[0].name ?? '').toLowerCase();
+      if (configName.includes(provider) || configName.includes(slug)) {
+        console.log(`[composio] Found Composio-managed auth config for ${provider} (slug: ${slug}): ${items[0].id}`);
+        return items[0].id;
+      }
+      console.warn(`[composio] Config found for slug ${slug} but name "${configName}" doesn't match provider "${provider}" — skipping`);
+      continue;
     }
   } catch (e) {
     console.warn(`[composio] Could not find auth config for ${provider} (slug: ${slug}):`, e);
