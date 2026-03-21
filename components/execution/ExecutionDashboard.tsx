@@ -1468,11 +1468,14 @@ export function ExecutionDashboard({
       // Route decision: task → orchestrator, conversation → Pivvy
       // ANY message starting with an action verb is a TASK, regardless of length
       const actionVerbStart = /^(create|build|write|draft|research|analyze|generate|make|send|post|design|develop|pull|check|scrape|search|find|get|show|list|export|update|fix|run|deploy|set up|schedule|plan|prepare|review|audit|compare|track|monitor|optimize)/i.test(msg.trim());
-      // Short replies to previous output are conversational ("make it shorter", "yes", "change the tone")
-      const isFollowUp = messages.some(m => m.type === "output" && Date.now() - m.timestamp < 120000) && msg.trim().length < 40 && !actionVerbStart;
-      // Questions are conversational ("what's my MRR?", "how are we doing?")
+      // Detect references to previous content — these are ALWAYS follow-ups, even with action verbs
+      const referencePrevious = /\b(them|it|this|that|those|the post|the image|the email|the content|what you|above|from above)\b/i.test(msg.trim());
+      const hasRecentOutput = messages.some(m => m.type === "output" && Date.now() - m.timestamp < 300000); // 5 min window
+      // Short replies to previous output are conversational
+      const isFollowUp = (hasRecentOutput && referencePrevious) || (hasRecentOutput && msg.trim().length < 40 && !actionVerbStart);
+      // Questions are conversational
       const isQuestion = /^(what|how|who|why|when|where|which|is |are |do |does |can |could |should |would |tell me|show me|help)/i.test(msg.trim()) && !actionVerbStart;
-      const isNewTask = actionVerbStart || (msg.trim().length > 30 && !isFollowUp && !isQuestion);
+      const isNewTask = actionVerbStart && !isFollowUp && !isQuestion || (msg.trim().length > 30 && !isFollowUp && !isQuestion && !referencePrevious);
       if (!isNewTask) {
         try {
           const recentCtx = messages
