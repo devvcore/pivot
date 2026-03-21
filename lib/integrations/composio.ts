@@ -130,13 +130,36 @@ export async function initiateConnection(
     throw new Error(`No Composio auth config for ${provider}. Create one in the Composio dashboard or set COMPOSIO_AUTH_${provider.toUpperCase()}.`);
   }
 
-  const result = await composio.connectedAccounts.initiate(
-    orgId, // use orgId as the Composio userId
-    authConfigId,
-    { callbackUrl, allowMultiple: true },
-  );
+  // Try SDK first, fall back to direct REST API if SDK fails
+  let result: Record<string, unknown>;
+  try {
+    result = await composio.connectedAccounts.initiate(
+      orgId,
+      authConfigId,
+      { callbackUrl, allowMultiple: true },
+    ) as unknown as Record<string, unknown>;
+  } catch (sdkErr) {
+    console.warn(`[composio] SDK initiate failed for ${provider}, trying REST API:`, sdkErr);
+    // Direct REST API call (v3 format)
+    const apiKey = process.env.COMPOSIO_API_KEY!;
+    const res = await fetch('https://backend.composio.dev/api/v3/connected_accounts', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        auth_config: { id: authConfigId },
+        connection: { redirect_url: callbackUrl },
+        user_id: orgId,
+        
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Composio REST initiate failed: ${res.status} ${err.slice(0, 200)}`);
+    }
+    result = await res.json();
+  }
   return {
-    redirectUrl: result.redirectUrl ?? '',
+    redirectUrl: String(result.redirectUrl ?? result.redirect_url ?? ''),
     connectionRequestId: (result as any).id ?? '',
   };
 }
