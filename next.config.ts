@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
+  // output: 'standalone',
   transpilePackages: ['motion'],
   turbopack: {},
   webpack: (config, {dev}) => {

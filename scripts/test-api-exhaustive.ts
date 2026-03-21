@@ -289,7 +289,7 @@ async function main() {
     "Write 3 Instagram captions for a web development agency",
     (events) => {
       const content = events
-        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output")
+        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output" || e.event_type === "output")
         .map((e: any) => e.data?.content || e.data?.output || "")
         .join("\n");
       if (content.length > 100) {
@@ -306,7 +306,7 @@ async function main() {
     "Create a monthly financial summary from Stripe data",
     (events) => {
       const content = events
-        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output")
+        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output" || e.event_type === "output")
         .map((e: any) => e.data?.content || e.data?.output || "")
         .join("\n");
       if (content.length > 100) {
@@ -322,7 +322,7 @@ async function main() {
     "Research Webflow and compare it to custom development for small businesses",
     (events) => {
       const content = events
-        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output")
+        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output" || e.event_type === "output")
         .map((e: any) => e.data?.content || e.data?.output || "")
         .join("\n");
       const toolCalls = events.filter((e: any) => e.event_type === "tool_call");
@@ -340,7 +340,7 @@ async function main() {
     "Create a project plan for migrating a client from WordPress to Next.js",
     (events) => {
       const content = events
-        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output")
+        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output" || e.event_type === "output")
         .map((e: any) => e.data?.content || e.data?.output || "")
         .join("\n");
       if (content.length > 100) {
@@ -357,7 +357,7 @@ async function main() {
     "Write a job posting for a junior React developer, remote, $60K-$80K",
     (events) => {
       const content = events
-        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output")
+        .filter((e: any) => e.event_type === "content" || e.event_type === "agent_output" || e.event_type === "output")
         .map((e: any) => e.data?.content || e.data?.output || "")
         .join("\n");
       if (content.length > 100) {
