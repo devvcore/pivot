@@ -1322,7 +1322,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         await this.emitEvent(task.id, task.agentId, task.orgId, 'output', {
           content: result,
           resultLength: result.length,
-          artifactCount: artifacts.length,
+          artifactCount: (task.artifacts ?? artifacts ?? []).length,
           triageLevel,
           totalCost: task.costSpent,
         });
