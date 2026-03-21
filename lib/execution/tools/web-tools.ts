@@ -30,10 +30,10 @@ async function webSearchViaOpenRouter(query: string): Promise<{ answer: string; 
       body: JSON.stringify({
         model: 'perplexity/sonar',
         messages: [
-          { role: 'system', content: 'You are a research assistant. Provide concise, factual answers with sources.' },
-          { role: 'user', content: query },
+          { role: 'system', content: 'You are a business research analyst. Provide detailed, factual answers with specific numbers, dates, and sources. Always cite your sources. When discussing competitors or pricing, include specific dollar amounts and comparisons. Be thorough but concise.' },
+          { role: 'user', content: `Research this thoroughly and provide specific data points, numbers, and citations: ${query}` },
         ],
-        max_tokens: 1500,
+        max_tokens: 3000,
       }),
       signal: AbortSignal.timeout(30000),
     });
@@ -69,7 +69,7 @@ function extractTextFromHTML(html: string): string {
   // Collapse whitespace
   text = text.replace(/\s+/g, ' ').trim();
   // Truncate to reasonable length
-  return text.slice(0, 8000);
+  return text.slice(0, 15000);
 }
 
 // ── Tool Definitions ─────────────────────────────────────────────────────────

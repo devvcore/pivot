@@ -66,6 +66,212 @@ const AGENT_NAMES: Record<string, { name: string; emoji: string; role: string; c
   codebot: { name: "CodeBot", emoji: "C", role: "Engineering & Code", color: "bg-orange-500" },
 };
 
+/* ── Source citation parsing ── */
+const SOURCE_TAG_RE = /\[from\s+([^\]]+)\]/gi;
+
+interface SourceCitation {
+  index: number;
+  label: string;
+  sourceType: "stripe" | "gmail" | "github" | "salesforce" | "analysis" | "web" | "integration" | "other";
+  snippet: string;
+}
+
+function detectSourceType(label: string): SourceCitation["sourceType"] {
+  const l = label.toLowerCase();
+  if (l.includes("stripe")) return "stripe";
+  if (l.includes("gmail") || l.includes("email")) return "gmail";
+  if (l.includes("github")) return "github";
+  if (l.includes("salesforce") || l.includes("crm")) return "salesforce";
+  if (l.includes("analysis") || l.includes("report") || l.includes("task")) return "analysis";
+  if (l.includes("web") || l.includes("search")) return "web";
+  if (l.includes("slack") || l.includes("jira") || l.includes("notion") || l.includes("sheets") || l.includes("calendar") || l.includes("hubspot") || l.includes("linkedin") || l.includes("twitter")) return "integration";
+  return "other";
+}
+
+function extractSourceCitations(content: string): { cleanContent: string; sources: SourceCitation[] } {
+  const sources: SourceCitation[] = [];
+  const seen = new Map<string, number>();
+  let index = 0;
+
+  const cleanContent = content.replace(SOURCE_TAG_RE, (_match, label: string) => {
+    const key = label.toLowerCase().trim();
+    if (!seen.has(key)) {
+      index++;
+      seen.set(key, index);
+      // Extract a snippet: grab some surrounding text context
+      const matchPos = content.indexOf(_match);
+      const before = content.slice(Math.max(0, matchPos - 80), matchPos).trim();
+      const snippetParts = before.split(/[.!?\n]/).filter(Boolean);
+      const snippet = snippetParts[snippetParts.length - 1]?.trim().slice(0, 60) ?? "";
+      sources.push({
+        index,
+        label: label.trim(),
+        sourceType: detectSourceType(label),
+        snippet,
+      });
+    }
+    const num = seen.get(key)!;
+    return `[${num}]`;
+  });
+
+  return { cleanContent, sources };
+}
+
+const SOURCE_ICONS: Record<SourceCitation["sourceType"], { icon: string; color: string; bg: string }> = {
+  stripe: { icon: "S", color: "text-violet-700", bg: "bg-violet-50 border-violet-200" },
+  gmail: { icon: "M", color: "text-red-700", bg: "bg-red-50 border-red-200" },
+  github: { icon: "G", color: "text-zinc-800", bg: "bg-zinc-50 border-zinc-300" },
+  salesforce: { icon: "SF", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+  analysis: { icon: "A", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
+  web: { icon: "W", color: "text-cyan-700", bg: "bg-cyan-50 border-cyan-200" },
+  integration: { icon: "I", color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
+  other: { icon: "?", color: "text-zinc-600", bg: "bg-zinc-50 border-zinc-200" },
+};
+
+/* ── Source card component ── */
+function SourceCard({ source }: { source: SourceCitation }) {
+  const style = SOURCE_ICONS[source.sourceType];
+  return (
+    <div className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] shrink-0 ${style.bg}`}>
+      <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold ${style.color} bg-white/60`}>
+        {style.icon}
+      </span>
+      <div className="min-w-0">
+        <div className={`font-medium truncate ${style.color}`}>{source.label}</div>
+        {source.snippet && (
+          <div className="text-[10px] text-zinc-500 truncate max-w-[140px]">{source.snippet}</div>
+        )}
+      </div>
+      <span className="text-[9px] text-zinc-400 font-mono shrink-0">[{source.index}]</span>
+    </div>
+  );
+}
+
+/* ── Sources panel ── */
+function SourcesPanel({ sources }: { sources: SourceCitation[] }) {
+  if (sources.length === 0) return null;
+  return (
+    <div className="mt-2 pt-2 border-t border-zinc-100">
+      <div className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-1.5">Sources</div>
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+        {sources.map((s) => (
+          <SourceCard key={s.index} source={s} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Thinking step labels ── */
+const THINKING_LABELS: Record<string, { active: string; done: string }> = {
+  query_analysis: { active: "Searching business data...", done: "Found relevant business data" },
+  query_integration_data: { active: "Pulling live integration data...", done: "Loaded integration data" },
+  web_search: { active: "Searching the web...", done: "Found web results" },
+  scrape_website: { active: "Reading website content...", done: "Finished reading website" },
+  send_email: { active: "Sending email...", done: "Email sent" },
+  post_to_linkedin: { active: "Publishing to LinkedIn...", done: "Posted to LinkedIn" },
+  post_to_instagram: { active: "Publishing to Instagram...", done: "Posted to Instagram" },
+  post_to_twitter: { active: "Publishing to Twitter...", done: "Posted to Twitter" },
+  generate_media: { active: "Creating media content...", done: "Media generated" },
+  get_social_analytics: { active: "Analyzing social engagement...", done: "Engagement data loaded" },
+  create_jira_ticket: { active: "Creating Jira ticket...", done: "Jira ticket created" },
+  github_create_issue: { active: "Creating GitHub issue...", done: "Issue created" },
+  github_create_pr: { active: "Creating pull request...", done: "Pull request created" },
+  write_to_google_sheets: { active: "Writing to Sheets...", done: "Exported to Sheets" },
+  read_from_google_sheets: { active: "Reading from Sheets...", done: "Loaded spreadsheet data" },
+  financial_projection: { active: "Running financial model...", done: "Projection complete" },
+  create_budget: { active: "Building budget...", done: "Budget created" },
+  create_document: { active: "Drafting document...", done: "Document drafted" },
+  create_spreadsheet: { active: "Building spreadsheet...", done: "Spreadsheet ready" },
+  create_social_post: { active: "Crafting social content...", done: "Content drafted" },
+  create_job_posting: { active: "Writing job posting...", done: "Job posting ready" },
+};
+
+function getThinkingLabel(toolName: string, isComplete: boolean): string {
+  const entry = THINKING_LABELS[toolName];
+  if (entry) return isComplete ? entry.done : entry.active;
+  return isComplete ? `Finished ${formatLabel(toolName).toLowerCase()}` : `${formatLabel(toolName)}...`;
+}
+
+function getToolResultSummary(toolName: string, toolResult: string): string | null {
+  if (!toolResult || toolResult.length < 5) return null;
+  try {
+    const r = JSON.parse(toolResult);
+    if (r.count !== undefined) return `${r.count} results found`;
+    if (r.total !== undefined) return `Total: ${r.total}`;
+    if (r.success === true && r.message) return r.message;
+  } catch {
+    // Not JSON — extract first meaningful line
+    const line = toolResult.split("\n").find(l => l.trim().length > 5);
+    if (line && line.length < 80) return line.trim();
+  }
+  return null;
+}
+
+/* ── Collapsible thinking/reasoning steps ── */
+function ThinkingSteps({ steps, isComplete }: { steps: ChatMessage[]; isComplete: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const thinkingSteps = steps.filter(s => s.type === "thinking" || s.type === "tool_use");
+
+  if (thinkingSteps.length === 0) return null;
+
+  return (
+    <div className="pl-9 mb-1">
+      {/* When task is done, collapse into a toggle */}
+      {isComplete ? (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors py-1"
+        >
+          <Brain className="w-3 h-3" />
+          <span>{thinkingSteps.filter(s => s.type === "tool_use").length} steps</span>
+          <span className="mx-0.5">·</span>
+          <span>Show reasoning</span>
+          <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      ) : null}
+
+      {/* Show steps: always visible while in progress, toggleable when done */}
+      {(!isComplete || expanded) && (
+        <div className="space-y-0.5 mt-0.5">
+          {thinkingSteps.map((step) => {
+            if (step.type === "thinking") {
+              return (
+                <div key={step.id} className="flex items-center gap-1.5 py-0.5">
+                  <div className="w-1 h-1 rounded-full bg-violet-300" />
+                  <span className="text-[11px] text-violet-500">{step.content}</span>
+                </div>
+              );
+            }
+            // tool_use
+            const toolName = step.toolName ?? "unknown";
+            const isDone = !!step.toolResult;
+            const label = getThinkingLabel(toolName, isDone);
+            const summary = isDone ? getToolResultSummary(toolName, step.toolResult ?? "") : null;
+            return (
+              <div key={step.id} className="flex items-center gap-1.5 py-0.5">
+                {isDone ? (
+                  <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+                ) : (
+                  <Loader2 className="w-3 h-3 text-indigo-400 animate-spin shrink-0" />
+                )}
+                <span className={`text-[11px] ${isDone ? "text-zinc-500" : "text-indigo-600"}`}>
+                  {label}
+                </span>
+                {summary && (
+                  <span className="text-[10px] text-zinc-400 ml-1 truncate max-w-[200px]">
+                    — {summary}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Parse [connect:provider] markers from agent output ── */
 const CONNECT_MARKER_RE = /\[connect:([a-z_]+)\]/g;
 
