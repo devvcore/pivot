@@ -542,10 +542,10 @@ const generateMedia: Tool = {
         }
       }
 
-      // No generation service available
+      // No image generation available — still provide useful content
       return {
         success: true,
-        output: `Media content plan created (no image generation service available):\n\nHeadline: ${headline}\nDescription: ${description}\nTarget: ${targetAudience}\nTone: ${tone}\nBrand Color: ${resolvedBrandColor}\n\nTo generate images, ensure GEMINI_API_KEY is set (preferred) or OPENBRAND_API_KEY.\nFor video ads, ensure the ad-generator service is running on ${AD_GENERATOR_URL}.\n\nCaption ready to use with posting tools once media is generated.`,
+        output: `## Social Media Post Ready\n\n**Caption:**\n${headline}\n\n${description}\n\n**Visual Direction:**\n- Background: ${tone} style with ${resolvedBrandColor} as accent color\n- Text overlay: "${headline}"\n- Suggested dimensions: 1080x1080 (Instagram square)\n- Style: ${tone}, professional, brand-consistent\n\n**Target Audience:** ${targetAudience}\n\nThe caption is ready to use. For the image, you can use Canva or any design tool with the visual direction above. Once you have an image, I can post it to Instagram, LinkedIn, or Facebook for you.`,
         cost: 0,
       };
     } catch (err) {
