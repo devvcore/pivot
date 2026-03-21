@@ -240,9 +240,26 @@ function generateContextPills(agentId: string, toolsUsed: string[], outputConten
     if (regex.test(lowerOutput)) add(pill);
   }
 
-  // Signal 1 — agent defaults (fill remaining slots)
-  const agentDefaults = AGENT_PILLS[agentId] ?? AGENT_PILLS.strategist;
-  for (const p of agentDefaults) add(p);
+  // Signal 4 — content-specific smart pills based on what was discussed
+  if (/client|customer|upsell|outreach|retention/i.test(lowerOutput)) {
+    add({ label: "Email this to client", icon: Mail, prompt: "Draft and send this as an email to the relevant client" });
+    add({ label: "Add to CRM", icon: Target, prompt: "Add this interaction to the CRM as a contact note" });
+  }
+  if (/instagram|social|post|content/i.test(lowerOutput)) {
+    add({ label: "Generate image", icon: Sparkles, prompt: "Generate a social media image for this content" });
+  }
+  if (/plan|strategy|roadmap|initiative/i.test(lowerOutput)) {
+    add({ label: "Create tickets", icon: ClipboardList, prompt: "Create project tickets from this plan" });
+  }
+  if (/data|revenue|mrr|expense|cash/i.test(lowerOutput)) {
+    add({ label: "Show projection", icon: TrendingUp, prompt: "Generate a 6-month projection chart for this" });
+  }
+
+  // Signal 5 — ONE agent default as fallback (only if we have fewer than 3 pills)
+  if (pills.length < 3) {
+    const agentDefaults = AGENT_PILLS[agentId] ?? AGENT_PILLS.strategist;
+    add(agentDefaults[0]);
+  }
 
   return pills.slice(0, 4);
 }

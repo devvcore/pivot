@@ -45,7 +45,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "pm", label: "Projects", icon: ClipboardList },
   { id: "employees", label: "Team", icon: UserCheck },
   { id: "integrations", label: "Integrations", icon: Plug },
-  { id: "mission-control", label: "Mission Control", icon: Cpu },
 ];
 
 interface AppShellProps {
