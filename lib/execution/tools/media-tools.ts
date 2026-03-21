@@ -404,7 +404,7 @@ const generateMedia: Tool = {
   category: 'marketing',
   costTier: 'moderate',
 
-  async execute(args: Record<string, unknown>, _context: ToolContext): Promise<ToolResult> {
+  async execute(args: Record<string, unknown>, context: ToolContext): Promise<ToolResult> {
     const type = String(args.type ?? 'social_image');
     const headline = String(args.headline ?? '');
     const description = String(args.description ?? '');
@@ -419,14 +419,50 @@ const generateMedia: Tool = {
     }
 
     try {
-      // If website URL provided, research it first for brand context (self-contained)
+      // Auto-resolve brand colors: check memory first, then website research
       let resolvedBrandColor = brandColor;
-      if (websiteUrl) {
+
+      // 1. Check agent memory for saved brand colors
+      if (resolvedBrandColor === '#6C5CE7') { // still default — try to find real colors
         try {
-          const research = await researchWebsiteInline(websiteUrl);
+          const { createAdminClient } = await import('@/lib/supabase/admin');
+          const supabase = createAdminClient();
+          const { data: memory } = await supabase
+            .from('agent_memory')
+            .select('content')
+            .eq('org_id', context.orgId)
+            .ilike('content', '%BRAND COLORS%')
+            .limit(1)
+            .maybeSingle();
+          if (memory?.content) {
+            const colorMatch = memory.content.match(/#[0-9a-fA-F]{6}/);
+            if (colorMatch) resolvedBrandColor = colorMatch[0];
+          }
+        } catch { /* no memory available */ }
+      }
+
+      // 2. If still default and website URL available, research it
+      let resolvedUrl = websiteUrl;
+      if (!resolvedUrl && resolvedBrandColor === '#6C5CE7') {
+        // Try to find website from deliverables
+        const website = context.deliverables?.website as string ?? (context.deliverables as Record<string, unknown>)?.companyWebsite as string;
+        if (website) resolvedUrl = website;
+      }
+      if (resolvedUrl && resolvedBrandColor === '#6C5CE7') {
+        try {
+          const research = await researchWebsiteInline(resolvedUrl);
           resolvedBrandColor = research.theme.primaryColor || brandColor;
+          // Save to memory for next time
+          try {
+            const { saveAgentMemory } = await import('@/lib/execution/agent-memory');
+            await saveAgentMemory(
+              context.orgId, context.agentId,
+              `BRAND COLORS from ${resolvedUrl}: Primary: ${research.theme.primaryColor}, Secondary: ${research.theme.secondaryColor}, Background: ${research.theme.backgroundColor}, Tone: ${research.theme.tone}`,
+              'context'
+            );
+          } catch { /* save failed — non-critical */ }
         } catch {
-          // Website research failed — continue with provided brand color
+          // Website research failed — continue with default
         }
       }
 
