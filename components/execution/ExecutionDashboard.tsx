@@ -706,13 +706,31 @@ function ArtifactCard({ artifact }: { artifact: { name: string; type: string; co
 
   // Image artifacts render as actual images
   if (isImage) {
+    const [imgError, setImgError] = useState(false);
+    const contentLen = artifact.content?.length ?? 0;
+
     return (
       <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-        <img src={artifact.content} alt={artifact.name} className="w-full max-w-lg" />
+        {contentLen > 100 && !imgError ? (
+          <img
+            src={artifact.content}
+            alt={artifact.name}
+            className="w-full max-w-lg"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="px-4 py-8 text-center bg-zinc-50">
+            <FileOutput className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+            <p className="text-sm text-zinc-500 mb-2">{artifact.name}</p>
+            <p className="text-xs text-zinc-400 mb-3">{contentLen > 0 ? `${Math.round(contentLen / 1024)}KB image` : 'Image data not loaded'}</p>
+          </div>
+        )}
         <div className="flex items-center gap-2 px-3 py-2 border-t border-zinc-100">
           <FileOutput className="w-3.5 h-3.5 text-teal-600" />
           <span className="text-xs text-zinc-600 truncate flex-1">{artifact.name}</span>
-          <button onClick={handleDownload} className="text-[10px] font-mono text-teal-600 hover:text-teal-800 transition-colors">Download</button>
+          <button onClick={handleDownload} className="text-[10px] font-mono text-teal-600 hover:text-teal-800 transition-colors px-2 py-1 bg-teal-50 rounded-lg">
+            Download Image
+          </button>
         </div>
       </div>
     );
