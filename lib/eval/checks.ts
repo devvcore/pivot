@@ -97,6 +97,43 @@ export function noFabricatedNumbers(): QualityCheck {
   };
 }
 
+export function noPlaceholders(): QualityCheck {
+  return {
+    name: 'No bracket placeholders',
+    dimension: 'relevance',
+    check: (r) => {
+      // Catch [Client Name], [Your Name], [mention project], [insert X], etc.
+      // But allow [from Stripe], [connect:X], [source: X] which are valid markers
+      const brackets = r.match(/\[[^\]]{3,}\]/g) ?? [];
+      const badBrackets = brackets.filter(b => {
+        const lower = b.toLowerCase();
+        return !lower.startsWith('[from ') && !lower.startsWith('[connect:') &&
+               !lower.startsWith('[source:') && !lower.startsWith('[industry') &&
+               !lower.includes('estimated') &&
+               (lower.includes('name') || lower.includes('project') || lower.includes('insert') ||
+                lower.includes('mention') || lower.includes('your ') || lower.includes('client'));
+      });
+      return badBrackets.length === 0;
+    },
+  };
+}
+
+export function noAITells(): QualityCheck {
+  return {
+    name: 'No AI chatbot tells',
+    dimension: 'quality',
+    check: (r) => {
+      const lower = r.toLowerCase();
+      const tells = [
+        'as an ai', 'as a language model', 'i\'d be happy to', 'certainly!',
+        'great question!', 'absolutely!', 'i hope this helps',
+        'let me help you with that', 'sure thing!', 'of course!',
+      ];
+      return !tells.some(t => lower.includes(t));
+    },
+  };
+}
+
 export function noFakeTestimonials(): QualityCheck {
   return {
     name: 'No fake testimonials',

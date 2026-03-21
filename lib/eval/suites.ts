@@ -8,7 +8,7 @@
 import type { EvalSuite } from './types';
 import {
   containsAny, containsAll, hasConnectMarker, usedTool,
-  noHallucination, noFabricatedNumbers, noFakeTestimonials,
+  noHallucination, noFabricatedNumbers, noFakeTestimonials, noAITells, noPlaceholders,
   notGeneric, noVerboseGuidance, minLength, maxLength,
   isConversational, usesMarkdown, hasHeaders,
   maxToolCalls, maxLatency,
@@ -115,7 +115,7 @@ export const agentSuite: EvalSuite = {
       checks: [
         minLength(400), containsAny('next.js', 'typescript', 'supabase', 'remote'),
         containsAny('responsibilities', 'requirements', 'qualifications', 'benefits'),
-        notGeneric(), noHallucination(), isConversational(), usesMarkdown(), hasHeaders(),
+        notGeneric(), noHallucination(), noAITells(), noPlaceholders(), isConversational(), usesMarkdown(), hasHeaders(),
       ],
     },
     {
@@ -126,7 +126,7 @@ export const agentSuite: EvalSuite = {
       tags: ['standalone'],
       checks: [
         minLength(400), containsAny('growth', 'strategy', 'q2', 'users', 'mrr'),
-        notGeneric(), noHallucination(), noFabricatedNumbers(),
+        notGeneric(), noHallucination(), noFabricatedNumbers(), noAITells(), noPlaceholders(),
         isConversational(), usesMarkdown(), hasHeaders(), maxToolCalls(10),
       ],
     },
@@ -138,7 +138,7 @@ export const agentSuite: EvalSuite = {
       tags: ['standalone', 'content'],
       checks: [
         minLength(300), containsAny('linkedin', 'twitter', 'post', 'content'),
-        notGeneric(), noHallucination(), usesMarkdown(), isConversational(),
+        notGeneric(), noHallucination(), noAITells(), noPlaceholders(), usesMarkdown(), isConversational(),
       ],
     },
   ],
