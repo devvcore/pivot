@@ -78,7 +78,7 @@ const queryAnalysis: Tool = {
         if (key.startsWith('__')) continue; // skip internal keys
         const data = deliverables[key];
         const serialized = JSON.stringify(data);
-        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 8000)}`);
+        sectionSummaries.push(`[${key}]: ${serialized.slice(0, 6000)}`);
       }
 
       // Include integration data if present — full context, no truncation
