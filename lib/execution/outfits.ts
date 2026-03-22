@@ -66,6 +66,12 @@ export const OUTFITS: Record<string, Outfit> = {
       'search_crm',
       'get_contact_details',
       'add_contact_note',
+      // Scheduling & A/B testing
+      'schedule_post',
+      'create_ab_test',
+      'get_scheduled_posts',
+      'get_ab_test_results',
+      'get_cross_platform_analytics',
     ],
     systemPromptExtension: `MARKETING MODE — Content creation and publishing.
 

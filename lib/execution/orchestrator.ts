@@ -41,6 +41,7 @@ import './tools/productivity-tools';
 import './tools/media-tools';
 import './tools/crm-tools';
 import './tools/pm-tools';
+import './tools/scheduling-tools';
 
 const FLASH_MODEL = 'gemini-2.5-flash';
 
