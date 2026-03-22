@@ -25,6 +25,7 @@ import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedu
 import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory, recoverToolCallsFromText, repairConversationHistory, guardContextBudget, smartTruncate } from './defensive-harness';
 import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, type Directive } from './directives';
 import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
+import { selectModel, calculateCost } from './model-router';
 
 // Import tool modules to ensure they self-register
 import './tools/web-tools';
@@ -81,6 +82,7 @@ export interface ExecutionTask {
   reviewFeedback?: string;
   costSpent: number;
   costCeiling: number;
+  triageLevel?: TriageLevel;
   createdAt: string;
   completedAt?: string;
 }
@@ -656,6 +658,24 @@ Output ONLY a JSON array of strings, no other text. Example:
       costTracker,
     };
 
+    // Select model based on task complexity and signals
+    const modelConfig = selectModel({
+      triageLevel: task.triageLevel ?? 'standard',
+      agentId: task.agentId,
+      taskTitle: task.title,
+      taskDescription: task.description,
+      costCeiling: task.costCeiling,
+      costSpent: task.costSpent,
+      hasIntegrationData: !!toolContext.deliverables?.__integrationData,
+      toolCount: outfit.tools.length,
+    });
+
+    await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+      phase: 'model_selection',
+      selectedModel: modelConfig.id,
+      tier: modelConfig.tier,
+    });
+
     // Emit thinking event at start of execution
     await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
       phase: 'execution_start',
@@ -706,11 +726,11 @@ Output ONLY a JSON array of strings, no other text. Example:
       }
 
       const response = await ai.models.generateContent({
-        model: FLASH_MODEL,
+        model: modelConfig.id,
         contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
         config: {
-          temperature: 0.1,
-          maxOutputTokens: 4096,
+          temperature: modelConfig.tier === 'flash' ? 0.1 : 0.3,
+          maxOutputTokens: modelConfig.maxOutputTokens,
           systemInstruction: systemPrompt,
           tools: functionDeclarations.length > 0
             ? [{ functionDeclarations }]
@@ -727,14 +747,13 @@ Output ONLY a JSON array of strings, no other text. Example:
         | undefined;
       const inputTokens = usageMetadata?.promptTokenCount ?? 0;
       const outputTokens = usageMetadata?.candidatesTokenCount ?? 0;
-      // Gemini Flash pricing: $0.15/M input, $0.60/M output
-      const callCost = (inputTokens / 1_000_000) * 0.15 + (outputTokens / 1_000_000) * 0.60;
+      const callCost = calculateCost(modelConfig, inputTokens, outputTokens);
 
       if (inputTokens > 0 || outputTokens > 0) {
         await this.recordCost(
           task.orgId,
           task.agentId,
-          FLASH_MODEL,
+          modelConfig.id,
           inputTokens,
           outputTokens,
           callCost,
@@ -1239,6 +1258,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
       // 1. Triage — fast classification (single Gemini call)
       await this.setTaskStatus(task, 'triaging');
       const triageLevel = await this.triageTask(task);
+      task.triageLevel = triageLevel;
 
       // 2. Generate acceptance criteria (skip for QUICK — saves a Gemini call)
       if (triageLevel !== 'quick') {
