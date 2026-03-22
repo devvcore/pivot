@@ -1105,7 +1105,7 @@ Output ONLY a JSON array of strings, no other text. Example:
           contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
           config: {
             temperature: 0.1,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             systemInstruction: systemPrompt,
           } as Record<string, unknown>,
         });

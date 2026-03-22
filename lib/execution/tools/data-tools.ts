@@ -132,7 +132,7 @@ const queryAnalysis: Tool = {
     if (query) {
       // Use Gemini to answer the specific question against this data
       const answer = await generateWithGemini(
-        `Given this business analysis data:\n\n${serialized.slice(0, 24000)}\n\nAnswer this question concisely: ${query}\n\nIMPORTANT: Only use numbers and facts from the data above. If the answer is not in the data, say "This information is not available in the analysis data." NEVER invent numbers.`
+        `Given this business analysis data:\n\n${serialized.slice(0, 65536)}\n\nAnswer this question concisely: ${query}\n\nIMPORTANT: Only use numbers and facts from the data above. If the answer is not in the data, say "This information is not available in the analysis data." NEVER invent numbers.`
       );
       return {
         success: true,
@@ -142,8 +142,8 @@ const queryAnalysis: Tool = {
     }
 
     // Return raw section data (truncated if very large)
-    const truncated = serialized.length > 24000
-      ? serialized.slice(0, 24000) + '\n\n[... truncated — ask a specific question for targeted data]'
+    const truncated = serialized.length > 65536
+      ? serialized.slice(0, 65536) + '\n\n[... truncated — ask a specific question for targeted data]'
       : serialized;
 
     return {
