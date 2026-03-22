@@ -66,6 +66,12 @@ export const OUTFITS: Record<string, Outfit> = {
       'search_crm',
       'get_contact_details',
       'add_contact_note',
+      // Scheduling & A/B testing
+      'schedule_post',
+      'create_ab_test',
+      'get_scheduled_posts',
+      'get_ab_test_results',
+      'get_cross_platform_analytics',
     ],
     systemPromptExtension: `MARKETING MODE — Content creation and publishing.
 
@@ -83,7 +89,19 @@ CONTENT-FIRST WORKFLOW (MANDATORY):
 4. AFTER writing → call posting tool. They handle connection checks.
 5. Do NOT call check_connection — action tools handle it automatically.
 
-Ground ALL content in the company's actual positioning, audience, AND engagement data.`,
+Ground ALL content in the company's actual positioning, audience, AND engagement data.
+
+## CAMPAIGN & SCHEDULING
+- You can SCHEDULE posts for future dates using schedule_post tool
+- You can create A/B TESTS to optimize content using create_ab_test tool
+- When creating content for a campaign, be aware of the CAMPAIGN CONTEXT from prior steps
+- Use get_cross_platform_analytics to inform content strategy with real engagement data
+- After creating content, ALWAYS offer to schedule it for optimal posting time
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Platform Best Practices:
 - LinkedIn: Professional tone, 1300 char max, 3-5 hashtags, hook in first 2 lines, post Tue-Thu 8-10am
 - Twitter/X: Punchy, 280 chars, 2-3 hashtags, threads for longer content, engage in replies
@@ -102,8 +120,8 @@ Email Benchmarks:
 - Click rate: 2-5% average, 5%+ is excellent
 - Best send times: Tue/Wed/Thu 10am or 2pm
 - Subject line: 6-10 words, personalization increases opens 26%`,
-    costCeiling: 0.50,
-    maxToolRounds: 8,
+    costCeiling: 1.50,
+    maxToolRounds: 12,
   },
 
   finance: {
@@ -152,7 +170,12 @@ DATA INTEGRITY — ABSOLUTE:
 - ONLY use numbers from: (1) query_integration_data output, (2) query_analysis output, (3) user's own words, (4) clearly labeled industry benchmarks.
 - NEVER fabricate expenses, revenue breakdowns, or burn rates. If you don't have the data, say so.
 - Distinguish: VERIFIED (from tools) vs INDUSTRY BENCHMARK (labeled). Never present benchmarks as company data.
-- Include assumptions explicitly. Flag data gaps that affect accuracy.`,
+- Include assumptions explicitly. Flag data gaps that affect accuracy.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Financial Modeling Reference:
 - SaaS Metrics: ARR, MRR, churn rate, LTV, CAC, LTV:CAC ratio (target 3:1+)
 - Burn Rate: Monthly cash outflow. Runway = cash / burn rate
@@ -175,8 +198,8 @@ Pricing Strategy Frameworks:
 - Value-based: price based on customer value delivered. Higher margins
 - Competitive: price relative to alternatives. Good for commoditized markets
 - Penetration: low price to gain share, raise later. Risky but fast growth`,
-    costCeiling: 0.30,
-    maxToolRounds: 7,
+    costCeiling: 0.80,
+    maxToolRounds: 10,
   },
 
   hr: {
@@ -225,7 +248,12 @@ GUIDELINES:
 - Inclusive language in all postings. No gendered terms, no unnecessary requirements.
 - Salary benchmarks labeled as "industry estimates" — never as company-specific data.
 - Structured interviews > unstructured (2x more predictive of performance).
-- Reference company's hiring plan and talent gap analysis when available.`,
+- Reference company's hiring plan and talent gap analysis when available.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Salary Benchmarking (2026 US):
 - Software Engineer (mid): $130-170K base + equity
 - Senior Software Engineer: $170-220K base + equity
@@ -252,8 +280,8 @@ Onboarding Milestones:
 - Week 1: Understand product, complete first meaningful PR/task
 - Month 1: Ship first feature/project independently
 - Month 3: Full contributor, own a domain or project area`,
-    costCeiling: 0.30,
-    maxToolRounds: 7,
+    costCeiling: 0.60,
+    maxToolRounds: 10,
   },
 
   operations: {
@@ -311,7 +339,12 @@ CONTENT-FIRST WORKFLOW:
 STANDARDS:
 - Process docs: owners, inputs, outputs, decision points.
 - Risk: Likelihood x Impact scoring. SOPs: formal auditable format.
-- Project plans: dependencies, milestones, pad 20-30%.`,
+- Project plans: dependencies, milestones, pad 20-30%.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Risk Assessment Matrix:
 - Likelihood: 1 (rare) to 5 (almost certain)
 - Impact: 1 (negligible) to 5 (catastrophic)
@@ -339,8 +372,8 @@ Vendor Evaluation Criteria:
 - Integration capability (20%)
 - Support and reliability (15%)
 - Scalability (10%)`,
-    costCeiling: 0.30,
-    maxToolRounds: 7,
+    costCeiling: 0.60,
+    maxToolRounds: 10,
   },
 
   sales: {
@@ -403,7 +436,12 @@ GUIDELINES:
 - ROI calculations must use real numbers, not fabricated metrics.
 - Email sequences: Day 1, Day 3, Day 7, Day 14 cadence.
 - Ground competitive analysis in real data, not assumptions.
-- Personalize EVERY outreach with real client data from CRM and integrations.`,
+- Personalize EVERY outreach with real client data from CRM and integrations.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Sales Frameworks:
 - MEDDIC: Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion
 - SPIN Selling: Situation, Problem, Implication, Need-payoff questions
@@ -421,7 +459,7 @@ Objection Handling:
 - Competition: never badmouth. Focus on unique differentiators
 - Authority: "Let's loop in the decision maker for a brief call"`,
     costCeiling: 0.40,
-    maxToolRounds: 8,
+    maxToolRounds: 10,
   },
 
   growth: {
@@ -482,7 +520,12 @@ PRINCIPLES:
 - Every recommendation must be testable as an experiment.
 - Prioritize by ICE (Impact x Confidence x Ease).
 - AARRR framework: Acquisition, Activation, Retention, Revenue, Referral.
-- Focus on scalable, repeatable growth — not one-time tactics.`,
+- Focus on scalable, repeatable growth — not one-time tactics.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `AARRR Pirate Metrics:
 - Acquisition: How users find you (SEO, ads, referral, organic)
 - Activation: First "aha" moment (signup to value in <5 min is ideal)
@@ -502,7 +545,7 @@ Growth Benchmarks (SaaS):
 - Viral coefficient >1.0 = organic growth (rare and powerful)
 - Payback period: <12 months for healthy unit economics`,
     costCeiling: 0.50,
-    maxToolRounds: 8,
+    maxToolRounds: 10,
   },
 
   research: {
@@ -556,7 +599,12 @@ STANDARDS:
 - Cite sources for factual claims. Confidence levels: High/Medium/Low.
 - Distinguish facts vs estimates vs opinions.
 - Note data recency — markets change fast. Flag source biases.
-- Never fabricate market sizes, competitor metrics, or statistics.`,
+- Never fabricate market sizes, competitor metrics, or statistics.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Market Sizing Frameworks:
 - TAM (Total Addressable Market): entire market if 100% share
 - SAM (Serviceable Addressable Market): segment you can reach
@@ -579,8 +627,8 @@ Trend Analysis:
 - Look for: acceleration, deceleration, inflection points
 - Compare: year-over-year, quarter-over-quarter
 - Context: macro trends, regulatory changes, technology shifts`,
-    costCeiling: 0.60,
-    maxToolRounds: 8,
+    costCeiling: 1.00,
+    maxToolRounds: 12,
   },
 
   codebot: {
@@ -630,7 +678,12 @@ ACTION WORKFLOW (MANDATORY):
 STANDARDS:
 - Issues: clear title, reproduction steps, acceptance criteria, labels.
 - PRs: description of WHY (not just what), link to issue, test plan.
-- NEVER fabricate repo metrics, commit counts, or CI pass rates.`,
+- NEVER fabricate repo metrics, commit counts, or CI pass rates.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `DORA Metrics (Elite Benchmarks):
 - Deployment Frequency: Multiple times per day
 - Lead Time for Changes: Less than 1 hour
@@ -654,8 +707,8 @@ GitHub Best Practices:
 - Issues: clear title, reproduction steps, expected vs actual, labels
 - PRs: description of WHY, not just what. Link to issue. Include test plan
 - Branch naming: type/description (feature/add-auth, fix/login-bug)`,
-    costCeiling: 0.60,
-    maxToolRounds: 8,
+    costCeiling: 0.80,
+    maxToolRounds: 10,
   },
 };
 

@@ -48,7 +48,7 @@ const strategist: AgentDefinition = {
     'Client outreach strategy and follow-up planning',
   ],
   modelPreference: 'deep',
-  costBudget: { perTask: 0.10, daily: 1.00 },
+  costBudget: { perTask: 0.50, daily: 5.00 },
   systemPrompt: `You are Atlas, the Chief Strategy Agent for Pivot — an AI-powered business intelligence platform.
 
 You are a conversational strategic advisor. You take business data and translate it into clear, actionable plans — like a trusted advisor talking to a founder.
@@ -105,7 +105,7 @@ const marketer: AgentDefinition = {
     'CRM-powered personalized outreach',
   ],
   modelPreference: 'default',
-  costBudget: { perTask: 0.05, daily: 0.50 },
+  costBudget: { perTask: 0.30, daily: 3.00 },
   systemPrompt: `You are Maven, the Marketing Execution Agent for Pivot.
 
 You create marketing content and publish it. Talk like a talented colleague showing their work — warm, direct, and action-oriented.
@@ -167,7 +167,7 @@ const analyst: AgentDefinition = {
     'Cash flow management',
   ],
   modelPreference: 'default',
-  costBudget: { perTask: 0.05, daily: 0.50 },
+  costBudget: { perTask: 0.30, daily: 3.00 },
   systemPrompt: `You are Quant, the Financial Analyst Agent for Pivot.
 
 You build budgets, projections, and financial models. Talk like a CFO presenting to the founder — clear, direct, explain the "so what" behind every number.
@@ -218,7 +218,7 @@ const recruiter: AgentDefinition = {
     'Talent gap analysis and hiring prioritization',
   ],
   modelPreference: 'default',
-  costBudget: { perTask: 0.05, daily: 0.40 },
+  costBudget: { perTask: 0.20, daily: 2.00 },
   systemPrompt: `You are Scout, the HR & Talent Agent for Pivot.
 
 You create job postings, interview guides, salary benchmarks, and hiring materials. Talk like a head of people presenting to the founder — warm, professional, proactive.
@@ -266,7 +266,7 @@ const operator: AgentDefinition = {
     'CRM pipeline management and client operations',
   ],
   modelPreference: 'default',
-  costBudget: { perTask: 0.05, daily: 0.40 },
+  costBudget: { perTask: 0.20, daily: 2.00 },
   systemPrompt: `You are Forge, the Operations Agent for Pivot.
 
 You create processes, SOPs, project plans, and risk assessments. Talk like a COO presenting to leadership — structured, clear, actionable.
@@ -310,7 +310,7 @@ const researcher: AgentDefinition = {
     'Technology landscape mapping',
   ],
   modelPreference: 'default',
-  costBudget: { perTask: 0.08, daily: 0.60 },
+  costBudget: { perTask: 0.30, daily: 3.00 },
   systemPrompt: `You are Lens, the Research Agent for Pivot.
 
 You gather intelligence and present findings like a consultant briefing a busy executive. Lead with the key finding, back it with data, end with actions.
@@ -357,7 +357,7 @@ const codebot: AgentDefinition = {
     'List repos, issues, and PRs',
   ],
   modelPreference: 'default',
-  costBudget: { perTask: 0.08, daily: 0.60 },
+  costBudget: { perTask: 0.30, daily: 3.00 },
   systemPrompt: `You are CodeBot, the Engineering Intelligence Agent for Pivot.
 
 You analyze repos, review PRs, and provide engineering intelligence. Talk like a senior engineer giving a team update — direct, technical, friendly.

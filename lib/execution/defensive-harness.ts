@@ -776,13 +776,13 @@ interface ContextGuardResult {
 /**
  * Guard context budget before an LLM call. Mutates the messages array in place.
  *
- * Layer 1: If total tool result content exceeds 75% of remaining headroom,
+ * Layer 1: If total tool result content exceeds 65% of remaining headroom,
  * compact the oldest tool results to 2K chars each, keeping the last 3 untouched.
  *
  * Layer 2: Progressive overflow recovery:
  *   Stage 1 — keep last 10 messages, prepend trimmed-context summary
- *   Stage 2 — keep last 4 messages
- *   Stage 3 — truncate ALL function responses to 2K chars
+ *   Stage 2 — progressive summarization of old tool results (>1000→500 chars) + keep last 4 messages (triggers at 80% headroom)
+ *   Stage 3 — truncate ALL function responses to 2K chars (triggers at 92% headroom)
  *   Stage 4 — return resetRequired flag
  */
 export function guardContextBudget(
@@ -798,7 +798,8 @@ export function guardContextBudget(
   }
 
   // --- Layer 1: Headroom guard on tool results ---
-  const toolResultThreshold = Math.floor(headroom * 0.75);
+  // Stage 1 (soft compression): trigger at 65% of headroom (was 75%)
+  const toolResultThreshold = Math.floor(headroom * 0.65);
   let totalToolChars = 0;
   const toolResultIndices: number[] = [];
 
@@ -830,7 +831,7 @@ export function guardContextBudget(
     return { trimmed };
   }
 
-  // Stage 1: Keep last 10 messages
+  // Stage 1: Keep last 10 messages (triggers when totalChars > headroom)
   if (messages.length > 10) {
     const removed = messages.length - 10;
     const summary: GeminiMessage = { role: 'user', parts: [{ text: `[Older context: ${removed} messages trimmed]` }] };
@@ -840,24 +841,51 @@ export function guardContextBudget(
     if (totalChars <= headroom) return { trimmed, stage: 1 };
   }
 
-  // Stage 2: Keep last 4 messages
-  if (messages.length > 4) {
-    const removed = messages.length - 4;
-    const summary: GeminiMessage = { role: 'user', parts: [{ text: `[Older context: ${removed} messages trimmed]` }] };
-    messages.splice(0, removed, summary);
-    trimmed = true;
+  // Stage 2: Aggressive compression — keep last 4 messages + progressive summarization of old tool results
+  // Triggers at 80% of headroom (was 75%); also compresses old tool results > 1000 chars to 500 chars
+  if (totalChars > Math.floor(headroom * 0.80) || messages.length > 4) {
+    // Progressive summarization: compress old tool results before trimming messages
+    const recentCutoff = messages.length - 4;
+    for (let h = 0; h < recentCutoff; h++) {
+      const msg = messages[h];
+      if (msg.role === 'user' && Array.isArray(msg.parts)) {
+        for (const part of msg.parts) {
+          const p = part as Record<string, unknown>;
+          if (p.functionResponse) {
+            const fr = p.functionResponse as Record<string, unknown>;
+            const resp = fr.response as Record<string, unknown> | undefined;
+            if (resp && typeof resp.output === 'string' && resp.output.length > 1000) {
+              resp.output = resp.output.slice(0, 500) + '\n[... compressed for context budget]';
+              trimmed = true;
+            }
+          }
+        }
+      }
+    }
     totalChars = estimateHistoryChars(messages);
     if (totalChars <= headroom) return { trimmed, stage: 2 };
-  }
 
-  // Stage 3: Truncate ALL function responses to 2K chars
-  for (const msg of messages) {
-    if (compactFunctionResponses(msg, 2000)) {
+    if (messages.length > 4) {
+      const removed = messages.length - 4;
+      const summary: GeminiMessage = { role: 'user', parts: [{ text: `[Older context: ${removed} messages trimmed]` }] };
+      messages.splice(0, removed, summary);
       trimmed = true;
+      totalChars = estimateHistoryChars(messages);
+      if (totalChars <= headroom) return { trimmed, stage: 2 };
     }
   }
-  totalChars = estimateHistoryChars(messages);
-  if (totalChars <= headroom) return { trimmed, stage: 3 };
+
+  // Stage 3: Nuclear — truncate ALL function responses to 2K chars
+  // Triggers at 92% of headroom (was 90%)
+  if (totalChars > Math.floor(headroom * 0.92)) {
+    for (const msg of messages) {
+      if (compactFunctionResponses(msg, 2000)) {
+        trimmed = true;
+      }
+    }
+    totalChars = estimateHistoryChars(messages);
+    if (totalChars <= headroom) return { trimmed, stage: 3 };
+  }
 
   // Stage 4: Nothing left — signal reset needed
   return { trimmed: true, stage: 4, resetRequired: true };

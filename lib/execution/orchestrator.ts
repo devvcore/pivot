@@ -25,6 +25,7 @@ import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedu
 import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory, recoverToolCallsFromText, repairConversationHistory, guardContextBudget, smartTruncate } from './defensive-harness';
 import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, type Directive } from './directives';
 import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
+import { selectModel, calculateCost } from './model-router';
 
 // Import tool modules to ensure they self-register
 import './tools/web-tools';
@@ -40,6 +41,7 @@ import './tools/productivity-tools';
 import './tools/media-tools';
 import './tools/crm-tools';
 import './tools/pm-tools';
+import './tools/scheduling-tools';
 
 const FLASH_MODEL = 'gemini-2.5-flash';
 
@@ -81,6 +83,7 @@ export interface ExecutionTask {
   reviewFeedback?: string;
   costSpent: number;
   costCeiling: number;
+  triageLevel?: TriageLevel;
   createdAt: string;
   completedAt?: string;
 }
@@ -656,6 +659,24 @@ Output ONLY a JSON array of strings, no other text. Example:
       costTracker,
     };
 
+    // Select model based on task complexity and signals
+    const modelConfig = selectModel({
+      triageLevel: task.triageLevel ?? 'standard',
+      agentId: task.agentId,
+      taskTitle: task.title,
+      taskDescription: task.description,
+      costCeiling: task.costCeiling,
+      costSpent: task.costSpent,
+      hasIntegrationData: !!toolContext.deliverables?.__integrationData,
+      toolCount: outfit.tools.length,
+    });
+
+    await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+      phase: 'model_selection',
+      selectedModel: modelConfig.id,
+      tier: modelConfig.tier,
+    });
+
     // Emit thinking event at start of execution
     await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
       phase: 'execution_start',
@@ -706,11 +727,11 @@ Output ONLY a JSON array of strings, no other text. Example:
       }
 
       const response = await ai.models.generateContent({
-        model: FLASH_MODEL,
+        model: modelConfig.id,
         contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
         config: {
-          temperature: 0.1,
-          maxOutputTokens: 4096,
+          temperature: modelConfig.tier === 'flash' ? 0.1 : 0.3,
+          maxOutputTokens: modelConfig.maxOutputTokens,
           systemInstruction: systemPrompt,
           tools: functionDeclarations.length > 0
             ? [{ functionDeclarations }]
@@ -727,14 +748,13 @@ Output ONLY a JSON array of strings, no other text. Example:
         | undefined;
       const inputTokens = usageMetadata?.promptTokenCount ?? 0;
       const outputTokens = usageMetadata?.candidatesTokenCount ?? 0;
-      // Gemini Flash pricing: $0.15/M input, $0.60/M output
-      const callCost = (inputTokens / 1_000_000) * 0.15 + (outputTokens / 1_000_000) * 0.60;
+      const callCost = calculateCost(modelConfig, inputTokens, outputTokens);
 
       if (inputTokens > 0 || outputTokens > 0) {
         await this.recordCost(
           task.orgId,
           task.agentId,
-          FLASH_MODEL,
+          modelConfig.id,
           inputTokens,
           outputTokens,
           callCost,
@@ -1086,7 +1106,7 @@ Output ONLY a JSON array of strings, no other text. Example:
           contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
           config: {
             temperature: 0.1,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             systemInstruction: systemPrompt,
           } as Record<string, unknown>,
         });
@@ -1236,19 +1256,42 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
     try {
-      // 1. Triage — fast classification (single Gemini call)
-      await this.setTaskStatus(task, 'triaging');
-      const triageLevel = await this.triageTask(task);
+      // ── INSTANT PATH: Procedure with high confidence ──
+      let matchedProcedure: Procedure | null = null;
+      try {
+        matchedProcedure = await findMatchingProcedure(task.orgId, task.agentId, task.title);
+      } catch { /* best effort */ }
 
-      // 2. Generate acceptance criteria (skip for QUICK — saves a Gemini call)
+      const isInstant = !!(matchedProcedure && matchedProcedure.runCount >= 3);
+
+      let triageLevel: TriageLevel;
+      let executionPlan: string | null = null;
+
+      if (isInstant) {
+        // Skip triage entirely — we know how to do this
+        triageLevel = 'quick';
+        task.triageLevel = triageLevel;
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+          phase: 'instant_path',
+          procedureId: matchedProcedure!.id,
+          runCount: matchedProcedure!.runCount,
+          reason: 'High-confidence procedure match — skipping triage + criteria',
+        });
+      } else {
+        // 1. Triage — fast classification (single Gemini call)
+        await this.setTaskStatus(task, 'triaging');
+        triageLevel = await this.triageTask(task);
+        task.triageLevel = triageLevel;
+      }
+
+      // 2. Generate acceptance criteria (skip for QUICK / INSTANT — saves a Gemini call)
       if (triageLevel !== 'quick') {
         task.acceptanceCriteria = await this.generateCriteria(task);
         await this.updateTaskInDb(taskId, { acceptanceCriteria: task.acceptanceCriteria });
       }
 
-      // 2b. Planning phase for STANDARD/HEAVY — helps agent think before acting
-      let executionPlan: string | null = null;
-      if (triageLevel !== 'quick') {
+      // 2b. Planning phase for HEAVY tasks WITHOUT a procedure
+      if (triageLevel === 'heavy' && !matchedProcedure) {
         executionPlan = await this.generatePlan(task);
         if (executionPlan) {
           await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
@@ -1258,20 +1301,14 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         }
       }
 
-      // 2c. Procedure lookup — check if we've done this type of task before
-      let matchedProcedure: Procedure | null = null;
-      try {
-        matchedProcedure = await findMatchingProcedure(task.orgId, task.agentId, task.title);
-        if (matchedProcedure) {
-          await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
-            phase: 'procedure_match',
-            procedureId: matchedProcedure.id,
-            procedureTitle: matchedProcedure.title,
-            runCount: matchedProcedure.runCount,
-          });
-        }
-      } catch {
-        /* procedure lookup is best-effort */
+      // 2c. Emit procedure match event (non-instant procedures still worth noting)
+      if (matchedProcedure && !isInstant) {
+        await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+          phase: 'procedure_match',
+          procedureId: matchedProcedure.id,
+          procedureTitle: matchedProcedure.title,
+          runCount: matchedProcedure.runCount,
+        });
       }
 
       // 3. Execute
@@ -1285,6 +1322,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         criteriaCount: task.acceptanceCriteria.length,
         hasPlan: !!executionPlan,
         hasProcedure: !!matchedProcedure,
+        isInstant,
       });
 
       let { result, artifacts, toolCallHistory } = await this.executeTask(task, executionPlan, matchedProcedure);
@@ -1324,6 +1362,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
           resultLength: result.length,
           artifactCount: (task.artifacts ?? artifacts ?? []).length,
           triageLevel,
+          isInstant,
           totalCost: task.costSpent,
         });
 
@@ -1367,6 +1406,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
             artifactCount: (task.artifacts ?? []).length,
             verdict: 'accept',
             reviewAttempt: attempt + 1,
+            isInstant,
             totalCost: task.costSpent,
           });
 
@@ -1393,6 +1433,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
             verdict: 'fail',
             feedback,
             reviewAttempt: attempt + 1,
+            isInstant,
             totalCost: task.costSpent,
           });
 
@@ -1453,6 +1494,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         resultLength: result.length,
         artifactCount: (task.artifacts ?? []).length,
         verdict: 'accepted_after_max_revisions',
+        isInstant,
         totalCost: task.costSpent,
       });
 
