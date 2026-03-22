@@ -1406,6 +1406,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
             artifactCount: (task.artifacts ?? []).length,
             verdict: 'accept',
             reviewAttempt: attempt + 1,
+            isInstant,
             totalCost: task.costSpent,
           });
 
@@ -1432,6 +1433,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
             verdict: 'fail',
             feedback,
             reviewAttempt: attempt + 1,
+            isInstant,
             totalCost: task.costSpent,
           });
 
@@ -1492,6 +1494,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         resultLength: result.length,
         artifactCount: (task.artifacts ?? []).length,
         verdict: 'accepted_after_max_revisions',
+        isInstant,
         totalCost: task.costSpent,
       });
 
