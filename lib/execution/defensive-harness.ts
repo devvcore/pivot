@@ -914,3 +914,513 @@ export function extractToolOutputsFromHistory(
   }
   return outputs;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 9. PARALLEL TOOL EXECUTION ──────────────────────────────────────────────
+// Execute independent tool calls concurrently instead of sequentially.
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Tools that are safe to run in parallel (no side effects, read-only) */
+const PARALLELIZABLE_TOOLS = new Set([
+  'web_search', 'scrape_website', 'query_analysis', 'query_integration_data',
+  'analyze_competitors', 'trend_analysis', 'benchmark_comparison',
+  'get_social_analytics', 'read_from_google_sheets', 'search_crm',
+  'get_contact_details', 'get_pipeline_summary', 'list_calendar_events',
+  'get_scheduled_posts', 'get_ab_test_results', 'get_cross_platform_analytics',
+  'search_notion', 'read_emails', 'search_emails',
+]);
+
+/** Tools that have side effects and must run sequentially */
+const SEQUENTIAL_TOOLS = new Set([
+  'post_to_linkedin', 'post_to_twitter', 'post_to_instagram', 'post_to_facebook',
+  'send_email', 'send_slack_message', 'write_to_google_sheets',
+  'create_jira_ticket', 'github_create_issue', 'github_create_pr',
+  'schedule_post', 'create_ab_test', 'create_calendar_event',
+]);
+
+/**
+ * Partition tool calls into parallel-safe and sequential groups.
+ * Parallel calls run concurrently; sequential calls run one-at-a-time after.
+ */
+export function partitionToolCalls(
+  calls: Array<{ name: string; args: Record<string, unknown> }>
+): { parallel: typeof calls; sequential: typeof calls } {
+  const parallel: typeof calls = [];
+  const sequential: typeof calls = [];
+
+  for (const call of calls) {
+    if (PARALLELIZABLE_TOOLS.has(call.name) && !SEQUENTIAL_TOOLS.has(call.name)) {
+      parallel.push(call);
+    } else {
+      sequential.push(call);
+    }
+  }
+
+  return { parallel, sequential };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 10. OUTPUT GROUNDING VERIFIER ───────────────────────────────────────────
+// Verify that numerical claims in the output trace to actual tool data.
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface GroundingResult {
+  isGrounded: boolean;
+  totalClaims: number;
+  groundedClaims: number;
+  ungroundedClaims: string[];
+  groundingScore: number; // 0-1
+}
+
+/**
+ * Extract all numerical claims from the output and verify against tool data.
+ * Returns a grounding score (0-1) and list of ungrounded claims.
+ */
+export function verifyOutputGrounding(
+  output: string,
+  toolOutputs: string[],
+): GroundingResult {
+  // Extract numbers from output (with context)
+  const numberPattern = /(?:\$[\d,.]+[KMBkmb]?|\d{2,}(?:[,.]\d+)?%?)\b/g;
+  const outputNumbers = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = numberPattern.exec(output)) !== null) {
+    outputNumbers.add(normalizeNumber(match[0]));
+  }
+
+  if (outputNumbers.size === 0) {
+    return { isGrounded: true, totalClaims: 0, groundedClaims: 0, ungroundedClaims: [], groundingScore: 1 };
+  }
+
+  // Extract numbers from all tool outputs
+  const toolNumbers = new Set<string>();
+  const allToolText = toolOutputs.join(' ');
+  while ((match = numberPattern.exec(allToolText)) !== null) {
+    toolNumbers.add(normalizeNumber(match[0]));
+  }
+
+  // Check each output number against tool data
+  const ungrounded: string[] = [];
+  let grounded = 0;
+
+  for (const num of outputNumbers) {
+    if (toolNumbers.has(num) || isCommonNumber(num)) {
+      grounded++;
+    } else {
+      ungrounded.push(num);
+    }
+  }
+
+  const score = outputNumbers.size > 0 ? grounded / outputNumbers.size : 1;
+
+  return {
+    isGrounded: score >= 0.7, // 70%+ grounded is acceptable
+    totalClaims: outputNumbers.size,
+    groundedClaims: grounded,
+    ungroundedClaims: ungrounded.slice(0, 10),
+    groundingScore: score,
+  };
+}
+
+function normalizeNumber(s: string): string {
+  return s.replace(/[$,%]/g, '').replace(/,/g, '').toLowerCase()
+    .replace(/k$/, '000').replace(/m$/, '000000').replace(/b$/, '000000000');
+}
+
+function isCommonNumber(s: string): boolean {
+  const n = parseFloat(s);
+  // Skip very common numbers that aren't claims
+  return isNaN(n) || n === 0 || n === 100 || (n >= 1 && n <= 12) || (n >= 2020 && n <= 2030);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 11. SMART RETRY WITH VARIATION ──────────────────────────────────────────
+// When retrying a failed generation, change the approach instead of repeating.
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface RetryStrategy {
+  instruction: string;
+  temperature: number;
+  maxTokens: number;
+}
+
+/**
+ * Generate a varied retry strategy based on what went wrong.
+ * Each retry uses a different approach to avoid repeating the same mistake.
+ */
+export function getRetryStrategy(
+  attempt: number,
+  failureReason: 'lazy' | 'hallucinated' | 'low_quality' | 'empty' | 'generic',
+  taskTitle: string,
+  toolOutputsSummary: string,
+): RetryStrategy {
+  const strategies: Record<string, RetryStrategy[]> = {
+    lazy: [
+      {
+        instruction: `Your previous response was too short and didn't use the data you gathered. Here is the data again:\n\n${toolOutputsSummary}\n\nWrite a DETAILED, COMPREHENSIVE response that uses this data. Minimum 300 words. Include specific numbers and facts from the data.`,
+        temperature: 0.2,
+        maxTokens: 8192,
+      },
+      {
+        instruction: `CRITICAL: Your last attempt was lazy — you gathered great data but wrote a tiny response. This time, structure your response with clear sections:\n\n1. Summary\n2. Key Findings (with specific data points)\n3. Analysis\n4. Recommendations\n\nUse ALL the data below:\n\n${toolOutputsSummary}`,
+        temperature: 0.3,
+        maxTokens: 8192,
+      },
+    ],
+    hallucinated: [
+      {
+        instruction: `WARNING: Your previous response contained fabricated data not found in any tool output. Rewrite using ONLY the verified data below. If data is missing, say "data not available" — NEVER invent numbers.\n\nVerified data:\n${toolOutputsSummary}`,
+        temperature: 0.0,
+        maxTokens: 8192,
+      },
+      {
+        instruction: `STRICT MODE: Every number and claim MUST come from the data below. Tag each claim with [verified] or [estimated]. No untagged claims allowed.\n\nSource data:\n${toolOutputsSummary}`,
+        temperature: 0.0,
+        maxTokens: 8192,
+      },
+    ],
+    low_quality: [
+      {
+        instruction: `Your previous response lacked depth. For task "${taskTitle}", write as a senior consultant would — with specific, actionable insights. Use data:\n\n${toolOutputsSummary}`,
+        temperature: 0.3,
+        maxTokens: 8192,
+      },
+    ],
+    empty: [
+      {
+        instruction: `You produced no output. Task: "${taskTitle}". Write your response NOW using available data:\n\n${toolOutputsSummary}`,
+        temperature: 0.1,
+        maxTokens: 8192,
+      },
+    ],
+    generic: [
+      {
+        instruction: `Your response was too generic — it could apply to any business. Rewrite with SPECIFIC details about THIS business using the data below:\n\n${toolOutputsSummary}`,
+        temperature: 0.2,
+        maxTokens: 8192,
+      },
+    ],
+  };
+
+  const strats = strategies[failureReason] ?? strategies.generic;
+  return strats[Math.min(attempt, strats.length - 1)];
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 12. TOOL CHAIN PREDICTOR ────────────────────────────────────────────────
+// Suggest optimal tool sequences based on task type and agent role.
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface ToolChainSuggestion {
+  chain: string[];
+  reason: string;
+  confidence: number;
+}
+
+/** Common effective tool chains by task pattern */
+const TOOL_CHAINS: Array<{
+  pattern: RegExp;
+  agentIds: string[];
+  chain: string[];
+  reason: string;
+}> = [
+  {
+    pattern: /post.*to.*(?:linkedin|twitter|instagram|facebook)/i,
+    agentIds: ['marketer'],
+    chain: ['get_social_analytics', 'create_social_post', 'generate_media'],
+    reason: 'Check engagement data → craft content → generate visuals → post',
+  },
+  {
+    pattern: /(?:competitor|competitive).*(?:analysis|research)/i,
+    agentIds: ['researcher', 'strategist'],
+    chain: ['web_search', 'scrape_website', 'analyze_competitors', 'query_analysis'],
+    reason: 'Search competitors → scrape details → analyze → cross-reference with existing data',
+  },
+  {
+    pattern: /(?:financial|budget|revenue|cash).*(?:analysis|review|report)/i,
+    agentIds: ['analyst'],
+    chain: ['query_integration_data', 'query_analysis', 'financial_projection', 'create_report'],
+    reason: 'Pull live financial data → check analysis → project forward → create report',
+  },
+  {
+    pattern: /(?:email|outreach).*(?:campaign|blast|send)/i,
+    agentIds: ['marketer'],
+    chain: ['search_crm', 'create_email_campaign', 'send_email'],
+    reason: 'Find target contacts → craft campaign → send',
+  },
+  {
+    pattern: /(?:job|hiring|recruit).*(?:post|description|listing)/i,
+    agentIds: ['recruiter'],
+    chain: ['salary_benchmark', 'create_job_posting', 'post_to_linkedin'],
+    reason: 'Benchmark salary → write posting → publish to LinkedIn',
+  },
+  {
+    pattern: /(?:strategy|plan|roadmap)/i,
+    agentIds: ['strategist'],
+    chain: ['query_analysis', 'web_search', 'query_integration_data'],
+    reason: 'Review existing analysis → research market context → check live data',
+  },
+  {
+    pattern: /(?:content.*calendar|social.*schedule|schedule.*post)/i,
+    agentIds: ['marketer'],
+    chain: ['get_cross_platform_analytics', 'create_social_post', 'schedule_post'],
+    reason: 'Check what performs → create content → schedule for optimal time',
+  },
+];
+
+/**
+ * Suggest an optimal tool chain for a task based on title and agent.
+ */
+export function suggestToolChain(
+  taskTitle: string,
+  agentId: string,
+): ToolChainSuggestion | null {
+  for (const entry of TOOL_CHAINS) {
+    if (entry.pattern.test(taskTitle) && entry.agentIds.includes(agentId)) {
+      return {
+        chain: entry.chain,
+        reason: entry.reason,
+        confidence: 0.8,
+      };
+    }
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 13. CITATION ENGINE ─────────────────────────────────────────────────────
+// Auto-cite sources in agent output to build trust and traceability.
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface Citation {
+  claim: string;
+  source: string;
+  sourceType: 'tool' | 'integration' | 'web' | 'analysis';
+}
+
+/**
+ * Extract citations by matching output claims to tool data sources.
+ * Returns a list of claims with their sources for footnote injection.
+ */
+export function extractCitations(
+  output: string,
+  toolCalls: Array<{ name: string; output: string }>,
+): Citation[] {
+  const citations: Citation[] = [];
+
+  // Extract key numbers and facts from output
+  const factPattern = /(?:\$[\d,.]+[KMBkmb]?|[\d,.]+%|\d{2,}(?:[,.]\d+)?)\s*(?:[\w\s]{2,30})/g;
+  const facts: string[] = [];
+  let factMatch: RegExpExecArray | null;
+  while ((factMatch = factPattern.exec(output)) !== null) {
+    facts.push(factMatch[0].trim());
+  }
+
+  // Match each fact to a tool output
+  for (const fact of facts.slice(0, 20)) {
+    const normalizedFact = fact.toLowerCase().replace(/[,$%]/g, '');
+    for (const tool of toolCalls) {
+      if (tool.output.toLowerCase().includes(normalizedFact.slice(0, 20))) {
+        const sourceType = categorizeToolSource(tool.name);
+        citations.push({
+          claim: fact,
+          source: formatToolSource(tool.name),
+          sourceType,
+        });
+        break; // First match wins
+      }
+    }
+  }
+
+  return citations;
+}
+
+/**
+ * Inject citation footnotes into output text.
+ */
+export function injectCitations(output: string, citations: Citation[]): string {
+  if (citations.length === 0) return output;
+
+  let cited = output;
+  const footnotes: string[] = [];
+  let idx = 1;
+
+  for (const c of citations.slice(0, 10)) {
+    // Only cite the first occurrence
+    const pos = cited.indexOf(c.claim);
+    if (pos >= 0) {
+      cited = cited.slice(0, pos + c.claim.length) + `[${idx}]` + cited.slice(pos + c.claim.length);
+      footnotes.push(`[${idx}] Source: ${c.source}`);
+      idx++;
+    }
+  }
+
+  if (footnotes.length > 0) {
+    cited += '\n\n---\n*Sources:*\n' + footnotes.join('\n');
+  }
+
+  return cited;
+}
+
+function categorizeToolSource(toolName: string): Citation['sourceType'] {
+  if (toolName.includes('integration') || toolName.includes('crm') || toolName.includes('stripe')) return 'integration';
+  if (toolName.includes('web_search') || toolName.includes('scrape')) return 'web';
+  if (toolName.includes('query_analysis')) return 'analysis';
+  return 'tool';
+}
+
+function formatToolSource(toolName: string): string {
+  const sourceMap: Record<string, string> = {
+    query_integration_data: 'Connected Integration Data',
+    query_analysis: 'Business Analysis Report',
+    web_search: 'Web Search',
+    scrape_website: 'Website Scrape',
+    search_crm: 'CRM Data',
+    get_social_analytics: 'Social Media Analytics',
+    get_pipeline_summary: 'CRM Pipeline',
+    read_from_google_sheets: 'Google Sheets',
+    get_cross_platform_analytics: 'Cross-Platform Analytics',
+  };
+  return sourceMap[toolName] ?? toolName.replace(/_/g, ' ').replace(/^./, s => s.toUpperCase());
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 14. ADAPTIVE TEMPERATURE CONTROL ────────────────────────────────────────
+// Dynamically adjust temperature based on execution phase and output quality.
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface TemperatureConfig {
+  temperature: number;
+  reason: string;
+}
+
+/**
+ * Calculate optimal temperature for the current execution state.
+ */
+export function getAdaptiveTemperature(
+  phase: 'data_gathering' | 'synthesis' | 'creative' | 'retry' | 'forced',
+  retryCount: number,
+  agentId: string,
+  taskTitle: string,
+): TemperatureConfig {
+  // Creative agents get higher base temperature
+  const isCreative = ['marketer'].includes(agentId);
+  const isAnalytical = ['analyst', 'researcher'].includes(agentId);
+
+  // Creative content tasks get higher temperature
+  const isCreativeTask = /(?:write|create|draft|brainstorm|ideate|generate.*content)/i.test(taskTitle);
+
+  switch (phase) {
+    case 'data_gathering':
+      // Low temp for precise tool calls
+      return { temperature: 0.05, reason: 'Data gathering: precise tool selection' };
+
+    case 'synthesis':
+      // Medium temp for synthesis — balance accuracy and expressiveness
+      if (isAnalytical) return { temperature: 0.1, reason: 'Analytical synthesis: high accuracy' };
+      if (isCreative || isCreativeTask) return { temperature: 0.4, reason: 'Creative synthesis: expressive writing' };
+      return { temperature: 0.2, reason: 'Standard synthesis' };
+
+    case 'creative':
+      // Higher temp for creative tasks
+      return { temperature: isCreativeTask ? 0.6 : 0.3, reason: 'Creative output' };
+
+    case 'retry':
+      // Increase temperature slightly on each retry to explore different outputs
+      const retryTemp = Math.min(0.1 + retryCount * 0.15, 0.5);
+      return { temperature: retryTemp, reason: `Retry #${retryCount}: exploring alternatives` };
+
+    case 'forced':
+      // Low temp for forced synthesis — we need reliability
+      return { temperature: 0.1, reason: 'Forced synthesis: reliability mode' };
+
+    default:
+      return { temperature: 0.1, reason: 'Default' };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── 15. SELF-HEALING CONVERSATION ───────────────────────────────────────────
+// Detect conversation derailment and inject course corrections mid-execution.
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface DerailmentCheck {
+  isDerailed: boolean;
+  reason?: string;
+  correction?: string;
+}
+
+/**
+ * Check if the agent has gone off-track based on recent messages.
+ * Detects: topic drift, circular loops, refusal patterns, irrelevant tool calls.
+ */
+export function detectDerailment(
+  taskTitle: string,
+  recentMessages: Array<{ role: string; content: string }>,
+  toolCallHistory: Array<{ name: string }>,
+): DerailmentCheck {
+  if (recentMessages.length === 0) {
+    return { isDerailed: false };
+  }
+
+  // 1. Detect circular conversation (same content repeated — needs 3+ messages)
+  const lastTexts = recentMessages
+    .filter(m => m.role === 'model')
+    .map(m => m.content.toLowerCase().slice(0, 100));
+  if (lastTexts.length >= 3) {
+    const unique = new Set(lastTexts.slice(-3));
+    if (unique.size === 1) {
+      return {
+        isDerailed: true,
+        reason: 'Circular: agent repeating the same response',
+        correction: `STOP REPEATING. You've said the same thing 3 times. Write a DIFFERENT, COMPLETE response for: "${taskTitle}". Use a different structure and approach.`,
+      };
+    }
+  }
+
+  // 2. Detect refusal patterns
+  const lastResponse = recentMessages[recentMessages.length - 1]?.content ?? '';
+  const refusalPatterns = [
+    /i (?:cannot|can't|am unable to|don't have (?:the )?ability)/i,
+    /as an ai,? i/i,
+    /i'm (?:sorry|afraid) (?:but )?i (?:can't|cannot)/i,
+    /this is (?:beyond|outside) my (?:capabilities|scope)/i,
+  ];
+  if (refusalPatterns.some(p => p.test(lastResponse))) {
+    return {
+      isDerailed: true,
+      reason: 'Refusal: agent refusing to complete the task',
+      correction: `DO NOT REFUSE. You are an execution agent — your job is to DO the task, not explain why you can't. Task: "${taskTitle}". Use your available tools and knowledge to produce the best possible output. If data is missing, say what data would help and proceed with what you have.`,
+    };
+  }
+
+  // 3. Detect topic drift (agent talking about unrelated things)
+  const taskWords = new Set(taskTitle.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+  if (taskWords.size > 0 && lastResponse.length > 200) {
+    const responseWords = lastResponse.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const overlap = responseWords.filter(w => taskWords.has(w)).length;
+    const overlapRatio = overlap / taskWords.size;
+    if (overlapRatio < 0.1 && responseWords.length > 50) {
+      return {
+        isDerailed: true,
+        reason: 'Topic drift: response has <10% keyword overlap with task',
+        correction: `STAY ON TOPIC. Your task is: "${taskTitle}". Your last response drifted off-topic. Refocus and write about the actual task.`,
+      };
+    }
+  }
+
+  // 4. Detect excessive tool calls without progress
+  if (toolCallHistory.length > 6) {
+    const last6 = toolCallHistory.slice(-6);
+    const uniqueTools = new Set(last6.map(t => t.name));
+    if (uniqueTools.size <= 2) {
+      return {
+        isDerailed: true,
+        reason: `Tool loop: only using ${[...uniqueTools].join(', ')} repeatedly`,
+        correction: `STOP CALLING TOOLS. You've called the same tools 6+ times. Write your response NOW with the data you already have. Task: "${taskTitle}".`,
+      };
+    }
+  }
+
+  return { isDerailed: false };
+}

@@ -22,7 +22,7 @@ import { OUTFITS, getOutfitSystemPrompt } from './outfits';
 import { globalRegistry, createCostTracker, type ToolContext, type ToolResult } from './tools/index';
 import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLessons, extractFactsFromOutput } from './agent-memory';
 import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedureAsContext, type Procedure } from './procedures';
-import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory, recoverToolCallsFromText, repairConversationHistory, guardContextBudget, smartTruncate } from './defensive-harness';
+import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory, recoverToolCallsFromText, repairConversationHistory, guardContextBudget, smartTruncate, partitionToolCalls, verifyOutputGrounding, getRetryStrategy, suggestToolChain, extractCitations, injectCitations, getAdaptiveTemperature, detectDerailment } from './defensive-harness';
 import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, type Directive } from './directives';
 import { generateClarifications, saveClarifications, waitForClarifications, getClarificationContext } from './clarifier';
 import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
@@ -641,6 +641,12 @@ Output ONLY a JSON array of strings, no other text. Example:
       systemPrompt += '\n\n' + formatProcedureAsContext(procedure);
     }
 
+    // Tool chain suggestion: recommend optimal tool sequence
+    const chainSuggestion = suggestToolChain(task.title, task.agentId);
+    if (chainSuggestion) {
+      systemPrompt += `\n\nSUGGESTED TOOL SEQUENCE: ${chainSuggestion.chain.join(' → ')}\nReason: ${chainSuggestion.reason}\nThis is a suggestion — adapt based on what you find.`;
+    }
+
     // Track tool calls for procedure learning
     const toolCallHistory: Array<{ name: string; args: Record<string, unknown> }> = [];
 
@@ -1033,6 +1039,27 @@ Output ONLY a JSON array of strings, no other text. Example:
         parts: functionResponses,
       });
 
+      // ── Self-healing: detect conversation derailment ──
+      if (round >= 2) {
+        const recentMsgs = conversationHistory.slice(-4).map(m => ({
+          role: m.role,
+          content: Array.isArray(m.parts)
+            ? m.parts.map((p: any) => p.text ?? '').filter(Boolean).join(' ').slice(0, 200)
+            : '',
+        }));
+        const derailment = detectDerailment(task.title, recentMsgs, toolCallHistory);
+        if (derailment.isDerailed && derailment.correction) {
+          await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+            phase: 'derailment_correction',
+            reason: derailment.reason,
+          });
+          conversationHistory.push({
+            role: 'user',
+            parts: [{ text: `SYSTEM: ${derailment.correction}` }],
+          });
+        }
+      }
+
       // Manus-style todo.md attention mechanism: re-inject task goals after every 2 rounds
       // This prevents the agent from "losing focus" as conversation grows
       if (round > 0 && round % 2 === 0 && functionCalls.length > 0) {
@@ -1122,6 +1149,31 @@ Output ONLY a JSON array of strings, no other text. Example:
 
     // Post-processing: inject any [connect:X] markers that tools returned but agent didn't pass through
     finalResponse = this.injectMissedConnectMarkers(finalResponse, conversationHistory);
+
+    // ── Grounding verification: check that numbers trace to tool data ──
+    const groundingToolOutputs = extractToolOutputsFromHistory(conversationHistory);
+    const grounding = verifyOutputGrounding(finalResponse, groundingToolOutputs);
+    if (!grounding.isGrounded && grounding.ungroundedClaims.length > 0) {
+      await this.emitEvent(task.id, task.agentId, task.orgId, 'thinking', {
+        phase: 'grounding_warning',
+        groundingScore: grounding.groundingScore,
+        ungroundedClaims: grounding.ungroundedClaims.slice(0, 5),
+      });
+    }
+
+    // ── Citation injection: auto-cite tool sources ──
+    if (toolCallHistory.length > 0 && finalResponse.length > 200) {
+      const toolCallsWithOutput = toolCallHistory.map(tc => {
+        // Find matching tool output from history
+        const matchingOutput = groundingToolOutputs.find(o => o.length > 50) ?? '';
+        return { name: tc.name, output: matchingOutput };
+      }).filter(tc => tc.output.length > 0);
+
+      const citations = extractCitations(finalResponse, toolCallsWithOutput);
+      if (citations.length > 0) {
+        finalResponse = injectCitations(finalResponse, citations);
+      }
+    }
 
     return { result: finalResponse, artifacts: allArtifacts, toolCallHistory };
   }
