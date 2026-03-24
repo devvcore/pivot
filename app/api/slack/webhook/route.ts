@@ -137,40 +137,70 @@ async function handleDirectMessage(
     { role: "user" as const, content: text, ts: event.ts },
   ].slice(-10); // Keep last 10
 
-  // Run Pivvy with full context
+  // Classify intent and route accordingly
   try {
-    const { runBusinessAgent } = await import("@/lib/agent/business-agent");
-    const chatMessages = updatedHistory.map(m => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-      timestamp: parseFloat(m.ts) * 1000 || Date.now(),
-    }));
+    const { classifyIntent } = await import("@/lib/slack/intent-router");
+    const intent = await classifyIntent(text);
 
-    const result = await runBusinessAgent({
-      orgId,
-      messages: chatMessages.slice(0, -1), // history (all but current)
-      message: text,
-    });
+    let reply: string = "";
+    let blocks: SlackBlock[] | null = null;
 
-    const reply = result.message ?? "I couldn't process that. Try asking about your business data.";
+    switch (intent.type) {
+      case "bi_query": {
+        const { answerBiQuery } = await import("@/lib/slack/bi-responder");
+        blocks = await answerBiQuery(orgId, intent.section, intent.question);
+        break;
+      }
+      case "agent_task": {
+        await sendSlackText(orgId, channel, `:hourglass_flowing_sand: Running ${intent.agentId} agent: "${intent.taskTitle}"...`, threadTs);
+        const { dispatchAgentTask } = await import("@/lib/slack/agent-dispatcher");
+        blocks = await dispatchAgentTask(orgId, intent.agentId, intent.taskTitle, intent.taskDescription);
+        break;
+      }
+      case "campaign": {
+        const { handleCampaignCommand } = await import("@/lib/slack/agent-dispatcher");
+        blocks = await handleCampaignCommand(orgId, intent.action, intent.templateId, intent.campaignId);
+        break;
+      }
+      case "report": {
+        const { answerBiQuery } = await import("@/lib/slack/bi-responder");
+        blocks = await answerBiQuery(orgId, intent.section, "Show full report");
+        break;
+      }
+      case "general":
+      default: {
+        const { runBusinessAgent } = await import("@/lib/agent/business-agent");
+        const chatMessages = updatedHistory.map(m => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: parseFloat(m.ts) * 1000 || Date.now(),
+        }));
+        const result = await runBusinessAgent({
+          orgId,
+          messages: chatMessages.slice(0, -1),
+          message: text,
+        });
+        reply = result.message ?? "I couldn't process that. Try asking about your business data.";
+        blocks = formatPivvyResponse(reply);
+      }
+    }
 
-    // Format as Block Kit
-    const blocks = formatPivvyResponse(reply);
-    const fallback = blocksToFallbackText(blocks);
+    if (blocks && blocks.length > 0) {
+      const fallback = blocksToFallbackText(blocks);
+      await sendSlackBlocks(orgId, channel, blocks, fallback, threadTs);
+    } else if (reply) {
+      await sendSlackText(orgId, channel, reply, threadTs);
+    }
 
-    // Send reply in thread
-    await sendSlackBlocks(orgId, channel, blocks, fallback, threadTs);
-
-    // Save conversation
+    const replyText = blocks ? blocksToFallbackText(blocks) : reply;
     await saveConversation(orgId, channel, threadTs, slackUserId, [
       ...updatedHistory,
-      { role: "assistant" as const, content: reply, ts: String(Date.now() / 1000) },
+      { role: "assistant" as const, content: replyText, ts: String(Date.now() / 1000) },
     ]);
 
-    // Run incremental processing in the background (learn from every DM)
     runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
   } catch (err) {
-    console.error("[Slack DM] Pivvy error:", err);
+    console.error("[Slack DM] Error:", err);
     await sendSlackText(orgId, channel, "Sorry, I ran into an issue. Please try again.", threadTs);
   }
 }
@@ -205,33 +235,68 @@ async function handleAppMention(
   ].slice(-10);
 
   try {
-    const { runBusinessAgent } = await import("@/lib/agent/business-agent");
-    const chatMessages = updatedHistory.map(m => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-      timestamp: parseFloat(m.ts) * 1000 || Date.now(),
-    }));
+    const { classifyIntent } = await import("@/lib/slack/intent-router");
+    const intent = await classifyIntent(text);
 
-    const result = await runBusinessAgent({
-      orgId,
-      messages: chatMessages.slice(0, -1),
-      message: text,
-    });
+    let reply: string = "";
+    let blocks: SlackBlock[] | null = null;
 
-    const reply = result.message ?? "I couldn't process that. Try asking me about your business.";
-    const blocks = formatPivvyResponse(reply);
-    const fallback = blocksToFallbackText(blocks);
+    switch (intent.type) {
+      case "bi_query": {
+        const { answerBiQuery } = await import("@/lib/slack/bi-responder");
+        blocks = await answerBiQuery(orgId, intent.section, intent.question);
+        break;
+      }
+      case "agent_task": {
+        await sendSlackText(orgId, channel, `:hourglass_flowing_sand: Running ${intent.agentId} agent: "${intent.taskTitle}"...`, threadTs);
+        const { dispatchAgentTask } = await import("@/lib/slack/agent-dispatcher");
+        blocks = await dispatchAgentTask(orgId, intent.agentId, intent.taskTitle, intent.taskDescription);
+        break;
+      }
+      case "campaign": {
+        const { handleCampaignCommand } = await import("@/lib/slack/agent-dispatcher");
+        blocks = await handleCampaignCommand(orgId, intent.action, intent.templateId, intent.campaignId);
+        break;
+      }
+      case "report": {
+        const { answerBiQuery } = await import("@/lib/slack/bi-responder");
+        blocks = await answerBiQuery(orgId, intent.section, "Show full report");
+        break;
+      }
+      case "general":
+      default: {
+        const { runBusinessAgent } = await import("@/lib/agent/business-agent");
+        const chatMessages = updatedHistory.map(m => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: parseFloat(m.ts) * 1000 || Date.now(),
+        }));
+        const result = await runBusinessAgent({
+          orgId,
+          messages: chatMessages.slice(0, -1),
+          message: text,
+        });
+        reply = result.message ?? "I couldn't process that. Try asking me about your business.";
+        blocks = formatPivvyResponse(reply);
+      }
+    }
 
-    // Always reply in thread to avoid channel noise
-    await sendSlackBlocks(orgId, channel, blocks, fallback, threadTs);
+    if (blocks && blocks.length > 0) {
+      const fallback = blocksToFallbackText(blocks);
+      // Always reply in thread to avoid channel noise
+      await sendSlackBlocks(orgId, channel, blocks, fallback, threadTs);
+    } else if (reply) {
+      await sendSlackText(orgId, channel, reply, threadTs);
+    }
 
+    const replyText = blocks ? blocksToFallbackText(blocks) : reply;
     // Save conversation context
     await saveConversation(orgId, channel, threadTs, slackUserId, [
       ...updatedHistory,
-      { role: "assistant" as const, content: reply, ts: String(Date.now() / 1000) },
+      { role: "assistant" as const, content: replyText, ts: String(Date.now() / 1000) },
     ]);
   } catch (err) {
-    console.error("[Slack Mention] Pivvy error:", err);
+    console.error("[Slack Mention] Error:", err);
     await sendSlackText(orgId, channel, "Sorry, I ran into an issue. Please try again.", threadTs);
   }
 }
@@ -414,6 +479,70 @@ async function handleSlashCommand(req: NextRequest): Promise<NextResponse> {
     });
   }
 
+  if (text === "report") {
+    processSlashReport(orgId, responseUrl).catch(err =>
+      console.error("[Slash] report error:", err)
+    );
+    return NextResponse.json({
+      response_type: "ephemeral",
+      text: ":hourglass_flowing_sand: Loading your executive report...",
+    });
+  }
+
+  if (text.startsWith("ask ") && text.length > 4) {
+    const question = text.slice(4).trim();
+    processSlashAsk(orgId, question, responseUrl).catch(err =>
+      console.error("[Slash] ask error:", err)
+    );
+    return NextResponse.json({
+      response_type: "ephemeral",
+      text: `:hourglass_flowing_sand: Looking into "${question}"...`,
+    });
+  }
+
+  if (text === "campaigns") {
+    processSlashCampaigns(orgId, responseUrl).catch(err =>
+      console.error("[Slash] campaigns error:", err)
+    );
+    return NextResponse.json({
+      response_type: "ephemeral",
+      text: ":hourglass_flowing_sand: Loading campaigns...",
+    });
+  }
+
+  if (text === "agents") {
+    return NextResponse.json({
+      response_type: "ephemeral",
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: "Pivot Agents", emoji: true } },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: [
+              "*Available agents — ask me to run any of these:*",
+              "",
+              ":bar_chart: *strategist* — Business strategy, competitive analysis, OKRs",
+              ":loudspeaker: *marketer* — Content creation, campaigns, social posts",
+              ":mag: *analyst* — Data analysis, financial modeling, reports",
+              ":busts_in_silhouette: *recruiter* — Job descriptions, candidate outreach, HR tasks",
+              ":gear: *operator* — Process optimization, documentation, SOPs",
+              ":earth_americas: *researcher* — Market research, industry trends, deep dives",
+              ":computer: *codebot* — Code reviews, GitHub issues, technical tasks",
+            ].join("\n"),
+          },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: '_Example: "Run the marketer agent to write a LinkedIn post about our new feature"_',
+          },
+        },
+      ],
+    });
+  }
+
   // Default: show help
   return NextResponse.json({
     response_type: "ephemeral",
@@ -428,6 +557,10 @@ async function handleSlashCommand(req: NextRequest): Promise<NextResponse> {
             "`/pivot status` - Business health summary (score, runway, risks)",
             "`/pivot pipeline` - CRM pipeline overview (stages, values, win rate)",
             "`/pivot tasks` - Open tickets count by status",
+            "`/pivot report` - Full executive summary report",
+            "`/pivot ask [question]` - Ask anything about your business data",
+            "`/pivot campaigns` - List active marketing campaigns",
+            "`/pivot agents` - Show all 7 available AI agents",
             "",
             "You can also DM me directly or @mention me in any channel!",
           ].join("\n"),
@@ -571,6 +704,76 @@ async function processSlashTasks(orgId: string, responseUrl: string): Promise<vo
     await sendSlashResponse(responseUrl, {
       response_type: "ephemeral",
       text: "Failed to load task data. Please try again.",
+    });
+  }
+}
+
+async function processSlashReport(orgId: string, responseUrl: string): Promise<void> {
+  try {
+    const { answerBiQuery } = await import("@/lib/slack/bi-responder");
+    const blocks = await answerBiQuery(orgId, "executiveSummary", "Show full report");
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      blocks,
+      text: blocksToFallbackText(blocks),
+    });
+  } catch (err) {
+    console.error("[Slash Report] Error:", err);
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      text: "Failed to load report. Please try again.",
+    });
+  }
+}
+
+async function processSlashAsk(orgId: string, question: string, responseUrl: string): Promise<void> {
+  try {
+    const { classifyIntent } = await import("@/lib/slack/intent-router");
+    const intent = await classifyIntent(question);
+
+    let blocks: SlackBlock[];
+
+    if (intent.type === "bi_query" || intent.type === "report") {
+      const { answerBiQuery } = await import("@/lib/slack/bi-responder");
+      const section = intent.type === "report" ? intent.section : intent.section;
+      const q = intent.type === "report" ? "Show full report" : intent.question;
+      blocks = await answerBiQuery(orgId, section, q);
+    } else {
+      // Fall back to Pivvy for general questions
+      const { runBusinessAgent } = await import("@/lib/agent/business-agent");
+      const result = await runBusinessAgent({ orgId, messages: [], message: question });
+      const reply = result.message ?? "I couldn't find an answer. Try asking in more detail.";
+      blocks = formatPivvyResponse(reply);
+    }
+
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      blocks,
+      text: blocksToFallbackText(blocks),
+    });
+  } catch (err) {
+    console.error("[Slash Ask] Error:", err);
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      text: "Failed to answer your question. Please try again.",
+    });
+  }
+}
+
+async function processSlashCampaigns(orgId: string, responseUrl: string): Promise<void> {
+  try {
+    const { handleCampaignCommand } = await import("@/lib/slack/agent-dispatcher");
+    const blocks = await handleCampaignCommand(orgId, "list");
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      blocks,
+      text: blocksToFallbackText(blocks),
+    });
+  } catch (err) {
+    console.error("[Slash Campaigns] Error:", err);
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      text: "Failed to load campaigns. Please try again.",
     });
   }
 }

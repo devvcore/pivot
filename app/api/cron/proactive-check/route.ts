@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { runProactiveCheck, type Alert } from '@/lib/execution/proactive-monitor';
+import { sendProactiveAlertToSlack } from '@/lib/slack/proactive-alerts';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes max
@@ -77,6 +78,18 @@ export async function GET(req: Request) {
 
           // Send notifications for high-severity alerts
           await notifyHighSeverity(orgId, alerts, supabase);
+
+          // Send proactive Slack alerts for all ACT-level alerts
+          await Promise.allSettled(
+            alerts.map((alert) =>
+              sendProactiveAlertToSlack(orgId, {
+                type: alert.type,
+                title: alert.title ?? alert.type,
+                message: alert.message ?? '',
+                severity: alert.severity ?? 'warning',
+              })
+            )
+          );
 
           return { orgId, alertCount: alerts.length };
         } catch (err) {
