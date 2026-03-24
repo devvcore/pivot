@@ -24,6 +24,7 @@ import { loadAgentMemories, formatMemoriesAsContext, saveAgentMemory, extractLes
 import { findMatchingProcedure, saveProcedure, recordProcedureUse, formatProcedureAsContext, type Procedure } from './procedures';
 import { fuzzyMatchTool, correctArgs, coerceArgs, detectLazyResponse, extractToolOutputsFromHistory, recoverToolCallsFromText, repairConversationHistory, guardContextBudget, smartTruncate } from './defensive-harness';
 import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, type Directive } from './directives';
+import { generateClarifications, saveClarifications, waitForClarifications, getClarificationContext } from './clarifier';
 import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
 import { selectModel, calculateCost } from './model-router';
 
@@ -1311,6 +1312,33 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         });
       }
 
+      // 2d. Clarification phase — ask user questions before executing (skip for INSTANT/QUICK)
+      let clarificationContext = '';
+      if (!isInstant && triageLevel !== 'quick') {
+        try {
+          const clarResult = await generateClarifications(task.title, task.description, task.agentId);
+          if (clarResult.needsClarification && clarResult.questions.length > 0) {
+            // Save questions and emit event for UI
+            await saveClarifications(task.id, task.orgId, task.agentId, clarResult.questions);
+            await this.setTaskStatus(task, 'awaiting_approval'); // reuse status for "waiting for user"
+
+            // Wait for user to answer (max 2 minutes, poll every 2s)
+            const answered = await waitForClarifications(task.id, 120_000, 2_000);
+
+            if (answered) {
+              clarificationContext = await getClarificationContext(task.id);
+            }
+          }
+        } catch (err) {
+          console.warn('[Orchestrator] Clarification phase error (continuing without):', err);
+        }
+      }
+
+      // Enrich task description with clarification responses
+      if (clarificationContext) {
+        task.description = task.description + clarificationContext;
+      }
+
       // 3. Execute
       await this.setTaskStatus(task, 'executing', { attempts: 1 });
       task.attempts = 1;
@@ -1323,6 +1351,7 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         hasPlan: !!executionPlan,
         hasProcedure: !!matchedProcedure,
         isInstant,
+        hasClarifications: !!clarificationContext,
       });
 
       let { result, artifacts, toolCallHistory } = await this.executeTask(task, executionPlan, matchedProcedure);

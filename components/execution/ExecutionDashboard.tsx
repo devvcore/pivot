@@ -307,10 +307,17 @@ function splitConnectMarkers(content: string): Array<{ type: "text"; value: stri
 }
 
 /* ── Chat message types ── */
+interface ClarificationQuestion {
+  id: string;
+  question: string;
+  options: { label: string; value: string; description?: string }[];
+  context?: string;
+}
+
 interface ChatMessage {
   id: string;
   timestamp: number;
-  type: "user" | "routing" | "thinking" | "tool_use" | "output" | "error" | "artifact";
+  type: "user" | "routing" | "thinking" | "tool_use" | "output" | "error" | "artifact" | "clarification";
   content: string;
   agentName?: string;
   agentId?: string;
@@ -320,6 +327,7 @@ interface ChatMessage {
   artifacts?: { name: string; type: string; content: string }[];
   taskId?: string;
   attachments?: { name: string; url: string; type: string }[];
+  clarifications?: ClarificationQuestion[];
 }
 
 /* ── Recommendation pills ── */
@@ -828,15 +836,29 @@ export function ExecutionDashboard({
           }
           break;
         case "thinking":
-          msgs.push({
-            id: ev.id,
-            timestamp: ts,
-            type: "thinking",
-            content: data.phase ? `${agentInfo.name} is ${data.phase.replace(/_/g, " ")}...` : `${agentInfo.name} is thinking...`,
-            agentName: agentInfo.name,
-            agentId,
-            taskId,
-          });
+          // Special handling for clarification requests
+          if (data.phase === "clarification_request" && data.questions?.length > 0) {
+            msgs.push({
+              id: ev.id,
+              timestamp: ts,
+              type: "clarification",
+              content: "I have a few questions before I start:",
+              agentName: agentInfo.name,
+              agentId,
+              taskId,
+              clarifications: data.questions,
+            });
+          } else {
+            msgs.push({
+              id: ev.id,
+              timestamp: ts,
+              type: "thinking",
+              content: data.phase ? `${agentInfo.name} is ${data.phase.replace(/_/g, " ")}...` : `${agentInfo.name} is thinking...`,
+              agentName: agentInfo.name,
+              agentId,
+              taskId,
+            });
+          }
           break;
         case "output":
           msgs.push({
@@ -1992,6 +2014,73 @@ export function ExecutionDashboard({
                         </span>
                       ) : null;
                     })()}
+                  </div>
+                </div>
+              );
+            }
+
+            /* ── Clarification questions — interactive buttons like Claude ── */
+            if (msg.type === "clarification" && msg.clarifications) {
+              const agentId = msg.agentId ?? "strategist";
+              const agentConfig = AGENT_NAMES[agentId];
+              const agentColor = agentConfig?.color ?? "bg-violet-500";
+
+              return (
+                <div key={msg.id} className="flex items-start gap-2 max-w-[85%]">
+                  <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5`}>
+                    <span className="text-[10px] font-bold text-white">{agentConfig?.emoji ?? "?"}</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <p className="text-sm text-zinc-600 font-medium">{msg.content}</p>
+                    {msg.clarifications.map((q) => (
+                      <div key={q.id} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
+                        <p className="text-sm font-medium text-zinc-800 mb-1">{q.question}</p>
+                        {q.context && (
+                          <p className="text-xs text-zinc-400 mb-3">{q.context}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {q.options.map((opt) => (
+                            <button
+                              key={opt.value}
+                              onClick={async () => {
+                                try {
+                                  await authFetch("/api/execution/clarifications", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ clarificationId: q.id, response: opt.value }),
+                                  });
+                                  // Update UI: replace this question with the selected answer
+                                  setMessages(prev => prev.map(m => {
+                                    if (m.id !== msg.id) return m;
+                                    return {
+                                      ...m,
+                                      clarifications: m.clarifications?.map(c =>
+                                        c.id === q.id
+                                          ? { ...c, options: c.options.map(o => ({ ...o, selected: o.value === opt.value })) } as any
+                                          : c
+                                      ),
+                                    };
+                                  }));
+                                } catch (err) {
+                                  console.error("Failed to submit clarification:", err);
+                                }
+                              }}
+                              disabled={(q as any).options?.some((o: any) => o.selected)}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+                                (opt as any).selected
+                                  ? "bg-indigo-600 text-white border-indigo-600"
+                                  : "bg-white text-zinc-700 border-zinc-300 hover:border-indigo-400 hover:bg-indigo-50"
+                              } disabled:opacity-60 disabled:cursor-default`}
+                            >
+                              {opt.label}
+                              {opt.description && (
+                                <span className="text-zinc-400 ml-1 font-normal">· {opt.description}</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
