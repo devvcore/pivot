@@ -48,6 +48,7 @@ import ReactMarkdown from "react-markdown";
 import { formatLabel } from "@/lib/utils";
 import { authFetch } from "@/lib/auth-fetch";
 import ConnectionPrompt from "./ConnectionPrompt";
+import AgentPlan, { type PlanTask } from "@/components/ui/agent-plan";
 import {
   generateArtifact,
   detectArtifacts,
@@ -288,6 +289,93 @@ function extractInlineImages(content: string): { text: string; images: string[] 
   return { text: cleaned, images };
 }
 
+/** Parse a plan text (from orchestrator planning phase) into structured PlanTask objects */
+function parsePlanText(planText: string, agentId: string): PlanTask[] {
+  const tasks: PlanTask[] = [];
+  // Split by numbered steps or bullet points
+  const lines = planText.split('\n').filter(l => l.trim().length > 0);
+  let currentTask: PlanTask | null = null;
+  let stepNum = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Detect step headers: "1. Title", "Step 1: Title", "- Title" (top-level)
+    const stepMatch = trimmed.match(/^(?:(\d+)\.|Step\s+(\d+)[:.]\s*|-\s+)(.+)/i);
+
+    if (stepMatch && !trimmed.startsWith('  ') && !trimmed.startsWith('\t')) {
+      stepNum++;
+      const title = (stepMatch[3] ?? trimmed.replace(/^[-*]\s+/, '')).trim();
+      currentTask = {
+        id: String(stepNum),
+        title,
+        description: '',
+        status: 'pending',
+        priority: stepNum <= 2 ? 'high' : 'medium',
+        level: 0,
+        dependencies: stepNum > 1 ? [String(stepNum - 1)] : [],
+        subtasks: [],
+      };
+      tasks.push(currentTask);
+    } else if (currentTask && (trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed.match(/^\d+\.\d+/))) {
+      // Sub-items become subtasks
+      const subTitle = trimmed.replace(/^[-*]\s+/, '').replace(/^\d+\.\d+[.)]\s*/, '').trim();
+      if (subTitle.length > 3) {
+        currentTask.subtasks.push({
+          id: `${currentTask.id}.${currentTask.subtasks.length + 1}`,
+          title: subTitle,
+          description: '',
+          status: 'pending',
+          priority: 'medium',
+          tools: detectToolsInText(subTitle),
+        });
+      }
+    } else if (currentTask && currentTask.subtasks.length === 0) {
+      // Append to description of current task
+      currentTask.description = (currentTask.description + ' ' + trimmed).trim();
+    }
+  }
+
+  // If no structured tasks found, create one per line
+  if (tasks.length === 0 && lines.length > 0) {
+    return lines.slice(0, 8).map((line, i) => ({
+      id: String(i + 1),
+      title: line.replace(/^[-*\d.)\s]+/, '').trim().slice(0, 100),
+      description: '',
+      status: 'pending',
+      priority: i < 2 ? 'high' : 'medium',
+      level: 0,
+      dependencies: i > 0 ? [String(i)] : [],
+      subtasks: [],
+    }));
+  }
+
+  return tasks;
+}
+
+/** Detect tool names mentioned in text */
+function detectToolsInText(text: string): string[] {
+  const toolPatterns: [RegExp, string][] = [
+    [/web.?search|search.*web/i, 'web_search'],
+    [/scrape|website.*anal/i, 'scrape_website'],
+    [/linked.?in/i, 'post_to_linkedin'],
+    [/twitter|tweet/i, 'post_to_twitter'],
+    [/email|gmail/i, 'send_email'],
+    [/slack/i, 'send_slack_message'],
+    [/sheets?|spreadsheet/i, 'write_to_google_sheets'],
+    [/jira|ticket/i, 'create_jira_ticket'],
+    [/github|pull.?req/i, 'github_create_issue'],
+    [/compet/i, 'analyze_competitors'],
+    [/query.*data|integr.*data/i, 'query_integration_data'],
+    [/analysis|report/i, 'query_analysis'],
+    [/schedul/i, 'schedule_post'],
+    [/slide|deck|present/i, 'create_slide_deck'],
+    [/crm|contact/i, 'search_crm'],
+  ];
+  return toolPatterns
+    .filter(([pat]) => pat.test(text))
+    .map(([, name]) => name);
+}
+
 function splitConnectMarkers(content: string): Array<{ type: "text"; value: string } | { type: "connect"; provider: string }> {
   const parts: Array<{ type: "text"; value: string } | { type: "connect"; provider: string }> = [];
   let lastIndex = 0;
@@ -317,7 +405,7 @@ interface ClarificationQuestion {
 interface ChatMessage {
   id: string;
   timestamp: number;
-  type: "user" | "routing" | "thinking" | "tool_use" | "output" | "error" | "artifact" | "clarification";
+  type: "user" | "routing" | "thinking" | "tool_use" | "output" | "error" | "artifact" | "clarification" | "plan";
   content: string;
   agentName?: string;
   agentId?: string;
@@ -328,6 +416,7 @@ interface ChatMessage {
   taskId?: string;
   attachments?: { name: string; url: string; type: string }[];
   clarifications?: ClarificationQuestion[];
+  planTasks?: PlanTask[];
 }
 
 /* ── Recommendation pills ── */
@@ -848,6 +937,31 @@ export function ExecutionDashboard({
               taskId,
               clarifications: data.questions,
             });
+          } else if (data.phase === "planning" && data.plan) {
+            // Convert plan text into structured PlanTask objects
+            const planTasks = parsePlanText(data.plan, agentId);
+            if (planTasks.length > 0) {
+              msgs.push({
+                id: ev.id,
+                timestamp: ts,
+                type: "plan",
+                content: "Here's my execution plan:",
+                agentName: agentInfo.name,
+                agentId,
+                taskId,
+                planTasks,
+              });
+            } else {
+              msgs.push({
+                id: ev.id,
+                timestamp: ts,
+                type: "thinking",
+                content: `${agentInfo.name} is planning...`,
+                agentName: agentInfo.name,
+                agentId,
+                taskId,
+              });
+            }
           } else {
             msgs.push({
               id: ev.id,
@@ -2081,6 +2195,28 @@ export function ExecutionDashboard({
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              );
+            }
+
+            /* ── Execution plan — visual task tree ── */
+            if (msg.type === "plan" && msg.planTasks) {
+              const agentId = msg.agentId ?? "strategist";
+              const agentConfig = AGENT_NAMES[agentId];
+              const agentColor = agentConfig?.color ?? "bg-violet-500";
+
+              return (
+                <div key={msg.id} className="flex items-start gap-2 max-w-[90%]">
+                  <div className={`w-7 h-7 ${agentColor} rounded-full flex items-center justify-center shrink-0 mt-0.5`}>
+                    <span className="text-[10px] font-bold text-white">{agentConfig?.emoji ?? "?"}</span>
+                  </div>
+                  <div className="flex-1">
+                    <AgentPlan
+                      tasks={msg.planTasks}
+                      isLive={activeAgents.has(agentId)}
+                      compact
+                    />
                   </div>
                 </div>
               );
