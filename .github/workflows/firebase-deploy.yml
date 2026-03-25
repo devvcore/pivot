@@ -25,3 +25,5 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
           projectId: dev-paradigm
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
