@@ -1,5 +1,8 @@
 -- 024_slack_rag.sql — Slack message embeddings for RAG semantic search
 
+-- Enable pgvector extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
+
 -- Slack message embeddings table
 CREATE TABLE IF NOT EXISTS slack_message_embeddings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11,7 +14,7 @@ CREATE TABLE IF NOT EXISTS slack_message_embeddings (
     message_text TEXT NOT NULL,
     thread_ts TEXT,
     message_ts TEXT NOT NULL,
-    embedding vector(768),
+    embedding extensions.vector(768),
     created_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE(org_id, channel_id, message_ts)
 );
@@ -21,14 +24,13 @@ CREATE INDEX IF NOT EXISTS idx_slack_embed_org ON slack_message_embeddings(org_i
 CREATE INDEX IF NOT EXISTS idx_slack_embed_channel ON slack_message_embeddings(org_id, channel_id);
 CREATE INDEX IF NOT EXISTS idx_slack_embed_thread ON slack_message_embeddings(org_id, thread_ts) WHERE thread_ts IS NOT NULL;
 
--- Vector similarity search index (IVFFlat for speed)
+-- Vector similarity search index (HNSW - works on empty tables, no tuning needed)
 CREATE INDEX IF NOT EXISTS idx_slack_embed_search ON slack_message_embeddings
-  USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);
+  USING hnsw (embedding extensions.vector_cosine_ops);
 
 -- RPC function for semantic search over Slack messages
 CREATE OR REPLACE FUNCTION search_slack_messages(
-  query_embedding vector(768),
+  query_embedding extensions.vector(768),
   match_org_id TEXT,
   match_channel_name TEXT DEFAULT NULL,
   match_count INTEGER DEFAULT 10,
