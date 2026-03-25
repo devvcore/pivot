@@ -14,3 +14,4 @@ reports/
 *.tsbuildinfo
 .firebase/
 test-hosting/
+.worktrees/
