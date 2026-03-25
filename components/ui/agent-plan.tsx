@@ -150,53 +150,21 @@ export default function AgentPlan({
   );
   const progressPct = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
 
-  // Animation variants
-  const taskVariants = {
+  // Animation variants (cast to any to avoid motion/react strict type issues)
+  const taskVariants: any = {
     hidden: { opacity: 0, y: prefersReducedMotion ? 0 : -5 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: prefersReducedMotion ? "tween" : "spring",
-        stiffness: 500,
-        damping: 30,
-        duration: prefersReducedMotion ? 0.2 : undefined,
-      },
-    },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
   };
 
-  const subtaskListVariants = {
-    hidden: { opacity: 0, height: 0, overflow: "hidden" as const },
-    visible: {
-      height: "auto",
-      opacity: 1,
-      overflow: "visible" as const,
-      transition: {
-        duration: 0.25,
-        staggerChildren: prefersReducedMotion ? 0 : 0.05,
-        when: "beforeChildren" as const,
-        ease: [0.2, 0.65, 0.3, 0.9],
-      },
-    },
-    exit: {
-      height: 0,
-      opacity: 0,
-      overflow: "hidden" as const,
-      transition: { duration: 0.2, ease: [0.2, 0.65, 0.3, 0.9] },
-    },
+  const subtaskListVariants: any = {
+    hidden: { opacity: 0, height: 0 },
+    visible: { height: "auto", opacity: 1, transition: { duration: 0.25, staggerChildren: 0.05 } },
+    exit: { height: 0, opacity: 0, transition: { duration: 0.2 } },
   };
 
-  const subtaskVariants = {
+  const subtaskVariants: any = {
     hidden: { opacity: 0, x: prefersReducedMotion ? 0 : -10 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: prefersReducedMotion ? "tween" : "spring",
-        stiffness: 500,
-        damping: 25,
-      },
-    },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2 } },
   };
 
   if (tasks.length === 0) return null;

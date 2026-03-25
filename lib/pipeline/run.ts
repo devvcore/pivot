@@ -1076,10 +1076,10 @@ export async function runPipeline(runId: string): Promise<void> {
 
       await updateJob(runId, { status: "ingesting" });
 
-      // Run document ingestion AND fresh integration data pull in parallel
-      // Integration pull adds zero wall-clock time — it finishes while docs are parsing
+      // Run document ingestion, RAG embedding, AND fresh integration data pull in parallel
+      // All three run concurrently — zero added wall-clock time
       const integrationOrgId = job.questionnaire.orgId;
-      const [ingestResult, _integrationPull] = await Promise.all([
+      const [ingestResult, _integrationPull, _ragEmbed] = await Promise.all([
         Promise.all([
           ingestDocuments(parsedFiles, job.questionnaire),
           categorizeAndBuildGraph(parsedFiles, job.questionnaire),
@@ -1090,6 +1090,21 @@ export async function runPipeline(runId: string): Promise<void> {
               await pullFreshIntegrationData(integrationOrgId);
             } catch (e) {
               console.warn('[Pivot] Fresh integration pull failed (non-fatal):', e);
+            }
+          }
+        })(),
+        // RAG: embed document chunks for semantic search (non-blocking)
+        (async () => {
+          if (integrationOrgId) {
+            try {
+              const { embedDocuments } = await import('./embed');
+              const docs = parsedFiles.map((f: any) => ({
+                filename: f.filename,
+                text: f.text,
+              }));
+              await embedDocuments(integrationOrgId, runId, docs);
+            } catch (e) {
+              console.warn('[Pivot] Document embedding failed (non-fatal):', e);
             }
           }
         })(),

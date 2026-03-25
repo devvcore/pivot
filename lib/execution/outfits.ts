@@ -712,6 +712,18 @@ GitHub Best Practices:
   },
 };
 
+// ── RAG tools: add document search to ALL outfits ────────────────────────────
+// Every agent can search original uploaded documents for specific information.
+const RAG_TOOLS = ['search_documents', 'list_documents'];
+
+for (const outfit of Object.values(OUTFITS)) {
+  for (const tool of RAG_TOOLS) {
+    if (!outfit.tools.includes(tool)) {
+      outfit.tools.push(tool);
+    }
+  }
+}
+
 // ── Populate the outfit-tool map (used by ToolRegistry.getForOutfit) ──────────
 
 for (const [name, outfit] of Object.entries(OUTFITS)) {
