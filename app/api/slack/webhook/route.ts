@@ -198,7 +198,7 @@ async function handleDirectMessage(
       { role: "assistant" as const, content: replyText, ts: String(Date.now() / 1000) },
     ]);
 
-    runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
+    runIncrementalProcessing(orgId, text, slackUserId, channel, event.ts, event.thread_ts).catch(() => {});
   } catch (err) {
     console.error("[Slack DM] Error:", err);
     await sendSlackText(orgId, channel, "Sorry, I ran into an issue. Please try again.", threadTs);
@@ -337,7 +337,7 @@ async function handleChannelMessage(
   const shouldRespond = await shouldRespondToMessage(text);
   if (!shouldRespond) {
     // Still run incremental processing for learning, even when not responding
-    runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
+    runIncrementalProcessing(orgId, text, slackUserId, channel, event.ts, event.thread_ts).catch(() => {});
     return;
   }
 
@@ -378,7 +378,7 @@ async function handleChannelMessage(
     ]);
 
     // Run incremental processing in the background
-    runIncrementalProcessing(orgId, text, slackUserId, channel).catch(() => {});
+    runIncrementalProcessing(orgId, text, slackUserId, channel, event.ts, event.thread_ts).catch(() => {});
   } catch (err) {
     console.error("[Slack Channel] Client interaction error:", err);
     // Silently fail in client interaction mode — don't spam the channel
@@ -500,6 +500,16 @@ async function handleSlashCommand(req: NextRequest): Promise<NextResponse> {
     });
   }
 
+  if (text === "briefing" || text === "digest" || text === "morning") {
+    processSlashBriefing(orgId, responseUrl).catch(err =>
+      console.error("[Slash] briefing error:", err)
+    );
+    return NextResponse.json({
+      response_type: "ephemeral",
+      text: ":sparkles: Generating your daily briefing...",
+    });
+  }
+
   if (text === "campaigns") {
     processSlashCampaigns(orgId, responseUrl).catch(err =>
       console.error("[Slash] campaigns error:", err)
@@ -560,7 +570,8 @@ async function handleSlashCommand(req: NextRequest): Promise<NextResponse> {
             "`/pivot report` - Full executive summary report",
             "`/pivot ask [question]` - Ask anything about your business data",
             "`/pivot campaigns` - List active marketing campaigns",
-            "`/pivot agents` - Show all 7 available AI agents",
+            "`/pivot briefing` - Get your personalized daily AI briefing",
+            "`/pivot agents` - Show all 8 available AI agents",
             "",
             "You can also DM me directly or @mention me in any channel!",
           ].join("\n"),
@@ -778,6 +789,50 @@ async function processSlashCampaigns(orgId: string, responseUrl: string): Promis
   }
 }
 
+async function processSlashBriefing(orgId: string, responseUrl: string): Promise<void> {
+  try {
+    const { generateDailyBriefing } = await import("@/lib/briefing/daily-digest");
+    const briefing = await generateDailyBriefing(orgId);
+
+    const blocks: SlackBlock[] = [
+      { type: "header", text: { type: "plain_text", text: ":sparkles: Daily Briefing", emoji: true } },
+      { type: "section", text: { type: "mrkdwn", text: `*${briefing.greeting}*\n${briefing.summary}` } },
+    ];
+
+    for (const section of briefing.sections) {
+      blocks.push({
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `${section.icon} *${section.title}*\n${section.content}`,
+        },
+      });
+    }
+
+    if (briefing.actionItems.length > 0) {
+      blocks.push({
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Action Items:*\n${briefing.actionItems.map(a => `- [ ] ${a}`).join("\n")}`,
+        },
+      });
+    }
+
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      blocks,
+      text: blocksToFallbackText(blocks),
+    });
+  } catch (err) {
+    console.error("[Slash Briefing] Error:", err);
+    await sendSlashResponse(responseUrl, {
+      response_type: "ephemeral",
+      text: "Failed to generate briefing. Please try again.",
+    });
+  }
+}
+
 // ── Incremental Processing (ported from Ultron incremental-processor.ts) ─────
 // Runs on every message, even when Pivvy doesn't respond. Cheap ~$0.001 per msg.
 
@@ -786,6 +841,9 @@ async function runIncrementalProcessing(
   text: string,
   slackUserId: string,
   channel: string,
+  messageTs?: string,
+  threadTs?: string,
+  channelName?: string,
 ): Promise<void> {
   try {
     const result = await processMessageIncrementally(orgId, {
@@ -805,6 +863,23 @@ async function runIncrementalProcessing(
     }
   } catch (err) {
     console.warn("[Slack Incremental] Background processing failed:", err instanceof Error ? err.message : err);
+  }
+
+  // Embed message for Slack RAG (async, non-blocking)
+  if (messageTs && text && text.length >= 10) {
+    try {
+      const { embedNewWebhookMessage } = await import("@/lib/slack/slack-rag");
+      await embedNewWebhookMessage(orgId, {
+        text,
+        user: slackUserId,
+        channel,
+        ts: messageTs,
+        thread_ts: threadTs,
+        channelName,
+      });
+    } catch (err) {
+      console.warn("[Slack RAG] Embed failed:", err instanceof Error ? err.message : err);
+    }
   }
 }
 

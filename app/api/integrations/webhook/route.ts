@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { processEventInline } from '@/lib/notifications/engine';
 import crypto from 'crypto';
 
 // ─── Slack Signature Verification ───────────────────────────────────────────
@@ -200,6 +201,24 @@ async function handleSlackWebhook(
           payload: event,
           processed: false,
         });
+
+        // Async: embed message for Slack RAG (non-blocking)
+        if (event.text && event.user && event.channel && event.ts) {
+          import('@/lib/slack/slack-rag')
+            .then(({ embedNewWebhookMessage }) =>
+              embedNewWebhookMessage(integration.org_id, {
+                text: event.text,
+                user: event.user,
+                channel: event.channel,
+                channel_type: event.channel_type,
+                ts: event.ts,
+                thread_ts: event.thread_ts,
+              }),
+            )
+            .catch(err =>
+              console.warn('[webhook/slack] Async embed failed:', err instanceof Error ? err.message : err),
+            );
+        }
         break;
       }
       case 'channel_created':
@@ -282,6 +301,16 @@ async function handleStripeWebhook(
       payload: event.data?.object ?? event,
       processed: false,
     });
+
+    // Instant notification for Stripe events (don't wait for cron)
+    if (integration?.org_id) {
+      processEventInline(
+        integration.org_id,
+        'stripe',
+        event.type,
+        event.data?.object ?? event,
+      ).catch(err => console.warn('[webhook/stripe] Inline notification failed:', err));
+    }
   }
 
   // Always return 200 to acknowledge receipt
@@ -345,6 +374,16 @@ async function handleJiraWebhook(
       payload,
       processed: false,
     });
+
+    // Instant notification for Jira events
+    if (integration?.org_id) {
+      processEventInline(
+        integration.org_id,
+        'jira',
+        webhookEvent,
+        payload,
+      ).catch(err => console.warn('[webhook/jira] Inline notification failed:', err));
+    }
   }
 
   return NextResponse.json({ ok: true });

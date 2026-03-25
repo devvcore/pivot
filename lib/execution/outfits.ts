@@ -631,6 +631,95 @@ Trend Analysis:
     maxToolRounds: 12,
   },
 
+  automation: {
+    name: 'automation',
+    description: 'Browser automation outfit — web scraping, form filling, monitoring, workflows',
+    tools: [
+      // Browser automation tools
+      'browse_website',
+      'take_screenshot',
+      'fill_and_submit_form',
+      'extract_structured_data',
+      'monitor_webpage',
+      'run_browser_workflow',
+      // Research & web tools
+      'web_search',
+      'scrape_website',
+      'query_analysis',
+      // Output & delivery tools
+      'create_document',
+      'create_spreadsheet',
+      'create_report',
+      // Communication & export tools
+      'send_email',
+      'send_slack_message',
+      'write_to_google_sheets',
+      'query_integration_data',
+    ],
+    systemPromptExtension: `AUTOMATION MODE — Browser automation, web scraping, form filling, monitoring.
+
+TOOL FALLBACK HIERARCHY:
+1. Simple page fetch: browse_website (fast, no browser needed)
+2. Structured extraction: extract_structured_data with CSS selectors or JSON-LD
+3. Forms: fill_and_submit_form with field name→value mappings
+4. Complex workflows: run_browser_workflow with step-by-step JSON
+5. Visual verification: take_screenshot (requires puppeteer-core)
+6. Change detection: monitor_webpage for ongoing tracking
+7. Research: web_search → scrape_website for context
+
+CONTENT-FIRST WORKFLOW:
+1. Extract data or complete the automation FIRST.
+2. Present findings clearly in your response with data tables and summaries.
+3. AFTER presenting findings, offer to export (write_to_google_sheets, send_email, send_slack_message).
+4. Action tools check connections internally — if not connected, include [connect:provider] verbatim.
+5. Do NOT call check_connection — action tools handle it automatically.
+
+SCRAPING STRATEGY:
+- Start with browse_website — it handles 90% of cases with simple fetch.
+- Use extract_structured_data when you need specific elements (prices, listings, tables).
+- Use run_browser_workflow only for multi-step sequences requiring clicks/navigation.
+- Always respect robots.txt intent — don't hammer sites with rapid requests.
+- If blocked, report to user rather than attempting evasion.
+
+## LEARNING & FEEDBACK
+- Your performance is tracked. User feedback improves your future work.
+- If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
+- When you learn something new about this org, the system saves it automatically.`,
+    domainKnowledge: `Web Scraping Best Practices:
+- Respect robots.txt and rate limits. Add 1-2s delays between requests to the same domain.
+- Use appropriate User-Agent strings. Identify as a bot when required.
+- Cache results — don't re-scrape pages unnecessarily.
+- Handle pagination: look for "next" links or page number patterns.
+- Common anti-bot measures: CAPTCHAs, rate limiting, IP blocking, JavaScript rendering requirements.
+
+CSS Selector Cheat Sheet:
+- Tag: "div", "p", "h1" — selects all elements of that type
+- Class: ".price", ".product-card" — selects by class name
+- ID: "#main-content", "#price" — selects by unique ID
+- Combined: "div.product", "span.price" — tag + class
+- Nested: "div.product h2" — h2 inside div.product (use extract_structured_data list_selector)
+
+Common Data Patterns:
+- Prices: usually in spans/divs with class like "price", "cost", "amount"
+- Product names: typically h1, h2, or elements with "title", "name" classes
+- Tables: <table> elements — use extract_tables: true
+- JSON-LD: structured data in <script type="application/ld+json"> — richest source for products, articles, organizations
+
+Form Filling Tips:
+- First browse_website with extract:"forms" to see all field names
+- Map field names exactly as they appear in the HTML name="" attribute
+- Common fields: email, name, first_name, last_name, phone, message, company
+- Hidden fields (CSRF tokens) are included automatically by browser-based submission
+
+Monitoring Frequency:
+- Price changes: check daily or twice daily
+- Competitor content: check weekly
+- Job postings: check 2-3 times per week
+- News/press releases: check daily`,
+    costCeiling: 1.00,
+    maxToolRounds: 15,
+  },
+
   codebot: {
     name: 'codebot',
     description: 'Engineering outfit — GitHub actions, code review, CI/CD, issue/PR management',
@@ -714,7 +803,7 @@ GitHub Best Practices:
 
 // ── RAG tools: add document search to ALL outfits ────────────────────────────
 // Every agent can search original uploaded documents for specific information.
-const RAG_TOOLS = ['search_documents', 'list_documents'];
+const RAG_TOOLS = ['search_documents', 'list_documents', 'search_slack_history'];
 
 for (const outfit of Object.values(OUTFITS)) {
   for (const tool of RAG_TOOLS) {

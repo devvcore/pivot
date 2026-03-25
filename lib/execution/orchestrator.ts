@@ -44,6 +44,8 @@ import './tools/crm-tools';
 import './tools/pm-tools';
 import './tools/scheduling-tools';
 import './tools/rag-tools';
+import './tools/slack-rag-tools';
+import './tools/browser-tools';
 
 const FLASH_MODEL = 'gemini-2.5-flash';
 

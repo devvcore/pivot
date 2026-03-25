@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, History, ChevronRight, BarChart3, Clock, AlertCircle, CheckCircle2, TrendingUp, Sparkles, FileText, RefreshCw, User, Users, Trophy, Crown, Activity, Gauge, Cpu, Link2, ClipboardList } from "lucide-react";
 import { ROITracker } from "./ROITracker";
+import { DailyBriefing } from "./DailyBriefing";
 import { authFetch } from "@/lib/auth-fetch";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -189,6 +190,16 @@ export function DashboardView({ onStartNew, onViewRun, userName, username, orgLo
             <ROITracker orgId={orgId} />
           </motion.div>
         )}
+
+        {/* Daily AI Briefing */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8"
+        >
+          <DailyBriefing />
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}

@@ -11,6 +11,8 @@ interface AlertItem {
   message: string;
   suggested_action?: string;
   source_provider?: string;
+  source?: string;
+  action_url?: string;
   read: boolean;
   created_at: string;
 }
@@ -79,7 +81,7 @@ export function NotificationBell() {
   // Initial fetch + polling
   useEffect(() => {
     fetchAlerts();
-    pollRef.current = setInterval(fetchAlerts, 30_000);
+    pollRef.current = setInterval(fetchAlerts, 10_000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -196,6 +198,10 @@ export function NotificationBell() {
                   key={alert.id}
                   onClick={() => {
                     if (!alert.read) markAsRead(alert.id);
+                    if (alert.action_url) {
+                      window.location.href = alert.action_url;
+                      setOpen(false);
+                    }
                   }}
                   className={`w-full text-left px-4 py-3 border-b border-zinc-50 border-l-2 transition-colors ${
                     severityBorder(alert.severity)
@@ -224,10 +230,15 @@ export function NotificationBell() {
                           {timeAgo(alert.created_at)}
                         </span>
                       </div>
-                      {alert.suggested_action && (
+                      {(alert.message || alert.suggested_action) && (
                         <p className="text-[12px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
-                          {alert.suggested_action}
+                          {alert.message || alert.suggested_action}
                         </p>
+                      )}
+                      {alert.source && (
+                        <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded">
+                          {alert.source}
+                        </span>
                       )}
                     </div>
                   </div>
