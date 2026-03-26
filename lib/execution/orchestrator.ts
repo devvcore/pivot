@@ -27,6 +27,7 @@ import { loadDirectives, formatDirectivesAsContext, checkDirectiveViolation, typ
 import { generateClarifications, saveClarifications, waitForClarifications, getClarificationContext } from './clarifier';
 import { needsApproval, getToolTier, describeToolAction, assessRiskLevel } from './tool-tiers';
 import { selectModel, calculateCost } from './model-router';
+import { distillToolCall, loadToolCallContext } from './distiller';
 
 // Import tool modules to ensure they self-register
 import './tools/web-tools';
@@ -650,6 +651,18 @@ Output ONLY a JSON array of strings, no other text. Example:
       systemPrompt += `\n\nSUGGESTED TOOL SEQUENCE: ${chainSuggestion.chain.join(' → ')}\nReason: ${chainSuggestion.reason}\nThis is a suggestion — adapt based on what you find.`;
     }
 
+    // ═══ DISTILLED TOOL CONTEXT — Self-optimizing agent intelligence ═══
+    // Load learned efficiency patterns from past tool calls
+    try {
+      const distilledContext = await loadToolCallContext(task.orgId, outfit.tools);
+      if (distilledContext) {
+        systemPrompt += '\n\n' + distilledContext;
+      }
+    } catch (err) {
+      // Non-blocking — don't fail execution if distillation load fails
+      console.warn('[distiller] Failed to load context:', err instanceof Error ? err.message : err);
+    }
+
     // Track tool calls for procedure learning
     const toolCallHistory: Array<{ name: string; args: Record<string, unknown> }> = [];
 
@@ -997,6 +1010,20 @@ Output ONLY a JSON array of strings, no other text. Example:
           phase: 'done',
           success: toolResult.success,
         });
+
+        // ═══ DISTILL — Learn from this tool call (async, non-blocking) ═══
+        distillToolCall({
+          orgId: task.orgId,
+          agentId: task.agentId,
+          taskId: task.id,
+          taskTitle: task.title,
+          toolName: name,
+          toolArgs: args as Record<string, unknown>,
+          toolOutput: outputStr.slice(0, 2000),
+          success: toolResult.success,
+          round,
+          totalRounds: round,
+        }).catch(() => {}); // Fire-and-forget
 
         // Annotate failed tool results so agent knows to try alternatives
         let finalOutput = outputStr.slice(0, 50000); // Gemini Flash has 1M context — use more of it
