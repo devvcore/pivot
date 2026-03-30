@@ -13,6 +13,7 @@ import {
   Brain,
   FileOutput,
   AlertCircle,
+  RefreshCw,
   ArrowRight,
   Copy,
   Check,
@@ -2428,22 +2429,34 @@ export function ExecutionDashboard({
 
             /* ── Error ── */
             if (msg.type === "error") {
-              const errorParts = splitConnectMarkers(msg.content);
+              // Find the last user message to enable retry
+              const lastUserMsg = [...messages].slice(0, msgIndex).reverse().find(m => m.type === "user");
+              // Clean up raw JSON error messages for display
+              const rawError = msg.content ?? "";
+              const isApiError = /\{"error"/.test(rawError) || /503|429|500|UNAVAILABLE|high demand|rate limit/i.test(rawError);
+              const friendlyMessage = isApiError
+                ? "Something went wrong on our end. This is usually temporary."
+                : rawError;
+
               return (
                 <div key={msg.id} className="space-y-2">
                   <div className="flex items-start gap-2">
                     <div className="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                       <AlertCircle className="w-3.5 h-3.5 text-red-500" />
                     </div>
-                    <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%]">
-                      {errorParts.map((part, idx) =>
-                        part.type === "text" ? (
-                          <p key={idx} className="text-sm text-red-700">{part.value}</p>
-                        ) : (
-                          <div key={idx} className="my-2">
-                            <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
-                          </div>
-                        )
+                    <div className="max-w-[85%]">
+                      <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3">
+                        <p className="text-sm text-red-700">{friendlyMessage}</p>
+                      </div>
+                      {lastUserMsg && (
+                        <button
+                          onClick={() => handleSend(lastUserMsg.content)}
+                          disabled={sending}
+                          className="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-100 hover:border-red-300 transition-all disabled:opacity-50"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Try again
+                        </button>
                       )}
                     </div>
                   </div>
