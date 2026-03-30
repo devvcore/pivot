@@ -30,6 +30,21 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   navigate_to_page:    <Navigation className="w-3 h-3" />,
 };
 
+/** Extract follow-up suggestions from <!--FOLLOWUPS:[...]-->  markers */
+function extractFollowUps(content: string): { text: string; followUps: string[] } {
+  const match = content.match(/<!--FOLLOWUPS:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      const followUps = JSON.parse(match[1]);
+      const text = content.replace(/<!--FOLLOWUPS:[\s\S]*?-->/, "").trim();
+      if (Array.isArray(followUps) && followUps.length > 0) {
+        return { text, followUps: followUps.slice(0, 3) };
+      }
+    } catch { /* fall through */ }
+  }
+  return { text: content, followUps: [] };
+}
+
 /** Extract projection JSON from <!--PROJECTION:{...}--> markers in message text.
  *  If no marker found but the text contains projection-like numbers, attempt to parse them. */
 function extractProjection(content: string): { text: string; projection: any | null } {
@@ -231,9 +246,11 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false, onNavigat
                     </div>
                   );
                 }
-                // Strip navigation markers first, then extract projections
+                // Strip markers: navigation → follow-ups → projections
                 const { text: navStripped, navigation: navAction } = extractNavigation(msg.content);
-                const { text, projection } = extractProjection(navStripped);
+                const { text: fuStripped, followUps } = extractFollowUps(navStripped);
+                const { text, projection } = extractProjection(fuStripped);
+                const isLatestAssistant = i === messages.length - 1 && msg.role === "assistant";
                 return (
                   <>
                     <div className="rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white border border-zinc-200 text-zinc-800 rounded-bl-sm shadow-sm">
@@ -251,6 +268,19 @@ export function AgentChat({ orgId, orgName, onClose, embedded = false, onNavigat
                       </button>
                     )}
                     {projection && <ProjectionChart data={projection} narrative={projection.dataPoints?.length ? text : undefined} />}
+                    {isLatestAssistant && followUps.length > 0 && !loading && (
+                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                        {followUps.map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => send(q)}
+                            className="text-[11px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all text-left"
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </>
                 );
               })()}

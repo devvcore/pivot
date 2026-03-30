@@ -15,6 +15,21 @@ interface PivvyFloatingChatProps {
   onNavigate?: (section: string) => void;
 }
 
+/** Extract follow-up suggestions from <!--FOLLOWUPS:[...]--> markers */
+function extractFollowUps(content: string): { text: string; followUps: string[] } {
+  const match = content.match(/<!--FOLLOWUPS:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      const followUps = JSON.parse(match[1]);
+      const text = content.replace(/<!--FOLLOWUPS:[\s\S]*?-->/, "").trim();
+      if (Array.isArray(followUps) && followUps.length > 0) {
+        return { text, followUps: followUps.slice(0, 3) };
+      }
+    } catch { /* fall through */ }
+  }
+  return { text: content, followUps: [] };
+}
+
 /** Extract projection from message */
 function extractProjection(content: string): { text: string; projection: unknown | null } {
   const match = content.match(/<!--PROJECTION:([\s\S]*?)-->/);
@@ -181,7 +196,9 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
           }
 
           const { text: navText, route } = extractNavigation(msg.content);
-          const { text: displayText, projection } = extractProjection(navText);
+          const { text: fuText, followUps } = extractFollowUps(navText);
+          const { text: displayText, projection } = extractProjection(fuText);
+          const isLatest = i === messages.length - 1;
 
           return (
             <div key={i} className="flex justify-start">
@@ -203,6 +220,19 @@ export default function PivvyFloatingChat({ orgId, onNavigate }: PivvyFloatingCh
                   >
                     Go to {route}
                   </button>
+                )}
+                {isLatest && followUps.length > 0 && !loading && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {followUps.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => { setInput(q); }}
+                        className="text-[10px] text-zinc-600 bg-white border border-zinc-200 rounded-lg px-2 py-1 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all text-left"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

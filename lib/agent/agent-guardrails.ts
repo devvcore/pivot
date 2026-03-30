@@ -305,3 +305,209 @@ export function smartTruncate(text: string, maxChars: number): string {
 
   return `${head}\n[...${truncatedCount} chars truncated...]\n${tail}`;
 }
+
+// ── 5. Response Quality Detection ────────────────────────────────────────────
+
+/** Fluff phrases that indicate a vague, non-specific response */
+const VAGUE_PATTERNS: RegExp[] = [
+  /\bconsider\s+(?:diversifying|exploring|investing|looking into|evaluating)\b/i,
+  /\byou (?:might|may|could|should) (?:want to )?(?:consider|look into|think about|explore)\b/i,
+  /\bit(?:'s| is) (?:important|essential|crucial|critical|vital|key) to\b/i,
+  /\bfocus on (?:building|improving|developing|enhancing|strengthening|optimizing)\b/i,
+  /\bleverage (?:your|the|existing)\b/i,
+  /\bstreamline (?:your|the|operations|processes)\b/i,
+  /\bdouble down on\b/i,
+  /\bstrategic(?:ally)? (?:align|position|pivot|focus)\b/i,
+  /\bhere are (?:some|a few) (?:things|ideas|suggestions|recommendations|steps|ways)\b/i,
+  /\bin today(?:'s| s) (?:competitive|dynamic|rapidly changing|evolving) (?:landscape|market|environment)\b/i,
+  /\bsynerg(?:y|ies|ize)\b/i,
+  /\bholistic(?:ally)? (?:approach|view|strategy|perspective)\b/i,
+  /\brobust (?:strategy|framework|approach|plan)\b/i,
+  /\bscalable (?:solution|approach|model|framework)\b/i,
+  /\bproactive(?:ly)? (?:address|manage|tackle|approach)\b/i,
+];
+
+/** Phrases that indicate specificity (numbers, names, actions) */
+const SPECIFIC_SIGNALS: RegExp[] = [
+  /\$[\d,.]+[KkMmBb]?/,                     // dollar amounts
+  /\d+(?:\.\d+)?%/,                          // percentages
+  /\d+(?:\.\d+)?\s*(?:weeks?|months?|days?|hours?)/i, // time spans
+  /(?:Amanda|Kate|Sarah|John|revenue leak|client name)/i, // specific names (from report)
+  /step \d|#\d|\d\.\s/,                      // numbered steps
+  /(?:draft|create|send|build|write|call|email|schedule)\s+(?:a|the|an)/i, // concrete actions
+];
+
+export interface QualityCheck {
+  isVague: boolean;
+  vagueCount: number;
+  specificCount: number;
+  reason?: string;
+}
+
+/**
+ * Detect if a response is vague/generic consultant-speak.
+ * Returns isVague=true if the response has too many fluff phrases
+ * relative to specific data points.
+ */
+export function detectVagueResponse(text: string): QualityCheck {
+  // Strip markers before checking
+  const clean = text.replace(/<!--[\s\S]*?-->/g, "").trim();
+
+  // Don't flag very short responses (greetings, confirmations)
+  if (clean.length < 100) return { isVague: false, vagueCount: 0, specificCount: 0 };
+
+  const vagueCount = VAGUE_PATTERNS.filter(p => p.test(clean)).length;
+  const specificCount = SPECIFIC_SIGNALS.filter(p => p.test(clean)).length;
+
+  // Vague if: 3+ vague phrases AND fewer specific signals than vague ones
+  if (vagueCount >= 3 && specificCount < vagueCount) {
+    return {
+      isVague: true,
+      vagueCount,
+      specificCount,
+      reason: `${vagueCount} vague phrases, only ${specificCount} specific data points`,
+    };
+  }
+
+  // Also flag if 2+ vague AND zero specific signals
+  if (vagueCount >= 2 && specificCount === 0) {
+    return {
+      isVague: true,
+      vagueCount,
+      specificCount,
+      reason: `${vagueCount} vague phrases with no concrete data`,
+    };
+  }
+
+  return { isVague: false, vagueCount, specificCount };
+}
+
+/** Prompt to append when forcing specificity */
+export const SPECIFICITY_NUDGE = `Your previous response was too vague and generic. Rewrite it with:
+- ACTUAL NUMBERS from the business data (dollar amounts, percentages, weeks)
+- SPECIFIC NAMES (clients, products, team members from the report)
+- CONCRETE ACTIONS (not "consider exploring" but "draft an email to Amanda about the $12K invoice")
+- If you don't have the data, call get_report_section or get_integration_data to get it
+Do NOT use phrases like "consider diversifying", "leverage your", "in today's competitive landscape", or "robust strategy".`;
+
+// ── 6. Tool Result Validation ────────────────────────────────────────────────
+
+export interface ValidationResult {
+  content: string;    // cleaned/validated content
+  quality: "good" | "weak" | "empty";
+  warning?: string;   // optional warning to prepend
+}
+
+/**
+ * Validate and clean tool results before sending to Gemini.
+ * Catches empty results, irrelevant search data, malformed JSON, etc.
+ */
+export function validateToolResult(toolName: string, query: string, rawResult: string): ValidationResult {
+  // Empty or error results
+  if (!rawResult || rawResult.trim().length === 0) {
+    return { content: `[${toolName}] No data returned.`, quality: "empty" };
+  }
+
+  if (rawResult.length < 20 && /no.*found|unavailable|failed|error/i.test(rawResult)) {
+    return { content: rawResult, quality: "empty" };
+  }
+
+  // Web search validation
+  if (toolName === "search_web") {
+    return validateWebSearch(query, rawResult);
+  }
+
+  // Report section validation
+  if (toolName === "get_report_section") {
+    return validateReportSection(query, rawResult);
+  }
+
+  // Integration data validation
+  if (toolName === "get_integration_data") {
+    return validateIntegrationData(rawResult);
+  }
+
+  // All other tools — pass through with basic length check
+  return { content: rawResult, quality: "good" };
+}
+
+function validateWebSearch(query: string, result: string): ValidationResult {
+  // Check for common Perplexity failure modes
+  const failurePatterns = [
+    /i (?:don't|do not) have (?:access|information|data) (?:about|on|to)/i,
+    /as an ai,? i (?:cannot|can't|don't)/i,
+    /i'm (?:sorry|unable),? (?:but )?i (?:cannot|can't)/i,
+    /no relevant (?:results|information|data) (?:found|available)/i,
+    /i (?:couldn't|could not) find (?:any|specific)/i,
+  ];
+
+  for (const pattern of failurePatterns) {
+    if (pattern.test(result)) {
+      return {
+        content: `[Web Search] No useful results for: "${query}". Answer from your training knowledge instead.`,
+        quality: "empty",
+        warning: "Search returned no useful results",
+      };
+    }
+  }
+
+  // Check for very short or generic responses (likely unhelpful)
+  const contentOnly = result.replace(/\[Web Search.*?\]\n?/, "").replace(/\n\nSources:\n[\s\S]*$/, "").trim();
+  if (contentOnly.length < 50) {
+    return {
+      content: result,
+      quality: "weak",
+      warning: "Search returned very brief results — verify before citing",
+    };
+  }
+
+  // Check relevance: do query keywords appear in the result?
+  const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const resultLower = contentOnly.toLowerCase();
+  const matchCount = queryWords.filter(w => resultLower.includes(w)).length;
+  const matchRatio = queryWords.length > 0 ? matchCount / queryWords.length : 1;
+
+  if (matchRatio < 0.2 && queryWords.length >= 3) {
+    return {
+      content: `${result}\n\n[VALIDATION NOTE: Search results may not be directly relevant to "${query}". Cross-check with report data before citing.]`,
+      quality: "weak",
+      warning: "Low relevance match between query and results",
+    };
+  }
+
+  return { content: result, quality: "good" };
+}
+
+function validateReportSection(section: string, result: string): ValidationResult {
+  // Check for "not found" responses
+  if (/not found|no completed report/i.test(result) && result.length < 200) {
+    return { content: result, quality: "empty" };
+  }
+
+  // Check for empty JSON objects/arrays
+  if (/^\[Report Section:.*?\]\n\s*(\{\}|\[\]|null|"null")$/m.test(result)) {
+    return {
+      content: `[Report Section: ${section}] Section exists but contains no data.`,
+      quality: "empty",
+    };
+  }
+
+  return { content: result, quality: "good" };
+}
+
+function validateIntegrationData(result: string): ValidationResult {
+  // Check for "no data" responses
+  if (/no (?:integration )?data (?:available|found)/i.test(result)) {
+    return { content: result, quality: "empty" };
+  }
+
+  // Check for empty data arrays
+  if (/\[\]|"data"\s*:\s*"?\s*"?/i.test(result) && result.length < 100) {
+    return {
+      content: result + "\n[NOTE: Integration returned empty data. The provider may not be synced yet.]",
+      quality: "weak",
+    };
+  }
+
+  return { content: result, quality: "good" };
+}

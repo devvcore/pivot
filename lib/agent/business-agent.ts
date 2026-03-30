@@ -16,16 +16,17 @@
  * - Never sugarcoats; always gives next steps
  */
 import { GoogleGenAI } from "@google/genai";
-import { getAgentMemory } from "./memory";
+import { getAgentMemory, extractAndSaveConversationInsights, formatConversationInsights } from "./memory";
 import { analyzeWebsite } from "./website-analyzer";
 import { findRoute, findRouteById } from "./page-routes";
 import { getJob, listJobs } from "@/lib/job-store";
 import { collectIntegrationContext, formatIntegrationContextAsText } from "@/lib/integrations/collect";
-import { LoopGuard, closestToolName, smartTruncate } from "./agent-guardrails";
+import { LoopGuard, closestToolName, smartTruncate, validateToolResult, detectVagueResponse, SPECIFICITY_NUDGE } from "./agent-guardrails";
 import type { ChatMessage, AgentMemory, MVPDeliverables } from "@/lib/types";
 
 const FLASH_MODEL = "gemini-2.5-flash";
 const MAX_HISTORY_MESSAGES = 16;
+const MAX_TOOL_ROUNDS = 5;  // Max tool-call loops before forcing a text response
 const AVAILABLE_TOOL_NAMES = ["search_web", "get_report_section", "analyze_website", "generate_projection", "navigate_to_page", "get_integration_data", "search_crm", "get_crm_contact", "get_pipeline_summary"];
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
@@ -650,9 +651,9 @@ Rules:
 // ── Response sanitizer ────────────────────────────────────────────────────────
 
 function sanitize(text: string): string {
-  // Preserve <!--PROJECTION:...--> and <!--NAVIGATE:...--> markers by temporarily replacing them
+  // Preserve <!--PROJECTION:...--> , <!--NAVIGATE:...--> , and <!--FOLLOWUPS:...--> markers by temporarily replacing them
   const markers: string[] = [];
-  let cleaned = text.replace(/<!--(PROJECTION|NAVIGATE):[\s\S]*?-->/g, (match) => {
+  let cleaned = text.replace(/<!--(PROJECTION|NAVIGATE|FOLLOWUPS):[\s\S]*?-->/g, (match) => {
     markers.push(match);
     return `__MARKER_${markers.length - 1}__`;
   });
@@ -760,6 +761,15 @@ PROACTIVE — END EVERY RESPONSE WITH 1 ACTION:
 - Keep it short: "Want me to model a 6-month cash forecast?" or "Should Maven draft an upsell email?"
 - Make it a question they can say "yes" to — then you execute immediately
 
+FOLLOW-UP SUGGESTIONS — MANDATORY:
+At the very end of EVERY response, append exactly this format on its own line:
+<!--FOLLOWUPS:["question 1", "question 2", "question 3"]-->
+- Generate 2-3 SHORT follow-up questions (max 10 words each) the user might want to ask next
+- Make them specific to what you just discussed — not generic
+- Make them progressively deeper: first one digs into what you said, second explores a related angle, third suggests an action
+- Examples after a revenue leak analysis: <!--FOLLOWUPS:["Which leak should I fix first?", "How does this compare to my industry?", "Draft a recovery plan for the top leak"]-->
+- NEVER skip this. EVERY response must end with this marker.
+
 PROJECTION TRIGGERS — CALL generate_projection FOR THESE:
 - "What do I look like in X months/weeks/years?"
 - "What's my forecast/projection/outlook?"
@@ -794,7 +804,7 @@ ${memory.reportSummaries
   .slice(0, 5)
   .map((r) => `- ${new Date(r.date).toLocaleDateString()}: ${r.headline} (Score: ${r.score ?? "?"}/${r.grade ?? "?"})`)
   .join("\n")}
-
+${formatConversationInsights(memory)}
 ANSWER STRATEGY (follow this order):
 1. Check your MEMORY above. If the answer is there, respond immediately. No tool call needed.
 2. If you need more detail, call get_report_section with the relevant section.
@@ -816,6 +826,11 @@ export interface AgentResponse {
   toolsUsed?: string[];
 }
 
+/** Fire-and-forget: extract conversation insights after responding */
+function saveInsightsAsync(orgId: string, userMsg: string, assistantMsg: string) {
+  extractAndSaveConversationInsights(orgId, userMsg, assistantMsg).catch(() => {});
+}
+
 export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -830,12 +845,13 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
   }
 
   const genai = new GoogleGenAI({ apiKey });
+  const systemPrompt = buildSystemPrompt(memory);
 
   // Trim history to last N messages for token efficiency
   const trimmedHistory = req.messages.slice(-MAX_HISTORY_MESSAGES);
 
-  // Build Gemini contents array
-  const contents = [
+  // Build Gemini contents array (mutated across tool rounds)
+  const contents: Array<{ role: string; parts: any[] }> = [
     ...trimmedHistory.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
@@ -847,29 +863,61 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
   ];
 
   const toolsUsed: string[] = [];
+  const embeddedMarkers: string[] = [];
+  const guard = new LoopGuard();
 
   try {
-    // First call — may request tool use
-    const resp = await genai.models.generateContent({
-      model: FLASH_MODEL,
-      contents,
-      config: {
-        systemInstruction: buildSystemPrompt(memory),
-        temperature: 0.4,
-        maxOutputTokens: 4000,
-        tools: [{ functionDeclarations: TOOLS }],
-        toolConfig: { functionCallingMode: "AUTO" },
-      } as Record<string, unknown>,
-    });
+    // Multi-turn tool loop: keep calling Gemini until it responds with text (no tool calls)
+    // or we hit the max rounds limit
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const isLastRound = round === MAX_TOOL_ROUNDS - 1;
 
-    // Check if model requested tool calls
-    const candidate = resp.candidates?.[0];
-    const parts = candidate?.content?.parts ?? [];
-    const fnCalls = parts.filter((p: any) => p.functionCall);
+      const resp = await genai.models.generateContent({
+        model: FLASH_MODEL,
+        contents,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.4,
+          maxOutputTokens: 4000,
+          // On the last round, disable tools to force a text response
+          ...(isLastRound ? {} : {
+            tools: [{ functionDeclarations: TOOLS }],
+            toolConfig: { functionCallingMode: "AUTO" },
+          }),
+        } as Record<string, unknown>,
+      });
 
-    if (fnCalls.length > 0) {
-      // Execute all requested tools with guardrails
-      const guard = new LoopGuard();
+      const candidate = resp.candidates?.[0];
+      const parts = candidate?.content?.parts ?? [];
+      const fnCalls = parts.filter((p: any) => p.functionCall);
+      const textParts = parts.filter((p: any) => p.text).map((p: any) => p.text).join("");
+
+      // No tool calls — we have our final text response
+      if (fnCalls.length === 0) {
+        // Retry once if empty
+        if (!textParts.trim() && round === 0) {
+          console.warn(`[Pivvy] Empty response on round 0, retrying...`);
+          continue;
+        }
+
+        // Quality check: if vague and we have rounds left, push back for specificity
+        const quality = detectVagueResponse(textParts);
+        if (quality.isVague && round < MAX_TOOL_ROUNDS - 1) {
+          console.warn(`[Pivvy] Vague response detected (${quality.reason}), nudging for specificity...`);
+          contents.push({ role: "model", parts: [{ text: textParts }] });
+          contents.push({ role: "user", parts: [{ text: SPECIFICITY_NUDGE }] });
+          continue;
+        }
+
+        let finalMessage = sanitize(textParts || "I encountered an issue generating a response. Please try again.");
+        if (embeddedMarkers.length > 0) {
+          finalMessage = finalMessage + "\n\n" + embeddedMarkers.join("\n");
+        }
+        saveInsightsAsync(req.orgId, req.message, finalMessage);
+        return { message: finalMessage, toolsUsed };
+      }
+
+      // Execute all tool calls for this round
       const toolResults = await Promise.all(
         fnCalls.map(async (part: any) => {
           let { name, args } = part.functionCall;
@@ -894,14 +942,16 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
           }
 
           toolsUsed.push(name);
-          const result = await executeTool(name, args as Record<string, unknown>, req.orgId);
-          return { name, result };
+          const rawResult = await executeTool(name, args as Record<string, unknown>, req.orgId);
+          const validated = validateToolResult(name, String(args.query ?? args.section ?? args.provider ?? ""), rawResult);
+          if (validated.warning) {
+            console.warn(`[Pivvy] Tool validation (${name}): ${validated.warning}`);
+          }
+          return { name, result: validated.content };
         })
       );
 
-      // Extract <!--PROJECTION:...--> and <!--NAVIGATE:...--> markers from tool results
-      // before sending to Gemini (Gemini won't reproduce them), then append to final response
-      const embeddedMarkers: string[] = [];
+      // Extract markers from tool results before sending back to Gemini
       const cleanedToolResults = toolResults.map((tr) => {
         let cleanResult = tr.result;
         const markerRegex = /<!--(PROJECTION|NAVIGATE):[\s\S]*?-->/g;
@@ -913,72 +963,36 @@ export async function runBusinessAgent(req: AgentRequest): Promise<AgentResponse
         return { name: tr.name, result: cleanResult };
       });
 
-      // Second call with tool results (markers stripped so Gemini gets clean text)
-      const contentsWithTools = [
-        ...contents,
-        { role: "model" as const, parts },
-        {
-          role: "user" as const,
-          parts: cleanedToolResults.map((tr) => ({
-            functionResponse: { name: tr.name, response: { result: tr.result } },
-          })),
-        },
-      ];
+      // Append model's tool-call turn + tool results to contents for next round
+      contents.push({ role: "model", parts });
+      contents.push({
+        role: "user",
+        parts: cleanedToolResults.map((tr) => ({
+          functionResponse: { name: tr.name, response: { result: tr.result } },
+        })),
+      });
 
-      // Retry up to 2 times if Gemini returns null/empty text
-      let resp2Text: string | null = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const resp2 = await genai.models.generateContent({
-          model: FLASH_MODEL,
-          contents: contentsWithTools,
-          config: {
-            systemInstruction: buildSystemPrompt(memory),
-            temperature: 0.4,
-            maxOutputTokens: 4000,
-          } as Record<string, unknown>,
-        });
-        resp2Text = resp2.text ?? null;
-        if (resp2Text?.trim()) break;
-        if (attempt < 2) console.warn(`[Pivvy] Empty response (attempt ${attempt + 1}/3), retrying...`);
-      }
-
-      // Append extracted markers to the response so the UI can parse them
-      let finalMessage = sanitize(resp2Text || "I encountered an issue generating a response. Please try again.");
-      if (embeddedMarkers.length > 0) {
-        finalMessage = finalMessage + "\n\n" + embeddedMarkers.join("\n");
-      }
-
-      return {
-        message: finalMessage,
-        toolsUsed,
-      };
+      console.log(`[Pivvy] Tool round ${round + 1}/${MAX_TOOL_ROUNDS}: used ${toolResults.map(t => t.name).join(", ")}`);
     }
 
-    // Retry if Gemini returned empty/null on the direct (no-tool) path
-    if (!resp.text?.trim()) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        console.warn(`[Pivvy] Empty direct response (attempt ${attempt + 2}/3), retrying...`);
-        const retry = await genai.models.generateContent({
-          model: FLASH_MODEL,
-          contents,
-          config: {
-            systemInstruction: buildSystemPrompt(memory),
-            temperature: 0.4,
-            maxOutputTokens: 4000,
-            tools: [{ functionDeclarations: TOOLS }],
-            toolConfig: { functionCallingMode: "AUTO" },
-          } as Record<string, unknown>,
-        });
-        if (retry.text?.trim()) {
-          return { message: sanitize(retry.text), toolsUsed };
-        }
-      }
-    }
+    // If we exhausted all rounds (unlikely — last round forces text), do a final text-only call
+    const finalResp = await genai.models.generateContent({
+      model: FLASH_MODEL,
+      contents,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.4,
+        maxOutputTokens: 4000,
+      } as Record<string, unknown>,
+    });
 
-    return {
-      message: sanitize(resp.text ?? "I encountered an issue generating a response. Please try again."),
-      toolsUsed,
-    };
+    let finalMessage = sanitize(finalResp.text || "I encountered an issue generating a response. Please try again.");
+    if (embeddedMarkers.length > 0) {
+      finalMessage = finalMessage + "\n\n" + embeddedMarkers.join("\n");
+    }
+    saveInsightsAsync(req.orgId, req.message, finalMessage);
+    return { message: finalMessage, toolsUsed };
+
   } catch (e) {
     console.error("[Pivvy] Agent error:", e);
     return {
