@@ -89,6 +89,21 @@ function detectSourceType(label: string): SourceCitation["sourceType"] {
   return "other";
 }
 
+/** Extract follow-up suggestions from <!--FOLLOWUPS:[...]--> markers */
+function extractFollowUps(content: string): { text: string; followUps: string[] } {
+  const match = content.match(/<!--FOLLOWUPS:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      const followUps = JSON.parse(match[1]);
+      const text = content.replace(/<!--FOLLOWUPS:[\s\S]*?-->/, "").trim();
+      if (Array.isArray(followUps) && followUps.length > 0) {
+        return { text, followUps: followUps.slice(0, 3) };
+      }
+    } catch { /* fall through */ }
+  }
+  return { text: content, followUps: [] };
+}
+
 function extractSourceCitations(content: string): { cleanContent: string; sources: SourceCitation[] } {
   const sources: SourceCitation[] = [];
   const seen = new Map<string, number>();
@@ -2281,8 +2296,10 @@ export function ExecutionDashboard({
 
               // Extract source citations and clean the content
               // Extract inline images (data:image/... URLs) and render them as actual images
-              const { text: textWithoutImages, images: inlineImages } = extractInlineImages(msg.content);
+              const { text: textWithoutFollowUps, followUps } = extractFollowUps(msg.content);
+              const { text: textWithoutImages, images: inlineImages } = extractInlineImages(textWithoutFollowUps);
               const { cleanContent, sources } = extractSourceCitations(textWithoutImages);
+              const isLatestOutput = msgIndex === messages.length - 1 && msg.type === "output";
 
               // Apply connect marker parsing on the citation-cleaned content
               const contentParts = splitConnectMarkers(cleanContent);
@@ -2387,6 +2404,20 @@ export function ExecutionDashboard({
                           {/* Sources panel inside bubble */}
                           <SourcesPanel sources={sources} />
                           <ArtifactDownloadBar content={msg.content} title={docTitle} />
+                        </div>
+                      )}
+                      {/* Follow-up suggestions */}
+                      {isLatestOutput && followUps.length > 0 && !sending && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {followUps.map((q) => (
+                            <button
+                              key={q}
+                              onClick={() => handleSend(q)}
+                              className="text-[11px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all text-left"
+                            >
+                              {q}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
