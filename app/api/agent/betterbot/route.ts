@@ -37,16 +37,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Resolve permissions for this user
-    const permissions = await resolvePermissions(auth.user.id);
-    if (!permissions) {
-      return NextResponse.json(
-        { error: "No employee profile found. You must be part of an organization to use BetterBot." },
-        { status: 403 },
-      );
-    }
-
     const supabase = createAdminClient();
+
+    // 1. Resolve permissions for this user — auto-create employee if missing
+    let permissions = await resolvePermissions(auth.user.id);
+    if (!permissions) {
+      // User exists but has no employee record — auto-provision one
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, first_name, last_name, organization_id")
+        .eq("id", auth.user.id)
+        .single();
+
+      if (!profile?.organization_id) {
+        return NextResponse.json(
+          { error: "You need to join or create an organization first." },
+          { status: 403 },
+        );
+      }
+
+      const fullName = profile.name
+        || [profile.first_name, profile.last_name].filter(Boolean).join(" ")
+        || auth.user.email?.split("@")[0]
+        || "Team Member";
+
+      // Check if this user already has an employee record via a different lookup
+      const { data: existingEmployee } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("org_id", profile.organization_id)
+        .eq("user_id", auth.user.id)
+        .limit(1)
+        .single();
+
+      if (!existingEmployee) {
+        // Create the employee record — org creator gets "owner" tier
+        const { data: orgMembers } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("org_id", profile.organization_id)
+          .limit(1);
+
+        const isFirstEmployee = !orgMembers || orgMembers.length === 0;
+
+        await supabase.from("employees").insert({
+          org_id: profile.organization_id,
+          user_id: auth.user.id,
+          name: fullName,
+          role_title: isFirstEmployee ? "Owner" : "Team Member",
+          permission_tier: isFirstEmployee ? "owner" : "employee",
+          status: "active",
+        });
+      }
+
+      // Re-resolve permissions now that the employee exists
+      permissions = await resolvePermissions(auth.user.id);
+      if (!permissions) {
+        return NextResponse.json(
+          { error: "Failed to set up your profile. Please try again." },
+          { status: 500 },
+        );
+      }
+    }
 
     // 2. Fetch the employee's name
     const { data: employee } = await supabase
@@ -146,11 +198,13 @@ export async function POST(request: NextRequest) {
         employeeNameMap.set(emp.id, emp.name);
       }
 
-      // Get latest scores for the org
+      // Get latest scores for the org (last 30 days only to avoid loading all history)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data: allScores } = await supabase
         .from("employee_scores")
         .select("*")
         .eq("org_id", permissions.orgId)
+        .gte("scored_at", thirtyDaysAgo)
         .order("scored_at", { ascending: false });
 
       if (allScores && allScores.length > 0) {
@@ -216,7 +270,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[POST /api/agent/betterbot]", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "BetterBot encountered an error" },
+      { error: "BetterBot encountered an error. Please try again." },
       { status: 500 },
     );
   }

@@ -14,6 +14,146 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import type { PermissionTier } from "@/lib/permissions";
+import { LoopGuard, closestToolName, smartTruncate, validateToolResult, detectVagueResponse, SPECIFICITY_NUDGE } from "./agent-guardrails";
+import { getJob, listJobs } from "@/lib/job-store";
+import type { MVPDeliverables } from "@/lib/types";
+
+// ─── Conversation Memory (uses agent_memory table) ──────────────────────────
+
+// Map coaching categories to agent_memory memory_type values
+const CATEGORY_TO_TYPE: Record<string, string> = {
+  commitment: "lesson",      // commitments are lessons learned
+  struggle: "context",       // struggles are contextual info
+  win: "lesson",             // wins are lessons to reinforce
+  preference: "preference",  // direct match
+  context: "context",        // direct match
+};
+
+interface BetterBotInsight {
+  fact: string;
+  category: string;
+  createdAt: number;
+}
+
+async function loadBetterBotMemory(orgId: string, employeeId: string): Promise<BetterBotInsight[]> {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("agent_memory")
+      .select("content, memory_type, created_at")
+      .eq("org_id", orgId)
+      .eq("agent_id", `betterbot-${employeeId}`)
+      .eq("expired", false)
+      .order("created_at", { ascending: false })
+      .limit(15);
+
+    if (!data || data.length === 0) return [];
+
+    return data.map(row => {
+      // Try to parse the stored JSON, fall back to plain text
+      try {
+        const parsed = JSON.parse(row.content);
+        return { fact: parsed.fact, category: parsed.category, createdAt: new Date(row.created_at).getTime() };
+      } catch {
+        return { fact: row.content, category: row.memory_type, createdAt: new Date(row.created_at).getTime() };
+      }
+    });
+  } catch { return []; }
+}
+
+async function extractAndSaveBBInsights(
+  orgId: string,
+  employeeId: string,
+  userMessage: string,
+  assistantMessage: string
+): Promise<void> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return;
+
+  try {
+    const genai = new GoogleGenAI({ apiKey });
+    const resp = await genai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Extract key coaching facts from this performance coaching exchange. Only extract things worth remembering for FUTURE sessions.
+
+USER: ${userMessage.slice(0, 500)}
+COACH: ${assistantMessage.slice(0, 1000)}
+
+Return ONLY a JSON array, or [] if nothing worth remembering:
+[{"fact": "short statement", "category": "commitment|struggle|win|preference|context"}]
+
+Rules:
+- Max 2 insights per exchange
+- "commitment": user agreed to do something ("I'll review PRs faster")
+- "struggle": user mentioned a challenge ("meetings are eating my deep work time")
+- "win": user shared a success ("I shipped 3 PRs today")
+- "preference": how user wants to be coached ("give me specific numbers")
+- "context": role info, team dynamics ("I just joined the backend team")
+- Skip generic questions. Only save things that reveal coaching-relevant info.
+- Keep facts under 80 characters`,
+      config: {
+        temperature: 0,
+        maxOutputTokens: 300,
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 },
+      } as Record<string, unknown>,
+    });
+
+    const text = resp.text?.trim();
+    if (!text) return;
+
+    let parsed: any[];
+    try {
+      parsed = JSON.parse(text);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+    } catch { return; }
+
+    // Deduplicate against existing
+    const existing = await loadBetterBotMemory(orgId, employeeId);
+    const newInsights = parsed.slice(0, 2).filter((item: any) => {
+      const fact = String(item.fact).toLowerCase();
+      return !existing.some(old =>
+        old.fact.toLowerCase().includes(fact.slice(0, 30)) ||
+        fact.includes(old.fact.toLowerCase().slice(0, 30))
+      );
+    });
+
+    if (newInsights.length === 0) return;
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+
+    for (const item of newInsights) {
+      const category = String(item.category);
+      const memoryType = CATEGORY_TO_TYPE[category] ?? "context";
+      await supabase.from("agent_memory").insert({
+        org_id: orgId,
+        agent_id: `betterbot-${employeeId}`,
+        memory_type: memoryType,
+        content: JSON.stringify({ fact: String(item.fact).slice(0, 120), category }),
+        relevance_score: 1.0,
+      });
+    }
+
+    console.log(`[BetterBot] Saved ${newInsights.length} coaching insight(s) for ${employeeId}`);
+  } catch (e) {
+    console.warn("[BetterBot] Insight extraction failed:", e);
+  }
+}
+
+function formatBBInsights(insights: BetterBotInsight[]): string {
+  if (!insights || insights.length === 0) return "";
+
+  const lines = insights.slice(0, 10).map(i => {
+    const age = Date.now() - i.createdAt;
+    const daysAgo = Math.floor(age / (1000 * 60 * 60 * 24));
+    const timeLabel = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo}d ago`;
+    return `- [${i.category}] ${i.fact} (${timeLabel})`;
+  });
+
+  return `\n\n--- Coaching Memory (from past sessions) ---\n${lines.join("\n")}\nUse this to follow up on commitments, check on struggles, and celebrate repeated wins.`;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -362,7 +502,14 @@ function analyzeTrend(history: EmployeeScoreSnapshot[]): TrendAnalysis {
 // ─── Sanitizer ───────────────────────────────────────────────────────────────
 
 function sanitize(text: string): string {
-  return text
+  // Preserve <!--PROJECTION:...--> , <!--NAVIGATE:...--> , and <!--FOLLOWUPS:...--> markers
+  const markers: string[] = [];
+  let cleaned = text.replace(/<!--(PROJECTION|NAVIGATE|FOLLOWUPS):[\s\S]*?-->/g, (match) => {
+    markers.push(match);
+    return `__MARKER_${markers.length - 1}__`;
+  });
+
+  cleaned = cleaned
     .replace(/\*\*/g, "")
     .replace(/\*/g, "")
     .replace(/\u2014/g, " - ")
@@ -370,6 +517,13 @@ function sanitize(text: string): string {
     .replace(/---/g, " - ")
     .replace(/--/g, " - ")
     .trim();
+
+  // Restore markers
+  markers.forEach((marker, i) => {
+    cleaned = cleaned.replace(`__MARKER_${i}__`, marker);
+  });
+
+  return cleaned;
 }
 
 // ─── Proactive Coaching Triggers ─────────────────────────────────────────────
@@ -434,6 +588,185 @@ function getProactiveInsert(ctx: BetterBotContext): string | null {
   return `--- Proactive Coaching Triggers ---\n${triggers.join("\n")}`;
 }
 
+// ─── Tool Definitions ───────────────────────────────────────────────────────
+
+const BETTERBOT_TOOLS = [
+  {
+    name: "get_score_details",
+    description: "Get detailed scoring breakdown for a specific dimension with historical trends. Use when the user asks about a specific performance area or wants to understand why a score changed.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        dimension: {
+          type: "string",
+          enum: ["responsiveness", "outputVolume", "qualitySignal", "collaboration", "reliability", "managerAssessment"],
+          description: "Which dimension to analyze in detail",
+        },
+      },
+      required: ["dimension"],
+    },
+  },
+  {
+    name: "get_report_section",
+    description: "Retrieve a section from the business intelligence report. Use when the user asks about business performance, revenue, customers, or any data beyond employee scoring.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        section: {
+          type: "string",
+          description: "Report section in camelCase (e.g. hiringPlan, kpiReport, teamPerformance, healthScore, actionPlan)",
+        },
+      },
+      required: ["section"],
+    },
+  },
+  {
+    name: "set_improvement_goal",
+    description: "Create or update a performance improvement goal for the employee. Use when the user commits to improving something specific.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        title: { type: "string", description: "Short goal title (e.g. 'Improve PR review time to under 2 hours')" },
+        dimension: {
+          type: "string",
+          enum: ["responsiveness", "outputVolume", "qualitySignal", "collaboration", "reliability", "managerAssessment"],
+          description: "Which dimension this goal targets",
+        },
+        target: { type: "number", description: "Target score (0-100)" },
+      },
+      required: ["title", "dimension", "target"],
+    },
+  },
+  {
+    name: "get_team_comparison",
+    description: "Compare the employee's scores against team averages. Only available for leaders. Use when asked about relative performance or team standing.",
+    parameters: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+];
+
+const BETTERBOT_TOOL_NAMES = BETTERBOT_TOOLS.map(t => t.name);
+const MAX_TOOL_ROUNDS = 3;
+
+// ─── Tool Execution ─────────────────────────────────────────────────────────
+
+async function executeBetterBotTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: BetterBotContext
+): Promise<string> {
+  if (toolName === "get_score_details") {
+    const dim = args.dimension as string;
+    const coaching = DIMENSION_COACHING[dim];
+    if (!coaching) return `Unknown dimension: ${dim}`;
+
+    const currentVal = ctx.currentScore?.dimensions[dim as keyof typeof ctx.currentScore.dimensions] ?? null;
+
+    // Build history for this dimension
+    const history = ctx.scoreHistory.slice(0, 10).map(s => {
+      const val = s.dimensions[dim as keyof typeof s.dimensions];
+      const date = s.scoredAt ? new Date(s.scoredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "?";
+      return `${date}: ${val ?? "no data"}`;
+    });
+
+    return `[Score Details: ${coaching.label}]
+Current: ${currentVal !== null ? `${currentVal}/100` : "no data"}
+Description: ${coaching.description}
+History: ${history.length > 0 ? history.join(" | ") : "No history"}
+Red flag: ${coaching.redFlags}
+Top tips:
+${coaching.improveTips.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
+  }
+
+  if (toolName === "get_report_section") {
+    const section = args.section as string;
+    const allJobs = await listJobs();
+    const job = allJobs.find(j => j.questionnaire.orgId === ctx.orgId && j.status === "completed")
+      ?? allJobs.find(j => j.status === "completed");
+
+    if (!job?.deliverables) return `No completed report found for section: ${section}`;
+
+    const d = job.deliverables as MVPDeliverables;
+    const sectionData = (d as any)[section];
+    if (!sectionData) return `Section "${section}" not found. Try: hiringPlan, kpiReport, teamPerformance, healthScore, actionPlan, goalTracker`;
+
+    let dataToSerialize = sectionData;
+    if (Array.isArray(sectionData)) {
+      dataToSerialize = sectionData.slice(0, 10);
+    } else if (typeof sectionData === "object" && sectionData !== null) {
+      dataToSerialize = { ...sectionData };
+      for (const [key, val] of Object.entries(dataToSerialize)) {
+        if (Array.isArray(val) && val.length > 10) {
+          (dataToSerialize as any)[key] = val.slice(0, 10);
+        }
+      }
+    }
+
+    return `[Report Section: ${section}]\n${smartTruncate(JSON.stringify(dataToSerialize), 2000)}`;
+  }
+
+  if (toolName === "set_improvement_goal") {
+    const title = args.title as string;
+    const dimension = args.dimension as string;
+    const target = Number(args.target ?? 70);
+
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const supabase = createAdminClient();
+
+      const currentVal = ctx.currentScore?.dimensions[dimension as keyof typeof ctx.currentScore.dimensions] ?? 0;
+
+      await supabase.from("employee_goals").insert({
+        employee_id: ctx.employeeId,
+        org_id: ctx.orgId,
+        title,
+        dimension,
+        current: currentVal,
+        target,
+        status: "active",
+      });
+
+      return `[Goal Created] "${title}" - targeting ${target}/100 for ${dimension} (currently ${currentVal}/100)`;
+    } catch (e) {
+      return `Failed to create goal: ${String(e)}`;
+    }
+  }
+
+  if (toolName === "get_team_comparison") {
+    if (ctx.tier === "employee") {
+      return "Team comparison is only available for leaders. You can only see your own performance data.";
+    }
+
+    if (!ctx.teamScores || ctx.teamScores.length === 0) {
+      return "No team scoring data available yet. Run a scoring cycle first.";
+    }
+
+    const dims = ["responsiveness", "outputVolume", "qualitySignal", "collaboration", "reliability", "managerAssessment"] as const;
+    const teamAvg: Record<string, number> = {};
+    for (const d of dims) {
+      const vals = ctx.teamScores.map(s => s.dimensions[d]).filter((v): v is number => v !== null);
+      teamAvg[d] = vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+    }
+
+    const myScore = ctx.currentScore;
+    const lines = [`[Team Comparison — ${ctx.teamScores.length} members]\n`];
+    for (const d of dims) {
+      const label = DIMENSION_COACHING[d]?.label ?? d;
+      const myVal = myScore?.dimensions[d] ?? null;
+      const avg = teamAvg[d];
+      const diff = myVal !== null ? myVal - avg : null;
+      lines.push(`${label}: You ${myVal ?? "??"} | Team avg ${avg}${diff !== null ? ` | ${diff >= 0 ? "+" : ""}${diff}` : ""}`);
+    }
+
+    return lines.join("\n");
+  }
+
+  return `Unknown tool: ${toolName}`;
+}
+
 // ─── Main Chat Function ─────────────────────────────────────────────────────
 
 const MAX_HISTORY = 20;
@@ -460,10 +793,27 @@ export async function chatWithBetterBot(
     systemPrompt += "\n\n" + proactive;
   }
 
+  // Load and inject conversation memory from past sessions
+  const bbInsights = await loadBetterBotMemory(context.orgId, context.employeeId);
+  const memoryBlock = formatBBInsights(bbInsights);
+  if (memoryBlock) {
+    systemPrompt += memoryBlock;
+  }
+
+  // Add tool info to system prompt
+  systemPrompt += `\n\n--- Tools ---
+You have these tools:
+- get_score_details(dimension): Deep dive into a specific scoring dimension with history and improvement tips
+- get_report_section(section): Access business report data (hiringPlan, kpiReport, teamPerformance, healthScore, actionPlan, goalTracker, etc.)
+- set_improvement_goal(title, dimension, target): Create a performance goal when the user commits to improving something
+- get_team_comparison(): Compare scores against team averages (leaders only)
+
+Use tools when you need data beyond what's in your context. Don't guess — look it up.`;
+
   // Build conversation
-  const contents = [
+  const contents: Array<{ role: string; parts: any[] }> = [
     ...trimmedHistory.map((m) => ({
-      role: m.role === "model" ? ("model" as const) : ("user" as const),
+      role: m.role === "model" ? "model" : "user",
       parts: [{ text: m.text }],
     })),
     {
@@ -472,8 +822,88 @@ export async function chatWithBetterBot(
     },
   ];
 
+  const guard = new LoopGuard();
+
   try {
-    const resp = await ai.models.generateContent({
+    // Multi-turn tool loop (same pattern as Pivvy/Coach)
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const isLastRound = round === MAX_TOOL_ROUNDS - 1;
+
+      const resp = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.35,
+          maxOutputTokens: 2000,
+          thinkingConfig: { thinkingBudget: 0 },
+          ...(isLastRound ? {} : {
+            tools: [{ functionDeclarations: BETTERBOT_TOOLS }],
+            toolConfig: { functionCallingMode: "AUTO" },
+          }),
+        } as Record<string, unknown>,
+      });
+
+      const candidate = resp.candidates?.[0];
+      const parts = candidate?.content?.parts ?? [];
+      const fnCalls = parts.filter((p: any) => p.functionCall);
+      const textParts = parts.filter((p: any) => p.text).map((p: any) => p.text).join("");
+
+      // No tool calls — final response
+      if (fnCalls.length === 0) {
+        if (!textParts.trim() && round === 0) {
+          console.warn(`[BetterBot] Empty response on round 0, retrying...`);
+          continue;
+        }
+
+        // Quality check
+        const quality = detectVagueResponse(textParts);
+        if (quality.isVague && round < MAX_TOOL_ROUNDS - 1) {
+          console.warn(`[BetterBot] Vague response detected (${quality.reason}), nudging...`);
+          contents.push({ role: "model", parts: [{ text: textParts }] });
+          contents.push({ role: "user", parts: [{ text: SPECIFICITY_NUDGE }] });
+          continue;
+        }
+
+        const result = sanitize(textParts || "I couldn't generate a response. Please try again.");
+        extractAndSaveBBInsights(context.orgId, context.employeeId, userMessage, result).catch(() => {});
+        return result;
+      }
+
+      // Execute tool calls
+      const toolResults = await Promise.all(
+        fnCalls.map(async (part: any) => {
+          let { name, args } = part.functionCall;
+
+          if (!BETTERBOT_TOOL_NAMES.includes(name)) {
+            const matched = closestToolName(name, BETTERBOT_TOOL_NAMES);
+            if (matched) name = matched;
+          }
+
+          const guardResult = guard.check(name, args);
+          if (!guardResult.allowed) {
+            return { name, result: `Blocked: ${guardResult.warning}` };
+          }
+
+          const rawResult = await executeBetterBotTool(name, args as Record<string, unknown>, context);
+          const validated = validateToolResult(name, String(args.dimension ?? args.section ?? ""), rawResult);
+          return { name, result: validated.content };
+        })
+      );
+
+      contents.push({ role: "model", parts });
+      contents.push({
+        role: "user",
+        parts: toolResults.map(tr => ({
+          functionResponse: { name: tr.name, response: { result: tr.result } },
+        })),
+      });
+
+      console.log(`[BetterBot] Tool round ${round + 1}/${MAX_TOOL_ROUNDS}: used ${toolResults.map(t => t.name).join(", ")}`);
+    }
+
+    // Exhausted rounds — force text
+    const finalResp = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents,
       config: {
@@ -484,7 +914,9 @@ export async function chatWithBetterBot(
       } as Record<string, unknown>,
     });
 
-    return sanitize(resp.text ?? "I couldn't generate a response. Please try again.");
+    const result = sanitize(finalResp.text || "I couldn't generate a response. Please try again.");
+    extractAndSaveBBInsights(context.orgId, context.employeeId, userMessage, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[BetterBot] Agent error:", err);
     return "I ran into a technical issue. Please try again in a moment.";
