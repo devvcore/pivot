@@ -59,14 +59,25 @@ export function selectModel(signals: RoutingSignals): ModelConfig {
   const remaining = signals.costCeiling - signals.costSpent;
   if (remaining < 0.05) return MODELS.flash;
 
-  // QUICK always flash
+  // QUICK always flash — even for strategist
   if (signals.triageLevel === 'quick') return MODELS.flash;
-
-  // Strategist gets pro
-  if (signals.agentId === 'strategist') return MODELS.pro;
 
   // HEAVY tasks get pro
   if (signals.triageLevel === 'heavy') return MODELS.pro;
+
+  // Strategist: pro only for complex tasks, flash for simple ones
+  if (signals.agentId === 'strategist') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'strategy', 'strategic', 'comprehensive', 'go-to-market', 'gtm',
+      'competitive analysis', 'market entry', 'business plan', 'fundraising',
+      'investor', 'board', 'due diligence', 'pricing strategy', 'financial model',
+      'unit economics', 'expansion', 'acquisition', 'partnership',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    // Simple queries (list, check, summarize) use flash
+    return MODELS.flash;
+  }
 
   // Keyword-based upgrade
   const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();

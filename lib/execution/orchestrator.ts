@@ -312,8 +312,8 @@ export class Orchestrator {
       tier,
     });
 
-    // 4. Poll for approval decision (max 5 minutes, every 10 seconds)
-    const MAX_WAIT_MS = 5 * 60 * 1000;
+    // 4. Poll for approval decision (max 10 minutes, every 10 seconds)
+    const MAX_WAIT_MS = 10 * 60 * 1000;
     const POLL_INTERVAL_MS = 10 * 1000;
     const startTime = Date.now();
 
@@ -347,7 +347,7 @@ export class Orchestrator {
     // 5. Timeout — mark the approval as timed out
     await supabase
       .from('execution_approvals')
-      .update({ status: 'rejected', feedback: 'Auto-rejected: approval timed out after 5 minutes' })
+      .update({ status: 'rejected', feedback: 'Auto-rejected: approval timed out after 10 minutes' })
       .eq('id', approvalId);
 
     await this.setTaskStatus(task, 'executing');
@@ -735,6 +735,19 @@ Output ONLY a JSON array of strings, no other text. Example:
         conversationHistory.push(...repairedHistory);
       }
 
+      // System prompt compression: after round 4, strip non-essential sections to save tokens
+      if (round === 4 && systemPrompt.length > 4000) {
+        const sections = systemPrompt.split('\n\n');
+        // Keep identity, task context, behavioral rules. Strip domain knowledge, procedures, tool chains.
+        systemPrompt = sections.filter(s =>
+          !s.startsWith('--- Domain Knowledge') &&
+          !s.startsWith('--- Procedure') &&
+          !s.startsWith('--- Tool Chain') &&
+          !s.startsWith('--- Distilled Tool')
+        ).join('\n\n');
+        console.log(`[ContextBudget] Round ${round}: compressed system prompt from ${sections.length} to ${systemPrompt.split('\n\n').length} sections`);
+      }
+
       // Context budget guard: compress old tool results if approaching context limit
       const budgetResult = guardContextBudget(conversationHistory, systemPrompt.length);
       if (budgetResult.trimmed) {
@@ -893,6 +906,21 @@ Output ONLY a JSON array of strings, no other text. Example:
           continue;
         }
 
+        // Block scrape_website with same URL (deduplication)
+        if (name === 'scrape_website' && args.url) {
+          const urlKey = `scrape:${String(args.url).replace(/\/$/, '').toLowerCase()}`;
+          if (toolSigCounts.has(urlKey)) {
+            functionResponses.push({
+              functionResponse: {
+                name,
+                response: { output: `DUPLICATE URL: You already scraped ${args.url}. Use the data from the previous scrape.` },
+              },
+            });
+            continue;
+          }
+          toolSigCounts.set(urlKey, 1);
+        }
+
         // Block same tool called too many times (3+)
         // Allow more calls for research tools (scrape_website, web_search) — needed for multi-client personalization
         const isResearchTool = ['scrape_website', 'web_search', 'query_integration_data'].includes(name);
@@ -941,7 +969,7 @@ Output ONLY a JSON array of strings, no other text. Example:
             functionResponses.push({
               functionResponse: {
                 name,
-                response: { output: `APPROVAL TIMED OUT: No response within 5 minutes for ${name}. The action was NOT executed. Mention this in your response and suggest the user can re-trigger it.` },
+                response: { output: `APPROVAL TIMED OUT: No response within 10 minutes for ${name}. The action was NOT executed. Mention this in your response and suggest the user can re-trigger it.` },
               },
             });
             continue;
@@ -1155,21 +1183,23 @@ Output ONLY a JSON array of strings, no other text. Example:
         .join('\n\n');
       conversationHistory.push({
         role: 'user',
-        parts: [{ text: `SYSTEM: Your response was too brief and did not use the tool data you gathered. Here is a summary of ALL tool outputs:\n\n${toolSummary}\n\nNow write a COMPLETE, DETAILED response that synthesizes this data. Address the task fully: "${task.title}". Minimum 200 words.` }],
+        parts: [{ text: `SYSTEM: Your response was too brief and did not use the tool data you gathered. Here is a summary of ALL tool outputs:\n\n${toolSummary}\n\nNow write a COMPLETE, DETAILED response that synthesizes this data. Address the task fully: "${task.title}".\n\nRULES:\n- You MUST reference specific data points from the tool results above\n- Include actual numbers, names, and findings — not summaries of summaries\n- Minimum 200 words\n- If tool data contradicts your previous response, trust the tool data` }],
       });
 
       try {
         const regenResponse = await ai.models.generateContent({
-          model: FLASH_MODEL,
+          model: modelConfig?.id ?? FLASH_MODEL,
           contents: conversationHistory as Array<{ role: 'user' | 'model'; parts: { text: string }[] }>,
           config: {
             temperature: 0.1,
-            maxOutputTokens: 8192,
+            maxOutputTokens: modelConfig?.maxOutputTokens ?? 8192,
             systemInstruction: systemPrompt,
           } as Record<string, unknown>,
         });
         const regenText = regenResponse.text ?? '';
-        if (regenText.length > finalResponse.length) {
+        // Accept if longer AND references tool data (contains numbers or names from tools)
+        const hasDataReferences = /\$[\d,.]+|\d+%|\d+\s*(?:users|clients|leads|deals|customers)/i.test(regenText);
+        if (regenText.length > finalResponse.length || hasDataReferences) {
           finalResponse = regenText;
         }
       } catch (err) {
@@ -1477,11 +1507,12 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
           totalCost: task.costSpent,
         });
 
-        // Save procedure from successful QUICK task
+        // Save procedure from successful QUICK task (with quality gate)
         const quickTimeMs = Date.now() - executionStartMs;
         if (matchedProcedure) {
           recordProcedureUse(matchedProcedure.id, quickTimeMs).catch(() => {});
-        } else {
+        } else if (toolCallHistory.length >= 1 && toolCallHistory.length <= 10 && result.length > 100) {
+          // Only save if: used tools (not empty), didn't loop excessively, produced real output
           saveProcedure(task.orgId, task.agentId, task.title, toolCallHistory, quickTimeMs).catch(() => {});
         }
 
@@ -1521,11 +1552,11 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
             totalCost: task.costSpent,
           });
 
-          // Save procedure from reviewed+accepted task
+          // Save procedure from reviewed+accepted task (with quality gate)
           const acceptTimeMs = Date.now() - executionStartMs;
           if (matchedProcedure) {
             recordProcedureUse(matchedProcedure.id, acceptTimeMs).catch(() => {});
-          } else {
+          } else if (toolCallHistory.length >= 1 && toolCallHistory.length <= 10 && result.length > 100) {
             saveProcedure(task.orgId, task.agentId, task.title, toolCallHistory, acceptTimeMs).catch(() => {});
           }
 
@@ -1609,11 +1640,12 @@ FEEDBACK: [If REVISE, list exactly what to fix with specific instructions. If AC
         totalCost: task.costSpent,
       });
 
-      // Save procedure even from exhausted-revision completion (still useful pattern)
+      // Save procedure from exhausted-revision completion (only if quality is decent)
       const exhaustedTimeMs = Date.now() - executionStartMs;
       if (matchedProcedure) {
         recordProcedureUse(matchedProcedure.id, exhaustedTimeMs).catch(() => {});
-      } else {
+      } else if (toolCallHistory.length >= 1 && toolCallHistory.length <= 10 && result.length > 200) {
+        // Higher bar for exhausted tasks — need more substantial output
         saveProcedure(task.orgId, task.agentId, task.title, toolCallHistory, exhaustedTimeMs).catch(() => {});
       }
 
