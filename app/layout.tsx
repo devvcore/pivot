@@ -20,8 +20,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmMono.variable} ${instrumentSerif.variable}`}>
-      <body className="bg-[#FAFAF9] text-[#1A1A1A] font-sans antialiased selection:bg-teal-100" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${dmSans.variable} ${dmMono.variable} ${instrumentSerif.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="font-sans antialiased" suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var t = localStorage.getItem('pivot_theme');
+            if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+              document.documentElement.setAttribute('data-theme', 'dark');
+            }
+          })();
+        `}} />
         {children}
       </body>
     </html>

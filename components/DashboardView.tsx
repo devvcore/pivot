@@ -154,7 +154,7 @@ export function DashboardView({ onStartNew, onViewRun, userName, username, orgLo
           </button>
           <button
             onClick={onStartNew}
-            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-800 transition-colors active:scale-95 group font-bold rounded-lg"
+            className="flex items-center gap-2 px-5 py-2.5 !bg-[#18181B] !text-white text-xs font-mono uppercase tracking-widest hover:!bg-[#3F3F46] transition-colors active:scale-95 group font-bold rounded-lg cursor-pointer"
           >
             <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> New Analysis
           </button>
@@ -224,7 +224,7 @@ export function DashboardView({ onStartNew, onViewRun, userName, username, orgLo
 
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-            className="bg-zinc-900 text-white p-8 rounded-xl relative overflow-hidden group cursor-pointer"
+            className="!bg-[#18181B] !text-white p-8 rounded-xl relative overflow-hidden group cursor-pointer"
             onClick={onStartNew}
           >
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors" />
@@ -317,7 +317,7 @@ export function DashboardView({ onStartNew, onViewRun, userName, username, orgLo
                 </p>
                 <button
                   onClick={onStartNew}
-                  className="inline-flex items-center gap-3 px-8 py-3 bg-zinc-900 text-white text-xs font-mono uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all rounded-xl"
+                  className="inline-flex items-center gap-3 px-8 py-3 !bg-[#18181B] !text-white text-xs font-mono uppercase tracking-[0.2em] hover:!bg-[#3F3F46] transition-all rounded-xl cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Start First Analysis
                 </button>
@@ -412,7 +412,7 @@ export function DashboardView({ onStartNew, onViewRun, userName, username, orgLo
                             {isComplete ? (
                               <button
                                 onClick={() => onViewRun(job.runId)}
-                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white text-xs font-mono uppercase tracking-widest hover:bg-zinc-700 transition-all rounded-lg shadow-sm"
+                                className="flex items-center gap-2 px-4 py-2 border border-transparent bg-[var(--bg-inverted)] text-[var(--text-inverted)] text-xs font-mono uppercase tracking-widest hover:bg-[var(--bg-inverted-soft)] transition-all rounded-lg shadow-sm cursor-pointer"
                               >
                                 View Report <ChevronRight className="w-3.5 h-3.5" />
                               </button>

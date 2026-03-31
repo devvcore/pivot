@@ -202,7 +202,14 @@ export default function Home() {
   return (
     <AppShell
       currentView={view}
-      onNavigate={(v) => setView(v)}
+      onNavigate={(v) => {
+        // If navigating to Analysis with no report selected, go to dashboard instead
+        if (v === "results" && !runId) {
+          setView("dashboard");
+          return;
+        }
+        setView(v);
+      }}
       onLogout={handleLogout}
       orgName={user?.organizationName || "Pivot"}
       orgLogoUrl={orgLogoUrl}
@@ -278,6 +285,7 @@ export default function Home() {
               onExecute={() => setView("execution")}
             />
           )}
+
 
           {view === "execution" && user && (
             <ExecutionDashboard

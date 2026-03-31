@@ -273,7 +273,7 @@ export function IntegrationsPanel({ orgId, onBack }: IntegrationsPanelProps) {
                       <button
                         onClick={() => handleConnect(p.provider)}
                         disabled={isLoading}
-                        className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-zinc-900 text-white text-xs font-medium rounded-lg hover:bg-zinc-800 transition-colors active:scale-[0.98] disabled:opacity-50"
+                        className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--bg-inverted)] text-[var(--text-inverted)] text-xs font-medium rounded-lg hover:bg-[var(--bg-inverted-soft)] transition-colors active:scale-[0.98] disabled:opacity-50"
                       >
                         {isLoading ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
+import { ThemeToggle } from "./ThemeToggle";
 
 type AppView =
   | "dashboard"
@@ -213,25 +214,32 @@ export function AppShell({
         </nav>
 
         {/* Bottom section */}
-        <div className="border-t border-stone-100 py-3 px-2 space-y-0.5 shrink-0">
-          <button
-            onClick={onLogout}
-            title={collapsed ? "Sign out" : undefined}
-            className={[
-              "w-full flex items-center gap-3 rounded-lg transition-all duration-150 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700 group relative",
-              collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
-            ].join(" ")}
-          >
-            <LogOut className="w-5 h-5 shrink-0 text-zinc-400 group-hover:text-zinc-600" />
+        <div className="border-t border-stone-100 py-3 px-2 shrink-0">
+          <div className={[
+            "flex items-center rounded-lg",
+            collapsed ? "justify-center gap-0" : "px-3 py-2.5 gap-3",
+          ].join(" ")}>
+            <button
+              onClick={onLogout}
+              title={collapsed ? "Sign out" : undefined}
+              className="flex items-center gap-3 text-zinc-500 hover:text-zinc-700 transition-colors group relative"
+            >
+              <LogOut className="w-5 h-5 shrink-0 text-zinc-400 group-hover:text-zinc-600" />
+              {!collapsed && (
+                <span className="text-[13px] font-medium text-zinc-600">Sign out</span>
+              )}
+              {collapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 hidden md:block">
+                  Sign out
+                </div>
+              )}
+            </button>
             {!collapsed && (
-              <span className="text-[13px] font-medium text-zinc-600">Sign out</span>
-            )}
-            {collapsed && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 hidden md:block">
-                Sign out
+              <div className="ml-auto">
+                <ThemeToggle />
               </div>
             )}
-          </button>
+          </div>
         </div>
       </aside>
 
