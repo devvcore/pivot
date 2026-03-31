@@ -21,6 +21,21 @@ interface Message {
   content: string;
 }
 
+/** Extract follow-up suggestions from <!--FOLLOWUPS:[...]--> markers */
+function extractFollowUps(content: string): { text: string; followUps: string[] } {
+  const match = content.match(/<!--FOLLOWUPS:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      const followUps = JSON.parse(match[1]);
+      const text = content.replace(/<!--FOLLOWUPS:[\s\S]*?-->/, "").trim();
+      if (Array.isArray(followUps) && followUps.length > 0) {
+        return { text, followUps: followUps.slice(0, 3) };
+      }
+    } catch { /* fall through */ }
+  }
+  return { text: content, followUps: [] };
+}
+
 /** Extract projection JSON from <!--PROJECTION:{...}--> markers */
 function extractProjection(content: string): { text: string; projection: any | null } {
   const match = content.match(/<!--PROJECTION:([\s\S]*?)-->/);
@@ -243,9 +258,13 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
                 const { text: navText, navigation: navAction } = isAssistant
                   ? extractNavigation(msg.content)
                   : { text: msg.content, navigation: null };
+                const { text: fuText, followUps } = isAssistant
+                  ? extractFollowUps(navText)
+                  : { text: navText, followUps: [] };
                 const { text: displayText, projection } = isAssistant
-                  ? extractProjection(navText)
-                  : { text: navText, projection: null };
+                  ? extractProjection(fuText)
+                  : { text: fuText, projection: null };
+                const isLatestAssistant = isAssistant && i === messages.length - 1;
 
                 return (
                   <div
@@ -283,6 +302,20 @@ export function CoachChat({ orgId, runId, memberRole = "owner", memberName, onNa
                           <Navigation className="w-3 h-3" />
                           Go to {navAction.label}
                         </button>
+                      )}
+                      {/* Follow-up suggestions */}
+                      {isLatestAssistant && followUps.length > 0 && !loading && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {followUps.map((q) => (
+                            <button
+                              key={q}
+                              onClick={() => sendMessage(q)}
+                              className="text-[11px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all text-left"
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
                       )}
                       {/* Connection prompt for disconnected services */}
                       {isAssistant && (() => {

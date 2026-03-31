@@ -12,7 +12,7 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { MVPDeliverables, AgentMemory, WebsiteAnalysis } from "@/lib/types";
+import type { MVPDeliverables, AgentMemory, WebsiteAnalysis, ConversationInsight, ChatMessage } from "@/lib/types";
 
 const LITE_MODEL = "gemini-2.5-flash";
 const supabase = createAdminClient();
@@ -210,4 +210,109 @@ export async function saveWebsiteAnalysis(orgId: string, analysis: WebsiteAnalys
   } catch (e) {
     console.warn("[Memory] Failed to save website analysis:", e);
   }
+}
+
+// ── Conversation Memory ─────────────────────────────────────────────────────
+
+const MAX_INSIGHTS = 20;
+
+/**
+ * Extract key facts from a conversation turn and save them to memory.
+ * Runs async after the response is sent — does not block the user.
+ */
+export async function extractAndSaveConversationInsights(
+  orgId: string,
+  userMessage: string,
+  assistantMessage: string
+): Promise<void> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return;
+
+  try {
+    const genai = new GoogleGenAI({ apiKey });
+    const resp = await genai.models.generateContent({
+      model: LITE_MODEL,
+      contents: `Extract key business facts from this conversation exchange that would be useful to remember in FUTURE conversations. Only extract facts that reveal the user's priorities, decisions, concerns, or preferences — NOT facts already in the business report.
+
+USER: ${userMessage.slice(0, 500)}
+ASSISTANT: ${assistantMessage.slice(0, 1000)}
+
+Return ONLY a JSON array of objects, or an empty array [] if nothing worth remembering:
+[{"fact": "short factual statement", "category": "priority|decision|concern|preference|context"}]
+
+Rules:
+- Max 2 insights per exchange
+- Skip generic questions ("what's my health score") — only save things that reveal intent
+- "User wants to fix revenue leaks before Q2" = GOOD (reveals priority + timeline)
+- "User asked about health score" = BAD (too generic)
+- "User decided to raise prices by 15%" = GOOD (decision)
+- Keep facts under 80 characters`,
+      config: {
+        temperature: 0,
+        maxOutputTokens: 300,
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 },
+      } as Record<string, unknown>,
+    });
+
+    const text = resp.text?.trim();
+    if (!text) return;
+
+    let insights: ConversationInsight[];
+    try {
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+      insights = parsed.slice(0, 2).map((item: any) => ({
+        fact: String(item.fact).slice(0, 120),
+        category: ["priority", "decision", "concern", "preference", "context"].includes(item.category)
+          ? item.category
+          : "context",
+        createdAt: Date.now(),
+      }));
+    } catch {
+      return;
+    }
+
+    // Load existing memory and append
+    const memory = await getAgentMemory(orgId);
+    if (!memory) return;
+
+    const existing = memory.conversationInsights ?? [];
+
+    // Deduplicate: skip if a very similar fact already exists
+    const newInsights = insights.filter((newI) =>
+      !existing.some((old) =>
+        old.fact.toLowerCase().includes(newI.fact.toLowerCase().slice(0, 30)) ||
+        newI.fact.toLowerCase().includes(old.fact.toLowerCase().slice(0, 30))
+      )
+    );
+
+    if (newInsights.length === 0) return;
+
+    // Keep most recent MAX_INSIGHTS
+    memory.conversationInsights = [...newInsights, ...existing].slice(0, MAX_INSIGHTS);
+    await saveAgentMemory(orgId, memory);
+
+    console.log(`[Memory] Saved ${newInsights.length} conversation insight(s) for org ${orgId}`);
+  } catch (e) {
+    // Non-critical — don't let memory extraction break the flow
+    console.warn("[Memory] Conversation insight extraction failed:", e);
+  }
+}
+
+/**
+ * Format conversation insights for injection into system prompt.
+ */
+export function formatConversationInsights(memory: AgentMemory): string {
+  const insights = memory.conversationInsights;
+  if (!insights || insights.length === 0) return "";
+
+  const lines = insights.slice(0, 10).map((i) => {
+    const age = Date.now() - i.createdAt;
+    const daysAgo = Math.floor(age / (1000 * 60 * 60 * 24));
+    const timeLabel = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo}d ago`;
+    return `- [${i.category}] ${i.fact} (${timeLabel})`;
+  });
+
+  return `\nCONVERSATION MEMORY (from past sessions):\n${lines.join("\n")}`;
 }

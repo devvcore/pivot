@@ -13,6 +13,7 @@ import {
   Brain,
   FileOutput,
   AlertCircle,
+  RefreshCw,
   ArrowRight,
   Copy,
   Check,
@@ -87,6 +88,21 @@ function detectSourceType(label: string): SourceCitation["sourceType"] {
   if (l.includes("web") || l.includes("search")) return "web";
   if (l.includes("slack") || l.includes("jira") || l.includes("notion") || l.includes("sheets") || l.includes("calendar") || l.includes("hubspot") || l.includes("linkedin") || l.includes("twitter")) return "integration";
   return "other";
+}
+
+/** Extract follow-up suggestions from <!--FOLLOWUPS:[...]--> markers */
+function extractFollowUps(content: string): { text: string; followUps: string[] } {
+  const match = content.match(/<!--FOLLOWUPS:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      const followUps = JSON.parse(match[1]);
+      const text = content.replace(/<!--FOLLOWUPS:[\s\S]*?-->/, "").trim();
+      if (Array.isArray(followUps) && followUps.length > 0) {
+        return { text, followUps: followUps.slice(0, 3) };
+      }
+    } catch { /* fall through */ }
+  }
+  return { text: content, followUps: [] };
 }
 
 function extractSourceCitations(content: string): { cleanContent: string; sources: SourceCitation[] } {
@@ -758,14 +774,14 @@ function ArtifactDownloadBar({ content, title }: { content: string; title: strin
       )}
       <button
         onClick={copyMarkdown}
-        className={`${btnClass} text-zinc-600 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100`}
+        className={`${btnClass} text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] hover:bg-[var(--bg-hover)]`}
       >
         {copiedMd ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
         {copiedMd ? "Copied" : "Markdown"}
       </button>
       <button
         onClick={() => downloadArtifact("markdown")}
-        className={`${btnClass} text-zinc-600 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100`}
+        className={`${btnClass} text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] hover:bg-[var(--bg-hover)]`}
       >
         <Download className="w-3 h-3" /> .md
       </button>
@@ -807,7 +823,7 @@ function ArtifactCard({ artifact }: { artifact: { name: string; type: string; co
     const contentLen = artifact.content?.length ?? 0;
 
     return (
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl overflow-hidden shadow-sm">
         {contentLen > 100 && !imgError ? (
           <img
             src={artifact.content}
@@ -816,15 +832,15 @@ function ArtifactCard({ artifact }: { artifact: { name: string; type: string; co
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="px-4 py-8 text-center bg-zinc-50">
-            <FileOutput className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
-            <p className="text-sm text-zinc-500 mb-2">{artifact.name}</p>
-            <p className="text-xs text-zinc-400 mb-3">{contentLen > 0 ? `${Math.round(contentLen / 1024)}KB image` : 'Image data not loaded'}</p>
+          <div className="px-4 py-8 text-center bg-[var(--bg-secondary)]">
+            <FileOutput className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
+            <p className="text-sm text-[var(--text-secondary)] mb-2">{artifact.name}</p>
+            <p className="text-xs text-[var(--text-muted)] mb-3">{contentLen > 0 ? `${Math.round(contentLen / 1024)}KB image` : 'Image data not loaded'}</p>
           </div>
         )}
-        <div className="flex items-center gap-2 px-3 py-2 border-t border-zinc-100">
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border-secondary)]">
           <FileOutput className="w-3.5 h-3.5 text-teal-600" />
-          <span className="text-xs text-zinc-600 truncate flex-1">{artifact.name}</span>
+          <span className="text-xs text-[var(--text-secondary)] truncate flex-1">{artifact.name}</span>
           <button onClick={handleDownload} className="text-[10px] font-mono text-teal-600 hover:text-teal-800 transition-colors px-2 py-1 bg-teal-50 rounded-lg">
             Download Image
           </button>
@@ -836,19 +852,19 @@ function ArtifactCard({ artifact }: { artifact: { name: string; type: string; co
   const preview = artifact.content.split("\n").slice(0, 4).join("\n");
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl p-3 shadow-sm">
+    <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2">
         <FileOutput className="w-4 h-4 text-teal-600" />
-        <span className="text-xs font-medium text-zinc-900 truncate flex-1">{artifact.name}</span>
-        <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded uppercase">{artifact.type}</span>
+        <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{artifact.name}</span>
+        <span className="text-[9px] font-mono text-[var(--text-muted)] bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded uppercase">{artifact.type}</span>
       </div>
-      <pre className="text-[11px] font-mono text-zinc-500 whitespace-pre-wrap max-h-20 overflow-hidden mb-2">{preview}{artifact.content.split("\n").length > 4 ? "\n..." : ""}</pre>
+      <pre className="text-[11px] font-mono text-[var(--text-tertiary)] whitespace-pre-wrap max-h-20 overflow-hidden mb-2">{preview}{artifact.content.split("\n").length > 4 ? "\n..." : ""}</pre>
       <div className="flex items-center gap-1.5">
-        <button onClick={handleCopy} className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-zinc-600 bg-zinc-50 border border-zinc-200 rounded hover:bg-zinc-100 transition-colors">
+        <button onClick={handleCopy} className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded hover:bg-[var(--bg-hover)] transition-colors">
           {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
           {copied ? "Copied" : "Copy"}
         </button>
-        <button onClick={handleDownload} className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-zinc-600 bg-zinc-50 border border-zinc-200 rounded hover:bg-zinc-100 transition-colors">
+        <button onClick={handleDownload} className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded hover:bg-[var(--bg-hover)] transition-colors">
           <Download className="w-3 h-3" /> Download
         </button>
       </div>
@@ -1845,11 +1861,11 @@ export function ExecutionDashboard({
 
       {/* ── Sidebar (conversation history) ── */}
       {showSidebar && (
-        <div className="fixed inset-y-0 left-0 z-50 w-64 md:relative md:z-auto bg-white border-r border-zinc-200 flex flex-col h-screen md:sticky top-0">
-          <div className="p-3 border-b border-zinc-100">
+        <div className="fixed inset-y-0 left-0 z-50 w-64 md:relative md:z-auto bg-[var(--bg-primary)] border-r border-[var(--border-primary)] flex flex-col h-screen md:sticky top-0">
+          <div className="p-3 border-b border-[var(--border-secondary)]">
             <button
               onClick={handleNewChat}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-all"
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl hover:bg-[var(--bg-hover)] transition-all"
             >
               <Plus className="w-4 h-4" /> New Chat
             </button>
@@ -1857,11 +1873,11 @@ export function ExecutionDashboard({
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
             {/* Current conversation */}
             {messages.length > 0 && (
-              <div className="px-3 py-2 bg-zinc-100 rounded-lg">
-                <div className="text-xs font-medium text-zinc-900 truncate">
+              <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg">
+                <div className="text-xs font-medium text-[var(--text-primary)] truncate">
                   {messages.find(m => m.type === "user")?.content?.slice(0, 50) || "Current chat"}
                 </div>
-                <div className="text-[9px] text-zinc-400 mt-0.5">Now</div>
+                <div className="text-[9px] text-[var(--text-muted)] mt-0.5">Now</div>
               </div>
             )}
             {/* Past conversations */}
@@ -1869,13 +1885,13 @@ export function ExecutionDashboard({
               <button
                 key={convo.id}
                 onClick={() => loadConversation(convo)}
-                className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-50 transition-colors group"
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors group"
               >
                 <div className="flex items-start gap-2">
-                  <MessageSquare className="w-3.5 h-3.5 text-zinc-400 mt-0.5 shrink-0" />
+                  <MessageSquare className="w-3.5 h-3.5 text-[var(--text-muted)] mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-xs text-zinc-700 truncate group-hover:text-zinc-900">{convo.title}</div>
-                    <div className="text-[9px] text-zinc-400">
+                    <div className="text-xs text-[var(--text-secondary)] truncate group-hover:text-[var(--text-primary)]">{convo.title}</div>
+                    <div className="text-[9px] text-[var(--text-muted)]">
                       {new Date(convo.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       {" "}· {convo.taskIds.length} task{convo.taskIds.length !== 1 ? "s" : ""}
                     </div>
@@ -1885,15 +1901,15 @@ export function ExecutionDashboard({
             ))}
             {conversations.length === 0 && messages.length === 0 && (
               <div className="text-center py-8">
-                <MessageSquare className="w-6 h-6 text-zinc-300 mx-auto mb-2" />
-                <p className="text-[10px] text-zinc-400">No conversations yet</p>
+                <MessageSquare className="w-6 h-6 text-[var(--text-muted)] mx-auto mb-2" />
+                <p className="text-[10px] text-[var(--text-muted)]">No conversations yet</p>
               </div>
             )}
           </div>
-          <div className="p-2 border-t border-zinc-100">
+          <div className="p-2 border-t border-[var(--border-secondary)]">
             <button
               onClick={() => setShowSidebar(false)}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-zinc-400 hover:text-zinc-600 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
             >
               <PanelLeftClose className="w-3.5 h-3.5" /> Close sidebar
             </button>
@@ -1909,29 +1925,29 @@ export function ExecutionDashboard({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-200 hover:bg-zinc-50 transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border-primary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] transition-all"
               title="Toggle sidebar"
             >
-              <PanelLeft className="w-4 h-4 text-zinc-500" />
+              <PanelLeft className="w-4 h-4 text-[var(--text-tertiary)]" />
             </button>
             <div className="hidden sm:block">
-              <div className="text-sm font-bold text-zinc-900 tracking-tight leading-none">{orgName}</div>
-              <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-[0.2em] mt-0.5">Command Center</div>
+              <div className="text-sm font-bold text-[var(--text-primary)] tracking-tight leading-none">{orgName}</div>
+              <div className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-[0.2em] mt-0.5">Command Center</div>
             </div>
           </div>
 
           {/* Tab switcher */}
-          <div className="flex items-center bg-zinc-100 rounded-lg p-0.5">
+          <div className="flex items-center bg-[var(--bg-secondary)] rounded-lg p-0.5 border border-[var(--border-secondary)]">
             <button
               onClick={onSwitchToAnalysis}
-              className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md transition-all text-zinc-500 hover:text-zinc-700"
+              className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md transition-all text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
               <span className="flex items-center gap-1.5">
                 <BarChart3 className="w-3.5 h-3.5" /> Analysis
               </span>
             </button>
             <button
-              className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md transition-all bg-white text-zinc-900 shadow-sm"
+              className="px-4 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md transition-all bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm border border-[var(--border-primary)]"
             >
               <span className="flex items-center gap-1.5">
                 <Play className="w-3.5 h-3.5" /> Execution
@@ -1947,15 +1963,15 @@ export function ExecutionDashboard({
                 {activeAgents.size} working
               </span>
             )}
-            <span className="hidden sm:inline text-[10px] font-mono text-zinc-400 tabular-nums">
+            <span className="hidden sm:inline text-[10px] font-mono text-[var(--text-muted)] tabular-nums">
               ${(totalCostCents / 100).toFixed(2)} spent
             </span>
             <button
               onClick={() => setShowMissionControl(!showMissionControl)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-lg border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-lg border transition-all cursor-pointer ${
                 showMissionControl
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                  ? "bg-[var(--bg-inverted)] text-[var(--text-inverted)] border-[var(--bg-inverted)]"
+                  : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-primary)] hover:bg-[var(--bg-secondary)]"
               }`}
             >
               <Activity className="w-3.5 h-3.5" /> Agents
@@ -1967,11 +1983,11 @@ export function ExecutionDashboard({
 
       {/* ── Mission Control Panel ── */}
       {showMissionControl && (
-        <div className="bg-white border-b border-zinc-200 shadow-sm">
+        <div className="bg-[var(--bg-primary)] border-b border-[var(--border-primary)] shadow-sm">
           <div className="max-w-5xl mx-auto px-4 py-4">
             <div className="flex items-center gap-2 mb-3">
-              <Activity className="w-4 h-4 text-zinc-400" />
-              <h3 className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em]">Mission Control — All Agents</h3>
+              <Activity className="w-4 h-4 text-[var(--text-muted)]" />
+              <h3 className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-[0.2em]">Mission Control — All Agents</h3>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
               {Object.entries(AGENT_NAMES).map(([id, agent]) => {
@@ -1985,7 +2001,7 @@ export function ExecutionDashboard({
                         ? "border-indigo-200 bg-indigo-50/50 shadow-sm"
                         : taskInfo
                         ? "border-zinc-200 bg-zinc-50/50"
-                        : "border-zinc-100 bg-white"
+                        : "border-zinc-100 bg-[var(--bg-primary)]"
                     }`}
                   >
                     {/* Status dot */}
@@ -1994,16 +2010,16 @@ export function ExecutionDashboard({
                         {agent.emoji}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-zinc-900 truncate">{agent.name}</div>
+                        <div className="text-xs font-medium text-[var(--text-primary)] truncate">{agent.name}</div>
                       </div>
                       {isActive && (
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shrink-0" />
                       )}
                     </div>
-                    <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider mb-1">{agent.role}</div>
+                    <div className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">{agent.role}</div>
                     {taskInfo ? (
                       <div className="mt-1">
-                        <p className="text-[10px] text-zinc-600 truncate">{taskInfo.task}</p>
+                        <p className="text-[10px] text-[var(--text-secondary)] truncate">{taskInfo.task}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-[8px] font-mono uppercase tracking-wider px-1 py-0.5 rounded ${
                             isActive
@@ -2017,7 +2033,7 @@ export function ExecutionDashboard({
                             {isActive ? "Working" : formatLabel(taskInfo.status)}
                           </span>
                           {taskInfo.costCents > 0 && (
-                            <span className="text-[8px] font-mono text-zinc-400 tabular-nums">
+                            <span className="text-[8px] font-mono text-[var(--text-muted)] tabular-nums">
                               ${(taskInfo.costCents / 100).toFixed(2)}
                             </span>
                           )}
@@ -2025,7 +2041,7 @@ export function ExecutionDashboard({
                       </div>
                     ) : (
                       <div className="mt-1">
-                        <span className="text-[9px] font-mono text-zinc-300 uppercase">Ready</span>
+                        <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Ready</span>
                       </div>
                     )}
                   </div>
@@ -2050,11 +2066,11 @@ export function ExecutionDashboard({
           {/* Empty state with recommendation pills */}
           {!hydrating && !hasMessages && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-              <div className="w-16 h-16 bg-zinc-900 flex items-center justify-center rounded-xl mb-6">
-                <Bot className="w-7 h-7 text-white" />
+                <div className="w-16 h-16 bg-[var(--bg-inverted)] flex items-center justify-center rounded-xl mb-6">
+                <Bot className="w-7 h-7 text-[var(--text-inverted)]" />
               </div>
-              <h2 className="text-2xl font-light text-zinc-900 mb-2">What do you need done?</h2>
-              <p className="text-sm text-zinc-500 max-w-md mb-8">
+              <h2 className="text-2xl font-light text-[var(--text-primary)] mb-2">What do you need done?</h2>
+              <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8">
                 Tell me what you need and I'll route it to the right specialist agent.
                 Marketing, finance, hiring, operations, research — I handle it all.
               </p>
@@ -2065,9 +2081,9 @@ export function ExecutionDashboard({
                     <button
                       key={action.label}
                       onClick={() => handleSend(action.label)}
-                      className="flex items-center gap-2 px-3 py-2.5 text-xs text-zinc-600 bg-white border border-zinc-200 rounded-xl hover:bg-zinc-50 hover:border-zinc-300 transition-all text-left shadow-sm"
+                      className="flex items-center gap-2 px-3 py-2.5 text-xs text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl hover:bg-[var(--bg-secondary)] hover:border-zinc-300 transition-all text-left shadow-sm"
                     >
-                      <Icon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <Icon className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                       <span>{action.label}</span>
                     </button>
                   );
@@ -2097,10 +2113,10 @@ export function ExecutionDashboard({
                 const icon = isPlanning ? "📋" : isExecuting ? "⚡" : isReviewing ? "🔍" : "💭";
                 return (
                   <div key={msg.id} className="flex items-center gap-2 pl-2 my-1">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50/50 border border-violet-100 rounded-full">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-full">
                       <span className="text-xs">{icon}</span>
-                      <span className="text-[11px] text-violet-600 font-medium">{msg.content}</span>
-                      <Loader2 className="w-3 h-3 animate-spin text-violet-400" />
+                      <span className="text-[11px] text-indigo-700 font-medium">{msg.content}</span>
+                      <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
                     </div>
                   </div>
                 );
@@ -2147,10 +2163,10 @@ export function ExecutionDashboard({
                   <div className="flex-1 space-y-3">
                     <p className="text-sm text-zinc-600 font-medium">{msg.content}</p>
                     {msg.clarifications.map((q) => (
-                      <div key={q.id} className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
-                        <p className="text-sm font-medium text-zinc-800 mb-1">{q.question}</p>
+                      <div key={q.id} className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl p-4 shadow-sm">
+                        <p className="text-sm font-medium text-[var(--text-primary)] mb-1">{q.question}</p>
                         {q.context && (
-                          <p className="text-xs text-zinc-400 mb-3">{q.context}</p>
+                          <p className="text-xs text-[var(--text-muted)] mb-3">{q.context}</p>
                         )}
                         <div className="flex flex-wrap gap-2">
                           {q.options.map((opt) => (
@@ -2183,12 +2199,12 @@ export function ExecutionDashboard({
                               className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
                                 (opt as any).selected
                                   ? "bg-indigo-600 text-white border-indigo-600"
-                                  : "bg-white text-zinc-700 border-zinc-300 hover:border-indigo-400 hover:bg-indigo-50"
+                                  : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-zinc-300 hover:border-indigo-400 hover:bg-indigo-50"
                               } disabled:opacity-60 disabled:cursor-default`}
                             >
                               {opt.label}
                               {opt.description && (
-                                <span className="text-zinc-400 ml-1 font-normal">· {opt.description}</span>
+                                <span className="text-[var(--text-muted)] ml-1 font-normal">· {opt.description}</span>
                               )}
                             </button>
                           ))}
@@ -2227,7 +2243,7 @@ export function ExecutionDashboard({
               return (
                 <div key={msg.id} className="flex justify-end">
                   <div className="flex items-start gap-2 max-w-[80%]">
-                    <div className="bg-zinc-900 text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm max-w-[85%]">
+                    <div className="!bg-[#18181B] !text-white rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm max-w-[85%]">
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="flex gap-2 mt-2 flex-wrap">
@@ -2246,8 +2262,8 @@ export function ExecutionDashboard({
                         </div>
                       )}
                     </div>
-                    <div className="w-7 h-7 bg-zinc-200 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="w-3.5 h-3.5 text-zinc-600" />
+                    <div className="w-7 h-7 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center shrink-0 mt-0.5 border border-[var(--border-primary)]">
+                      <User className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
                     </div>
                   </div>
                 </div>
@@ -2260,7 +2276,7 @@ export function ExecutionDashboard({
               const agentConfig = AGENT_NAMES[agentId];
               return (
                 <div key={msg.id} className="flex justify-center my-2">
-                  <div className="inline-flex items-center gap-2 text-[11px] font-medium bg-zinc-50 border border-indigo-100 px-4 py-2 rounded-full">
+                  <div className="inline-flex items-center gap-2 text-[11px] font-medium bg-[var(--bg-secondary)] border border-indigo-200 px-4 py-2 rounded-full shadow-sm">
                     {agentConfig && (
                       <span className={`w-5 h-5 ${agentConfig.color} rounded-full flex items-center justify-center text-[9px] font-bold text-white`}>
                         {agentConfig.emoji}
@@ -2281,8 +2297,10 @@ export function ExecutionDashboard({
 
               // Extract source citations and clean the content
               // Extract inline images (data:image/... URLs) and render them as actual images
-              const { text: textWithoutImages, images: inlineImages } = extractInlineImages(msg.content);
+              const { text: textWithoutFollowUps, followUps } = extractFollowUps(msg.content);
+              const { text: textWithoutImages, images: inlineImages } = extractInlineImages(textWithoutFollowUps);
               const { cleanContent, sources } = extractSourceCitations(textWithoutImages);
+              const isLatestOutput = msgIndex === messages.length - 1 && msg.type === "output";
 
               // Apply connect marker parsing on the citation-cleaned content
               const contentParts = splitConnectMarkers(cleanContent);
@@ -2321,15 +2339,15 @@ export function ExecutionDashboard({
                       {initial}
                     </div>
                     <div className="max-w-[85%] min-w-0">
-                      <div className="text-[10px] font-mono text-zinc-400 mb-1">{msg.agentName}</div>
+                      <div className="text-[10px] font-mono text-[var(--text-muted)] mb-1">{msg.agentName}</div>
                       {isDocument ? (
                         /* ── Document frame (Manus-style) ── */
-                        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl shadow-sm overflow-hidden">
                           {/* Document header bar */}
-                          <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-zinc-100">
+                          <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-primary)] border-b border-[var(--border-secondary)]">
                             <FileText className="w-3.5 h-3.5 text-indigo-500" />
-                            <span className="text-xs font-semibold text-zinc-800 truncate flex-1">{docTitle}</span>
-                            <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">
+                            <span className="text-xs font-semibold text-[var(--text-primary)] truncate flex-1">{docTitle}</span>
+                            <span className="text-[9px] font-mono text-[var(--text-muted)] bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded">
                               {detected.hasTable ? "DATA" : "REPORT"}
                             </span>
                           </div>
@@ -2358,13 +2376,13 @@ export function ExecutionDashboard({
                             </div>
                           )}
                           {/* Download bar */}
-                          <div className="px-4 py-2 bg-zinc-50/80 border-t border-zinc-100">
+                          <div className="px-4 py-2 bg-[var(--bg-secondary)] border-t border-[var(--border-secondary)]">
                             <ArtifactDownloadBar content={msg.content} title={docTitle} />
                           </div>
                         </div>
                       ) : (
                         /* ── Regular chat bubble for short responses ── */
-                        <div className="bg-white border border-zinc-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                        <div className="bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                           <div className={proseClasses}>
                             {contentParts.map((part, idx) =>
                               part.type === "text" ? (
@@ -2389,6 +2407,20 @@ export function ExecutionDashboard({
                           <ArtifactDownloadBar content={msg.content} title={docTitle} />
                         </div>
                       )}
+                      {/* Follow-up suggestions */}
+                      {isLatestOutput && followUps.length > 0 && !sending && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {followUps.map((q) => (
+                            <button
+                              key={q}
+                              onClick={() => handleSend(q)}
+                              className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all text-left"
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2397,22 +2429,34 @@ export function ExecutionDashboard({
 
             /* ── Error ── */
             if (msg.type === "error") {
-              const errorParts = splitConnectMarkers(msg.content);
+              // Find the last user message to enable retry
+              const lastUserMsg = [...messages].slice(0, msgIndex).reverse().find(m => m.type === "user");
+              // Clean up raw JSON error messages for display
+              const rawError = msg.content ?? "";
+              const isApiError = /\{"error"/.test(rawError) || /503|429|500|UNAVAILABLE|high demand|rate limit/i.test(rawError);
+              const friendlyMessage = isApiError
+                ? "Something went wrong on our end. This is usually temporary."
+                : rawError;
+
               return (
                 <div key={msg.id} className="space-y-2">
                   <div className="flex items-start gap-2">
                     <div className="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                       <AlertCircle className="w-3.5 h-3.5 text-red-500" />
                     </div>
-                    <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%]">
-                      {errorParts.map((part, idx) =>
-                        part.type === "text" ? (
-                          <p key={idx} className="text-sm text-red-700">{part.value}</p>
-                        ) : (
-                          <div key={idx} className="my-2">
-                            <ConnectionPrompt orgId={orgId} filterServices={[part.provider]} compact={true} />
-                          </div>
-                        )
+                    <div className="max-w-[85%]">
+                      <div className="bg-red-50 border border-red-100 rounded-2xl rounded-bl-md px-4 py-3">
+                        <p className="text-sm text-red-700">{friendlyMessage}</p>
+                      </div>
+                      {lastUserMsg && (
+                        <button
+                          onClick={() => handleSend(lastUserMsg.content)}
+                          disabled={sending}
+                          className="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-100 hover:border-red-300 transition-all disabled:opacity-50"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Try again
+                        </button>
                       )}
                     </div>
                   </div>
@@ -2587,9 +2631,9 @@ export function ExecutionDashboard({
                     <button
                       key={pill.prompt}
                       onClick={() => handleSend(pill.prompt)}
-                      className="flex items-center gap-1.5 text-[11px] text-zinc-600 bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 hover:bg-zinc-50 hover:border-zinc-300 transition-all"
+                      className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--bg-secondary)] hover:border-zinc-300 transition-all cursor-pointer"
                     >
-                      <Icon className="w-3 h-3 text-zinc-400" />
+                      <Icon className="w-3 h-3 text-[var(--text-muted)]" />
                       {pill.label}
                     </button>
                   );
@@ -2602,7 +2646,7 @@ export function ExecutionDashboard({
         </div>
 
         {/* ── Input (textarea for multiline support) ── */}
-        <div className="sticky bottom-0 bg-[#F8F9FA] pt-6 pb-4 px-4">
+        <div className="sticky bottom-0 bg-[var(--bg-body)] pt-6 pb-4 px-4">
           {/* File previews */}
           {stagedFiles.length > 0 && (
             <div className="flex gap-2 mb-2 flex-wrap px-1">
@@ -2642,7 +2686,7 @@ export function ExecutionDashboard({
               e.stopPropagation();
               addFiles(e.dataTransfer.files);
             }}
-            className="flex items-end gap-2 bg-white border border-zinc-200 rounded-xl shadow-sm px-3 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
+            className="flex items-end gap-2 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl shadow-sm px-3 py-2.5 focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all"
           >
             {/* Hidden file input */}
             <input
@@ -2661,7 +2705,7 @@ export function ExecutionDashboard({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={sending || uploading}
-              className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-lg disabled:opacity-30 transition-all shrink-0"
+              className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] rounded-lg disabled:opacity-30 transition-all shrink-0"
               title="Attach files (images, documents)"
             >
               {uploading ? (
@@ -2699,7 +2743,7 @@ export function ExecutionDashboard({
               placeholder={stagedFiles.length > 0 ? "Add a message with your files..." : "Ask me anything or give me a task..."}
               disabled={sending}
               rows={1}
-              className="flex-1 text-sm bg-transparent placeholder:text-zinc-400 focus:outline-none disabled:opacity-50 resize-none max-h-32 overflow-y-auto leading-relaxed"
+              className="flex-1 text-sm text-[var(--text-primary)] bg-transparent placeholder:text-[var(--text-muted)] focus:outline-none disabled:opacity-50 resize-none max-h-32 overflow-y-auto leading-relaxed"
               style={{ minHeight: "1.5rem" }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
@@ -2710,7 +2754,7 @@ export function ExecutionDashboard({
             <button
               type="submit"
               disabled={sending || uploading || (!input.trim() && stagedFiles.length === 0)}
-              className="w-8 h-8 flex items-center justify-center bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+              className="w-8 h-8 flex items-center justify-center bg-[var(--bg-inverted)] text-[var(--text-inverted)] rounded-lg hover:bg-[var(--bg-inverted-soft)] disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer"
             >
               {sending || uploading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -2720,7 +2764,7 @@ export function ExecutionDashboard({
             </button>
           </form>
           <div className="flex items-center justify-center gap-3 mt-2">
-            <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">
+            <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-widest">
               7 agents · 49 tools · auto-routed · drop files to attach
             </span>
           </div>

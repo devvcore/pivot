@@ -221,6 +221,13 @@ export interface AgentMemory {
   }[];
   websiteGrade?: string;
   lastUpdated: number;
+  conversationInsights?: ConversationInsight[];
+}
+
+export interface ConversationInsight {
+  fact: string;          // e.g. "User is focused on fixing revenue leaks before Q2"
+  category: "priority" | "decision" | "concern" | "preference" | "context";
+  createdAt: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
