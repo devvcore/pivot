@@ -10,6 +10,23 @@
 import type { Tool, ToolContext, ToolResult } from './index';
 import { registerTools } from './index';
 
+// ── Duplicate Post Prevention ────────────────────────────────────────────────
+// Track recent posts to prevent double-posting within a short window
+const recentPosts = new Map<string, number>(); // hash → timestamp
+const DEDUP_WINDOW = 5 * 60 * 1000; // 5 minutes
+
+function isDuplicatePost(platform: string, content: string): boolean {
+  const key = `${platform}:${content.slice(0, 100).toLowerCase().trim()}`;
+  const lastPosted = recentPosts.get(key);
+  if (lastPosted && Date.now() - lastPosted < DEDUP_WINDOW) return true;
+  recentPosts.set(key, Date.now());
+  // Clean old entries
+  for (const [k, v] of recentPosts) {
+    if (Date.now() - v > DEDUP_WINDOW) recentPosts.delete(k);
+  }
+  return false;
+}
+
 // ── Connection Check Helper ──────────────────────────────────────────────────
 
 async function checkConnection(orgId: string, provider: string): Promise<boolean> {
@@ -96,6 +113,14 @@ const postToLinkedIn: Tool = {
       return { success: false, output: 'Post text is required.' };
     }
 
+    if (text.length > 3000) {
+      return { success: false, output: `Post is ${text.length} characters — LinkedIn max is 3000. Shorten it and try again.` };
+    }
+
+    if (isDuplicatePost('linkedin', text)) {
+      return { success: false, output: 'This content was already posted to LinkedIn in the last 5 minutes. Skipping to avoid duplicates.' };
+    }
+
     const connected = await checkConnection(context.orgId, 'linkedin');
     if (!connected) {
       return connectionRequiredResult('linkedin');
@@ -124,8 +149,8 @@ const postToLinkedIn: Tool = {
         };
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, output: `LinkedIn post failed: ${message}` };
+      console.error('[LinkedIn] Post failed:', err);
+      return { success: false, output: 'LinkedIn post failed. The account may need to be reconnected. Try again.' };
     }
   },
 };
@@ -158,6 +183,10 @@ const postToTwitter: Tool = {
       return { success: false, output: `Tweet is ${text.length} characters. Maximum is 280. Please shorten it.` };
     }
 
+    if (isDuplicatePost('twitter', text)) {
+      return { success: false, output: 'This content was already posted to Twitter in the last 5 minutes. Skipping to avoid duplicates.' };
+    }
+
     const connected = await checkConnection(context.orgId, 'twitter');
     if (!connected) {
       return connectionRequiredResult('twitter');
@@ -186,8 +215,8 @@ const postToTwitter: Tool = {
         };
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, output: `Tweet failed: ${message}` };
+      console.error('[Twitter] Post failed:', err);
+      return { success: false, output: 'Tweet failed. The account may need to be reconnected. Try again.' };
     }
   },
 };
@@ -217,6 +246,29 @@ const postToInstagram: Tool = {
       return { success: false, output: 'Both image_url and caption are required.' };
     }
 
+    // Validate image URL is accessible before posting
+    try {
+      const headCheck = await fetch(imageUrl, { method: 'HEAD', signal: AbortSignal.timeout(8000) });
+      if (!headCheck.ok) {
+        return { success: false, output: `Image URL is not accessible (HTTP ${headCheck.status}). Generate a new image first or provide a valid public URL.` };
+      }
+      const contentType = headCheck.headers.get('content-type') ?? '';
+      if (!contentType.includes('image')) {
+        return { success: false, output: `URL does not point to an image (got ${contentType}). Provide a direct image URL (JPEG or PNG).` };
+      }
+    } catch {
+      return { success: false, output: 'Image URL is not reachable. The URL may have expired. Generate a new image and try again.' };
+    }
+
+    // Validate caption length
+    if (caption.length > 2200) {
+      return { success: false, output: `Caption is ${caption.length} characters — Instagram max is 2200. Shorten the caption and try again.` };
+    }
+
+    if (isDuplicatePost('instagram', caption)) {
+      return { success: false, output: 'This content was already posted to Instagram in the last 5 minutes. Skipping to avoid duplicates.' };
+    }
+
     const connected = await checkConnection(context.orgId, 'instagram');
     if (!connected) {
       return connectionRequiredResult('instagram');
@@ -239,8 +291,8 @@ const postToInstagram: Tool = {
         };
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, output: `Instagram post failed: ${message}` };
+      console.error('[Instagram] Post failed:', err);
+      return { success: false, output: 'Instagram post failed. The account may need to be reconnected, or the image URL may have expired. Try again.' };
     }
   },
 };
@@ -310,8 +362,8 @@ const postToFacebook: Tool = {
         };
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return { success: false, output: `Facebook post failed: ${msg}` };
+      console.error('[Facebook] Post failed:', err);
+      return { success: false, output: 'Facebook post failed. The account may need to be reconnected. Try again.' };
     }
   },
 };
@@ -529,8 +581,8 @@ const postToTikTok: Tool = {
         cost: 0,
       };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, output: `TikTok post failed: ${message}` };
+      console.error('[TikTok] Post failed:', err);
+      return { success: false, output: 'TikTok post failed. The account may need to be reconnected. Try again.' };
     }
   },
 };
@@ -645,7 +697,8 @@ const getSocialAnalytics: Tool = {
 
       return { success: true, output: parts.join('\n'), cost: 0 };
     } catch (err) {
-      return { success: false, output: `Failed to fetch ${platform} analytics: ${err instanceof Error ? err.message : 'unknown error'}` };
+      console.error(`[SocialAnalytics] ${platform} fetch failed:`, err);
+      return { success: false, output: `Failed to fetch ${platform} analytics. The account may not be connected or data hasn't synced yet.` };
     }
   },
 };

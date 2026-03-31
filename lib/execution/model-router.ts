@@ -79,6 +79,18 @@ export function selectModel(signals: RoutingSignals): ModelConfig {
     return MODELS.flash;
   }
 
+  // Marketer: pro for complex campaigns, flash for single posts
+  if (signals.agentId === 'marketer') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'campaign', 'a/b test', 'multi-platform', 'multi-channel', 'launch',
+      'rebrand', 'content calendar', 'email sequence', 'landing page',
+      'full funnel', 'marketing strategy', 'brand voice',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
   // Keyword-based upgrade
   const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
   const proKeywords = [
