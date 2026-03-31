@@ -15,7 +15,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { MVPDeliverables, AgentMemory, WebsiteAnalysis, ConversationInsight, ChatMessage } from "@/lib/types";
 
 const LITE_MODEL = "gemini-2.5-flash";
-const supabase = createAdminClient();
+
+// Lazy init — don't call createAdminClient() at module level (breaks build when env vars are missing)
+let _supabase: ReturnType<typeof createAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) _supabase = createAdminClient();
+  return _supabase;
+}
 
 export async function buildAgentMemory(
   orgId: string,
@@ -157,7 +163,7 @@ WEBSITE: ${wa ? `Grade ${wa.grade} — ${wa.synopsis}` : "Not analyzed"}`;
 
 export async function getAgentMemory(orgId: string): Promise<AgentMemory | null> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("organizations")
       .select("agent_memory_json")
       .eq("id", orgId)
@@ -175,7 +181,7 @@ export async function getAgentMemory(orgId: string): Promise<AgentMemory | null>
 
 export async function saveAgentMemory(orgId: string, memory: AgentMemory): Promise<void> {
   try {
-    await supabase
+    await getSupabase()
       .from("organizations")
       .update({ agent_memory_json: memory })
       .eq("id", orgId);
@@ -186,7 +192,7 @@ export async function saveAgentMemory(orgId: string, memory: AgentMemory): Promi
 
 export async function getOrgWebsiteAnalysis(orgId: string): Promise<WebsiteAnalysis | null> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("organizations")
       .select("website_analysis_json")
       .eq("id", orgId)
@@ -203,7 +209,7 @@ export async function getOrgWebsiteAnalysis(orgId: string): Promise<WebsiteAnaly
 
 export async function saveWebsiteAnalysis(orgId: string, analysis: WebsiteAnalysis): Promise<void> {
   try {
-    await supabase
+    await getSupabase()
       .from("organizations")
       .update({ website_analysis_json: analysis, website: analysis.url })
       .eq("id", orgId);
