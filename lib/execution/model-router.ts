@@ -91,6 +91,18 @@ export function selectModel(signals: RoutingSignals): ModelConfig {
     return MODELS.flash;
   }
 
+  // Analyst: pro for complex financial modeling, flash for simple lookups
+  if (signals.agentId === 'analyst') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'projection', 'forecast', 'financial model', 'p&l', 'profit and loss',
+      'comprehensive', 'multi-scenario', 'sensitivity analysis', 'valuation',
+      'unit economics', 'pricing strategy', 'cash flow model', 'budget plan',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
   // Keyword-based upgrade
   const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
   const proKeywords = [
