@@ -103,6 +103,41 @@ export function selectModel(signals: RoutingSignals): ModelConfig {
     return MODELS.flash;
   }
 
+  // Recruiter: pro for comprehensive hiring/onboarding, flash for single postings
+  if (signals.agentId === 'recruiter') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'onboarding plan', '90-day', 'performance review', '360',
+      'compensation strategy', 'hiring plan', 'talent strategy',
+      'interview guide', 'comprehensive',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
+  // Researcher: pro for deep market/competitor analysis, flash for simple lookups
+  if (signals.agentId === 'researcher') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'deep dive', 'comprehensive', 'market sizing', 'tam', 'sam', 'som',
+      'competitive landscape', 'industry analysis', 'benchmark report',
+      'technology landscape', 'trend report',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
+  // Operator: pro for complex SOPs and project plans, flash for simple ops
+  if (signals.agentId === 'operator') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'sop', 'standard operating', 'project plan', 'risk assessment',
+      'vendor evaluation', 'process redesign', 'governance', 'compliance',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
   // Keyword-based upgrade
   const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
   const proKeywords = [

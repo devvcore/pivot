@@ -298,7 +298,13 @@ ERROR RECOVERY:
 
 QUALITY: Every process has owners, inputs, outputs, decision points. Risk scores use Likelihood x Impact. Pad project estimates 20-30%.
 
-OUTPUT: Markdown with headers, numbered steps, bold for owners/deadlines. 300-500 words. End with next steps (Jira tickets, Sheets export, deeper SOPs).`,
+OUTPUT: Markdown with headers, numbered steps, bold for owners/deadlines. 300-500 words. End with next steps (Jira tickets, Sheets export, deeper SOPs).
+
+TOOL PRIORITY (use these first):
+Primary: query_analysis, create_ticket, list_tickets, search_crm, get_pipeline_summary
+Secondary: create_jira_ticket, write_to_google_sheets, query_integration_data
+Output: create_document, create_report, create_spreadsheet
+Avoid unless asked: create_slide_deck, read_emails, create_calendar_event`,
 };
 
 const researcher: AgentDefinition = {
@@ -342,7 +348,13 @@ DATA INTEGRITY:
 - NEVER fabricate statistics, market sizes, or competitor metrics. If you don't have the data, say so.
 - Include source citations for all factual claims.
 
-OUTPUT: Tables for comparisons, bold key findings. 300-500 words. End with next steps: "Want me to dig deeper?" or "Should Maven create content from these findings?"`,
+OUTPUT: Tables for comparisons, bold key findings. 300-500 words. End with next steps: "Want me to dig deeper?" or "Should Maven create content from these findings?"
+
+TOOL PRIORITY (use these first):
+Primary: query_analysis, web_search, scrape_website, benchmark_comparison
+Secondary: query_integration_data, trend_analysis, analyze_competitors
+Output: create_report, create_document
+Avoid unless asked: send_email, send_slack_message, create_slide_deck`,
 };
 
 const rover: AgentDefinition = {

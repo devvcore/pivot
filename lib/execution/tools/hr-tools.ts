@@ -13,14 +13,26 @@ const FLASH_MODEL = 'gemini-2.5-flash';
 
 async function generateWithGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+  if (!apiKey) return '[Error: GEMINI_API_KEY not configured. HR tools unavailable.]';
+
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: FLASH_MODEL,
-    contents: prompt,
-    config: { temperature: 0.5, maxOutputTokens: 4000 },
-  });
-  return response.text ?? '';
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: FLASH_MODEL,
+        contents: prompt,
+        config: { temperature: 0.5, maxOutputTokens: 6000 },
+      });
+      const text = response.text ?? '';
+      if (text.trim()) return text;
+      if (attempt < 2) console.warn(`[HR] Empty response (attempt ${attempt + 1}/3), retrying...`);
+    } catch (e) {
+      console.warn(`[HR] Gemini call failed (attempt ${attempt + 1}/3):`, e);
+      if (attempt === 2) return '[Error: HR tool failed after 3 attempts. Please try again.]';
+    }
+  }
+  return '[Error: Could not generate HR content. Please try again.]';
 }
 
 function getHRContext(context: ToolContext): string {
@@ -31,10 +43,22 @@ IMPORTANT: You MUST still produce specific, professional HR deliverables. Use th
   const d = context.deliverables;
   const parts: string[] = [];
 
-  if (d.hiringPlan) parts.push(`Hiring Plan: ${JSON.stringify(d.hiringPlan).slice(0, 2000)}`);
-  if (d.talentGapAnalysis) parts.push(`Talent Gaps: ${JSON.stringify(d.talentGapAnalysis).slice(0, 1000)}`);
-  if (d.cultureAssessment) parts.push(`Culture: ${JSON.stringify(d.cultureAssessment).slice(0, 800)}`);
-  if (d.teamPerformance) parts.push(`Team Performance: ${JSON.stringify(d.teamPerformance).slice(0, 800)}`);
+  if (d.hiringPlan) {
+    const hp = d.hiringPlan as any;
+    parts.push(`Hiring Plan: ${hp.recommendations?.length ?? 0} roles recommended. Gaps: ${hp.currentTeamGaps?.slice(0, 5).map((g: any) => g.role ?? g.title ?? g).join(', ') ?? 'N/A'}. ${hp.summary ?? ''}`);
+  }
+  if (d.talentGapAnalysis) {
+    const tg = d.talentGapAnalysis as any;
+    parts.push(`Talent Gaps: ${tg.gaps?.slice(0, 5).map((g: any) => `${g.skill ?? g.role ?? g} (${g.severity ?? g.priority ?? 'medium'})`).join(', ') ?? 'N/A'}`);
+  }
+  if (d.cultureAssessment) {
+    const ca = d.cultureAssessment as any;
+    parts.push(`Culture: Score ${ca.score ?? ca.overallScore ?? '?'}/100. Values: ${ca.coreValues?.join(', ') ?? 'N/A'}`);
+  }
+  if (d.teamPerformance) {
+    const tp = d.teamPerformance as any;
+    parts.push(`Team: ${tp.teamSize ?? '?'} members. ${tp.summary ?? ''}`);
+  }
 
   return parts.length > 0 ? parts.join('\n\n') : 'Limited HR data available. Focus on the role details and requirements provided to create specific deliverables.';
 }
@@ -133,7 +157,7 @@ Writing guidelines:
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,
     };
   },
 };
@@ -205,7 +229,7 @@ Also include:
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,
     };
   },
 };
@@ -276,14 +300,16 @@ Provide a comprehensive salary benchmark analysis:
 7. **Recommendation**: Where to price to attract strong candidates without overpaying
 8. **Negotiation Range**: Floor, target, and ceiling for negotiations
 
-Note: These are AI-generated estimates based on publicly available data patterns. For definitive benchmarking, consult Levels.fyi, Glassdoor, Payscale, or Radford surveys.`;
+IMPORTANT: Label ALL salary figures as "AI-estimated based on 2025-2026 market data patterns." Include a disclaimer that actual salaries vary.
+Recommend the user verify with: Levels.fyi, Glassdoor, Payscale, or Radford surveys.
+If you are uncertain about a specific market, say so — do NOT fabricate precise numbers.`;
 
     const content = await generateWithGemini(prompt);
 
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,
     };
   },
 };
@@ -384,7 +410,7 @@ Also include a 30-60-90 day review template.`;
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,
     };
   },
 };
@@ -473,7 +499,7 @@ Create a comprehensive performance review framework:
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,
     };
   },
 };
