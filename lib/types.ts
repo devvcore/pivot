@@ -193,6 +193,7 @@ export interface WebsiteAnalysis {
   marketingDirection: string;    // overall marketing strategy suggestion
   ctaAssessment: string;         // is the CTA clear?
   analyzedAt: number;
+  failed?: boolean;              // true if analysis could not be completed
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

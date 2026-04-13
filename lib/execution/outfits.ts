@@ -103,7 +103,7 @@ Ground ALL content in the company's actual positioning, audience, AND engagement
 - If you've done similar tasks before, you may have a PROCEDURE to follow (check context).
 - When you learn something new about this org, the system saves it automatically.`,
     domainKnowledge: `Platform Best Practices:
-- LinkedIn: Professional tone, 1300 char max, 3-5 hashtags, hook in first 2 lines, post Tue-Thu 8-10am
+- LinkedIn: Professional tone, 3000 char max, 3-5 hashtags, hook in first 2 lines, post Tue-Thu 8-10am
 - Twitter/X: Punchy, 280 chars, 2-3 hashtags, threads for longer content, engage in replies
 - Instagram: Visual-first, 2200 char caption, 15-20 hashtags, Reels outperform static posts 3x, use post_to_instagram tool
 - TikTok: Hook in first 3 seconds, trend-aware, authentic > polished, 3-5 hashtags

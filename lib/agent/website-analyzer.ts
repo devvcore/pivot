@@ -32,8 +32,9 @@ async function fetchWebsiteTextViaHttp(url: string): Promise<WebsiteBrowseResult
   const normalized = normalizeUrl(url);
   const resp = await fetch(normalized, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; PivotAI/1.0; +https://pivot.ai)",
-      "Accept": "text/html,application/xhtml+xml",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
     },
     signal: AbortSignal.timeout(12_000),
   });
@@ -45,7 +46,7 @@ async function fetchWebsiteTextViaHttp(url: string): Promise<WebsiteBrowseResult
     .replace(/<[^>]+>/g, " ")
     .replace(/\s{2,}/g, " ")
     .trim()
-    .slice(0, 12000);
+    .slice(0, 24000);
   return { text, snapshot: "", source: "http-fetch" };
 }
 
@@ -62,7 +63,7 @@ async function fetchWebsiteWithBrowserAgent(url: string): Promise<WebsiteBrowseR
       browser.extractText().catch(() => ""),
       browser.screenshot().catch(() => ""),
     ]);
-    const text = (visibleText || snapshot || "").replace(/\s{2,}/g, " ").trim().slice(0, 12000);
+    const text = (visibleText || snapshot || "").replace(/\s{2,}/g, " ").trim().slice(0, 24000);
     return {
       text,
       snapshot: (snapshot || "").slice(0, 8000),
@@ -99,10 +100,65 @@ async function maybePersistScreenshot(
   }
 }
 
+/**
+ * Attempt to repair truncated JSON from Gemini.
+ * Extracts whatever complete key-value pairs exist before the truncation point.
+ */
+function repairTruncatedJson(raw: string): Partial<WebsiteAnalysis> {
+  const result: Record<string, any> = {};
+
+  // Extract simple string fields: "key": "value"
+  const stringPattern = /"(\w+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+  let match: RegExpExecArray | null;
+  while ((match = stringPattern.exec(raw)) !== null) {
+    result[match[1]] = match[2];
+  }
+
+  // Extract number fields: "key": 123
+  const numPattern = /"(\w+)"\s*:\s*(\d+)/g;
+  while ((match = numPattern.exec(raw)) !== null) {
+    result[match[1]] = Number(match[2]);
+  }
+
+  // Extract complete arrays: "key": ["val1", "val2"]
+  const arrayPattern = /"(\w+)"\s*:\s*\[((?:[^\]])*)\]/g;
+  while ((match = arrayPattern.exec(raw)) !== null) {
+    try {
+      result[match[1]] = JSON.parse(`[${match[2]}]`);
+    } catch {
+      // Extract individual strings from the partial array
+      const items: string[] = [];
+      const itemPattern = /"((?:[^"\\]|\\.)*)"/g;
+      let itemMatch: RegExpExecArray | null;
+      while ((itemMatch = itemPattern.exec(match[2])) !== null) {
+        items.push(itemMatch[1]);
+      }
+      if (items.length > 0) result[match[1]] = items;
+    }
+  }
+
+  return result as Partial<WebsiteAnalysis>;
+}
+
+// Cache: URL → { analysis, timestamp }. Avoids re-analyzing the same site within 1 hour.
+const analysisCache = new Map<string, { analysis: WebsiteAnalysis; timestamp: number }>();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 export async function analyzeWebsite(
   url: string,
-  opts?: { runId?: string; label?: string }
+  opts?: { runId?: string; label?: string; skipCache?: boolean }
 ): Promise<WebsiteAnalysis> {
+  const normalized = normalizeUrl(url);
+
+  // Check cache first
+  if (!opts?.skipCache) {
+    const cached = analysisCache.get(normalized);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`[WebsiteAnalyzer] Cache hit for ${normalized} (${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`);
+      return cached.analysis;
+    }
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return buildFallback(url, "GEMINI_API_KEY not configured");
@@ -170,55 +226,81 @@ C (60-74): Confusing offer, weak CTAs, outdated design
 D (45-59): Major clarity issues, no clear value proposition, poor trust signals
 F (0-44): Fundamentally broken, unreadable, or no clear purpose`;
 
-  try {
-    const resp = await genai.models.generateContent({
-      model: LITE_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.2,
-        maxOutputTokens: 2000,
-      } as Record<string, unknown>,
-    });
-    const raw = resp.text ?? "{}";
-    const result = JSON.parse(raw) as Partial<WebsiteAnalysis>;
-    return {
-      url,
-      grade: result.grade ?? "C",
-      score: result.score ?? 60,
-      synopsis: result.synopsis ?? "",
-      actualOffer: result.actualOffer ?? "",
-      perceivedOffer: result.perceivedOffer ?? "",
-      offerGap: result.offerGap ?? "",
-      topIssues: result.topIssues ?? [],
-      recommendations: result.recommendations ?? [],
-      suggestedHeadline: result.suggestedHeadline ?? "",
-      prominentFeatures: result.prominentFeatures ?? [],
-      marketingDirection: result.marketingDirection ?? "",
-      ctaAssessment: result.ctaAssessment ?? "",
-      analyzedAt: Date.now(),
-    };
-  } catch (e) {
-    console.warn("[WebsiteAnalyzer] Analysis failed:", e);
-    return buildFallback(url, String(e));
+  // Retry up to 3 times — Gemini frequently returns truncated JSON
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await genai.models.generateContent({
+        model: LITE_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.2,
+          maxOutputTokens: 3000,  // increased from 2000 to reduce truncation
+        } as Record<string, unknown>,
+      });
+      const raw = resp.text ?? "{}";
+
+      // Try strict parse first
+      let result: Partial<WebsiteAnalysis>;
+      try {
+        result = JSON.parse(raw);
+      } catch {
+        // Gemini returned truncated JSON — attempt to salvage
+        console.warn(`[WebsiteAnalyzer] Truncated JSON (attempt ${attempt + 1}/3, ${raw.length} chars), repairing...`);
+        result = repairTruncatedJson(raw);
+        if (!result.grade && !result.synopsis) {
+          // Repair failed, retry
+          if (attempt < 2) continue;
+          return buildFallback(url, "AI returned invalid JSON after 3 attempts");
+        }
+      }
+
+      const analysis: WebsiteAnalysis = {
+        url,
+        grade: result.grade ?? "C",
+        score: result.score ?? 60,
+        synopsis: result.synopsis ?? "",
+        actualOffer: result.actualOffer ?? "",
+        perceivedOffer: result.perceivedOffer ?? "",
+        offerGap: result.offerGap ?? "",
+        topIssues: result.topIssues ?? [],
+        recommendations: result.recommendations ?? [],
+        suggestedHeadline: result.suggestedHeadline ?? "",
+        prominentFeatures: result.prominentFeatures ?? [],
+        marketingDirection: result.marketingDirection ?? "",
+        ctaAssessment: result.ctaAssessment ?? "",
+        analyzedAt: Date.now(),
+      };
+
+      // Cache successful result
+      analysisCache.set(normalized, { analysis, timestamp: Date.now() });
+      return analysis;
+    } catch (e) {
+      console.warn(`[WebsiteAnalyzer] Attempt ${attempt + 1}/3 failed:`, e);
+      if (attempt < 2) continue;
+      return buildFallback(url, String(e));
+    }
   }
+
+  return buildFallback(url, "Analysis failed after 3 attempts");
 }
 
 function buildFallback(url: string, reason: string): WebsiteAnalysis {
   return {
     url,
-    grade: "C",
-    score: 60,
+    grade: "N/A" as any,
+    score: 0,
     synopsis: `Website analysis could not be completed: ${reason}`,
-    actualOffer: "Unable to determine",
-    perceivedOffer: "Unable to determine",
-    offerGap: "Analysis unavailable",
-    topIssues: ["Website analysis failed — please check the URL and try again"],
-    recommendations: ["Ensure the website URL is accessible and try again"],
+    actualOffer: "",
+    perceivedOffer: "",
+    offerGap: "",
+    topIssues: ["Analysis failed — the website could not be graded. Check the URL and try again."],
+    recommendations: ["Retry the analysis or verify the website is publicly accessible"],
     suggestedHeadline: "",
     prominentFeatures: [],
     marketingDirection: "",
     ctaAssessment: "",
     analyzedAt: Date.now(),
+    failed: true,
   };
 }

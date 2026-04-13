@@ -59,14 +59,84 @@ export function selectModel(signals: RoutingSignals): ModelConfig {
   const remaining = signals.costCeiling - signals.costSpent;
   if (remaining < 0.05) return MODELS.flash;
 
-  // QUICK always flash
+  // QUICK always flash — even for strategist
   if (signals.triageLevel === 'quick') return MODELS.flash;
-
-  // Strategist gets pro
-  if (signals.agentId === 'strategist') return MODELS.pro;
 
   // HEAVY tasks get pro
   if (signals.triageLevel === 'heavy') return MODELS.pro;
+
+  // Strategist: pro only for complex tasks, flash for simple ones
+  if (signals.agentId === 'strategist') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'strategy', 'strategic', 'comprehensive', 'go-to-market', 'gtm',
+      'competitive analysis', 'market entry', 'business plan', 'fundraising',
+      'investor', 'board', 'due diligence', 'pricing strategy', 'financial model',
+      'unit economics', 'expansion', 'acquisition', 'partnership',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    // Simple queries (list, check, summarize) use flash
+    return MODELS.flash;
+  }
+
+  // Marketer: pro for complex campaigns, flash for single posts
+  if (signals.agentId === 'marketer') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'campaign', 'a/b test', 'multi-platform', 'multi-channel', 'launch',
+      'rebrand', 'content calendar', 'email sequence', 'landing page',
+      'full funnel', 'marketing strategy', 'brand voice',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
+  // Analyst: pro for complex financial modeling, flash for simple lookups
+  if (signals.agentId === 'analyst') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'projection', 'forecast', 'financial model', 'p&l', 'profit and loss',
+      'comprehensive', 'multi-scenario', 'sensitivity analysis', 'valuation',
+      'unit economics', 'pricing strategy', 'cash flow model', 'budget plan',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
+  // Recruiter: pro for comprehensive hiring/onboarding, flash for single postings
+  if (signals.agentId === 'recruiter') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'onboarding plan', '90-day', 'performance review', '360',
+      'compensation strategy', 'hiring plan', 'talent strategy',
+      'interview guide', 'comprehensive',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
+  // Researcher: pro for deep market/competitor analysis, flash for simple lookups
+  if (signals.agentId === 'researcher') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'deep dive', 'comprehensive', 'market sizing', 'tam', 'sam', 'som',
+      'competitive landscape', 'industry analysis', 'benchmark report',
+      'technology landscape', 'trend report',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
+
+  // Operator: pro for complex SOPs and project plans, flash for simple ops
+  if (signals.agentId === 'operator') {
+    const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();
+    const complexKeywords = [
+      'sop', 'standard operating', 'project plan', 'risk assessment',
+      'vendor evaluation', 'process redesign', 'governance', 'compliance',
+    ];
+    if (complexKeywords.some(kw => text.includes(kw))) return MODELS.pro;
+    return MODELS.flash;
+  }
 
   // Keyword-based upgrade
   const text = `${signals.taskTitle} ${signals.taskDescription}`.toLowerCase();

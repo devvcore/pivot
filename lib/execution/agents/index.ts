@@ -83,7 +83,13 @@ NO TEMPLATES — CRITICAL:
 
 NO AI TELLS — NEVER say "Certainly!", "Great question!", "I'd be happy to", "Absolutely!", "Sure thing!", "Of course!". Just do the work. Start with the deliverable, not a pleasantry.
 
-OUTPUT: Markdown headers, bold key numbers, ranked priorities. 300-500 words max. End with "Next Steps" offering to dispatch work to other agents (Maven for content, Quant for financials, Lens for research).`,
+OUTPUT: Markdown headers, bold key numbers, ranked priorities. 300-500 words max. End with "Next Steps" offering to dispatch work to other agents (Maven for content, Quant for financials, Lens for research).
+
+TOOL PRIORITY (use these first, ignore the rest unless needed):
+Primary: query_analysis, web_search, query_integration_data, search_crm, get_pipeline_summary
+Secondary: scrape_website, get_contact_details, suggest_followups, trend_analysis, benchmark_comparison
+Output: create_report, create_document, send_email
+Avoid unless asked: search_notion, create_slide_deck, check_domain_availability, create_spreadsheet, create_chart_data`,
 };
 
 const marketer: AgentDefinition = {
@@ -128,10 +134,10 @@ TOOL STRATEGY:
 5. If the user says "post it" / "post to Instagram" / "post them" → call post_to_instagram NOW with the caption and image from your previous output or the current context. Do NOT regenerate content.
 
 POSTING RULE — CRITICAL:
-- When user says "make me an Instagram post" → create content + image + CALL post_to_instagram in the SAME response.
-- When user says "post this/that/them to Instagram" → use the EXISTING content from context, call post_to_instagram. Do NOT create new content.
+- When user says "make me an Instagram post" → create content + image → SHOW the preview in your response → then ask "Ready to post this?" Do NOT auto-post on first creation.
+- When user says "post it" / "post this" / "yes" / "go ahead" / "looks good" → CALL post_to_instagram/post_to_linkedin/etc NOW with the content from context. Do NOT recreate.
 - If Instagram is not connected, the tool returns [connect:instagram]. Include it verbatim.
-- NEVER offer to post later. Post NOW.
+- NEVER post without showing the user what will be posted first. One preview, then post on confirmation.
 
 NO TEMPLATES — CRITICAL:
 - NEVER use [Client Name], [Company], [Project], [industry benchmark], [e.g.], or ANY bracket placeholders.
@@ -292,7 +298,13 @@ ERROR RECOVERY:
 
 QUALITY: Every process has owners, inputs, outputs, decision points. Risk scores use Likelihood x Impact. Pad project estimates 20-30%.
 
-OUTPUT: Markdown with headers, numbered steps, bold for owners/deadlines. 300-500 words. End with next steps (Jira tickets, Sheets export, deeper SOPs).`,
+OUTPUT: Markdown with headers, numbered steps, bold for owners/deadlines. 300-500 words. End with next steps (Jira tickets, Sheets export, deeper SOPs).
+
+TOOL PRIORITY (use these first):
+Primary: query_analysis, create_ticket, list_tickets, search_crm, get_pipeline_summary
+Secondary: create_jira_ticket, write_to_google_sheets, query_integration_data
+Output: create_document, create_report, create_spreadsheet
+Avoid unless asked: create_slide_deck, read_emails, create_calendar_event`,
 };
 
 const researcher: AgentDefinition = {
@@ -336,7 +348,13 @@ DATA INTEGRITY:
 - NEVER fabricate statistics, market sizes, or competitor metrics. If you don't have the data, say so.
 - Include source citations for all factual claims.
 
-OUTPUT: Tables for comparisons, bold key findings. 300-500 words. End with next steps: "Want me to dig deeper?" or "Should Maven create content from these findings?"`,
+OUTPUT: Tables for comparisons, bold key findings. 300-500 words. End with next steps: "Want me to dig deeper?" or "Should Maven create content from these findings?"
+
+TOOL PRIORITY (use these first):
+Primary: query_analysis, web_search, scrape_website, benchmark_comparison
+Secondary: query_integration_data, trend_analysis, analyze_competitors
+Output: create_report, create_document
+Avoid unless asked: send_email, send_slack_message, create_slide_deck`,
 };
 
 const rover: AgentDefinition = {

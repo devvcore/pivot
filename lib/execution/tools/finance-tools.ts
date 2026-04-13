@@ -13,14 +13,27 @@ const FLASH_MODEL = 'gemini-2.5-flash';
 
 async function generateWithGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+  if (!apiKey) return '[Error: GEMINI_API_KEY not configured. Financial analysis unavailable.]';
+
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: FLASH_MODEL,
-    contents: prompt,
-    config: { temperature: 0.3, maxOutputTokens: 4000 },
-  });
-  return response.text ?? '';
+
+  // Retry up to 2 times on failure
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: FLASH_MODEL,
+        contents: prompt,
+        config: { temperature: 0.3, maxOutputTokens: 6000 },
+      });
+      const text = response.text ?? '';
+      if (text.trim()) return text;
+      if (attempt < 2) console.warn(`[Finance] Empty response (attempt ${attempt + 1}/3), retrying...`);
+    } catch (e) {
+      console.warn(`[Finance] Gemini call failed (attempt ${attempt + 1}/3):`, e);
+      if (attempt === 2) return `[Error: Financial analysis failed after 3 attempts. Please try again.]`;
+    }
+  }
+  return '[Error: Could not generate financial analysis. Please try again.]';
 }
 
 function getFinanceContext(context: ToolContext): string {
@@ -31,13 +44,32 @@ IMPORTANT: You MUST still produce specific, actionable financial deliverables. U
   const d = context.deliverables;
   const parts: string[] = [];
 
-  if (d.cashIntelligence) parts.push(`Cash Intelligence: ${JSON.stringify(d.cashIntelligence).slice(0, 2000)}`);
-  if (d.unitEconomics) parts.push(`Unit Economics: ${JSON.stringify(d.unitEconomics).slice(0, 1500)}`);
-  if (d.revenueForecast) parts.push(`Revenue Forecast: ${JSON.stringify(d.revenueForecast).slice(0, 1000)}`);
-  if (d.revenueLeakAnalysis) parts.push(`Revenue Leaks: ${JSON.stringify(d.revenueLeakAnalysis).slice(0, 800)}`);
-  if (d.healthScore) parts.push(`Health Score: ${JSON.stringify(d.healthScore).slice(0, 500)}`);
-  if (d.pricingIntelligence) parts.push(`Pricing: ${JSON.stringify(d.pricingIntelligence).slice(0, 800)}`);
-  if (d.financialRatios) parts.push(`Financial Ratios: ${JSON.stringify(d.financialRatios).slice(0, 800)}`);
+  // Safe truncation: extract key fields instead of slicing JSON mid-string
+  if (d.cashIntelligence) {
+    const ci = d.cashIntelligence as any;
+    parts.push(`Cash Intelligence: Runway ${ci.runwayWeeks ?? '?'} weeks, Cash Position $${ci.currentCashPosition?.toLocaleString() ?? '?'}, Monthly Burn $${ci.monthlyBurn?.toLocaleString() ?? '?'}. Summary: ${ci.summary ?? 'N/A'}`);
+  }
+  if (d.unitEconomics) {
+    const ue = d.unitEconomics as any;
+    parts.push(`Unit Economics: LTV $${ue.ltv?.toLocaleString() ?? '?'}, CAC $${ue.cac?.toLocaleString() ?? '?'}, LTV:CAC ${ue.ltvCacRatio ?? '?'}. ${ue.summary ?? ''}`);
+  }
+  if (d.revenueForecast) {
+    parts.push(`Revenue Forecast: ${JSON.stringify(d.revenueForecast).slice(0, 1000)}`);
+  }
+  if (d.revenueLeakAnalysis) {
+    const rl = d.revenueLeakAnalysis as any;
+    parts.push(`Revenue Leaks: $${rl.totalIdentified?.toLocaleString() ?? '?'} total. Top: ${rl.items?.slice(0, 3).map((i: any) => `${i.description} ($${i.amount?.toLocaleString()})`).join(', ') ?? 'N/A'}`);
+  }
+  if (d.healthScore) {
+    const hs = d.healthScore as any;
+    parts.push(`Health Score: ${hs.score ?? '?'}/100 Grade ${hs.grade ?? '?'}. ${hs.headline ?? hs.summary ?? ''}`);
+  }
+  if (d.pricingIntelligence) {
+    parts.push(`Pricing: ${JSON.stringify(d.pricingIntelligence).slice(0, 800)}`);
+  }
+  if (d.financialRatios) {
+    parts.push(`Financial Ratios: ${JSON.stringify(d.financialRatios).slice(0, 800)}`);
+  }
 
   return parts.length > 0 ? parts.join('\n\n') : 'Limited financial data available. Focus on the task parameters to produce specific deliverables.';
 }
@@ -90,7 +122,7 @@ const createInvoice: Tool = {
       return { success: false, output: 'client_name and items are required.' };
     }
 
-    // Parse items
+    // Parse items with validation
     const lines = itemsStr.split('\n').filter(Boolean);
     const items: { description: string; qty: number; unitPrice: number; total: number }[] = [];
     let subtotal = 0;
@@ -98,11 +130,16 @@ const createInvoice: Tool = {
     for (const line of lines) {
       const parts = line.split('|').map(p => p.trim());
       const description = parts[0] ?? 'Item';
-      const qty = Number(parts[1] ?? 1);
-      const unitPrice = Number(parts[2] ?? 0);
+      const qty = Math.max(0, Number(parts[1] ?? 1));
+      const unitPrice = Math.max(0, Number(parts[2] ?? 0));
+      if (isNaN(qty) || isNaN(unitPrice)) continue; // skip invalid lines
       const total = qty * unitPrice;
       items.push({ description, qty, unitPrice, total });
       subtotal += total;
+    }
+
+    if (items.length === 0) {
+      return { success: false, output: 'No valid line items found. Use format: "description|quantity|unit_price" per line.' };
     }
 
     const taxAmount = subtotal * (taxRate / 100);
@@ -117,8 +154,10 @@ const createInvoice: Tool = {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Build formatted invoice
+    // Build formatted invoice with org branding
+    const orgName = (_context.deliverables?.healthScore as any)?.headline?.split(' ')[0] ?? 'Pivot';
     let invoice = `INVOICE\n${'='.repeat(60)}\n\n`;
+    invoice += `From: ${orgName}\n`;
     invoice += `Invoice #: ${invoiceNumber}\n`;
     invoice += `Date: ${today}\n`;
     invoice += `Payment Terms: ${termsLabel[paymentTerms] ?? paymentTerms}\n\n`;
@@ -241,7 +280,7 @@ Also output the monthly data as a CSV table at the end.`;
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,  // ~2000 input tokens + ~4000 output tokens at Flash pricing
     };
   },
 };
@@ -328,7 +367,7 @@ Use realistic numbers grounded in the business data provided.`;
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,  // ~2000 input tokens + ~4000 output tokens at Flash pricing
     };
   },
 };
@@ -415,7 +454,7 @@ Provide:
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,  // ~2000 input tokens + ~4000 output tokens at Flash pricing
     };
   },
 };
@@ -507,7 +546,7 @@ Provide a comprehensive pricing optimization analysis:
     return {
       success: true,
       output: content,
-      cost: 0.01,
+      cost: 0.002,  // ~2000 input tokens + ~4000 output tokens at Flash pricing
     };
   },
 };
